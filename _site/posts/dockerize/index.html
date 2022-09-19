@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.1.251">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ronald (Ryy) Glenn Thomas">
+<meta name="dcterms.date" content="2022-09-18">
+<meta name="description" content="This is the first in a series of posts offering suggested strategies for leveraging open source technologies to effectively host data science analysis results online.">
+
+<title>Focus on R: a new qblog - Bare bones process to securely hosting Shiny apps online</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1.6em;
+  vertical-align: middle;
+}
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit"
+  }
+}</script>
+<style>
+    .quarto-title-block .quarto-title-banner {
+      background: #eeeeee;
+    }
+    </style>
+
+
+<link rel="stylesheet" href="../../styles.css">
+<meta property="og:title" content="Focus on R: a new qblog - Bare bones process to securely hosting Shiny apps online">
+<meta property="og:description" content="This is the first in a series of posts offering suggested strategies for leveraging open source technologies to effectively host data science analysis results online.">
+<meta property="og:image" content="https://focusonr.org/posts/dockerize/img/rshiny.png">
+<meta property="og:site-name" content="Focus on R: a new qblog">
+<meta property="og:image:height" content="482">
+<meta property="og:image:width" content="1200">
+<meta name="twitter:title" content="Focus on R: a new qblog - Bare bones process to securely hosting Shiny apps online">
+<meta name="twitter:description" content="This is the first in a series of posts offering suggested strategies for leveraging open source technologies to effectively host data science analysis results online.">
+<meta name="twitter:image" content="https://focusonr.org/posts/dockerize/img/rshiny.png">
+<meta name="twitter:creator" content="@rgt47">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image-height" content="482">
+<meta name="twitter:image-width" content="1200">
+</head>
+
+<body class="floating nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-dark ">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container">
+    <a class="navbar-brand" href="../../index.html">
+    <span class="navbar-title">Focus on R: a new qblog</span>
+    </a>
+  </div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../about.html">About</a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47"><i class="bi bi-twitter" role="img" aria-label="twitter">
+</i> 
+ </a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47"><i class="bi bi-github" role="img" aria-label="github">
+</i> 
+ </a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://rgtlab.org"><i class="bi bi-person-circle" role="img" aria-label="website">
+</i> 
+ </a>
+  </li>  
+</ul>
+              <div id="quarto-search" class="" title="Search"></div>
+          </div> <!-- /navcollapse -->
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<header id="title-block-header" class="quarto-title-block default toc-left page-columns page-full">
+  <div class="quarto-title-banner page-columns page-full">
+    <div class="quarto-title column-body">
+      <h1 class="title">Bare bones process to securely hosting Shiny apps online</h1>
+                  <div>
+        <div class="description">
+          This is the first in a series of posts offering suggested strategies for leveraging open source technologies to effectively host data science analysis results online.
+        </div>
+      </div>
+                          <div class="quarto-categories">
+                <div class="quarto-category">Docker</div>
+                <div class="quarto-category">Shiny</div>
+              </div>
+                  </div>
+  </div>
+    
+  <div class="quarto-title-meta-author">
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-heading">Affiliation</div>
+    
+      <div class="quarto-title-meta-contents">
+      <a href="https://rgtlab.org">Ronald (Ryy) Glenn Thomas</a> <a href="https://orcid.org/0000-0003-1686-4965" class="quarto-title-author-orcid"> <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA2ZpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDo1N0NEMjA4MDI1MjA2ODExOTk0QzkzNTEzRjZEQTg1NyIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDozM0NDOEJGNEZGNTcxMUUxODdBOEVCODg2RjdCQ0QwOSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDozM0NDOEJGM0ZGNTcxMUUxODdBOEVCODg2RjdCQ0QwOSIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ1M1IE1hY2ludG9zaCI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOkZDN0YxMTc0MDcyMDY4MTE5NUZFRDc5MUM2MUUwNEREIiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOjU3Q0QyMDgwMjUyMDY4MTE5OTRDOTM1MTNGNkRBODU3Ii8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+84NovQAAAR1JREFUeNpiZEADy85ZJgCpeCB2QJM6AMQLo4yOL0AWZETSqACk1gOxAQN+cAGIA4EGPQBxmJA0nwdpjjQ8xqArmczw5tMHXAaALDgP1QMxAGqzAAPxQACqh4ER6uf5MBlkm0X4EGayMfMw/Pr7Bd2gRBZogMFBrv01hisv5jLsv9nLAPIOMnjy8RDDyYctyAbFM2EJbRQw+aAWw/LzVgx7b+cwCHKqMhjJFCBLOzAR6+lXX84xnHjYyqAo5IUizkRCwIENQQckGSDGY4TVgAPEaraQr2a4/24bSuoExcJCfAEJihXkWDj3ZAKy9EJGaEo8T0QSxkjSwORsCAuDQCD+QILmD1A9kECEZgxDaEZhICIzGcIyEyOl2RkgwAAhkmC+eAm0TAAAAABJRU5ErkJggg=="></a>
+    </div>
+      <div class="quarto-title-meta-contents">
+          <p class="affiliation">
+              <a href="https://ucsd.edu">
+              UCSD
+              </a>
+            </p>
+        </div>
+      </div>
+
+  <div class="quarto-title-meta">
+
+        
+      <div>
+      <div class="quarto-title-meta-heading">Published</div>
+      <div class="quarto-title-meta-contents">
+        <p class="date">September 18, 2022</p>
+      </div>
+    </div>
+      
+    </div>
+    
+  
+  </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction">Introduction</a></li>
+  <li><a href="#methods" id="toc-methods" class="nav-link" data-scroll-target="#methods">Methods</a></li>
+  <li><a href="#hosting" id="toc-hosting" class="nav-link" data-scroll-target="#hosting">Hosting</a>
+  <ul class="collapse">
+  <li><a href="#select-a-hosting-service" id="toc-select-a-hosting-service" class="nav-link" data-scroll-target="#select-a-hosting-service">Select a hosting service</a></li>
+  </ul></li>
+  <li><a href="#website" id="toc-website" class="nav-link" data-scroll-target="#website">Website</a></li>
+  <li><a href="#appendix-1" id="toc-appendix-1" class="nav-link" data-scroll-target="#appendix-1">Appendix-1</a></li>
+  <li><a href="#appendix-2" id="toc-appendix-2" class="nav-link" data-scroll-target="#appendix-2">Appendix-2</a></li>
+  <li><a href="#appendix-x-joe-data-version" id="toc-appendix-x-joe-data-version" class="nav-link" data-scroll-target="#appendix-x-joe-data-version">appendix x (joe data version)</a></li>
+  </ul>
+</nav>
+</nav>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+    </div>
+<!-- main -->
+<main class="content quarto-banner-title-block" id="quarto-document-content">
+
+
+
+
+<section id="introduction" class="level1">
+<h1>Introduction</h1>
+<p>This is the first in a series of posts offering suggested strategies for leveraging open source technologies to provide straight-forward solutions to one of the central challenges in the practice of data science, i.e.&nbsp;how to effectively communicate analysis results to clients and collaborators. The group of technologies (or stack) we’ll employ is: linux, R, Shiny, Caddy, git, and Docker. We’ll make use of two cloud services github and AWS.</p>
+<p>This initial post provides a minimal, proof-of-concept example of how to apply these technologies for hosting of an interactive shiny application.</p>
+<p>We start with a simple, but hopefully useful, stand-alone shiny app and end with a secure (encrypted and authenticated) web site with a custom domain name hosting our app. The approach described here is intentionally minimalist.</p>
+</section>
+<section id="methods" class="level1">
+<h1>Methods</h1>
+<p>To begin, lets assume we’re just finished developing a new shiny app, named <code>power0</code> .</p>
+<p>The methods described here apply to any shiny app, but to provide a concrete example we’ve created our own app. See the code for our <code>power0</code> shiny app [here] (#appendix-1) in appendix 1.</p>
+<p>A screenshot of the finished product shows a shiny app with a widget to select the sample size and a visualization (2D plot) of the power as a function of the standardized effect size:</p>
+<div class="cell-output-display">
+<p><img src="img/shinyapppower0.png" class="img-fluid" width="200"></p>
+</div>
+<p>The app is discussed further is <a href="#appendix1">appendix 1</a></p>
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>ui <span class="ot">&lt;-</span> <span class="fu">fluidPage</span>(</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">titlePanel</span>(<span class="st">"Power Calculator for Two Group </span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="st">             Parallel Designs"</span>),</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sliderInput</span>(<span class="st">"N"</span>, <span class="st">"Total Sample Size:"</span>, </span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>              <span class="at">min =</span> <span class="dv">0</span>, <span class="at">max =</span> <span class="dv">300</span>, <span class="at">value =</span> <span class="dv">100</span>),</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plotOutput</span>(<span class="st">"plot"</span>),</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">verbatimTextOutput</span>(<span class="st">"eff"</span>)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>server <span class="ot">&lt;-</span> <span class="cf">function</span>(input, output, session) {</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  delta <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="dv">0</span>, <span class="fl">1.5</span>, .<span class="dv">05</span>)</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  pow <span class="ot">&lt;-</span> <span class="fu">reactive</span>(</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">sapply</span>(delta,</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>           <span class="cf">function</span>(x) <span class="fu">power.t.test</span>(input<span class="sc">$</span>N, <span class="at">d =</span> x)<span class="sc">$</span>power</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>           )</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>                 )</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  eff <span class="ot">&lt;-</span> <span class="fu">renderText</span>(<span class="fu">power.t.test</span>(input<span class="sc">$</span>N, <span class="at">power =</span> .<span class="dv">8</span>)<span class="sc">$</span>d)</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  output<span class="sc">$</span>plot <span class="ot">&lt;-</span> <span class="fu">renderPlot</span>({</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plot</span>(delta, <span class="fu">pow</span>(), <span class="at">cex =</span> <span class="fl">1.5</span>, <span class="at">ylab =</span> <span class="st">"power"</span>)</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">abline</span>(<span class="at">h =</span> .<span class="dv">8</span>, <span class="at">col =</span> <span class="st">"red"</span>, <span class="at">lwd =</span> <span class="fl">2.5</span>, <span class="at">lty =</span> <span class="dv">4</span>)</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">abline</span>(<span class="at">v =</span> <span class="fu">eff</span>(), <span class="at">col =</span> <span class="st">"blue"</span>, <span class="at">lwd =</span> <span class="fl">2.5</span>, <span class="at">lty =</span> <span class="dv">4</span>)</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>                           })</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>  output<span class="sc">$</span>eff <span class="ot">&lt;-</span> <span class="fu">renderText</span>(</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    <span class="fu">paste0</span>(<span class="st">"Std. effect with power 80% = "</span>, <span class="fu">eff</span>() )</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>                          )</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a><span class="fu">shinyApp</span>(ui, server)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<p>Once we determine the app is working as designed, we are next interested in hosting the app on a (virtual) server to share with our collaborators. There are many ways to accomplish this. Here, in a nutshell, we’ll demonstrate one of the most straightforward and efficient: “spinning” up a server on Amazon Web Service (AWS) and use docker containers to provide shiny and webserver functionalityto provide shiny and webserver functionality.</p>
+</section>
+<section id="hosting" class="level1">
+<h1>Hosting</h1>
+<p>Once we have a production ready shiny app available, we’ll want to host it on the internet. To do that we’ll need the following :</p>
+<ol type="1">
+<li>a virtual server (connected via ssh)</li>
+<li>a static IP address (to identify the server online)</li>
+<li>a domain name (human readable name for IP address)</li>
+<li>a web server (software to recognize https protocol requests and respond)</li>
+<li>an SSL certificate (encrypted communication)</li>
+<li>an authentication method (password protection)</li>
+<li>a reverse proxy method (translate port 443 requests to port 3838 for shiny)</li>
+<li>a containerized version of app. (bundled app and requisite software)</li>
+<li>a method for <code>power0</code> container to communicate with containerized webserver.</li>
+</ol>
+<p>At first glance these 9 requirements can appear daunting, but on closer inspection all can be met with minimal expertise and minimal or no cost.</p>
+<p>This can all be done at no cost if you have your own (self-hosted) server with IP address, and domain name, or at minimal cost using a cloud-hosting service (e.g.&nbsp;Amazon’s EC2 or Digital Ocean) and a “leased” domain name from, e.g. GoDaddy, or Amazon’s Route 53.</p>
+<section id="select-a-hosting-service" class="level2">
+<h2 class="anchored" data-anchor-id="select-a-hosting-service">Select a hosting service</h2>
+<p>There are a number of cloud based server options: Microsoft Azure, Google Cloud, Amazon AWS, Digital Ocean to name a few. Each has their own approach to setting up a custom virtual server. Several have free or low-cost service tiers available.</p>
+<p>Specific instructions for AWS EC2 are <a href="#appendix-2">here</a> in appendix 2.</p>
+<p>Once the server is available connect via ssh, login, and Install docker, docker-compose and git. with the following command:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt install <span class="at">-y</span> git docker docker-compose</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Once the hosting process is complete we’ll have a customized virtual server wtih a static IP address and unique domain name and firewall in place. In other words, items 1, 2, and 3 will be taken care of.</p>
+</section>
+</section>
+<section id="website" class="level1">
+<h1>Website</h1>
+<p>To configure the web server and containerize our app we need to add three files to the server, to go along with our shiny app in the <code>power0</code> directory (in the home directory for default user <code>ubuntu</code>).</p>
+<p>The easiest way to do this is to add the three files to the power0 directory on our workstation and then “push” a copy to github.</p>
+<p>These three configuation files are:</p>
+<ul>
+<li>a Caddyfile</li>
+<li>a Dockerfile</li>
+<li>a docker-compose.yml file</li>
+</ul>
+<p>Lets discuss each and initially add them to the power0 directory on our workstation. Once the three files are in place in the directory we can push copies to github and from there we can access them from our server.</p>
+<p>We’ll use Caddy as our web server. Caddy is an open-source tool that has the very useful feature of automating the acquiring and installing of an SSL certificate, which is required to use the encrypted communication protocol https.</p>
+<p>Caddy is configured with a file named <code>Caddyfile</code>. The caddyfile configures three things.</p>
+<ol type="1">
+<li>the site domain name.</li>
+<li>the authentication pair login/hash-password, and</li>
+<li>the ‘reverse proxy’ map that redirects requests to port 443 (ssl port) to port 3838 (shiny port).</li>
+</ol>
+<p>The Caddyfile in our example is:</p>
+<p>auth info bob/utter</p>
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>rgtlab.org {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co">#auth credentials: bob/utter</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>basicauth <span class="sc">*</span> {</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>        bob JDJhJDE0JElCQmRGaTA0ajY3bkZTLjRiWUZ4enVoZnVSQzVXVGVUMHlVcXJTaTRGYmpRQVFHLnYzN0tx</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    handle_path <span class="sc">/</span>power0<span class="sc">/</span><span class="er">*</span> {</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        reverse_proxy power0<span class="sc">:</span><span class="dv">3838</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<p>We can accomplish what we need for items 4, 5 and 6 through the Caddyfile.</p>
+<p>For your project replace:</p>
+<ul>
+<li>rgtlab.org with your domain name</li>
+<li>Bob JDJ… with user names and hash-passwords</li>
+<li>power0 with you app’s name</li>
+</ul>
+<p>Providing our servers domain name, <code>rgtlab.org</code> is sufficient to initiate an exchange with <code>letsencrypt</code> to generates an SSL certificate.</p>
+<p>The second file is the dockerfile. In its simplest form it instructs Docker to build a container based on a Rocker/Shiny image then copy in the app.R code and launch shiny on (default) port 3838.</p>
+<div class="cell-output-display">
+<p><img src="img/docker1.jpg" class="img-fluid" width="150"></p>
+</div>
+<p><font size="2"> Photo by <a href="https://unsplash.com/@carrier_lost?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Ian Taylor</a> on <a href="https://unsplash.com/?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Unsplash</a> </font></p>
+<p>Here is our dockerfile:</p>
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>FROM rocker<span class="sc">/</span>shiny<span class="sc">:</span><span class="dv">4</span>.<span class="fl">2.0</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>COPY app.R <span class="sc">/</span>srv<span class="sc">/</span>shiny<span class="sc">-</span>server<span class="sc">/</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>USER shiny</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>CMD [<span class="st">"/usr/bin/shiny-server"</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<p>And the third file is the docker compose file that containerizes our shiny app, and pulls a caddy server image from Docker Hub and create a local network for the two containers to communicate in.</p>
+<p>The docker-compose.yml file:</p>
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>version<span class="sc">:</span> <span class="st">"3.7"</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>services<span class="sc">:</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  power0<span class="sc">:</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    build<span class="sc">:</span> .</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  caddy<span class="sc">:</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    image<span class="sc">:</span> caddy<span class="sc">:</span><span class="dv">2</span>.<span class="fl">3.0</span><span class="sc">-</span>alpine</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    ports<span class="sc">:</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>      <span class="sc">-</span> <span class="st">"443:443"</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    volumes<span class="sc">:</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>      <span class="sc">-</span> <span class="er">$</span>PWD<span class="sc">/</span>Caddyfile<span class="sc">:</span><span class="er">/</span>etc<span class="sc">/</span>caddy<span class="sc">/</span>Caddyfile</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>      <span class="sc">-</span> caddy_data<span class="sc">:</span><span class="er">/</span>data</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>volumes<span class="sc">:</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    caddy_data<span class="sc">:</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<p>To generate a password for say foobar.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">docker-compose</span> run caddy caddy hash-password foobar</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Once in place push power0 to github and then clone repo to server.</p>
+<p>Lets clone them into the server from github.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone https:// <span class="pp">???</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>cd to power0 directory and run</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">docker-compose</span> up <span class="at">-d</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>and you’re good to go! The app <code>power0</code> can be accessed by ‘bob’ at the url</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">https://rgtlab.org/power0</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>with password ‘utter’</p>
+</section>
+<section id="appendix-1" class="level1">
+<h1>Appendix-1</h1>
+<p>Consider an app that is a balance of simple and functional – one that calculates the power for a 2-sample t-test as a function of the standardized effect size. re is our shiny app <code>power0.R</code>:</p>
+<p>Consider the power0.R file:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ex">ui</span> <span class="op">&lt;</span>- fluidPage<span class="er">(</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="ex">titlePanel</span><span class="er">(</span><span class="st">"Power Calculator for Two Group Parallel Designs"</span><span class="kw">)</span><span class="ex">,</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="ex">sliderInput</span><span class="er">(</span><span class="st">"N"</span><span class="ex">,</span> <span class="st">"Total Sample Size:"</span>, min = 0, max = 300, value = 100<span class="kw">)</span><span class="ex">,</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="ex">plotOutput</span><span class="er">(</span><span class="st">"plot"</span><span class="kw">)</span><span class="ex">,</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="ex">verbatimTextOutput</span><span class="er">(</span><span class="st">"eff"</span><span class="kw">))</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="ex">server</span> <span class="op">&lt;</span>- function<span class="er">(</span><span class="ex">input,</span> output, session<span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>  <span class="ex">delta</span> = seq<span class="er">(</span><span class="ex">0,</span> 1.5,.05<span class="kw">)</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>  <span class="ex">pow</span> = reactive<span class="er">(</span><span class="ex">sapply</span><span class="er">(</span><span class="ex">delta,</span> function<span class="er">(</span><span class="ex">x</span><span class="kw">)</span> <span class="ex">power.t.test</span><span class="er">(</span><span class="ex">input</span><span class="va">$N</span><span class="ex">,</span> d=x<span class="kw">)</span><span class="va">$power</span> <span class="kw">))</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>  <span class="ex">eff</span> =  renderText<span class="er">(</span><span class="ex">power.t.test</span><span class="er">(</span><span class="ex">input</span><span class="va">$N</span><span class="ex">,</span> power=.8<span class="kw">)</span><span class="va">$d</span><span class="kw">)</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>  <span class="ex">output</span><span class="va">$plot</span> <span class="op">&lt;</span>- renderPlot<span class="er">(</span><span class="kw">{</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>  <span class="ex">plot</span><span class="er">(</span><span class="ex">delta,</span> pow<span class="er">(</span><span class="kw">)</span><span class="ex">,</span> cex=1.5, ylab=<span class="st">"power"</span><span class="kw">)</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>  <span class="ex">abline</span><span class="er">(</span><span class="ex">h</span> = .8,  col = <span class="st">"red"</span>, lwd =2.5, lty = 4<span class="kw">)</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>  <span class="ex">abline</span><span class="er">(</span><span class="ex">v</span> = eff<span class="er">(</span><span class="kw">)</span><span class="ex">,</span> col = <span class="st">"blue"</span>,lwd =2.5, lty = 4<span class="kw">)})</span>  </span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>  <span class="ex">output</span><span class="va">$eff</span> <span class="op">&lt;</span>- renderText<span class="er">(</span></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>    <span class="ex">paste0</span><span class="er">(</span><span class="st">"Std. effect detectable with power 80% = "</span><span class="ex">,</span> eff<span class="er">(</span><span class="kw">))</span> <span class="kw">)</span></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a><span class="ex">shinyApp</span><span class="er">(</span><span class="ex">ui,</span> server<span class="kw">)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The app is designed to be maximally minimal. Using only base R functions, with a minimum of reactive widgets and layout commands to keep it simple while still performing a useful function.</p>
+</section>
+<section id="appendix-2" class="level1">
+<h1>Appendix-2</h1>
+<p>AWS is a reasonable choice for setting up a small custom server. AWS offers a free set of servers for the first 12 months.</p>
+<p>To start open the EC2 console.</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>   <span class="ex">https://aws.amazon.com/console</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="img/ec2a.png" class="img-fluid" width="300"></p>
+</div>
+<p>Create an account or sign in. Next set up a working environment. Specifically you’ll want to set up four components of the environment:</p>
+<ol type="1">
+<li>Ssh key pair</li>
+<li>Firewall</li>
+<li>Static IP</li>
+<li>Domain Name</li>
+</ol>
+<p>The first time you create an AWS account you need to exchange an SSH key pair with AWS. You can generate the ssh key pair locally on you workstation and upload the public key to EC2.</p>
+<p>Create a directory to hold the keys. e.g.&nbsp;<code>~/.ssh</code>. Change directory into <code>.ssh</code>. Generate the keys with the command</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh-keygen</span> <span class="at">-m</span> PEM</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>name the key prefix something like <code>ssh-rsa</code>.</p>
+<p>On EC2 select <code>security/keys</code>, browse to the <code>.ssh</code> directory and import the public key <code>ssh-rsa.pub</code>.</p>
+<p>For convenience, construct a <code>config</code> file in <code>~/.ssh</code> as:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">Host</span> ec2</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="ex">HostName</span> 13.57.139.31 <span class="co"># static IP</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="ex">User</span> ubuntu <span class="co"># default user on ubuntu server</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="ex">Port</span> 22  <span class="co"># the default port ssh uses</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="ex">IdentityFile</span> ~/.ssh/ssh-rsa</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>then you can ssh into the new server with</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sh</span><span class="op">&gt;</span> ssh ec2</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Use “elastic IP” to get a static IP that can be assigned to the server</p>
+<ul>
+<li>click on elastic IP in left panel</li>
+<li>select associate Elastic IP 13.57.139.31 choose an instance (shiny-july22) to associate with.</li>
+<li>side panel, click “ec2”</li>
+<li>side panel, click “Instances”</li>
+<li>from top bar, click “Launch Instances”</li>
+</ul>
+<ol start="2" type="1">
+<li>From “Quick Start” click Ubuntu button.</li>
+</ol>
+<ul>
+<li>Name the server, say shiny-july22</li>
+<li>Choose an AMI (instance template, operating system):</li>
+</ul>
+<p>Suggest choose “Ubuntu Server 22.04 LTS”, but other linux distributions can be utilized, e.g.u Red Hat, or SUSE.)</p>
+<ol start="3" type="1">
+<li><p>Next choose an instance <strong>type</strong>, e.g.&nbsp;“t2-micro”. (different instance types are mixtures of size, processors, memory, instance storage, network performance) click “Next: Configure Instance Details”</p></li>
+<li><p>choose Key pair (use in place aws18.pem) or set up new pair</p></li>
+<li><p>Add security group, e.g.&nbsp;‘shiny’ (sg-0f37c94ac1e1b6250) allowing ports 80 (http), 22 (ssh), 443 (https), and 3838 (shiny). and 8787</p></li>
+<li><p>choose 30 GB of EBS General Purpose (SSD) or Magnetic storage</p></li>
+<li><p>click Launch Instance</p></li>
+</ol>
+<p>Log into new instance with ssh from local</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> <span class="at">-i</span> ~/.ssh/aws18.pem ubuntu@13.57.139.31</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>or</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> ec2 </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>if you’ve set up a <code>config</code> file in <code>~/.ssh</code></p>
+<p>Tip: Add ubuntu to the docker group to allow docker to run without sudo.</p>
+<p>Go to godaddy or Amazon route 53 to associate a domain name with the Elastic IP in EC2.</p>
+<p>(screenshot)</p>
+<p>To associate domain name rgtlab.org with elastic IP.</p>
+<p>in Route 53:</p>
+<ul>
+<li>click on ‘hosted zones’ in side panel</li>
+<li>click on rgtlab.org in center panel</li>
+<li>click on checkbox for rgtlab.org type=A line</li>
+<li>then click on edit record in right panel</li>
+<li>change ip address to 13.57.139.31</li>
+</ul>
+</section>
+<section id="appendix-x-joe-data-version" class="level1">
+<h1>appendix x (joe data version)</h1>
+<p>ok! got my shiny app running. Works great! Now how do I get it up on the web and shared with my client Bob?</p>
+<p>Start by creating a repo for the app on github.</p>
+<ul>
+<li>login to github (screenshot)</li>
+</ul>
+<div class="cell-output-display">
+<p><img src="img/git1.png" class="img-fluid" width="300"></p>
+</div>
+<ul>
+<li>click on <code>new</code> in <code>repo name</code> and enter <code>power1</code>. (Make the repo private we only want to share with Bob at this point).</li>
+<li>create repo</li>
+<li>on workstation: clone the repo</li>
+</ul>
+<div class="sourceCode" id="cb17"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone https://github.com/rgt47/power1.git</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ul>
+<li>copy <code>power1.R</code> in <code>power1</code> repo directory.</li>
+<li>update remote repo
+<ul>
+<li>git add .</li>
+<li>git commit -m ‘add shiny code’</li>
+<li>git push</li>
+</ul></li>
+</ul>
+<p>Now we need a (virtual) server to host the app. Let use Amazon AWS.</p>
+
+
+</section>
+
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents"><h2 class="anchored quarto-appendix-heading">Reuse</h2><div quarto-reuse="quarto-reuse" class="quarto-appendix-contents"><a rel="license" href="https://creativecommons.org/licenses/by/4.0/">https://creativecommons.org/licenses/by/4.0/</a></div></section><section class="quarto-appendix-contents"><h2 class="anchored quarto-appendix-heading">Citation</h2><div><div class="quarto-appendix-secondary-label">BibTeX citation:</div><pre class="sourceCode code-with-copy quarto-appendix-bibtex"><code class="sourceCode bibtex">@online{(ryy)glennthomas2022,
+  author = {Ronald (Ryy) Glenn Thomas},
+  editor = {},
+  title = {Bare Bones Process to Securely Hosting {Shiny} Apps Online},
+  date = {2022-09-18},
+  url = {https://focusonr.org/posts/dockerize},
+  langid = {en}
+}
+</code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre><div class="quarto-appendix-secondary-label">For attribution, please cite this work as:</div><div id="ref-(ryy)glennthomas2022" class="csl-entry quarto-appendix-citeas" role="doc-biblioentry">
+Ronald (Ryy) Glenn Thomas. 2022. <span>“Bare Bones Process to Securely
+Hosting Shiny Apps Online.”</span> September 18, 2022. <a href="https://focusonr.org/posts/dockerize">https://focusonr.org/posts/dockerize</a>.
+</div></div></section></div></main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    target: function(trigger) {
+      return trigger.previousElementSibling;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    setTimeout(function() {
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const cites = ref.parentNode.getAttribute('data-cites').split(' ');
+    tippyHover(ref, function() {
+      var popup = window.document.createElement('div');
+      cites.forEach(function(cite) {
+        var citeDiv = window.document.createElement('div');
+        citeDiv.classList.add('hanging-indent');
+        citeDiv.classList.add('csl-entry');
+        var biblioDiv = window.document.getElementById('ref-' + cite);
+        if (biblioDiv) {
+          citeDiv.innerHTML = biblioDiv.innerHTML;
+        }
+        popup.appendChild(citeDiv);
+      });
+      return popup.innerHTML;
+    });
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>
