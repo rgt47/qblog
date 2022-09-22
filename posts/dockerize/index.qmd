@@ -1,5 +1,5 @@
 ---
-title: "Bare bones process to securely hosting Shiny apps online"
+title: "Bare bones process for securely hosting Shiny apps online"
 description: "This is the first in a series of posts offering suggested strategies for leveraging open source technologies to effectively host data science analysis results online."
 date: "2022-09-18"
 categories: [Docker, Shiny]
@@ -104,6 +104,11 @@ most straightforward and efficient: "spinning" up a server on Amazon Web Service
 provide shiny and webserver functionality. 
 
 # Hosting
+
+```{r out.width = "600px"}
+include_graphics("img/blogdockerizeflow.png")
+
+```
 
 Once we have a production ready  shiny app available, we'll want to
 host it on the internet. To do that we'll need the following :
@@ -355,33 +360,26 @@ you'll want to set up four components of the environment:
 
 The first time you create an AWS account you need to exchange an SSH key pair
 with AWS.  You can generate the ssh key pair locally on you workstation and
-upload the public key to EC2. 
-
-Create a directory to hold the keys. e.g. `~/.ssh`. Change directory into
-`.ssh`.
- Generate the keys with the command
+upload the public key to EC2.  To do this create a directory to hold the keys.
+e.g. `~/.ssh`. From inside `.ssh` directory you can  generate the keys with the command
 
 ```sh
 ssh-keygen -m PEM
 ```
-name the key prefix something like `ssh-rsa`.
+in the dialog that ensues name the key prefix something like `ssh-rsa`.
 
-On EC2 select `security/keys`, browse to the `.ssh` directory and  import the
+Back in the browser on EC2 select `security/keys`, A dialog starts and asks for
+the location of the public key. Browse to the `.ssh` directory and  import the
 public key `ssh-rsa.pub`.
 
-For convenience, construct a `config` file in `~/.ssh` as:
-```sh
-Host ec2
-HostName 13.57.139.31 # static IP
-User ubuntu # default user on ubuntu server
-Port 22  # the default port ssh uses
-IdentityFile ~/.ssh/ssh-rsa
-```
-then you can ssh into the new server with 
-```sh
-sh> ssh ec2
-```
+# Set up firewall
 
+A very restrictive firewall is recommended. Only https and ssh packets are
+needed. To construct the firewall click on: 
+
+FIREWALL TBD
+
+# Set up static IP address
 
 Use "elastic IP" to get a static IP that can be assigned to the server
 
@@ -422,23 +420,18 @@ Log into new instance with ssh from local
 ```sh
 ssh -i ~/.ssh/aws18.pem ubuntu@13.57.139.31
 ```
-or 
-```sh
-ssh ec2 
-
-```
-if you've set up a ``config`` file in ``~/.ssh`` 
 
 
-Tip: Add ubuntu to the docker group to allow docker to run without sudo. 
+# Get Domain Name
 
-
-Go to godaddy or Amazon route 53 to associate a domain name with the Elastic IP
+Go to godaddy.com or Amazon route 53 to associate a domain name with the Elastic IP
 in EC2. 
 
 (screenshot) 
 
-To associate domain name rgtlab.org with elastic IP.
+Once a domain name is obtained, eg rgtlab.com you want to associate it with your
+static IP address. To associate domain name rgtlab.org with elastic IP in EC2
+do as follows.
 
 in Route 53: 
 
@@ -448,7 +441,25 @@ in Route 53:
 * then click on edit record in right panel
 * change ip address to 13.57.139.31
 
+# Appendix Tips
 
+## Tip 1. 
+
+For convenience, construct a `config` file in `~/.ssh` as:
+
+```sh
+Host ec2
+HostName 13.57.139.31 # static IP
+User ubuntu # default user on ubuntu server
+Port 22  # the default port ssh uses
+IdentityFile ~/.ssh/ssh-rsa
+```
+then you can ssh into the new server with 
+```sh
+sh> ssh ec2
+```
+
+## Tip 2: Add ubuntu to the docker group to allow docker to run without sudo. 
 
 # appendix x (joe data version)
 
@@ -466,18 +477,48 @@ include_graphics("img/git1.png")
 ```
 
 
-*  click  on `new` in `repo name` and enter `power1`. (Make the repo private we
+*  click  on `new` . Then in `repository name` field enter `power1`. (Make the
+*  repo private,  we 
   only want to share with Bob at this point). 
-* create repo
-* on workstation: clone the repo 
+* create repo. Click ``Create repository`` green button at the bottom of the page. 
+* back in a terminal window on your laptop: clone the repo 
 ```sh
 git clone https://github.com/rgt47/power1.git
 ```
-* copy `power1.R` in `power1` repo directory. 
-* update remote repo
+
+
+* Create a Dockerfile to dockerize the shiny app. 
+
+The simplist Dockerfile grabs a pre-built image (say rocker/shiny) from
+Dockerhub and copies the shiny app code (app.R) to the default location on the
+docker image, and then runs shiny-server. Here's the file. Copy it into the
+working directory and name it ``Dockerfile``.  
+
+Here is our dockerfile: 
+
+```{r echo=T, eval=F}
+FROM rocker/shiny:4.2.0
+COPY app.R /srv/shiny-server/
+USER shiny
+CMD ["/usr/bin/shiny-server"]
+```
+
+* Install Docker on your laptop. Instructions here: https://docs.docker.com/engine/install/
+* Bulid and run the docker image to test it locally 
+    * docker build -t app4 .
+    * docker run --rm -p 3838:3838 app4 
+
+
+* copy `power1.R` and ``Dockerfile`` from working directory ``app4`` to the  `power1` repo directory. 
+```sh
+cd ~/prj/app4/app.R ~/prj/app4/Dockerfile ~/prj/power1
+```
+
+* from inside the ``power1`` directory, update remote repository
     * git add . 
     * git commit -m 'add shiny code'
     * git push
 
-Now we need a (virtual) server to host the app. Let use Amazon AWS. 
+* All good? Ok, now we need a (virtual) server to host the app. Let use Amazon AWS. 
+
 
