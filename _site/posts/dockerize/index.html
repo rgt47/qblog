@@ -10,7 +10,7 @@
 <meta name="dcterms.date" content="2022-09-18">
 <meta name="description" content="This is the first in a series of posts offering suggested strategies for leveraging open source technologies to effectively host data science analysis results online.">
 
-<title>Focus on R: a new qblog - Bare bones process for securely hosting Shiny apps online</title>
+<title>Focus on R: a new qblog - Seven step process for securely hosting Shiny apps online</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -132,13 +132,13 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 
 <link rel="stylesheet" href="../../styles.css">
-<meta property="og:title" content="Focus on R: a new qblog - Bare bones process for securely hosting Shiny apps online">
+<meta property="og:title" content="Focus on R: a new qblog - Seven step process for securely hosting Shiny apps online">
 <meta property="og:description" content="This is the first in a series of posts offering suggested strategies for leveraging open source technologies to effectively host data science analysis results online.">
 <meta property="og:image" content="https://focusonr.org/posts/dockerize/img/rshiny.png">
 <meta property="og:site-name" content="Focus on R: a new qblog">
 <meta property="og:image:height" content="482">
 <meta property="og:image:width" content="1200">
-<meta name="twitter:title" content="Focus on R: a new qblog - Bare bones process for securely hosting Shiny apps online">
+<meta name="twitter:title" content="Focus on R: a new qblog - Seven step process for securely hosting Shiny apps online">
 <meta name="twitter:description" content="This is the first in a series of posts offering suggested strategies for leveraging open source technologies to effectively host data science analysis results online.">
 <meta name="twitter:image" content="https://focusonr.org/posts/dockerize/img/rshiny.png">
 <meta name="twitter:creator" content="@rgt47">
@@ -191,7 +191,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <header id="title-block-header" class="quarto-title-block default toc-left page-columns page-full">
   <div class="quarto-title-banner page-columns page-full">
     <div class="quarto-title column-body">
-      <h1 class="title">Bare bones process for securely hosting Shiny apps online</h1>
+      <h1 class="title">Seven step process for securely hosting Shiny apps online</h1>
+            <p class="subtitle lead">Github, Docker-compose, EC2 version</p>
                   <div>
         <div class="description">
           This is the first in a series of posts offering suggested strategies for leveraging open source technologies to effectively host data science analysis results online.
@@ -265,62 +266,46 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
     </div>
 <!-- main -->
-<main class="content quarto-banner-title-block" id="quarto-document-content">
+<main class="content quarto-banner-title-block page-columns page-full" id="quarto-document-content">
 
 
 
 
+<div class="column-body">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="img/crane.jpg" class="img-fluid figure-img"></p>
+<p></p><figcaption class="figure-caption">under construction</figcaption><p></p>
+</figure>
+</div>
+</div>
+<p><font size="1"> Photo by <a href="https://unsplash.com/@nathangwaters?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Nathan Waters</a> on <a href="https://unsplash.com/s/photos/construction?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Unsplash</a> </font></p>
 <section id="introduction" class="level1">
 <h1>Introduction</h1>
-<p>This is the first in a series of posts offering suggested strategies for leveraging open source technologies to provide straight-forward solutions to one of the central challenges in the practice of data science, i.e.&nbsp;how to effectively communicate analysis results to clients and collaborators. The group of technologies (or stack) we’ll employ is: linux, R, Shiny, Caddy, git, and Docker. We’ll make use of two cloud services github and AWS.</p>
-<p>This initial post provides a minimal, proof-of-concept example of how to apply these technologies for hosting of an interactive shiny application.</p>
-<p>We start with a simple, but hopefully useful, stand-alone shiny app and end with a secure (encrypted and authenticated) web site with a custom domain name hosting our app. The approach described here is intentionally minimalist.</p>
+<p>This is the first in a series of posts offering suggested strategies for leveraging open source technologies to provide straight-forward solutions to one of the central challenges in the practice of data science, i.e.&nbsp;how to effectively communicate analysis results to clients and collaborators. The list of open-source technologies (or stack) we’ll employ is: linux, R, Shiny, Caddy, git, and Docker. We’ll make use of two cloud services github and AWS.</p>
+<p>This initial post provides a minimal, proof-of-concept example of how to apply these technologies for hosting an interactive shiny application.</p>
+<p>We start with a very simple, but hopefully still useful, stand-alone shiny app on our local workstation and push it into the cloud and end with a secure (encrypted and authenticated) app running on a website with a custom domain name. The approach described here is intentionally minimalist.</p>
 </section>
-<section id="methods" class="level1">
+<section id="methods" class="level1 page-columns page-full">
 <h1>Methods</h1>
-<p>To begin, lets assume we’re just finished developing a new shiny app, named <code>power0</code> .</p>
-<p>The methods described here apply to any shiny app, but to provide a concrete example we’ve created our own app. See the code for our <code>power0</code> shiny app [here] (#appendix-1) in appendix 1.</p>
+<p>To begin, lets assume we’re just finished developing a new shiny app, named <code>power0</code> . (The methods described here apply to any shiny app, but to provide a concrete example we’ve created our own app). See the code for our <code>power0</code> shiny app [here] (#appendix-1) in appendix 1.</p>
+<p>We can test the app locally by runnning it with the command (from the <code>power0</code> directory).</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">R</span> <span class="at">-e</span> <span class="st">"runApp('power0.R')"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>A screenshot of the finished product shows a shiny app with a widget to select the sample size and a visualization (2D plot) of the power as a function of the standardized effect size:</p>
-<div class="cell-output-display">
-<p><img src="img/shinyapppower0.png" class="img-fluid" width="200"></p>
+<div class="column-body">
+<p><img src="img/shinyapppower0.png" class="img-fluid"></p>
 </div>
-<p>The app is discussed further is <a href="#appendix1">appendix 1</a></p>
-<details>
-<summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>ui <span class="ot">&lt;-</span> <span class="fu">fluidPage</span>(</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">titlePanel</span>(<span class="st">"Power Calculator for Two Group </span></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="st">             Parallel Designs"</span>),</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sliderInput</span>(<span class="st">"N"</span>, <span class="st">"Total Sample Size:"</span>, </span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>              <span class="at">min =</span> <span class="dv">0</span>, <span class="at">max =</span> <span class="dv">300</span>, <span class="at">value =</span> <span class="dv">100</span>),</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plotOutput</span>(<span class="st">"plot"</span>),</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">verbatimTextOutput</span>(<span class="st">"eff"</span>)</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>server <span class="ot">&lt;-</span> <span class="cf">function</span>(input, output, session) {</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  delta <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="dv">0</span>, <span class="fl">1.5</span>, .<span class="dv">05</span>)</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  pow <span class="ot">&lt;-</span> <span class="fu">reactive</span>(</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">sapply</span>(delta,</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>           <span class="cf">function</span>(x) <span class="fu">power.t.test</span>(input<span class="sc">$</span>N, <span class="at">d =</span> x)<span class="sc">$</span>power</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>           )</span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>                 )</span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  eff <span class="ot">&lt;-</span> <span class="fu">renderText</span>(<span class="fu">power.t.test</span>(input<span class="sc">$</span>N, <span class="at">power =</span> .<span class="dv">8</span>)<span class="sc">$</span>d)</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  output<span class="sc">$</span>plot <span class="ot">&lt;-</span> <span class="fu">renderPlot</span>({</span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plot</span>(delta, <span class="fu">pow</span>(), <span class="at">cex =</span> <span class="fl">1.5</span>, <span class="at">ylab =</span> <span class="st">"power"</span>)</span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">abline</span>(<span class="at">h =</span> .<span class="dv">8</span>, <span class="at">col =</span> <span class="st">"red"</span>, <span class="at">lwd =</span> <span class="fl">2.5</span>, <span class="at">lty =</span> <span class="dv">4</span>)</span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">abline</span>(<span class="at">v =</span> <span class="fu">eff</span>(), <span class="at">col =</span> <span class="st">"blue"</span>, <span class="at">lwd =</span> <span class="fl">2.5</span>, <span class="at">lty =</span> <span class="dv">4</span>)</span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>                           })</span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>  output<span class="sc">$</span>eff <span class="ot">&lt;-</span> <span class="fu">renderText</span>(</span>
-<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    <span class="fu">paste0</span>(<span class="st">"Std. effect with power 80% = "</span>, <span class="fu">eff</span>() )</span>
-<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>                          )</span>
-<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a><span class="fu">shinyApp</span>(ui, server)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-<p>Once we determine the app is working as designed, we are next interested in hosting the app on a (virtual) server to share with our collaborators. There are many ways to accomplish this. Here, in a nutshell, we’ll demonstrate one of the most straightforward and efficient: “spinning” up a server on Amazon Web Service (AWS) and use docker containers to provide shiny and webserver functionalityto provide shiny and webserver functionality.</p>
+<p>Once we determine the app is working as designed, we can move on to hosting the app on a (virtual) server to share with our collaborators. There are many ways to accomplish this. Here we’ll demonstrate, in a nutshell, in our opinion, one of the most straightforward and efficient approaches. That is, we’ll ‘spin’ up a server on Amazon Web Service EC2 and run docker containers to provide R, shiny, and caddy webserver functionality.</p>
 </section>
-<section id="hosting" class="level1">
+<section id="hosting" class="level1 page-columns page-full">
 <h1>Hosting</h1>
-<div class="cell-output-display">
-<p><img src="img/blogdockerizeflow.png" class="img-fluid" width="600"></p>
+<div class="column-body">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="img/blogdockerizeflow.png" class="img-fluid figure-img"></p>
+<p></p><figcaption class="figure-caption"><em>Figure 1</em></figcaption><p></p>
+</figure>
+</div>
 </div>
 <p>Once we have a production ready shiny app available, we’ll want to host it on the internet. To do that we’ll need the following :</p>
 <ol type="1">
@@ -389,7 +374,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div class="cell-output-display">
 <p><img src="img/docker1.jpg" class="img-fluid" width="150"></p>
 </div>
-<p><font size="2"> Photo by <a href="https://unsplash.com/@carrier_lost?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Ian Taylor</a> on <a href="https://unsplash.com/?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Unsplash</a> </font></p>
+<p><font size="1"> Photo by <a href="https://unsplash.com/@carrier_lost?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Ian Taylor</a> on <a href="https://unsplash.com/?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Unsplash</a> </font></p>
 <p>Here is our dockerfile:</p>
 <details>
 <summary>Show the code</summary>
@@ -453,13 +438,13 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a><span class="ex">shinyApp</span><span class="er">(</span><span class="ex">ui,</span> server<span class="kw">)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>The app is designed to be maximally minimal. Using only base R functions, with a minimum of reactive widgets and layout commands to keep it simple while still performing a useful function.</p>
 </section>
-<section id="appendix-2" class="level1">
+<section id="appendix-2" class="level1 page-columns page-full">
 <h1>Appendix-2</h1>
 <p>AWS is a reasonable choice for setting up a small custom server. AWS offers a free set of servers for the first 12 months.</p>
 <p>To start open the EC2 console.</p>
 <div class="sourceCode" id="cb11"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>   <span class="ex">https://aws.amazon.com/console</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<p><img src="img/ec2a.png" class="img-fluid" width="300"></p>
+<div class="column-body">
+<p><img src="img/ec2a.png" class="img-fluid"></p>
 </div>
 <p>Create an account or sign in. Next set up a working environment. Specifically you’ll want to set up four components of the environment:</p>
 <ol type="1">
@@ -537,15 +522,15 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <h2 class="anchored" data-anchor-id="tip-2-add-ubuntu-to-the-docker-group-to-allow-docker-to-run-without-sudo.">Tip 2: Add ubuntu to the docker group to allow docker to run without sudo.</h2>
 </section>
 </section>
-<section id="appendix-x-joe-data-version" class="level1">
+<section id="appendix-x-joe-data-version" class="level1 page-columns page-full">
 <h1>appendix x (joe data version)</h1>
 <p>ok! got my shiny app running. Works great! Now how do I get it up on the web and shared with my client Bob?</p>
 <p>Start by creating a repo for the app on github.</p>
 <ul>
 <li>login to github (screenshot)</li>
 </ul>
-<div class="cell-output-display">
-<p><img src="img/git1.png" class="img-fluid" width="300"></p>
+<div class="column-body">
+<p><img src="img/git1.png" class="img-fluid"></p>
 </div>
 <ul>
 <li>click on <code>new</code> . Then in <code>repository name</code> field enter <code>power1</code>. (Make the</li>
@@ -589,13 +574,13 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div id="quarto-appendix" class="default"><section class="quarto-appendix-contents"><h2 class="anchored quarto-appendix-heading">Reuse</h2><div quarto-reuse="quarto-reuse" class="quarto-appendix-contents"><a rel="license" href="https://creativecommons.org/licenses/by/4.0/">https://creativecommons.org/licenses/by/4.0/</a></div></section><section class="quarto-appendix-contents"><h2 class="anchored quarto-appendix-heading">Citation</h2><div><div class="quarto-appendix-secondary-label">BibTeX citation:</div><pre class="sourceCode code-with-copy quarto-appendix-bibtex"><code class="sourceCode bibtex">@online{(ryy)glennthomas2022,
   author = {Ronald (Ryy) Glenn Thomas},
   editor = {},
-  title = {Bare Bones Process for Securely Hosting {Shiny} Apps Online},
+  title = {Seven Step Process for Securely Hosting {Shiny} Apps Online},
   date = {2022-09-18},
   url = {https://focusonr.org/posts/dockerize},
   langid = {en}
 }
 </code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre><div class="quarto-appendix-secondary-label">For attribution, please cite this work as:</div><div id="ref-(ryy)glennthomas2022" class="csl-entry quarto-appendix-citeas" role="doc-biblioentry">
-Ronald (Ryy) Glenn Thomas. 2022. <span>“Bare Bones Process for Securely
+Ronald (Ryy) Glenn Thomas. 2022. <span>“Seven Step Process for Securely
 Hosting Shiny Apps Online.”</span> September 18, 2022. <a href="https://focusonr.org/posts/dockerize">https://focusonr.org/posts/dockerize</a>.
 </div></div></section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">

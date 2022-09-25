@@ -1,6 +1,7 @@
 ---
-title: "Bare bones process for securely hosting Shiny apps online"
+title: "Seven step  process for securely hosting Shiny apps online"
 description: "This is the first in a series of posts offering suggested strategies for leveraging open source technologies to effectively host data science analysis results online."
+subtitle: "Github, Docker-compose, EC2 version"
 date: "2022-09-18"
 categories: [Docker, Shiny]
 image: "img/rshiny.png"
@@ -23,92 +24,72 @@ opts_chunk$set(warning = F, message = F, echo=F, fig.width=3.2,
 source('~/shr/zz.tools.R')
 options(scipen = 1, digits = 2)
 ```
+:::{.column-body}
+![under construction](img/crane.jpg)
+:::
 
-
+<font size="1"> 
+Photo by <a href="https://unsplash.com/@nathangwaters?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText">Nathan Waters</a> on <a href="https://unsplash.com/s/photos/construction?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText">Unsplash</a>
+</font> 
+  
 
 # Introduction
 
 This is the first in a series of posts offering suggested strategies for
-leveraging open source  technologies to provide straight-forward  solutions to one of
-the central challenges in the practice of data science, i.e. how to effectively
-communicate analysis results to clients and collaborators.  The group of
-technologies (or stack) we'll employ is: linux, R, Shiny, Caddy, git, and
-Docker. We'll make use of two cloud services github and AWS. 
+leveraging open source  technologies to provide straight-forward  solutions to
+one of the central challenges in the practice of data science, i.e. how to
+effectively communicate analysis results to clients and collaborators.  The list
+of open-source technologies (or stack) we'll employ is: linux, R, Shiny, Caddy,
+git, and Docker. We'll make use of two cloud services github and AWS. 
 
 This initial post provides a minimal, proof-of-concept example of how to apply these
-technologies for  hosting of an interactive shiny application.  
+technologies for  hosting  an interactive shiny application.  
 
-We start with a simple, but hopefully useful, stand-alone shiny app and end with
-a secure (encrypted  and authenticated) web site with a custom domain name
-hosting our app.  The approach described here is intentionally minimalist.  
+We start with a very simple, but hopefully still useful, stand-alone shiny app
+on our local workstation and push it into the cloud and end with a secure
+(encrypted  and authenticated) app running on a website with a custom domain
+name.  The approach described here is intentionally minimalist.  
 
 # Methods
 
 To begin, lets assume we're just
 finished developing a  new shiny app, named ``power0`` .
-
-The methods described here apply to any shiny app, but  to provide a concrete example we've
-created our own app. See the code for our ``power0`` shiny app [here] (#appendix-1) in
+(The methods described here apply to any shiny app, but  to provide a concrete example we've
+created our own app). 
+See the code for our ``power0`` shiny app [here] (#appendix-1) in
 appendix 1. 
+
+We can test the app locally by runnning it with the command  (from the ``power0`` directory). 
+
+```sh
+R -e "runApp('power0.R')"
+```
 
 A screenshot of the finished product shows a shiny app with a widget to select the
 sample size and a visualization (2D plot) of the power as a function of the
 standardized effect size: 
 
-```{r out.width="200px"}
-include_graphics("img/shinyapppower0.png")
-```
+:::{.column-body}
+![](img/shinyapppower0.png)
+:::
 
 
 
-The app is discussed further is [appendix 1](#appendix1)
 
-```{r echo=T, eval=F}
-#| code-fold: true
-#| code-summary: "Show the code"
-ui <- fluidPage(
-  titlePanel("Power Calculator for Two Group 
-             Parallel Designs"),
-  sliderInput("N", "Total Sample Size:", 
-              min = 0, max = 300, value = 100),
-  plotOutput("plot"),
-  verbatimTextOutput("eff")
-)
-
-server <- function(input, output, session) {
-  delta <- seq(0, 1.5, .05)
-  pow <- reactive(
-    sapply(delta,
-           function(x) power.t.test(input$N, d = x)$power
-           )
-                 )
-  eff <- renderText(power.t.test(input$N, power = .8)$d)
-  output$plot <- renderPlot({
-    plot(delta, pow(), cex = 1.5, ylab = "power")
-    abline(h = .8, col = "red", lwd = 2.5, lty = 4)
-    abline(v = eff(), col = "blue", lwd = 2.5, lty = 4)
-                           })
-  output$eff <- renderText(
-    paste0("Std. effect with power 80% = ", eff() )
-                          )
-}
-shinyApp(ui, server)
-
-``` 
-
-Once we determine the app is working as designed, we are next interested in
+Once we determine the app is working as designed, we can move on to
 hosting the app on a (virtual) server to share with our collaborators. There are
-many ways to accomplish this. Here, in a nutshell,  we'll demonstrate one of the
-most straightforward and efficient: "spinning" up a server on Amazon Web Service
-(AWS) and use docker containers to provide shiny and webserver functionalityto
-provide shiny and webserver functionality. 
+many ways to accomplish this. Here  we'll demonstrate, in a nutshell, in our
+opinion, one of the
+most straightforward and efficient approaches. That is, we'll 'spin' up a server
+on Amazon Web Service EC2
+and run docker containers to provide R, shiny, and caddy webserver functionality. 
 
 # Hosting
 
-```{r out.width = "600px"}
-include_graphics("img/blogdockerizeflow.png")
+:::{.column-body}
+![*Figure 1*](img/blogdockerizeflow.png)
+:::
 
-```
 
 Once we have a production ready  shiny app available, we'll want to
 host it on the internet. To do that we'll need the following :
@@ -225,10 +206,10 @@ The second file is the dockerfile. In its simplest form it instructs Docker to b
 a container based on a Rocker/Shiny image then copy in the app.R code and
 launch shiny on (default) port 3838. 
 
-```{r out.width = "150px"}
-include_graphics("img/docker1.jpg")
-```
-<font size="2"> 
+:::{.column-body}
+![](img/docker1.png)
+:::
+<font size="1"> 
 Photo by <a href="https://unsplash.com/@carrier_lost?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText">Ian Taylor</a> on <a href="https://unsplash.com/?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText">Unsplash</a>
 </font> 
 
@@ -345,10 +326,9 @@ To start open the EC2 console.
    https://aws.amazon.com/console
 ```
 
-```{r out.width = "300px"}
-include_graphics("img/ec2a.png")
-
-```
+:::{.column-body}
+![](img/ec2a.png)
+:::
 
 Create an account or sign in. Next set up a working environment. Specifically
 you'll want to set up four components of the environment:
@@ -470,11 +450,9 @@ Start by creating a repo for the app on github.
 
 * login to github (screenshot) 
 
-
-```{r out.width = "300px"}
-include_graphics("img/git1.png")
-
-```
+:::{.column-body}
+![](img/git1.png)
+:::
 
 
 *  click  on `new` . Then in `repository name` field enter `power1`. (Make the
