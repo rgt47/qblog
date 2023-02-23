@@ -1,0 +1,59 @@
+
+# appendix x (joe data version)
+
+ok! got my shiny app running. Works great! Now how do I get it up on the
+web and shared with my client Bob?
+
+Start by creating a repo for the app on github.
+
+-   login to github (screenshot)
+
+::: column-body
+![](img/git1.png)
+:::
+
+-   click on `new` . Then in `repository name` field enter `power1`.
+    (Make the
+-   repo private, we only want to share with Bob at this point).
+-   create repo. Click `Create repository` green button at the bottom of
+    the page.
+-   back in a terminal window on your laptop: clone the repo
+
+``` sh
+git clone https://github.com/rgt47/power1.git
+```
+
+-   Create a Dockerfile to dockerize the shiny app.
+
+The simplist Dockerfile grabs a pre-built image (say rocker/shiny) from
+Dockerhub and copies the shiny app code (app.R) to the default location
+on the docker image, and then runs shiny-server. Here's the file. Copy
+it into the working directory and name it `Dockerfile`.
+
+Here is our dockerfile:
+
+```{r echo=T, eval=F}
+FROM rocker/shiny:4.2.0
+COPY app.R /srv/shiny-server/
+USER shiny
+CMD ["/usr/bin/shiny-server"]
+```
+
+-   Install Docker on your laptop. Instructions here:
+    https://docs.docker.com/engine/install/
+-   Bulid and run the docker image to test it locally
+    -   docker build -t app4 .
+    -   docker run --rm -p 3838:3838 app4
+-   copy `power1.R` and `Dockerfile` from working directory `app4` to
+    the `power1` repo directory.
+
+``` sh
+cd ~/prj/app4/app.R ~/prj/app4/Dockerfile ~/prj/power1
+```
+
+-   from inside the `power1` directory, update remote repository
+    -   git add .
+    -   git commit -m 'add shiny code'
+    -   git push
+-   All good? Ok, now we need a (virtual) server to host the app. Let
+    use Amazon AWS.
