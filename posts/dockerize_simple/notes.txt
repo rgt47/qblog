@@ -1,0 +1,151 @@
+2022-09-22
+draft is looking pretty good.
+
+now I need to read through and edit for smoothness and familiarity.
+then read each of peters blog posts and apply contemporary terminology to my
+post. 
+
+2023-03-11
+status: power1 not working on rgtlab.org. 
+consider alternate environments: parallels, macos
+
+step 1. read blog draft carefully. 
+step 2. what logs or diagnostics are available?
+step 3. follow "peter S" blog post for docker compose on rgtlab.org.
+step 4. follow "peter S" blog post for docker compose on parallels.
+
+2023-03-13
+ok. I'm having trouble getting the 'compose' version working. To try to make
+sense of things I've spun off a parallel directory,
+qblog/posts/dockerize_simple. The goal here is to start over without
+docker-compose. Rather use Docker for R/Shiny and install Caddy directly on
+rgtlab.org. 
+Step one: mimic the blog post: 
+https://hosting.analythium.io/host-shiny-apps-with-docker/
+Result: Works. 
+
+Step 2. Do it again, but use 'snap' install for Docker. 
+
+Step 3. Understand the 'role' of port 9000. 
+Understand the role of reverse proxy.
+Understand firewall on AWS. 
+
+
+
+
+
+2023-03-14
+Got it working!
+Here are the steps. first just dump all the info in here, then clean it up for
+blog post. 
+
+step 1
+create directory for Shiny app
+power1_app
+in power1_app create a directory for the code: power1_shiny
+> mkdir -p ~/prj/power1_app/power1_shiny/
+
+in power_shiny create app.R a shiny app as follows:
+> cd ~/prj/power1_app/power1_shiny/
+> cat app.R
+ui <- fluidPage(
+titlePanel("Power Calculator for Two Group Parallel Designs"),
+sliderInput("N", "Total Sample Size:", min = 0, max = 300, value = 100),
+plotOutput("plot"),
+verbatimTextOutput("eff"))
+
+server <- function(input, output, session) {
+  delta = seq(0, 1.5,.05)
+  pow = reactive(sapply(delta, function(x) power.t.test(input$N, d=x)$power ))
+  eff =  renderText(power.t.test(input$N, power=.8)$d)
+  output$plot <- renderPlot({
+  plot(delta, pow(), cex=1.5, ylab="power")
+  abline(h = .8,  col = "red", lwd =2.5, lty = 4)
+  abline(v = eff(), col = "blue",lwd =2.5, lty = 4)})  
+  output$eff <- renderText(
+    paste0("Std. effect detectable with power 80% = ", eff()) )
+}
+shinyApp(ui, server)
+
+test the Shiny app from the power1_app directory
+> R -e "library(shiny); runApp('app.R', launch=T)"
+
+create a Dockerfile to build the docker container, like this:
+> cat Dockerfile
+FROM rocker/shiny:4.2.0
+COPY /power1_shiny/* /srv/shiny-server/
+CMD ["/usr/bin/shiny-server"]
+
+create a Caddyfile
+> cat Caddyfile
+rgtlab.org {
+    root * /var/www/html
+    handle_path /power1_shiny/* {
+            reverse_proxy 0.0.0.0:3838
+    }
+    file_server
+}
+
+create a file index.html 
+> cat index.html
+<!DOCTYPE html>
+<html>
+  <body>
+    <h1>Power1 App</h1>
+    <ul>
+      <li><a href="./power1_shiny/">Hello app</a></li>
+    </ul>
+  </body>
+</html>
+
+copy power1_app directory to rgtlab.org 
+> scp -i "~/.ssh/power1ssh.pem" -r ~/prj/power1_app/  ubuntu@rgtlab.org:~
+
+log into rgtlab.org
+> ssh rgtlab.org
+install Docker and Caddy
+(do the 'long' way with sudo apt until I can figure how to get snap or homebrew
+working)
+>> sudo apt install docker.io
+>> sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
+>> curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+>> curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+>> sudo apt update
+>> sudo apt install caddy
+
+build the Docker container on rgtlab.org
+>> cd power1_app
+>> docker build -t power1_image .
+create container and run
+>> docker run -d --name=power1_shiny -p 3838:3838 --restart=always power1_image
+
+
+copy Caddyfile to location caddy expects
+ in /etc/caddy directory
+>> sudo cp ./Caddyfile /etc/caddy/Caddyfile 
+
+copy index.html to location caddy expects
+ in /var/www/html directory
+>> cp  ./index.html /var/www/html/index.html 
+
+restart Caddy
+>> sudo systemctl reload caddy
+
+App launch page is now available at https://rgtlab.org
+
+
+Bonus: Add basic authentication for bob/utter to the Caddyfile:
+
+rgtlab.org {
+basicauth * {
+		bob JDJhJDE0JElCQmRGaTA0ajY3bkZTLjRiWUZ4enVoZnVSQzVXVGVUMHlVcXJTaTRGYmpRQVFHLnYzN0tx
+	}
+    root * /var/www/html
+    handle_path /power1_shiny/* {
+            reverse_proxy 0.0.0.0:3838
+    }
+    file_server
+}
+
+Restart Caddy.
+>> sudo systemctl reload caddy

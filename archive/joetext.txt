@@ -1,0 +1,177 @@
+
+# appendix x (joe data version)
+
+ok! got my shiny app running. Works great! Now how do I get it up on the
+web and shared with my client Bob?
+
+Start by creating a repo for the app on github.
+
+-   login to github (screenshot) as user `joe47`.
+
+::: column-body
+![](img/git1.png)
+:::
+
+-   click on `new` in left panel. Then in  the `repository name` field enter `power1`.
+    (Make the
+-   repo private, we only want to share with Bob at this point).
+-   create repo. Click `Create repository` green button at the bottom of
+    the page.
+-   back in a terminal window on your laptop: clone the repo
+
+``` sh
+git clone https://github.com/joe47/power1.git
+```
+to create `~/prj/power1` where `prj` is the directory you maintain your Shiny
+code for distribution. 
+
+-  change directory into the power1 repo directory. 
+- copy in the `power1.R` file and rename it to app.R
+- Run the Shiny code to check
+
+``` sh
+cd power1
+cp ~/prj.develop/power1.R app.R
+R -e "library(shiny); runApp('app.R', launch=T)"
+```
+
+-   Install Docker on your laptop. Instructions here:
+    [here](https://docs.docker.com/engine/install/)
+-   Create a Dockerfile to dockerize the shiny app.
+
+The simplist Dockerfile grabs a pre-built image (say rocker/shiny) from
+Dockerhub and copies the shiny app code (app.R) to the default location
+on the docker image, and then runs shiny-server. Here's the file. Copy
+it into the working directory and name it `Dockerfile`.
+
+Here is our dockerfile:
+
+```{r echo=T, eval=F}
+FROM rocker/shiny:4.2.0
+COPY app.R /srv/shiny-server/
+USER shiny
+CMD ["/usr/bin/shiny-server"]
+```
+
+``` sh
+```
+-   Bulid and run the docker image to test it locally
+
+
+``` sh
+       docker build -t power1 .
+       docker run --rm -p 3838:3838 power1
+```
+
+-   update remote repository with the new code;w
+
+``` sh
+       git add .
+       git commit -m 'add shiny code'
+       git push
+```
+
+-   All good? Ok, now we need a (virtual) server to host the app. Let
+    use Amazon AWS.
+
+- Open the AWS portal and navigate to EC2 service. 
+
+- Name the server. Suggest `power1server`. 
+- Select a server (or instance). From `Launch Instance` panel.   
+Suggest `Ubuntu 22.04 LTS` as a  and stable platform. 
+- Select a type. Types are combinations of cpus, storage capacity, memory, and
+  network speed. Suggest `t2-micro` as a suficiently capacious and relatively
+  inexpensive (Free tier) option. 
+
+- Define a `Key pair` to use or if you don't have one,  you can select 
+`Create Key Pair` in EC2. Give the pair a name, say
+`power1ssh`, and a pair of keys will be created and the private key
+`power1ssh.pem` will be downloaded to you local machine. In my case to
+the default `~/Downloads` directory. Move the file to the `~/.ssh` directory. 
+Change the access permissions: `sudo chmod 600 power1ssh.pem`.
+- Log into server with `ssh -i "~/.ssh/power1ssh.pem" ubuntu@rgtlab.org`
+- update software on server: `sudo apt-get update`
+- Create a firewall using `Network settings` pane- update software on server:
+  `sudo apt-get update`l. Choose `Create security
+  group` and select `Allow SSH traffic` and `Allow HTTPS traffic`. 
+
+
+The default name will be something like `launch-wizard-6`. 
+
+
+- Configure  30 GiB of gp2 (general purpose SSD) storage.
+
+Now Launch the Instance.
+
+We still need a static IP address and a domain name.
+- Navigate back to the EC2 page. 
+- Select `Elastic IPs` from the `Network & Security` section
+Select `Allocate Elastic IP address` button in upper right of page. 
+Name it `power1`. 
+- check box for `power1`, and choose  `Associate IP address` from the `Actions`
+  drop down menu. Choose the `power1` server from the `Instance` drop down list.
+
+- Open Route 53 interface. Select `Hosted zones`. Select `Create hosted zone`.
+  Assign a domain name e.g. `power1app`. 
+- Click on the `power1app` link that is created. Select the checkbox for the
+  line with Type=A. In the right hand panel select `edit record`. Enter the
+  value of the Elastic IP address obtained above. 
+
+
+- install docker
+`sudo snap install docker`
+- clone github repo joe47/power1. Note: You'll need to authenticate to github. 
+``` sh
+git clone https://github.com/joe47/power1.git
+```
+
+- back on laptop...
+- add `Caddyfile` and `docker-compose.yml` files to `power1` repo.
+`Caddyfile`
+```sh
+
+rgtlab.org {
+basicauth * {
+		bob JDJhJDE0JElCQmRGaTA0ajY3bkZTLjRiWUZ4enVoZnVSQzVXVGVUMHlVcXJTaTRGYmpRQVFHLnYzN0tx
+	}
+	handle_path /power1/* {
+		reverse_proxy power1:3838
+	}
+}
+```
+
+`docker-compose.yml`
+```sh
+
+version: "3.7"
+
+services:
+  power1:
+    build: .
+  caddy:
+    image: caddy:2.3.0-alpine
+    ports:
+      - "443:443"
+    volumes:
+      - $PWD/Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+volumes:
+    caddy_data:
+
+```
+
+- update (push to) github repo. 
+``` sh
+git add *
+git commit -am "adding Caddyfile and docker-compose.yml"
+git push
+```
+- back on server
+
+Lastly, cd to `power1` directory and run
+
+``` sh
+git pull
+sudo docker-compose up -d
+```
+
