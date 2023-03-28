@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.2.475">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ronald (Ryy) Glenn Thomas">
+<meta name="description" content="Detailed steps for setting up a lightweight server on AWS.">
+
+<title>Focus on R: a new qblog - Set up a virtual server on AWS (in anticipation of hosting Shiny apps)</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1.6em;
+  vertical-align: middle;
+}
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit"
+  }
+}</script>
+<style>
+    .quarto-title-block .quarto-title-banner {
+      background: #eeeeee;
+    }
+    </style>
+
+
+<link rel="stylesheet" href="../../styles.css">
+<meta property="og:title" content="Focus on R: a new qblog - Set up a virtual server on AWS (in anticipation of hosting Shiny apps)">
+<meta property="og:description" content="Detailed steps for setting up a lightweight server on AWS.">
+<meta property="og:image" content="https://jolly-cobbler-da7b3e.netlify.app/posts/setupaws/img/rshiny.png">
+<meta property="og:site-name" content="Focus on R: a new qblog">
+<meta property="og:image:height" content="482">
+<meta property="og:image:width" content="1200">
+<meta name="twitter:title" content="Focus on R: a new qblog - Set up a virtual server on AWS (in anticipation of hosting Shiny apps)">
+<meta name="twitter:description" content="Detailed steps for setting up a lightweight server on AWS.">
+<meta name="twitter:image" content="https://jolly-cobbler-da7b3e.netlify.app/posts/setupaws/img/rshiny.png">
+<meta name="twitter:creator" content="@rgt47">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image-height" content="482">
+<meta name="twitter:image-width" content="1200">
+</head>
+
+<body class="floating nav-fixed slimcontent">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-dark ">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container">
+    <a class="navbar-brand" href="../../index.html">
+    <span class="navbar-title">Focus on R: a new qblog</span>
+    </a>
+  </div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../about.html">
+ <span class="menu-text">About</span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47"><i class="bi bi-twitter" role="img" aria-label="twitter">
+</i> 
+ <span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47"><i class="bi bi-github" role="img" aria-label="github">
+</i> 
+ <span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://rgtlab.org"><i class="bi bi-person-circle" role="img" aria-label="website">
+</i> 
+ <span class="menu-text"></span></a>
+  </li>  
+</ul>
+              <div id="quarto-search" class="" title="Search"></div>
+          </div> <!-- /navcollapse -->
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<header id="title-block-header" class="quarto-title-block default toc-left page-columns page-full">
+  <div class="quarto-title-banner page-columns page-full">
+    <div class="quarto-title column-body">
+      <h1 class="title">Set up a virtual server on AWS (in anticipation of hosting Shiny apps)</h1>
+                  <div>
+        <div class="description">
+          Detailed steps for setting up a lightweight server on AWS.
+        </div>
+      </div>
+                          <div class="quarto-categories">
+                <div class="quarto-category">AWS</div>
+              </div>
+                  </div>
+  </div>
+    
+  <div class="quarto-title-meta-author">
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-heading">Affiliation</div>
+    
+      <div class="quarto-title-meta-contents">
+      <a href="https://rgtlab.org">Ronald (Ryy) Glenn Thomas</a> <a href="https://orcid.org/0000-0003-1686-4965" class="quarto-title-author-orcid"> <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA2ZpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDo1N0NEMjA4MDI1MjA2ODExOTk0QzkzNTEzRjZEQTg1NyIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDozM0NDOEJGNEZGNTcxMUUxODdBOEVCODg2RjdCQ0QwOSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDozM0NDOEJGM0ZGNTcxMUUxODdBOEVCODg2RjdCQ0QwOSIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ1M1IE1hY2ludG9zaCI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOkZDN0YxMTc0MDcyMDY4MTE5NUZFRDc5MUM2MUUwNEREIiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOjU3Q0QyMDgwMjUyMDY4MTE5OTRDOTM1MTNGNkRBODU3Ii8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+84NovQAAAR1JREFUeNpiZEADy85ZJgCpeCB2QJM6AMQLo4yOL0AWZETSqACk1gOxAQN+cAGIA4EGPQBxmJA0nwdpjjQ8xqArmczw5tMHXAaALDgP1QMxAGqzAAPxQACqh4ER6uf5MBlkm0X4EGayMfMw/Pr7Bd2gRBZogMFBrv01hisv5jLsv9nLAPIOMnjy8RDDyYctyAbFM2EJbRQw+aAWw/LzVgx7b+cwCHKqMhjJFCBLOzAR6+lXX84xnHjYyqAo5IUizkRCwIENQQckGSDGY4TVgAPEaraQr2a4/24bSuoExcJCfAEJihXkWDj3ZAKy9EJGaEo8T0QSxkjSwORsCAuDQCD+QILmD1A9kECEZgxDaEZhICIzGcIyEyOl2RkgwAAhkmC+eAm0TAAAAABJRU5ErkJggg=="></a>
+    </div>
+      <div class="quarto-title-meta-contents">
+          <p class="affiliation">
+              <a href="https://ucsd.edu">
+              UCSD
+              </a>
+            </p>
+        </div>
+      </div>
+
+  <div class="quarto-title-meta">
+
+        
+    
+      
+    </div>
+    
+  
+  </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction">Introduction</a></li>
+  <li><a href="#hosting" id="toc-hosting" class="nav-link" data-scroll-target="#hosting">Hosting</a></li>
+  <li><a href="#select-a-hosting-service" id="toc-select-a-hosting-service" class="nav-link" data-scroll-target="#select-a-hosting-service">Select a hosting service</a></li>
+  <li><a href="#ssh-key-pair" id="toc-ssh-key-pair" class="nav-link" data-scroll-target="#ssh-key-pair">Ssh key pair</a></li>
+  <li><a href="#firewall" id="toc-firewall" class="nav-link" data-scroll-target="#firewall">firewall</a></li>
+  <li><a href="#set-up-static-ip-address" id="toc-set-up-static-ip-address" class="nav-link" data-scroll-target="#set-up-static-ip-address">Set up static IP address</a></li>
+  <li><a href="#domain-name" id="toc-domain-name" class="nav-link" data-scroll-target="#domain-name">Domain Name</a></li>
+  <li><a href="#select-and-launch-instance" id="toc-select-and-launch-instance" class="nav-link" data-scroll-target="#select-and-launch-instance">Select and launch instance</a></li>
+  <li><a href="#access-instance" id="toc-access-instance" class="nav-link" data-scroll-target="#access-instance">Access instance</a></li>
+  <li><a href="#appendix-tips-and-tricks" id="toc-appendix-tips-and-tricks" class="nav-link" data-scroll-target="#appendix-tips-and-tricks">Appendix: Tips and Tricks</a></li>
+  </ul>
+</nav>
+</nav>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+    </div>
+<!-- main -->
+<main class="content quarto-banner-title-block page-columns page-full" id="quarto-document-content">
+
+
+
+
+
+<div class="no-row-height column-margin column-container"><div class="">
+<p><img src="img/crane.jpg" class="img-fluid" alt="under construction"> <font size="1"> Photo by <a href="https://unsplash.com/@nathangwaters?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Nathan Waters</a> on <a href="https://unsplash.com/s/photos/construction?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Unsplash</a> </font></p>
+</div></div><section id="introduction" class="level1">
+<h1>Introduction</h1>
+<p>Once we have a working shiny app, we can move on to the task of hosting the app on a (virtual) server to share with our collaborators. There are many ways to accomplish this. In this post, we’ll describe how to ‘spin’ up a server on Amazon Web Service EC2, and in the next post show how, in just a few steps, through the application of Docker, R, Shiny, and Caddy (webserver) functionality we can have a fully functional and secure web app to share with colleagues.</p>
+</section>
+<section id="hosting" class="level1 page-columns page-full">
+<h1>Hosting</h1>
+
+<div class="no-row-height column-margin column-container"><div class="">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="img/blogdockerizeflow.png" class="img-fluid figure-img"></p>
+<p></p><figcaption class="figure-caption"><em>Data flow </em></figcaption><p></p>
+</figure>
+</div>
+</div></div><p>Figure 3 illustrates the tools we’ll use and the flow of program and configuration files. In order to host a shiny app, say <code>power1_shiny</code>, online we’ll need to complete the following tasks: 1. create a virtual server (connected via ssh) with a firewall 2. obtain a static IP address (to identify the server online) 3. obtain a domain name (name for IP address) 4. install and configure a webserver (tool to interact with https protocol requests and respond) 5. obtain and install an SSL certificate (to allow encrypted communication) 6. setup an authentication method (password protection) 7. configure a reverse proxy method (translate https (port 443) requests to Shiny (port 3838)</p>
+<p>In this post we’ll address the first three of these. Tasks four through seven will be accomplished using docker-compose and described in the next post.</p>
+<p>At first glance these 7 requirements can appear daunting, but on closer inspection all can be met with relative ease and minimal cost ( using a cloud-hosting service, e.g.&nbsp;Amazon’s EC2 or Digital Ocean, and a “leased” domain name from, e.g.&nbsp;GoDaddy, or Amazon’s Route 53) or at no cost( if you have your own server with IP address, and domain name)</p>
+</section>
+<section id="select-a-hosting-service" class="level1 page-columns page-full">
+<h1>Select a hosting service</h1>
+<p>ok! got my shiny app running. Works great! Now how do I get it up on the web and shared with my client?</p>
+<p>There are a number of cloud based server options to choose from: Microsoft Azure, Oracle, Google Cloud, Amazon AWS EC2, Digital Ocean to name a few. Each has their own approach to setting up a custom virtual server. Several have free or low-cost service tiers available.</p>
+<p>An overview of the process with EC2 follows.</p>
+<p>AWS is a reasonable choice for setting up a small custom server.</p>
+<p>To start open the EC2 console.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>   <span class="ex">https://aws.amazon.com/console</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Choose regional service. For me its “N. California”.</p>
+
+<div class="no-row-height column-margin column-container"><div class="">
+<p><img src="img/aws_dash.png" class="img-fluid"></p>
+</div></div><p>Create an account or sign in and navigate to the EC2 dashboard.</p>
+<p>Along with selecting a server you’ll need to set up a working environment. This environment consists of four main components:</p>
+<ol type="1">
+<li>ssh key-pair to allow you to remotely and securely login to the virtual server.</li>
+<li>A firewall to restrict access to only secure connections.</li>
+<li>A static IP address. This is required for maintaining the link between the domain name and the server when rebooting. (The default is for the instance/server to be assigned a new IP each time its rebooted.)</li>
+</ol>
+<p>and</p>
+<ol start="4" type="1">
+<li>A domain name, say rgtlab.org. A domain name is not required but will facilitate collaborator access by not needing to use the IP address directly.</li>
+</ol>
+<p>The host host setup process is a simpler if you set up the working environment first.</p>
+</section>
+<section id="ssh-key-pair" class="level1">
+<h1>Ssh key pair</h1>
+<p>The first time you create an AWS account you need to exchange an ssh (secure shell) key pair with AWS. This will allow you to login remotely to any server you launch. You can generate a ssh key pair locally on you workstation and upload the public key to EC2. To do this create a directory to hold the keys. e.g.&nbsp;<code>~/.ssh</code>. From inside <code>~/.ssh</code> directory you can generate the keys with the command</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh-keygen</span> <span class="at">-m</span> PEM</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>In the dialog that ensues name the key prefix something like <code>power1_appssh-rsa</code>.</p>
+<p>Back in the browser on EC2 select <code>security/keys</code>, A dialog starts and asks for the location of the public key. Browse to the <code>~/.ssh</code> directory on your workstation and import the public key <code>power1_appssh-rsa.pub</code>.</p>
+<p>Alternatively, you can select <code>Create Key Pair</code> in EC2. Give the pair a name, say <code>power1_appssh</code>, and a pair of keys will be created and the private key <code>power1_appssh.pem</code> will be downloaded to you local machine. In my case to the default <code>~/Downloads</code> directory. Move the file to the <code>~/.ssh</code> directory. Change the access permissions: <code>sudo chmod 600 power1ssh.pem</code>. - update software on server: <code>sudo apt-get update</code></p>
+</section>
+<section id="firewall" class="level1">
+<h1>firewall</h1>
+<ol start="6" type="1">
+<li>Add security group, e.g.&nbsp;‘power1.firewall’ allowing 22 (ssh), and 443 (https).</li>
+</ol>
+<ul>
+<li>Create a firewall using <code>Network settings</code> pane Choose <code>Create security   group</code> and select <code>Allow SSH traffic</code> and <code>Allow HTTPS traffic</code>.</li>
+</ul>
+<p>The default name for the firewall will be something like <code>launch-wizard-6</code>.</p>
+</section>
+<section id="set-up-static-ip-address" class="level1">
+<h1>Set up static IP address</h1>
+<p>Use “elastic IP” to get a static IP that can be assigned to the server. Navigate to Network and Security again and select Allocate Elastic IP. An IP will be assigned from the EC2 pool of IPv4 IP addresses. (there is a fee for use of the static IP).</p>
+</section>
+<section id="domain-name" class="level1 page-columns page-full">
+<h1>Domain Name</h1>
+<p>To obtain a dedicated domain name go to godaddy.com or Amazon route 53 to select a domain name and associate it with your Elastic IP.</p>
+<p>Once a domain name is aquired, eg rgtlab.org, you want to associate it with your static IP address. To associate domain name rgtlab.org with elastic IP do as follows.</p>
+<p>in Route 53:</p>
+<ul>
+<li>click on ‘hosted zones’ in side panel</li>
+<li>click on rgtlab.org in center panel</li>
+<li>click on checkbox for rgtlab.org type=A line</li>
+<li>then click on edit record in right panel</li>
+<li>change ip address to the Elastic IP (e.g.&nbsp;13.57.139.31).</li>
+</ul>
+
+<div class="no-row-height column-margin column-container"><div class="">
+<p><img src="img/ec2a.png" class="img-fluid"></p>
+</div></div></section>
+<section id="select-and-launch-instance" class="level1">
+<h1>Select and launch instance</h1>
+<ol start="2" type="1">
+<li>From “Quick Start” in the EC2 dashboard click <code>Ubuntu</code> button.</li>
+</ol>
+<ul>
+<li>Name the server, say power1</li>
+</ul>
+<ol start="3" type="1">
+<li><p>Next choose an instance <strong>type</strong>, e.g.&nbsp;“t2-micro”. Different instance types are mixtures of size, processors, memory, instance storage capacity, network performance.</p></li>
+<li><p>click “Next: Configure Instance Details”</p></li>
+<li><p>choose a Key pair (use power1.rsa from your environment) .</p></li>
+<li><p>Add security group, e.g.&nbsp;‘power1.firewall’ from your environment.</p></li>
+<li><p>choose 30 GB of EBS General Purpose (SSD) or Magnetic storage</p></li>
+<li><p>click Launch Instance</p></li>
+</ol>
+<ul>
+<li>Configure 30 GiB of gp2 (general purpose SSD) storage. Define the size and type of disc storage.</li>
+</ul>
+<p>Now Launch the Instance.</p>
+<p>We still need a static IP address and a domain name.</p>
+<ul>
+<li>Navigate back to the EC2 page.</li>
+<li>Select <code>Elastic IPs</code> from the <code>Network &amp; Security</code> section.</li>
+<li>check box for <code>power1</code>, and choose <code>Associate IP address</code> from the <code>Actions</code> drop down menu. Choose the <code>power1server</code> server from the <code>Instance</code> drop down list.</li>
+</ul>
+<p>Select Domain Name</p>
+</section>
+<section id="access-instance" class="level1">
+<h1>Access instance</h1>
+<p>On your laptop log into server with</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> <span class="at">-i</span> <span class="st">"~/.ssh/power1ssh.pem"</span> ubuntu@power1app.org</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="appendix-tips-and-tricks" class="level1">
+<h1>Appendix: Tips and Tricks</h1>
+<div class="callout-tip callout callout-style-default callout-captioned">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-caption-container flex-fill">
+Tip 1.
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>For convenience, construct a <code>config</code> file in <code>~/.ssh</code> as:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">Host</span> ec2</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">HostName</span> 13.57.139.31 <span class="co"># static IP</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="ex">User</span> ubuntu <span class="co"># default user on ubuntu server</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="ex">Port</span> 22  <span class="co"># the default port ssh uses</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="ex">IdentityFile</span> ~/Downloads/power1.rsa</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>then you can ssh into the new server with</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sh</span><span class="op">&gt;</span> ssh ec2</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</div>
+<p>Open the Amazon EC2 console at <a href="https://console.aws.amazon.com/ec2/" class="uri">https://console.aws.amazon.com/ec2/</a></p>
+<p>From the top navigation bar, select a Region to create an instance in. For me its “N. California”.</p>
+<p>Create an account or sign in and navigate to the EC2 dashboard.</p>
+<p>In the left side panel select <strong>Key Pairs</strong> (under Network and Security).</p>
+<p>At the top right select the <strong>Create key pair</strong> button. A <strong>Key Pair</strong> form will open.</p>
+<p>Give the key pair a name. Something like <code>power1_appssh</code>. Select a key pair type, suggest <code>RSA</code>. Select a <strong>Private key file format</strong>, suggest <code>.pem</code></p>
+<p>Below the form select the <strong>Create key pair</strong> button. A pair of keys will be created and the private key <code>power1_appssh.pem</code> will be downloaded to you local machine. In my case to the default <code>~/Downloads</code> directory.</p>
+<p>Move the file to the <code>~/.ssh</code> directory: <code>mv ~/Downloads/power1_appssh.pem ~/.ssh</code></p>
+<p>Change the access permissions: <code>sudo chmod 600 power1ssh.pem</code> to be more restrictive.</p>
+<p>** REWRITE TO HERE…. 2023-03-27</p>
+<p>In the navigation pane, choose <strong>Instances</strong>.</p>
+<p>Select your instance and, in bottom half of the screen, choose the Security tab. Security groups lists the security groups that are associated with the instance. Inbound rules displays a list of the inbound rules that are in effect for the instance.</p>
+<p>For the security group to which you’ll add the new rule, choose the security group ID link to open the security group.</p>
+<p>On the Inbound rules tab, choose Edit inbound rules.</p>
+<p>On the Edit inbound rules page, do the following:</p>
+
+
+</section>
+
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents"><h2 class="anchored quarto-appendix-heading">Reuse</h2><div quarto-reuse="quarto-reuse" class="quarto-appendix-contents"><a rel="license" href="https://creativecommons.org/licenses/by/4.0/">https://creativecommons.org/licenses/by/4.0/</a></div></section><section class="quarto-appendix-contents"><h2 class="anchored quarto-appendix-heading">Citation</h2><div><div class="quarto-appendix-secondary-label">BibTeX citation:</div><pre class="sourceCode code-with-copy quarto-appendix-bibtex"><code class="sourceCode bibtex">@online{(ryy)glennthomas,
+  author = {Ronald (Ryy) Glenn Thomas},
+  title = {{Set} up a Virtual Server on {AWS} (in Anticipation of
+    Hosting {Shiny} Apps)},
+  url = {https://jolly-cobbler-da7b3e.netlify.app/posts/setupaws},
+  langid = {en}
+}
+</code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre><div class="quarto-appendix-secondary-label">For attribution, please cite this work as:</div><div id="ref-(ryy)glennthomas" class="csl-entry quarto-appendix-citeas" role="doc-biblioentry">
+Ronald (Ryy) Glenn Thomas. n.d.<span>“Set up a Virtual Server on AWS (in
+Anticipation of Hosting Shiny Apps) .”</span> <a href="https://jolly-cobbler-da7b3e.netlify.app/posts/setupaws">https://jolly-cobbler-da7b3e.netlify.app/posts/setupaws</a>.
+</div></div></section></div></main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    target: function(trigger) {
+      return trigger.previousElementSibling;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>
