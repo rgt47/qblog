@@ -27,24 +27,23 @@ Waters</a> on
 
 # Introduction
 
-Once we have a working shiny  app, we can move on to the task of hosting the app
+Ok! got my shiny app running. Works great! Now how do I get it up on the
+web and shared with my client?
+
+Assuming we have a working shiny app, we often next need to address the task of hosting the app
 on a (virtual) server to share with our collaborators. There are many ways to
-accomplish this.  In this post, we'll describe how to  'spin' up a server on
-Amazon Web Service EC2,  and in the next post show how, in just a few steps,
+accomplish this.  In this post, we'll describe how to  'spin up' a server on
+Amazon Web Service EC2.  In a future post we'll show how, in just a few steps,
 through the application of Docker, R, Shiny, and Caddy (webserver) functionality
-we can have a fully functional and secure web app to share with colleagues.
+we can have a fully functional and secure app available on the web to share with colleagues.
 
 # Hosting
 
-::: column-margin
-![*Data flow *](img/blogdockerizeflow.png)
-:::
-
-Figure 3 illustrates the tools we'll use and the flow of program and
-configuration files. In order to host a shiny app, say `power1_shiny`, online  we'll need to complete the
+ In order to host a shiny app, say `power1_shiny`, online  we'll need to complete the
 following tasks:
+
 1.  create a virtual server (connected via ssh) with a firewall
-2. obtain a static IP address (to identify the server online)
+2.  obtain a static IP address (to identify the server online)
 3.  obtain a domain name (name for IP address)
 4.  install and configure a webserver (tool to interact with https protocol requests and
     respond)
@@ -55,131 +54,128 @@ following tasks:
 
 In this
 post we'll address the first three of these. Tasks four through seven will be
-accomplished using docker-compose and described in the next post. 
+accomplished using docker-compose and Caddy, as described in the next post. 
 
 At first glance these 7 requirements can appear daunting, but on closer
 inspection all can be met with relative ease and minimal  cost ( using a
 cloud-hosting service, e.g. Amazon's EC2 or Digital Ocean, and a
 "leased" domain name from, e.g. GoDaddy, or Amazon's Route 53)
-or at no cost( if you have your own  server with IP address, and domain name)
+or at no cost if you have your own  server with IP address, and domain name.
 
-# Select a hosting service 
+## Select a hosting service 
 
-ok! got my shiny app running. Works great! Now how do I get it up on the
-web and shared with my client?
 
 There are a number of cloud based server options to choose from: Microsoft Azure,
 Oracle, Google Cloud, Amazon AWS EC2, Digital Ocean to name a few. Each
 has their own approach to setting up a custom virtual server. Several
 have free or low-cost service tiers available.
 
-An overview of the process with EC2  follows. 
+In this power we'll provide a step-by-step description of the process with AWS
+EC2. 
 
 
+AWS is a reasonable choice for setting up a small custom server. Its not the
+cheapest option but the system is very well documented and, in our experience,
+reliable. 
 
-AWS is a reasonable choice for setting up a small custom server. 
-
-To start open the EC2 console.
+To start open the EC2 console visit the URL:
 
 ``` sh
    https://aws.amazon.com/console
 ```
 
-Choose regional service. For me its "N. California".
+Next choose regional service. For me its "N. California".
 
 ::: column-margin
 ![](img/aws_dash.png)
 :::
 
-Create an account or sign in and navigate to the EC2 dashboard. 
+Next create an account or sign in and navigate to the EC2 dashboard.  Its
+through the dashboard that we'll define the parameters for the type of server to
+launch
+and the mechanisms for communicating with it. 
 
-Along with selecting a server you'll need to set up a working environment. This
-environment consists of
-four main components: 
+## AWS Working Environment
 
-1. ssh key-pair to allow you to remotely and securely login to
-the virtual server. 
+That is, along with selecting a server you'll need to set up a working
+environment. We recommend setting up the working environment before launching
+the server, as it saves some back and forth. This working environment consists of four
+main components: 
+
+1. A secure shell (ssh) key-pair to allow you to remotely and securely login to
+the virtual server once its launched. 
 2. A firewall to restrict access to only secure
-connections. 
+connections. The firewall closes off all incoming traffic except through those
+ports specifically named.  
 3. A static IP address. This is required for maintaining the link
 between the domain name and the server when rebooting. (The default is for the
 instance/server to be assigned a new IP each time its rebooted.) 
-
 and 
-
 4. A domain name,
 say rgtlab.org. A domain name is not required but will
 facilitate collaborator access by not needing to use the IP address directly.
 
+## Ssh key pair
 
-The host host setup process is a simpler if you set up the working environment
-first. 
-
-# Ssh key pair
-
-The first time you create an AWS account you need to exchange an ssh (secure
-shell) key pair with AWS. This will allow you to login remotely to any server
-you launch. You can generate a ssh key pair locally on you workstation and
-upload the public key to EC2. To do this create a directory to hold the keys.
-e.g. `~/.ssh`. From inside `~/.ssh` directory you can generate the keys with the
+The first time you create an AWS account you need to exchange an ssh  
+key pair with AWS. This will allow you to login securely to any server
+you launch. You can generate a ssh key pair in one of two ways in EC2. Either,
+locally, on you workstation and
+upload the public key to EC2, or have EC2 generate the key pair. For the first
+option create a directory on your workstation to hold the keys and navigate to
+it.
+e.g. `~/.ssh`.  You can generate the keys with the
 command
 
 ``` sh
 ssh-keygen -m PEM
 ```
 
-In the dialog that ensues name the key prefix something like `power1_appssh-rsa`.
+In the dialog that ensues name the key prefix something like `power1_app_ssh-rsa`.
 
-Back in the browser on EC2 select `security/keys`, A dialog starts and
+Back in the EC2 dashboard  select `security/keys` in the left panel. A dialog starts and
 asks for the location of the public key. Browse to the `~/.ssh` directory on
 your workstation
-and import the public key `power1_appssh-rsa.pub`.
+and import the public key `power1_app_ssh-rsa.pub`.
 
-Alternatively, you can select 
+For the second method select 
 `Create Key Pair` in EC2. Give the pair a name, say
-`power1_appssh`, and a pair of keys will be created and the private key
+`power1_app_ssh`, and a pair of keys will be created and the private key
 `power1_appssh.pem` will be downloaded to you local machine. In my case to
 the default `~/Downloads` directory. Move the file to the `~/.ssh` directory. 
-Change the access permissions: `sudo chmod 600 power1ssh.pem`.
-- update software on server: `sudo apt-get update`
+Change the access permissions: `sudo chmod 600 power1_app_ssh.pem`.
+
+## Firewall
 
 
-# firewall
+Create a firewall using `Network settings` in the left hand panel.
+Choose `Create security group` and select `Allow SSH traffic` and `Allow HTTPS traffic`. 
+This will create a firewall that leaves open only ports 22 and 443, for ssh and
+https incoming traffic respectively. 
+The default name for the firewall will be something like `launch-wizard-6`.
+Rename it power1_firewall.  
 
-6.  Add security group, e.g. 'power1.firewall' allowing 22 (ssh), and
-    443 (https).
+## Static IP address
 
-- Create a firewall using `Network settings` pane
-Choose `Create security
-  group` and select `Allow SSH traffic` and `Allow HTTPS traffic`. 
+The next step is to use the `elastic IP` service to get a static IP that can be assigned to the server.
+Navigate to Network and Security again and select `Allocate Elastic IP`.
+An IP will be assigned from the EC2 pool of IPv4 IP addresses. 
 
-The default name for the firewall will be something like `launch-wizard-6`. 
+## Domain Name
 
-# Set up static IP address
-
-Use "elastic IP" to get a static IP that can be assigned to the server.
-Navigate to Network and Security again and select Allocate Elastic IP.
-An IP will be assigned from the EC2 pool of IPv4 IP addresses. (there is
-a fee for use of the static IP).
-
-
-# Domain Name
-
-To obtain a dedicated domain name go to godaddy.com or Amazon route 53
-to select a domain name and associate it  with your Elastic IP.
+To obtain a dedicated domain name go to  Amazon route 53 or Godaddy.com 
+to select a domain name and associate it  with your static IP.
 
 
-Once a domain name is aquired, eg rgtlab.org, you want to associate it
-with your static IP address. To associate domain name rgtlab.org with
-elastic IP do as follows.
-
-in Route 53:
+Once a domain name is aquired, e.g. rgtlab.org,  associate it
+with your static IP address via the domain name service. To associate domain name rgtlab.org with
+elastic IP do as follows in Route 53:
 
 -   click on 'hosted zones' in side panel
 -   click on rgtlab.org in center panel
 -   click on checkbox for rgtlab.org type=A line
 -   then click on edit record in right panel
--   change ip address to the Elastic IP (e.g. 13.57.139.31).
+-   change IP address to the Elastic IP (e.g. 13.57.139.31).
 
 ::: column-margin
 ![](img/ec2a.png)
@@ -187,47 +183,36 @@ in Route 53:
 
 # Select and launch instance
 
-2.  From "Quick Start" in the EC2 dashboard click `Ubuntu` button.
+2.  From "Quick Start" in the EC2 dashboard select an operating system for the
+server. Our recommendation is the `Ubuntu` OS. Ubuntu is based on linux. Click
+the `Ubuntu` button.
 
 -   Name the server, say power1
 
 3.  Next choose an instance **type**, e.g. "t2-micro". Different
-    instance types are mixtures of size, processors, memory, instance
-    storage capacity, network performance.
+    instance types are combinations of, processors, memory, 
+    storage capacity, and network performance.
 
-4.  click "Next: Configure Instance Details"
+4.  click **Configure Instance Details**
 
-5.  choose a Key pair (use power1.rsa from your environment) .
+5.  choose a Key pair (use power1_app_ssh.rsa from your environment) .
 
-6.  Add security group, e.g. 'power1.firewall' from your environment.
+6.  Add security group, e.g. 'power1_firewall' from your environment.
 
-7.  choose 30 GB of EBS General Purpose (SSD) or Magnetic storage
+7.  choose 30 GB of EBS General Purpose (SSD) or Magnetic storage. Thirty GBs is
+the maximum allowed in the 'Free tier' of servers on AWS. In our experience
+smaller disk sizes can lead to problems. 
 
-8.  click Launch Instance
+8.  click **Launch Instance**
 
-- Configure  30 GiB of gp2 (general purpose SSD) storage. Define the size and
-  type of disc storage. 
+to Launch the Instance.
 
-Now Launch the Instance.
-
-We still need a static IP address and a domain name.
-
-- Navigate back to the EC2 page. 
-- Select `Elastic IPs` from the `Network & Security` section.
-- check box for `power1`, and choose  `Associate IP address` from the `Actions`
-  drop down menu. Choose the `power1server` server from the `Instance` drop down list.
-
-Select Domain Name
-
-
-
-# Access instance
-
+## Access server
 
 On your laptop log into server with
 
 ``` sh
-ssh -i "~/.ssh/power1ssh.pem" ubuntu@power1app.org
+ssh -i "~/.ssh/power1_app_ssh.pem" ubuntu@rgtlab.org
 ```
 
 
@@ -241,7 +226,7 @@ ssh -i "~/.ssh/power1ssh.pem" ubuntu@power1app.org
 
 
 
-# Appendix:  Tips and Tricks
+# Appendix:  Tips 
 
 ::: {.callout-tip}
 
@@ -250,19 +235,21 @@ ssh -i "~/.ssh/power1ssh.pem" ubuntu@power1app.org
 For convenience, construct a `config` file in `~/.ssh` as:
 
 ``` sh
-Host ec2
+Host rgtlab.org
 HostName 13.57.139.31 # static IP
 User ubuntu # default user on ubuntu server
 Port 22  # the default port ssh uses
-IdentityFile ~/Downloads/power1.rsa
+IdentityFile ~/.ssh/power1_app_ssh.rsa
 ```
 
 then you can ssh into the new server with
 
 ``` sh
-sh> ssh ec2
+sh> ssh rgtlab.org
 ```
 :::
+
+# Appendix: Non-opinionated instructions
 
 Open the Amazon EC2 console at <https://console.aws.amazon.com/ec2/>
 
@@ -276,29 +263,16 @@ In the left side panel select **Key Pairs** (under Network and Security).
 At the top right select the **Create key pair** button. A **Key Pair** form will
 open. 
 
-Give the key pair a name. Something like  `power1_appssh`.  Select a key pair
+Give the key pair a name. Something like  `power1_app_ssh`.  Select a key pair
 type, suggest `RSA`. Select a **Private key file format**, suggest `.pem`
 
 Below the form select the **Create key pair** button. 
 A pair of keys will be created and the private key
-`power1_appssh.pem` will be downloaded to you local machine. In my case to
+`power1_app_ssh.pem` will be downloaded to you local machine. In my case to
 the default `~/Downloads` directory. 
 
-Move the file to the `~/.ssh` directory: `mv ~/Downloads/power1_appssh.pem ~/.ssh `
+Move the file to the `~/.ssh` directory: `mv ~/Downloads/power1_app_ssh.pem ~/.ssh `
 
 Change the access permissions: `sudo chmod 600 power1ssh.pem` to be more
 restrictive. 
-
-** REWRITE TO HERE.... 2023-03-27
-
-In the navigation pane, choose **Instances**.
-
-Select your instance and, in bottom half of the screen, choose the Security tab. Security groups lists the security groups that are associated with the instance. Inbound rules displays a list of the inbound rules that are in effect for the instance.
-
-For the security group to which you'll add the new rule, choose the security group ID link to open the security group.
-
-On the Inbound rules tab, choose Edit inbound rules.
-
-On the Edit inbound rules page, do the following:
-
 

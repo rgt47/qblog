@@ -235,15 +235,21 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
    
   <ul>
   <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction">Introduction</a></li>
-  <li><a href="#hosting" id="toc-hosting" class="nav-link" data-scroll-target="#hosting">Hosting</a></li>
+  <li><a href="#hosting" id="toc-hosting" class="nav-link" data-scroll-target="#hosting">Hosting</a>
+  <ul class="collapse">
   <li><a href="#select-a-hosting-service" id="toc-select-a-hosting-service" class="nav-link" data-scroll-target="#select-a-hosting-service">Select a hosting service</a></li>
+  <li><a href="#aws-working-environment" id="toc-aws-working-environment" class="nav-link" data-scroll-target="#aws-working-environment">AWS Working Environment</a></li>
   <li><a href="#ssh-key-pair" id="toc-ssh-key-pair" class="nav-link" data-scroll-target="#ssh-key-pair">Ssh key pair</a></li>
-  <li><a href="#firewall" id="toc-firewall" class="nav-link" data-scroll-target="#firewall">firewall</a></li>
-  <li><a href="#set-up-static-ip-address" id="toc-set-up-static-ip-address" class="nav-link" data-scroll-target="#set-up-static-ip-address">Set up static IP address</a></li>
+  <li><a href="#firewall" id="toc-firewall" class="nav-link" data-scroll-target="#firewall">Firewall</a></li>
+  <li><a href="#static-ip-address" id="toc-static-ip-address" class="nav-link" data-scroll-target="#static-ip-address">Static IP address</a></li>
   <li><a href="#domain-name" id="toc-domain-name" class="nav-link" data-scroll-target="#domain-name">Domain Name</a></li>
-  <li><a href="#select-and-launch-instance" id="toc-select-and-launch-instance" class="nav-link" data-scroll-target="#select-and-launch-instance">Select and launch instance</a></li>
-  <li><a href="#access-instance" id="toc-access-instance" class="nav-link" data-scroll-target="#access-instance">Access instance</a></li>
-  <li><a href="#appendix-tips-and-tricks" id="toc-appendix-tips-and-tricks" class="nav-link" data-scroll-target="#appendix-tips-and-tricks">Appendix: Tips and Tricks</a></li>
+  </ul></li>
+  <li><a href="#select-and-launch-instance" id="toc-select-and-launch-instance" class="nav-link" data-scroll-target="#select-and-launch-instance">Select and launch instance</a>
+  <ul class="collapse">
+  <li><a href="#access-server" id="toc-access-server" class="nav-link" data-scroll-target="#access-server">Access server</a></li>
+  </ul></li>
+  <li><a href="#appendix-tips" id="toc-appendix-tips" class="nav-link" data-scroll-target="#appendix-tips">Appendix: Tips</a></li>
+  <li><a href="#appendix-non-opinionated-instructions" id="toc-appendix-non-opinionated-instructions" class="nav-link" data-scroll-target="#appendix-non-opinionated-instructions">Appendix: Non-opinionated instructions</a></li>
   </ul>
 </nav>
 </nav>
@@ -261,120 +267,105 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p><img src="img/crane.jpg" class="img-fluid" alt="under construction"> <font size="1"> Photo by <a href="https://unsplash.com/@nathangwaters?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Nathan Waters</a> on <a href="https://unsplash.com/s/photos/construction?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Unsplash</a> </font></p>
 </div></div><section id="introduction" class="level1">
 <h1>Introduction</h1>
-<p>Once we have a working shiny app, we can move on to the task of hosting the app on a (virtual) server to share with our collaborators. There are many ways to accomplish this. In this post, we’ll describe how to ‘spin’ up a server on Amazon Web Service EC2, and in the next post show how, in just a few steps, through the application of Docker, R, Shiny, and Caddy (webserver) functionality we can have a fully functional and secure web app to share with colleagues.</p>
+<p>Ok! got my shiny app running. Works great! Now how do I get it up on the web and shared with my client?</p>
+<p>Assuming we have a working shiny app, we often next need to address the task of hosting the app on a (virtual) server to share with our collaborators. There are many ways to accomplish this. In this post, we’ll describe how to ‘spin up’ a server on Amazon Web Service EC2. In a future post we’ll show how, in just a few steps, through the application of Docker, R, Shiny, and Caddy (webserver) functionality we can have a fully functional and secure app available on the web to share with colleagues.</p>
 </section>
 <section id="hosting" class="level1 page-columns page-full">
 <h1>Hosting</h1>
-
-<div class="no-row-height column-margin column-container"><div class="">
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="img/blogdockerizeflow.png" class="img-fluid figure-img"></p>
-<p></p><figcaption class="figure-caption"><em>Data flow </em></figcaption><p></p>
-</figure>
-</div>
-</div></div><p>Figure 3 illustrates the tools we’ll use and the flow of program and configuration files. In order to host a shiny app, say <code>power1_shiny</code>, online we’ll need to complete the following tasks: 1. create a virtual server (connected via ssh) with a firewall 2. obtain a static IP address (to identify the server online) 3. obtain a domain name (name for IP address) 4. install and configure a webserver (tool to interact with https protocol requests and respond) 5. obtain and install an SSL certificate (to allow encrypted communication) 6. setup an authentication method (password protection) 7. configure a reverse proxy method (translate https (port 443) requests to Shiny (port 3838)</p>
-<p>In this post we’ll address the first three of these. Tasks four through seven will be accomplished using docker-compose and described in the next post.</p>
-<p>At first glance these 7 requirements can appear daunting, but on closer inspection all can be met with relative ease and minimal cost ( using a cloud-hosting service, e.g.&nbsp;Amazon’s EC2 or Digital Ocean, and a “leased” domain name from, e.g.&nbsp;GoDaddy, or Amazon’s Route 53) or at no cost( if you have your own server with IP address, and domain name)</p>
-</section>
-<section id="select-a-hosting-service" class="level1 page-columns page-full">
-<h1>Select a hosting service</h1>
-<p>ok! got my shiny app running. Works great! Now how do I get it up on the web and shared with my client?</p>
+<p>In order to host a shiny app, say <code>power1_shiny</code>, online we’ll need to complete the following tasks:</p>
+<ol type="1">
+<li>create a virtual server (connected via ssh) with a firewall</li>
+<li>obtain a static IP address (to identify the server online)</li>
+<li>obtain a domain name (name for IP address)</li>
+<li>install and configure a webserver (tool to interact with https protocol requests and respond)</li>
+<li>obtain and install an SSL certificate (to allow encrypted communication)</li>
+<li>setup an authentication method (password protection)</li>
+<li>configure a reverse proxy method (translate https (port 443) requests to Shiny (port 3838)</li>
+</ol>
+<p>In this post we’ll address the first three of these. Tasks four through seven will be accomplished using docker-compose and Caddy, as described in the next post.</p>
+<p>At first glance these 7 requirements can appear daunting, but on closer inspection all can be met with relative ease and minimal cost ( using a cloud-hosting service, e.g.&nbsp;Amazon’s EC2 or Digital Ocean, and a “leased” domain name from, e.g.&nbsp;GoDaddy, or Amazon’s Route 53) or at no cost if you have your own server with IP address, and domain name.</p>
+<section id="select-a-hosting-service" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="select-a-hosting-service">Select a hosting service</h2>
 <p>There are a number of cloud based server options to choose from: Microsoft Azure, Oracle, Google Cloud, Amazon AWS EC2, Digital Ocean to name a few. Each has their own approach to setting up a custom virtual server. Several have free or low-cost service tiers available.</p>
-<p>An overview of the process with EC2 follows.</p>
-<p>AWS is a reasonable choice for setting up a small custom server.</p>
-<p>To start open the EC2 console.</p>
+<p>In this power we’ll provide a step-by-step description of the process with AWS EC2.</p>
+<p>AWS is a reasonable choice for setting up a small custom server. Its not the cheapest option but the system is very well documented and, in our experience, reliable.</p>
+<p>To start open the EC2 console visit the URL:</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>   <span class="ex">https://aws.amazon.com/console</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>Choose regional service. For me its “N. California”.</p>
+<p>Next choose regional service. For me its “N. California”.</p>
 
 <div class="no-row-height column-margin column-container"><div class="">
 <p><img src="img/aws_dash.png" class="img-fluid"></p>
-</div></div><p>Create an account or sign in and navigate to the EC2 dashboard.</p>
-<p>Along with selecting a server you’ll need to set up a working environment. This environment consists of four main components:</p>
+</div></div><p>Next create an account or sign in and navigate to the EC2 dashboard. Its through the dashboard that we’ll define the parameters for the type of server to launch and the mechanisms for communicating with it.</p>
+</section>
+<section id="aws-working-environment" class="level2">
+<h2 class="anchored" data-anchor-id="aws-working-environment">AWS Working Environment</h2>
+<p>That is, along with selecting a server you’ll need to set up a working environment. We recommend setting up the working environment before launching the server, as it saves some back and forth. This working environment consists of four main components:</p>
 <ol type="1">
-<li>ssh key-pair to allow you to remotely and securely login to the virtual server.</li>
-<li>A firewall to restrict access to only secure connections.</li>
-<li>A static IP address. This is required for maintaining the link between the domain name and the server when rebooting. (The default is for the instance/server to be assigned a new IP each time its rebooted.)</li>
-</ol>
-<p>and</p>
-<ol start="4" type="1">
+<li>A secure shell (ssh) key-pair to allow you to remotely and securely login to the virtual server once its launched.</li>
+<li>A firewall to restrict access to only secure connections. The firewall closes off all incoming traffic except through those ports specifically named.<br>
+</li>
+<li>A static IP address. This is required for maintaining the link between the domain name and the server when rebooting. (The default is for the instance/server to be assigned a new IP each time its rebooted.) and</li>
 <li>A domain name, say rgtlab.org. A domain name is not required but will facilitate collaborator access by not needing to use the IP address directly.</li>
 </ol>
-<p>The host host setup process is a simpler if you set up the working environment first.</p>
 </section>
-<section id="ssh-key-pair" class="level1">
-<h1>Ssh key pair</h1>
-<p>The first time you create an AWS account you need to exchange an ssh (secure shell) key pair with AWS. This will allow you to login remotely to any server you launch. You can generate a ssh key pair locally on you workstation and upload the public key to EC2. To do this create a directory to hold the keys. e.g.&nbsp;<code>~/.ssh</code>. From inside <code>~/.ssh</code> directory you can generate the keys with the command</p>
+<section id="ssh-key-pair" class="level2">
+<h2 class="anchored" data-anchor-id="ssh-key-pair">Ssh key pair</h2>
+<p>The first time you create an AWS account you need to exchange an ssh<br>
+key pair with AWS. This will allow you to login securely to any server you launch. You can generate a ssh key pair in one of two ways in EC2. Either, locally, on you workstation and upload the public key to EC2, or have EC2 generate the key pair. For the first option create a directory on your workstation to hold the keys and navigate to it. e.g.&nbsp;<code>~/.ssh</code>. You can generate the keys with the command</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh-keygen</span> <span class="at">-m</span> PEM</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>In the dialog that ensues name the key prefix something like <code>power1_appssh-rsa</code>.</p>
-<p>Back in the browser on EC2 select <code>security/keys</code>, A dialog starts and asks for the location of the public key. Browse to the <code>~/.ssh</code> directory on your workstation and import the public key <code>power1_appssh-rsa.pub</code>.</p>
-<p>Alternatively, you can select <code>Create Key Pair</code> in EC2. Give the pair a name, say <code>power1_appssh</code>, and a pair of keys will be created and the private key <code>power1_appssh.pem</code> will be downloaded to you local machine. In my case to the default <code>~/Downloads</code> directory. Move the file to the <code>~/.ssh</code> directory. Change the access permissions: <code>sudo chmod 600 power1ssh.pem</code>. - update software on server: <code>sudo apt-get update</code></p>
+<p>In the dialog that ensues name the key prefix something like <code>power1_app_ssh-rsa</code>.</p>
+<p>Back in the EC2 dashboard select <code>security/keys</code> in the left panel. A dialog starts and asks for the location of the public key. Browse to the <code>~/.ssh</code> directory on your workstation and import the public key <code>power1_app_ssh-rsa.pub</code>.</p>
+<p>For the second method select <code>Create Key Pair</code> in EC2. Give the pair a name, say <code>power1_app_ssh</code>, and a pair of keys will be created and the private key <code>power1_appssh.pem</code> will be downloaded to you local machine. In my case to the default <code>~/Downloads</code> directory. Move the file to the <code>~/.ssh</code> directory. Change the access permissions: <code>sudo chmod 600 power1_app_ssh.pem</code>.</p>
 </section>
-<section id="firewall" class="level1">
-<h1>firewall</h1>
-<ol start="6" type="1">
-<li>Add security group, e.g.&nbsp;‘power1.firewall’ allowing 22 (ssh), and 443 (https).</li>
-</ol>
-<ul>
-<li>Create a firewall using <code>Network settings</code> pane Choose <code>Create security   group</code> and select <code>Allow SSH traffic</code> and <code>Allow HTTPS traffic</code>.</li>
-</ul>
-<p>The default name for the firewall will be something like <code>launch-wizard-6</code>.</p>
+<section id="firewall" class="level2">
+<h2 class="anchored" data-anchor-id="firewall">Firewall</h2>
+<p>Create a firewall using <code>Network settings</code> in the left hand panel. Choose <code>Create security group</code> and select <code>Allow SSH traffic</code> and <code>Allow HTTPS traffic</code>. This will create a firewall that leaves open only ports 22 and 443, for ssh and https incoming traffic respectively. The default name for the firewall will be something like <code>launch-wizard-6</code>. Rename it power1_firewall.</p>
 </section>
-<section id="set-up-static-ip-address" class="level1">
-<h1>Set up static IP address</h1>
-<p>Use “elastic IP” to get a static IP that can be assigned to the server. Navigate to Network and Security again and select Allocate Elastic IP. An IP will be assigned from the EC2 pool of IPv4 IP addresses. (there is a fee for use of the static IP).</p>
+<section id="static-ip-address" class="level2">
+<h2 class="anchored" data-anchor-id="static-ip-address">Static IP address</h2>
+<p>The next step is to use the <code>elastic IP</code> service to get a static IP that can be assigned to the server. Navigate to Network and Security again and select <code>Allocate Elastic IP</code>. An IP will be assigned from the EC2 pool of IPv4 IP addresses.</p>
 </section>
-<section id="domain-name" class="level1 page-columns page-full">
-<h1>Domain Name</h1>
-<p>To obtain a dedicated domain name go to godaddy.com or Amazon route 53 to select a domain name and associate it with your Elastic IP.</p>
-<p>Once a domain name is aquired, eg rgtlab.org, you want to associate it with your static IP address. To associate domain name rgtlab.org with elastic IP do as follows.</p>
-<p>in Route 53:</p>
+<section id="domain-name" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="domain-name">Domain Name</h2>
+<p>To obtain a dedicated domain name go to Amazon route 53 or Godaddy.com to select a domain name and associate it with your static IP.</p>
+<p>Once a domain name is aquired, e.g.&nbsp;rgtlab.org, associate it with your static IP address via the domain name service. To associate domain name rgtlab.org with elastic IP do as follows in Route 53:</p>
 <ul>
 <li>click on ‘hosted zones’ in side panel</li>
 <li>click on rgtlab.org in center panel</li>
 <li>click on checkbox for rgtlab.org type=A line</li>
 <li>then click on edit record in right panel</li>
-<li>change ip address to the Elastic IP (e.g.&nbsp;13.57.139.31).</li>
+<li>change IP address to the Elastic IP (e.g.&nbsp;13.57.139.31).</li>
 </ul>
 
 <div class="no-row-height column-margin column-container"><div class="">
 <p><img src="img/ec2a.png" class="img-fluid"></p>
 </div></div></section>
+</section>
 <section id="select-and-launch-instance" class="level1">
 <h1>Select and launch instance</h1>
 <ol start="2" type="1">
-<li>From “Quick Start” in the EC2 dashboard click <code>Ubuntu</code> button.</li>
+<li>From “Quick Start” in the EC2 dashboard select an operating system for the server. Our recommendation is the <code>Ubuntu</code> OS. Ubuntu is based on linux. Click the <code>Ubuntu</code> button.</li>
 </ol>
 <ul>
 <li>Name the server, say power1</li>
 </ul>
 <ol start="3" type="1">
-<li><p>Next choose an instance <strong>type</strong>, e.g.&nbsp;“t2-micro”. Different instance types are mixtures of size, processors, memory, instance storage capacity, network performance.</p></li>
-<li><p>click “Next: Configure Instance Details”</p></li>
-<li><p>choose a Key pair (use power1.rsa from your environment) .</p></li>
-<li><p>Add security group, e.g.&nbsp;‘power1.firewall’ from your environment.</p></li>
-<li><p>choose 30 GB of EBS General Purpose (SSD) or Magnetic storage</p></li>
-<li><p>click Launch Instance</p></li>
+<li><p>Next choose an instance <strong>type</strong>, e.g.&nbsp;“t2-micro”. Different instance types are combinations of, processors, memory, storage capacity, and network performance.</p></li>
+<li><p>click <strong>Configure Instance Details</strong></p></li>
+<li><p>choose a Key pair (use power1_app_ssh.rsa from your environment) .</p></li>
+<li><p>Add security group, e.g.&nbsp;‘power1_firewall’ from your environment.</p></li>
+<li><p>choose 30 GB of EBS General Purpose (SSD) or Magnetic storage. Thirty GBs is the maximum allowed in the ‘Free tier’ of servers on AWS. In our experience smaller disk sizes can lead to problems.</p></li>
+<li><p>click <strong>Launch Instance</strong></p></li>
 </ol>
-<ul>
-<li>Configure 30 GiB of gp2 (general purpose SSD) storage. Define the size and type of disc storage.</li>
-</ul>
-<p>Now Launch the Instance.</p>
-<p>We still need a static IP address and a domain name.</p>
-<ul>
-<li>Navigate back to the EC2 page.</li>
-<li>Select <code>Elastic IPs</code> from the <code>Network &amp; Security</code> section.</li>
-<li>check box for <code>power1</code>, and choose <code>Associate IP address</code> from the <code>Actions</code> drop down menu. Choose the <code>power1server</code> server from the <code>Instance</code> drop down list.</li>
-</ul>
-<p>Select Domain Name</p>
-</section>
-<section id="access-instance" class="level1">
-<h1>Access instance</h1>
+<p>to Launch the Instance.</p>
+<section id="access-server" class="level2">
+<h2 class="anchored" data-anchor-id="access-server">Access server</h2>
 <p>On your laptop log into server with</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> <span class="at">-i</span> <span class="st">"~/.ssh/power1ssh.pem"</span> ubuntu@power1app.org</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> <span class="at">-i</span> <span class="st">"~/.ssh/power1_app_ssh.pem"</span> ubuntu@rgtlab.org</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
-<section id="appendix-tips-and-tricks" class="level1">
-<h1>Appendix: Tips and Tricks</h1>
+</section>
+<section id="appendix-tips" class="level1">
+<h1>Appendix: Tips</h1>
 <div class="callout-tip callout callout-style-default callout-captioned">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -386,30 +377,27 @@ Tip 1.
 </div>
 <div class="callout-body-container callout-body">
 <p>For convenience, construct a <code>config</code> file in <code>~/.ssh</code> as:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">Host</span> ec2</span>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">Host</span> rgtlab.org</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">HostName</span> 13.57.139.31 <span class="co"># static IP</span></span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="ex">User</span> ubuntu <span class="co"># default user on ubuntu server</span></span>
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="ex">Port</span> 22  <span class="co"># the default port ssh uses</span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="ex">IdentityFile</span> ~/Downloads/power1.rsa</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="ex">IdentityFile</span> ~/.ssh/power1_app_ssh.rsa</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>then you can ssh into the new server with</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sh</span><span class="op">&gt;</span> ssh ec2</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sh</span><span class="op">&gt;</span> ssh rgtlab.org</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
+</section>
+<section id="appendix-non-opinionated-instructions" class="level1">
+<h1>Appendix: Non-opinionated instructions</h1>
 <p>Open the Amazon EC2 console at <a href="https://console.aws.amazon.com/ec2/" class="uri">https://console.aws.amazon.com/ec2/</a></p>
 <p>From the top navigation bar, select a Region to create an instance in. For me its “N. California”.</p>
 <p>Create an account or sign in and navigate to the EC2 dashboard.</p>
 <p>In the left side panel select <strong>Key Pairs</strong> (under Network and Security).</p>
 <p>At the top right select the <strong>Create key pair</strong> button. A <strong>Key Pair</strong> form will open.</p>
-<p>Give the key pair a name. Something like <code>power1_appssh</code>. Select a key pair type, suggest <code>RSA</code>. Select a <strong>Private key file format</strong>, suggest <code>.pem</code></p>
-<p>Below the form select the <strong>Create key pair</strong> button. A pair of keys will be created and the private key <code>power1_appssh.pem</code> will be downloaded to you local machine. In my case to the default <code>~/Downloads</code> directory.</p>
-<p>Move the file to the <code>~/.ssh</code> directory: <code>mv ~/Downloads/power1_appssh.pem ~/.ssh</code></p>
+<p>Give the key pair a name. Something like <code>power1_app_ssh</code>. Select a key pair type, suggest <code>RSA</code>. Select a <strong>Private key file format</strong>, suggest <code>.pem</code></p>
+<p>Below the form select the <strong>Create key pair</strong> button. A pair of keys will be created and the private key <code>power1_app_ssh.pem</code> will be downloaded to you local machine. In my case to the default <code>~/Downloads</code> directory.</p>
+<p>Move the file to the <code>~/.ssh</code> directory: <code>mv ~/Downloads/power1_app_ssh.pem ~/.ssh</code></p>
 <p>Change the access permissions: <code>sudo chmod 600 power1ssh.pem</code> to be more restrictive.</p>
-<p>** REWRITE TO HERE…. 2023-03-27</p>
-<p>In the navigation pane, choose <strong>Instances</strong>.</p>
-<p>Select your instance and, in bottom half of the screen, choose the Security tab. Security groups lists the security groups that are associated with the instance. Inbound rules displays a list of the inbound rules that are in effect for the instance.</p>
-<p>For the security group to which you’ll add the new rule, choose the security group ID link to open the security group.</p>
-<p>On the Inbound rules tab, choose Edit inbound rules.</p>
-<p>On the Edit inbound rules page, do the following:</p>
 
 
 </section>
