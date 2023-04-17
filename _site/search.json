@@ -63,6 +63,62 @@
     "text": "Appendix 1 Set up AWS IAM\nSet up aws access via the aws configure program. To get the needed credentials use the AWS IAM service.\nDetails follow:\nLog into AWS console.\nSearch for IAM service. Navigate to IAM dashboard.\nSelect Users in left hand panel.\nThen select Add Users button (in upper right).\nThen enter a User name in the form. Click Next (lower right)\nThen Create User.\nClick on the user name\nIn the page that comes up. Select Security Credentials tab (center of page).\nUnder Access Keys panel click Create access key (right side or bottom of panel).\nClick Command Line Interface CLI)\nand at the bottom of the page click the checkbox “I understand…”.\nFinally select Create access key and\nchoose Download .csv file (lower right).\nNavigate Download screen to local ~/.aws directory.\nClick Done\nNow in the terminal on your workstation, configure the aws cli app via the command.\n aws configure \nEnter info from the credentials file just downloaded. After entering the AWS Access Key ID and AWS Secret Access Key information you are asked for a Region, (My region is us-west-1), and an output format suggested output format is JSON."
   },
   {
+    "objectID": "posts/setupaws/index.html",
+    "href": "posts/setupaws/index.html",
+    "title": "Set up a virtual server on AWS (in anticipation of hosting Shiny apps)",
+    "section": "",
+    "text": "Photo by Nathan Waters on Unsplash"
+  },
+  {
+    "objectID": "posts/setupaws/index.html#select-a-hosting-service",
+    "href": "posts/setupaws/index.html#select-a-hosting-service",
+    "title": "Set up a virtual server on AWS (in anticipation of hosting Shiny apps)",
+    "section": "Select a hosting service",
+    "text": "Select a hosting service\nThere are a number of cloud based server options to choose from: Microsoft Azure, Oracle, Google Cloud, Amazon AWS EC2, Digital Ocean to name a few. Each has their own approach to setting up a custom virtual server. Several have free or low-cost service tiers available.\nIn this power we’ll provide a step-by-step description of the process with AWS EC2.\nAWS is a reasonable choice for setting up a small custom server. Its not the cheapest option but the system is very well documented and, in our experience, reliable.\nTo start open the EC2 console visit the URL:\n   https://aws.amazon.com/console\nNext choose regional service. For me its “N. California”.\n\n\n\nNext create an account or sign in and navigate to the EC2 dashboard. Its through the dashboard that we’ll define the parameters for the type of server to launch and the mechanisms for communicating with it."
+  },
+  {
+    "objectID": "posts/setupaws/index.html#aws-working-environment",
+    "href": "posts/setupaws/index.html#aws-working-environment",
+    "title": "Set up a virtual server on AWS (in anticipation of hosting Shiny apps)",
+    "section": "AWS Working Environment",
+    "text": "AWS Working Environment\nThat is, along with selecting a server we’ll need to set up a working environment. We recommend setting up the working environment before launching the server, as it saves some back and forth. This working environment consists of four main components:\n\nA secure shell (ssh) key-pair to allow we to remotely and securely login to the virtual server once its launched.\nA firewall to restrict access to only secure connections. The firewall closes off all incoming traffic except through those ports specifically named.\n\nA static IP address. This is required for maintaining the link between the domain name and the server when rebooting. (The default is for the instance/server to be assigned a new IP each time its rebooted.) and\nA domain name, say rgtlab.org. A domain name is not required but will facilitate collaborator access by not needing to use the IP address directly."
+  },
+  {
+    "objectID": "posts/setupaws/index.html#ssh-key-pair",
+    "href": "posts/setupaws/index.html#ssh-key-pair",
+    "title": "Set up a virtual server on AWS (in anticipation of hosting Shiny apps)",
+    "section": "Ssh key pair",
+    "text": "Ssh key pair\nThe first time we create an AWS account we need to exchange an ssh key pair with AWS. The pairs consist of a private and a public key. The pair of keys will allow us to login securely to any server we launch on EC2. We can generate an ssh key pair in one of two ways in EC2. Either, locally, on our workstation and upload the public key to EC2, or have EC2 generate the key pair and download the private key.\nFor the first option we create a directory on our workstation to hold the keys and navigate to it. e.g. ~/.ssh. Generate the keys with the command\nssh-keygen -m PEM\n“PEM” defines the key format. More information on public key authentication can be found here. In the interactive dialog name the key prefix something like power1_app_ssh. The dialog will ask for a passphrase. Enter one for an additional level of security, but its not required. The ssh-keygen program will generate two files: power1_app_ssh and power1_app_ssh.pub\nTo complete the process return to the EC2 dashboard select Keys Pairs in the left panel. The select Create key pair botton in the upper right of the page.\nA form appears and asks for a name. Enter something like power1_app_ssh. Select RSA for key pair type and .pem for key file format to match the ssh-keygen process we went through on our workstation.\nasks for the location of the public key. Browse to the ~/.ssh directory on wer workstation and import the public key power1_app_ssh.pub.\nGive the pair a name, say power1_app_ssh, and the keys will be created and the private key power1_app_ssh.pem will be downloaded to our local machine to the ~/.ssh directory. Change the access permissions for the private key with the following command:\nsudo chmod 600 power1_app_ssh.pem"
+  },
+  {
+    "objectID": "posts/setupaws/index.html#firewall",
+    "href": "posts/setupaws/index.html#firewall",
+    "title": "Set up a virtual server on AWS (in anticipation of hosting Shiny apps)",
+    "section": "Firewall",
+    "text": "Firewall\nTo create a firewall click on Network settings in the left hand panel. Choose Create security group and select Allow SSH traffic and Allow HTTPS traffic. This will create a firewall that leaves open only ports 22 and 443, for ssh and https incoming traffic respectively. The default name for the firewall will be something like launch-wizard-6. name the security group power1_firewall."
+  },
+  {
+    "objectID": "posts/setupaws/index.html#static-ip-address",
+    "href": "posts/setupaws/index.html#static-ip-address",
+    "title": "Set up a virtual server on AWS (in anticipation of hosting Shiny apps)",
+    "section": "Static IP address",
+    "text": "Static IP address\nThe next step is to use the elastic IP service to get a static IP that can be assigned to the server. Navigate to Network and Security again and select Allocate Elastic IP. An IP will be assigned from the EC2 pool of available IPv4 IP addresses."
+  },
+  {
+    "objectID": "posts/setupaws/index.html#domain-name",
+    "href": "posts/setupaws/index.html#domain-name",
+    "title": "Set up a virtual server on AWS (in anticipation of hosting Shiny apps)",
+    "section": "Domain Name",
+    "text": "Domain Name\nTo obtain a dedicated domain name go to Amazon route 53 to select a domain name and associate it with our static IP.\nOnce a domain name is acquired, e.g. rgtlab.org, associate it with our static IP address. This can be done via the Route 53 service. To associate domain name rgtlab.org with elastic IP do the following in Route 53:\n\nclick on hosted zones in side panel\nclick on rgtlab.org in center panel\nclick on checkbox for rgtlab.org type=A line\nthen click on edit record in right panel\nchange IP address to the static IP (e.g. 13.57.139.31)."
+  },
+  {
+    "objectID": "posts/setupaws/index.html#access-server",
+    "href": "posts/setupaws/index.html#access-server",
+    "title": "Set up a virtual server on AWS (in anticipation of hosting Shiny apps)",
+    "section": "Access server",
+    "text": "Access server\nOn wer laptop log into server with\nssh -i \"~/.ssh/power1_app_ssh.pem\" ubuntu@rgtlab.org"
+  },
+  {
     "objectID": "posts/dockerize_simple/index.html",
     "href": "posts/dockerize_simple/index.html",
     "title": "A simple process to get your Shiny app online (securely).",
