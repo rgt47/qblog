@@ -3,12 +3,12 @@ title: "A simple process to get your  Shiny app online (securely). "
 description: "This is the first in a series of posts offering suggested strategies for leveraging open source technologies to effectively host data science analysis apps and reports online."
 categories: [Docker, Shiny]
 image: "img/rshiny.png"
-editor: 
-  markdown: 
-    wrap: 72
-#format:
-#  pdf:
-#    toc: true
+#editor: 
+#  markdown: 
+#    wrap: 72
+format:
+  pdf:
+    toc: true
 #date: "2023-04-01"
 
 #categories: [Neovim]
@@ -44,21 +44,21 @@ Waters</a> on
 # Introduction
 
 This is another in a series of posts offering suggested strategies for
-leveraging open source technologies to provide straight-forward
-solutions to one of the central challenges in the practice of data
-science, i.e. how to effectively communicate analysis results to clients
-and collaborators. The list of open-source technologies (software stack) we
-suggest for employment here is: linux, R, Shiny, Docker, and Caddy. In
-this post we'll make use of the AWS  cloud service. Further
-posts will describe alternate constructions, e.g. using the low cost
-cloud service: Hetzner.
+leveraging open source technologies to provide straight-forward solutions to one
+of the central challenges in the practice of data science, i.e. how to
+effectively communicate analysis results to clients and collaborators. In this
+post we propose a simple method to migrate a shiny app from your local
+workstation to the web. The list of open-source technologies (software stack) we
+hesuggest for employment here is: linux, R, Shiny, Docker, and Caddy. Here we'll
+make use of the AWS  cloud service. Future posts will describe alternate
+constructions, e.g. using the low cost cloud service: Hetzner.
 
-This initial post provides a minimal, proof-of-concept example of how to
+This post provides a proof-of-concept example of how to
 apply these technologies for hosting an interactive Shiny application.
 
 In the following we start with a very simple, but hopefully still useful,
 stand-alone Shiny app developed on our local workstation.   Then after some
-straightforward interfacing with the Amazon web service environment, we
+straightforward interfacing with the Amazon web service environment, we'll
 push the Shiny app into the cloud, and end up with a secure (encrypted and
 authenticated) app running on a website with a custom domain name. 
 
@@ -68,7 +68,14 @@ To begin, lets assume we're just finished developing a new Shiny app,
 named `power1_shiny`. Our working directory is named `power1_app`.
 The methods described here apply generically to any
 Shiny app, but we'll use one of our own for illustration). See the
-`R/Shiny` code for our `power1_shiny` app (`app.R`) below or [here](#appendix-1) in appendix 1.
+`R/Shiny` code for our `power1_shiny` app (`app.R`) below.
+
+Our shiny app is designed to be a balance of simple and functional -- one that
+calculates the power for a 2-sample t-test as a function of the
+standardized effect size. 
+The app is intentionally minimal. Using only base R
+functions, with a minimum of reactive widgets and layout commands to
+keep it simple while still performing a useful function.
 
 ```{r echo=t, eval=FALSE}
 #| code-fold: true
@@ -152,14 +159,16 @@ instructions for AWS EC2 were described in an earlier post:
 <https://focusonr.org/posts/setupaws/>
 
 0. Create an AWS account or sign in and navigate to the EC2 dashboard. 
-1. Set up an interactive environment with AWS server.
+1. Set up an working environment with AWS server.
     a. define secure shell (ssh) key-pair (prefix pair with name `power1_app_ssh`.
     b. configure firewall.
     c. obtain static IP.
     d. obtain domain name (rgtlab.org). 
     e. select instance operating system (`ubuntu`) and type (`t2-micro`) 
     f. launch server
-Once the server is available (optionally follow instructions in `Tip`) and connect via ssh, 
+
+Once the server is available (optionally follow instructions in `Tip`) and connect via ssh. 
+
 ```sh
 ssh -i "~/.ssh/power1_app_ssh.pem"  ubuntu@rgtlab.org
 or
@@ -167,9 +176,8 @@ ssh rgtlab.org
 ```
 The only
 necessary software to install is Docker and Caddy. Install
-them  with the following command:
+them  with the following commands:
 
-Install Docker and Caddy:
 ``` sh
 sudo apt install docker.io
 sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
@@ -182,12 +190,8 @@ sudo apt install caddy
 ```
 
 
-log into rgtlab.org
-``` sh
-> ssh rgtlab.org
-```
 
-Once the host is set up and the requisite software installed we'll have
+At this point we have
 a customized virtual server with a static IP address, and unique domain
 name and firewall in place. In other words, items 1, 2, and 3 from our
 'hosting' list will be taken care of.
@@ -197,7 +201,7 @@ name and firewall in place. In other words, items 1, 2, and 3 from our
 
 To configure the web server and containerize our app we need to add
 three files to the server, to go along with our Shiny app in the
-`power1_app` directory.
+`power1_app` directory and move all files to the server.
 
 
 
@@ -228,7 +232,7 @@ CMD ["/usr/bin/shiny-server"]
 to build a container based on a Rocker/Shiny image (which is a ubuntu
 image with R and Shiny installed) then copy into the container the
 `power1_shiny` directory containing the shiny code and
-finally launch Shiny on (default) port 3838. We placed the `power1_shiny.R` code in the
+finally launch Shiny server listening on (default) port 3838. We placed the `power1_shiny/app.R` code in the
 default location `/srv/shiny-server` so we only need to start the server and it
 will find the shiny program. 
 
@@ -279,7 +283,7 @@ Note:
 Providing our servers domain name, `rgtlab.org` is sufficient to
 initiate an exchange with the `letsencrypt` service to generates an SSL certificate.
 
-And the third file is the `index.html` file to provide a launch page.
+And the third file is the `index.html` file to provide a launch page for the app.
 
 ```{r echo=T, eval=F}
 #| code-fold: true
@@ -296,17 +300,33 @@ And the third file is the `index.html` file to provide a launch page.
 </html> 
 ```
 
-copy `power1_app` directory to `rgtlab.org` 
+Once the three config files and the the Shiny code directory are in place copy the `power1_app` directory to the server `rgtlab.org`  with the command: 
 
 ```sh
-> scp -i "~/.ssh/power1_app_ssh.pem" -r ~/prj/power1_app/  ubuntu@rgtlab.org:~
+scp -i "~/.ssh/power1_app_ssh.pem" -r ~/prj/power1_app/  ubuntu@rgtlab.org:~
 ```
 
-Lastly, cd to `power1_app` directory and run
+Lastly, ssh to the server and cd to `power1_app` directory
+
+
+copy `Caddyfile` to location caddy expects
+ in `/etc/caddy` directory
+
+```sh
+sudo cp ./Caddyfile /etc/caddy/Caddyfile 
+```
+
+copy `index.html` to location caddy expects
+ in `/var/www/html` directory
+```sh
+cp  ./index.html /var/www/html/index.html 
+```
+
+
+and run the following command to 
 
 build the Docker container on `rgtlab.org`
 ```sh
-cd power1_app
 docker build -t power1_image .
 ```
 create container and run
@@ -314,19 +334,6 @@ create container and run
 docker run -d --name=power1_shiny -p 3838:3838 --restart=always power1_image
 ```
 
-copy Caddyfile to location caddy expects
- in `/etc/caddy` directory
-
-```sh
->> sudo cp ./Caddyfile /etc/caddy/Caddyfile 
-```
-
-copy `index.html` to location caddy expects
- in `/var/www/html` directory
-```sh
-cp  ./index.html /var/www/html/index.html 
-
-```
 restart Caddy
 ```sh
 sudo systemctl reload caddy
@@ -338,39 +345,6 @@ and you're good to go!
 
 
 
-# Appendix-1 {#appendix-1}
-
-Our shiny app is designed to be a balance of simple and functional -- one that
-calculates the power for a 2-sample t-test as a function of the
-standardized effect size. 
-
-Consider the `app.R` file:
-
-``` sh
-
-ui <- fluidPage(
-titlePanel("Power Calculator for Two Group Parallel Designs"),
-sliderInput("N", "Total Sample Size:", min = 0, max = 300, value = 100),
-plotOutput("plot"),
-verbatimTextOutput("eff"))
-
-server <- function(input, output, session) {
-  delta = seq(0, 1.5,.05)
-  pow = reactive(sapply(delta, function(x) power.t.test(input$N, d=x)$power ))
-  eff =  renderText(power.t.test(input$N, power=.8)$d)
-  output$plot <- renderPlot({
-  plot(delta, pow(), cex=1.5, ylab="power")
-  abline(h = .8,  col = "red", lwd =2.5, lty = 4)
-  abline(v = eff(), col = "blue",lwd =2.5, lty = 4)})  
-  output$eff <- renderText(
-    paste0("Std. effect detectable with power 80% = ", eff()) )
-}
-shinyApp(ui, server)
-```
-
-The app is intentionally minimal. Using only base R
-functions, with a minimum of reactive widgets and layout commands to
-keep it simple while still performing a useful function.
 
 
 

@@ -1,87 +1,73 @@
 [
   {
-    "objectID": "posts/setupaws/index.html",
-    "href": "posts/setupaws/index.html",
-    "title": "Set up a virtual server on AWS (in anticipation of hosting Shiny apps)",
+    "objectID": "posts/simpleS3/index.html",
+    "href": "posts/simpleS3/index.html",
+    "title": "Writing a simple R package in S3.",
     "section": "",
     "text": "Photo by Nathan Waters on Unsplash"
   },
   {
-    "objectID": "posts/setupaws/index.html#select-a-hosting-service",
-    "href": "posts/setupaws/index.html#select-a-hosting-service",
-    "title": "Set up a virtual server on AWS (in anticipation of hosting Shiny apps)",
-    "section": "Select a hosting service",
-    "text": "Select a hosting service\nThere are a number of cloud based server options to choose from: Microsoft Azure, Oracle, Google Cloud, Amazon AWS EC2, Digital Ocean to name a few. Each has their own approach to setting up a custom virtual server. Several have free or low-cost service tiers available.\nIn this power we’ll provide a step-by-step description of the process with AWS EC2.\nAWS is a reasonable choice for setting up a small custom server. Its not the cheapest option but the system is very well documented and, in our experience, reliable.\nTo start open the EC2 console visit the URL:\n   https://aws.amazon.com/console\nNext choose regional service. For me its “N. California”.\n\n\n\nNext create an account or sign in and navigate to the EC2 dashboard. Its through the dashboard that we’ll define the parameters for the type of server to launch and the mechanisms for communicating with it."
-  },
-  {
-    "objectID": "posts/setupaws/index.html#aws-working-environment",
-    "href": "posts/setupaws/index.html#aws-working-environment",
-    "title": "Set up a virtual server on AWS (in anticipation of hosting Shiny apps)",
+    "objectID": "posts/simpleS3/index.html#aws-working-environment",
+    "href": "posts/simpleS3/index.html#aws-working-environment",
+    "title": "Writing a simple R package in S3.",
     "section": "AWS Working Environment",
-    "text": "AWS Working Environment\nThat is, along with selecting a server you’ll need to set up a working environment. We recommend setting up the working environment before launching the server, as it saves some back and forth. This working environment consists of four main components:\n\nA secure shell (ssh) key-pair to allow you to remotely and securely login to the virtual server once its launched.\nA firewall to restrict access to only secure connections. The firewall closes off all incoming traffic except through those ports specifically named.\n\nA static IP address. This is required for maintaining the link between the domain name and the server when rebooting. (The default is for the instance/server to be assigned a new IP each time its rebooted.) and\nA domain name, say rgtlab.org. A domain name is not required but will facilitate collaborator access by not needing to use the IP address directly."
+    "text": "AWS Working Environment\nThat is, along with selecting a server we’ll need to set up a working environment. We recommend setting up the working environment before launching the server, as it saves some back and forth. This working environment consists of four main components:\n\nA secure shell (ssh) key-pair to allow we to remotely and securely login to the virtual server once its launched.\nA firewall to restrict access to only secure connections. The firewall closes off all incoming traffic except through those ports specifically named.\n\nA static IP address. This is required for maintaining the link between the domain name and the server when rebooting. (The default is for the instance/server to be assigned a new IP each time its rebooted.) and\nA domain name, say rgtlab.org. A domain name is not required but will facilitate collaborator access by not needing to use the IP address directly."
   },
   {
-    "objectID": "posts/setupaws/index.html#ssh-key-pair",
-    "href": "posts/setupaws/index.html#ssh-key-pair",
-    "title": "Set up a virtual server on AWS (in anticipation of hosting Shiny apps)",
+    "objectID": "posts/simpleS3/index.html#ssh-key-pair",
+    "href": "posts/simpleS3/index.html#ssh-key-pair",
+    "title": "Writing a simple R package in S3.",
     "section": "Ssh key pair",
-    "text": "Ssh key pair\nThe first time you create an AWS account you need to exchange an ssh\nkey pair with AWS. This will allow you to login securely to any server you launch. You can generate a ssh key pair in one of two ways in EC2. Either, locally, on you workstation and upload the public key to EC2, or have EC2 generate the key pair. For the first option create a directory on your workstation to hold the keys and navigate to it. e.g. ~/.ssh. You can generate the keys with the command\nssh-keygen -m PEM\nIn the dialog that ensues name the key prefix something like power1_app_ssh-rsa.\nBack in the EC2 dashboard select security/keys in the left panel. A dialog starts and asks for the location of the public key. Browse to the ~/.ssh directory on your workstation and import the public key power1_app_ssh-rsa.pub.\nFor the second method select Create Key Pair in EC2. Give the pair a name, say power1_app_ssh, and a pair of keys will be created and the private key power1_appssh.pem will be downloaded to you local machine. In my case to the default ~/Downloads directory. Move the file to the ~/.ssh directory. Change the access permissions: sudo chmod 600 power1_app_ssh.pem."
+    "text": "Ssh key pair\nThe first time we create an AWS account we need to exchange an ssh key pair with AWS. The pairs consist of a private and a public key. The pair of keys will allow us to login securely to any server we launch on EC2. We can generate an ssh key pair in one of two ways in EC2. Either, locally, on our workstation and upload the public key to EC2, or have EC2 generate the key pair and download the private key.\nFor the first option we create a directory on our workstation to hold the keys and navigate to it. e.g. ~/.ssh. Generate the keys with the command\nssh-keygen -m PEM\n“PEM” defines the key format. More information on public key authentication can be found here. In the interactive dialog name the key prefix something like power1_app_ssh. The dialog will ask for a passphrase. Enter one for an additional level of security, but its not required. The ssh-keygen program will generate two files: power1_app_ssh and power1_app_ssh.pub\nTo complete the process return to the EC2 dashboard select Keys Pairs in the left panel. The select Create key pair botton in the upper right of the page.\nA form appears and asks for a name. Enter something like power1_app_ssh. Select RSA for key pair type and .pem for key file format to match the ssh-keygen process we went through on our workstation.\nasks for the location of the public key. Browse to the ~/.ssh directory on wer workstation and import the public key power1_app_ssh.pub.\nGive the pair a name, say power1_app_ssh, and the keys will be created and the private key power1_app_ssh.pem will be downloaded to our local machine to the ~/.ssh directory. Change the access permissions for the private key with the following command:\nsudo chmod 600 power1_app_ssh.pem"
   },
   {
-    "objectID": "posts/setupaws/index.html#firewall",
-    "href": "posts/setupaws/index.html#firewall",
-    "title": "Set up a virtual server on AWS (in anticipation of hosting Shiny apps)",
+    "objectID": "posts/simpleS3/index.html#firewall",
+    "href": "posts/simpleS3/index.html#firewall",
+    "title": "Writing a simple R package in S3.",
     "section": "Firewall",
-    "text": "Firewall\nCreate a firewall using Network settings in the left hand panel. Choose Create security group and select Allow SSH traffic and Allow HTTPS traffic. This will create a firewall that leaves open only ports 22 and 443, for ssh and https incoming traffic respectively. The default name for the firewall will be something like launch-wizard-6. Rename it power1_firewall."
+    "text": "Firewall\nTo create a firewall click on Network settings in the left hand panel. Choose Create security group and select Allow SSH traffic and Allow HTTPS traffic. This will create a firewall that leaves open only ports 22 and 443, for ssh and https incoming traffic respectively. The default name for the firewall will be something like launch-wizard-6. name the security group power1_firewall."
   },
   {
-    "objectID": "posts/setupaws/index.html#static-ip-address",
-    "href": "posts/setupaws/index.html#static-ip-address",
-    "title": "Set up a virtual server on AWS (in anticipation of hosting Shiny apps)",
+    "objectID": "posts/simpleS3/index.html#static-ip-address",
+    "href": "posts/simpleS3/index.html#static-ip-address",
+    "title": "Writing a simple R package in S3.",
     "section": "Static IP address",
-    "text": "Static IP address\nThe next step is to use the elastic IP service to get a static IP that can be assigned to the server. Navigate to Network and Security again and select Allocate Elastic IP. An IP will be assigned from the EC2 pool of IPv4 IP addresses."
+    "text": "Static IP address\nThe next step is to use the elastic IP service to get a static IP that can be assigned to the server. Navigate to Network and Security again and select Allocate Elastic IP. An IP will be assigned from the EC2 pool of available IPv4 IP addresses."
   },
   {
-    "objectID": "posts/setupaws/index.html#domain-name",
-    "href": "posts/setupaws/index.html#domain-name",
-    "title": "Set up a virtual server on AWS (in anticipation of hosting Shiny apps)",
+    "objectID": "posts/simpleS3/index.html#domain-name",
+    "href": "posts/simpleS3/index.html#domain-name",
+    "title": "Writing a simple R package in S3.",
     "section": "Domain Name",
-    "text": "Domain Name\nTo obtain a dedicated domain name go to Amazon route 53 or Godaddy.com to select a domain name and associate it with your static IP.\nOnce a domain name is aquired, e.g. rgtlab.org, associate it with your static IP address via the domain name service. To associate domain name rgtlab.org with elastic IP do as follows in Route 53:\n\nclick on ‘hosted zones’ in side panel\nclick on rgtlab.org in center panel\nclick on checkbox for rgtlab.org type=A line\nthen click on edit record in right panel\nchange IP address to the Elastic IP (e.g. 13.57.139.31)."
+    "text": "Domain Name\nTo obtain a dedicated domain name go to Amazon route 53 to select a domain name and associate it with our static IP.\nOnce a domain name is acquired, e.g. rgtlab.org, associate it with our static IP address. This can be done via the Route 53 service. To associate domain name rgtlab.org with elastic IP do the following in Route 53:\n\nclick on hosted zones in side panel\nclick on rgtlab.org in center panel\nclick on checkbox for rgtlab.org type=A line\nthen click on edit record in right panel\nchange IP address to the static IP (e.g. 13.57.139.31)."
   },
   {
-    "objectID": "posts/setupaws/index.html#access-server",
-    "href": "posts/setupaws/index.html#access-server",
-    "title": "Set up a virtual server on AWS (in anticipation of hosting Shiny apps)",
+    "objectID": "posts/simpleS3/index.html#access-server",
+    "href": "posts/simpleS3/index.html#access-server",
+    "title": "Writing a simple R package in S3.",
     "section": "Access server",
-    "text": "Access server\nOn your laptop log into server with\nssh -i \"~/.ssh/power1_app_ssh.pem\" ubuntu@rgtlab.org"
+    "text": "Access server\nOn wer laptop log into server with\nssh -i \"~/.ssh/power1_app_ssh.pem\" ubuntu@rgtlab.org"
   },
   {
-    "objectID": "posts/dockerize_simple/index.html",
-    "href": "posts/dockerize_simple/index.html",
-    "title": "A simple process to get your Shiny app online (securely).",
+    "objectID": "posts/awscli_approach/docker_compose_power1_app/TODO.html",
+    "href": "posts/awscli_approach/docker_compose_power1_app/TODO.html",
+    "title": "Focus on R: a new qblog",
+    "section": "",
+    "text": "Reusehttps://creativecommons.org/licenses/by/4.0/CitationBibTeX citation:@online{(ryy)glennthomas,\n  author = {Ronald (Ryy) Glenn Thomas},\n  url = {https://focusonr.org/TODO.html},\n  langid = {en}\n}\nFor attribution, please cite this work as:\nRonald (Ryy) Glenn Thomas. n.d. https://focusonr.org/TODO.html."
+  },
+  {
+    "objectID": "posts/awscli_approach/index.html",
+    "href": "posts/awscli_approach/index.html",
+    "title": "Using the AWS command line interface to launch a EC2 server and docker compose",
     "section": "",
     "text": "Photo by Nathan Waters on Unsplash"
   },
   {
-    "objectID": "posts/dockerize_simple/index.html#select-a-hosting-service",
-    "href": "posts/dockerize_simple/index.html#select-a-hosting-service",
-    "title": "A simple process to get your Shiny app online (securely).",
-    "section": "Select a hosting service",
-    "text": "Select a hosting service\nThere are a number of cloud based server options: Microsoft Azure, Oracle, Google Cloud, Amazon AWS EC2, Digital Ocean to name a few. Each has their own approach to setting up a custom virtual server. Several have free or low-cost service tiers available.\nAn overview of the process with EC2 follows. (Detailed instructions for AWS EC2 were described in an earlier post: https://focusonr.org/posts/setupaws/\n\nCreate an AWS account or sign in and navigate to the EC2 dashboard.\nSet up an interactive environment with AWS server.\n\ndefine secure shell (ssh) key-pair (prefix pair with name power1_app_ssh.\nconfigure firewall.\nobtain static IP.\nobtain domain name (rgtlab.org).\nselect instance operating system (ubuntu) and type (t2-micro)\nlaunch server Once the server is available (optionally follow instructions in Tip) and connect via ssh,\n\nssh -i \"~/.ssh/power1_app_ssh.pem\"  ubuntu@rgtlab.org\nor\nssh rgtlab.org \nThe only necessary software to install is Docker and Caddy. Install them with the following command:\n\nInstall Docker and Caddy:\nsudo apt install docker.io\nsudo apt install -y debian-keyring debian-archive-keyring apt-transport-https\ncurl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | \\\nsudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg\ncurl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | \\\nsudo tee /etc/apt/sources.list.d/caddy-stable.list\nsudo apt update\nsudo apt install caddy\nlog into rgtlab.org\n> ssh rgtlab.org\nOnce the host is set up and the requisite software installed we’ll have a customized virtual server with a static IP address, and unique domain name and firewall in place. In other words, items 1, 2, and 3 from our ‘hosting’ list will be taken care of."
-  },
-  {
-    "objectID": "posts/dockerize_simple/index.html#website",
-    "href": "posts/dockerize_simple/index.html#website",
-    "title": "A simple process to get your Shiny app online (securely).",
-    "section": "Website",
-    "text": "Website\nTo configure the web server and containerize our app we need to add three files to the server, to go along with our Shiny app in the power1_app directory.\nThe three configuation files are:\n\na Docker configuration file (default name Dockerfile)\n\n\n\n  Photo by Ian Taylor on Unsplash \nWe’ll use docker to access R/Shiny. Here is our minimal dockerfile:\n\nShow the code\nFROM rocker/shiny:4.2.0\nCOPY /power1_shiny/* /srv/shiny-server/\nCMD [\"/usr/bin/shiny-server\"]\n\nThis file instructs Docker to build a container based on a Rocker/Shiny image (which is a ubuntu image with R and Shiny installed) then copy into the container the power1_shiny directory containing the shiny code and finally launch Shiny on (default) port 3838. We placed the power1_shiny.R code in the default location /srv/shiny-server so we only need to start the server and it will find the shiny program.\n\na Caddy web server configuration file (default name Caddyfile)\n\nWe’ll use Caddy as our web server. Caddy is an open-source tool that has the very useful feature of automating the acquiring and installing of an SSL certificate. (An SSL cert is required by most browsers to use the encrypted communication protocol https.)\nCaddy is configured with a file named Caddyfile. We use the caddy configuration file to specify three critical things.\n\nthe site domain name.\nthe authentication pair login/hash-password, for each user and\nthe ‘reverse proxy’ map that redirects requests to port 443 (ssl port) onto port 3838 (Shiny port) in the docker container.\n\nOur barebones Caddyfile looks like this:\n\nCaddyfile: Show the code\nrgtlab.org {\n    basicauth * /power1_shiny/* {\n        bob $2a$14$pYWd5O7JqNeGLS4m4CKkzemM2pq5ezn9bcTDowofZTl5wRVl8NTJm\n    }\n    root * /var/www/html\n    handle_path /power1_shiny/* {\n            reverse_proxy 0.0.0.0:3838\n    }\n    file_server\n}\n\nWe can accomplish what we need for items 4, 5, 6 and 7 through the Caddyfile.\nNote:\n\nrgtlab.org is our domain name\nthe basicauth directive specifies login credentials for bob (password: vanilla47)\nhandle_path maps all https requests to port 3838 where Shiny is listening.\nroot directive tells Caddy where to look for the index.html file.\n\nProviding our servers domain name, rgtlab.org is sufficient to initiate an exchange with the letsencrypt service to generates an SSL certificate.\nAnd the third file is the index.html file to provide a launch page.\n\nindex.html: Show the code\n<!DOCTYPE html>\n<html>\n  <body>\n    <h1>Power1 app</h1>\n    <ul>\n      <li><a href=\"./power1_shiny/\">Power1 app</a></li>\n    </ul>\n  </body>\n</html> \n\ncopy power1_app directory to rgtlab.org\n> scp -i \"~/.ssh/power1_app_ssh.pem\" -r ~/prj/power1_app/  ubuntu@rgtlab.org:~\nLastly, cd to power1_app directory and run\nbuild the Docker container on rgtlab.org\ncd power1_app\ndocker build -t power1_image .\ncreate container and run\ndocker run -d --name=power1_shiny -p 3838:3838 --restart=always power1_image\ncopy Caddyfile to location caddy expects in /etc/caddy directory\n>> sudo cp ./Caddyfile /etc/caddy/Caddyfile \ncopy index.html to location caddy expects in /var/www/html directory\ncp  ./index.html /var/www/html/index.html \nrestart Caddy\nsudo systemctl reload caddy\nApp launch page is now available at https://rgtlab.org.\nand you’re good to go!"
-  },
-  {
-    "objectID": "posts/dockerize_simple/index.html#tip-construct-ssh-config-file.",
-    "href": "posts/dockerize_simple/index.html#tip-construct-ssh-config-file.",
-    "title": "A simple process to get your Shiny app online (securely).",
-    "section": "Tip construct ssh config file.",
-    "text": "Tip construct ssh config file.\nFor convenience, construct a config file in ~/.ssh as:\nHost rgtlab.org\nHostName 13.57.139.31 # static IP\nUser ubuntu # default user on ubuntu server\nPort 22  # the default port ssh uses\nIdentityFile ~/Downloads/power1.rsa\nthen you can ssh into the new server with\nsh> ssh rgtlab.org"
+    "objectID": "posts/awscli_approach/index.html#appendix-1",
+    "href": "posts/awscli_approach/index.html#appendix-1",
+    "title": "Using the AWS command line interface to launch a EC2 server and docker compose",
+    "section": "Appendix 1 Set up AWS IAM",
+    "text": "Appendix 1 Set up AWS IAM\nSet up aws access via the aws configure program. To get the needed credentials use the AWS IAM service.\nDetails follow:\nLog into AWS console.\nSearch for IAM service. Navigate to IAM dashboard.\nSelect Users in left hand panel.\nThen select Add Users button (in upper right).\nThen enter a User name in the form. Click Next (lower right)\nThen Create User.\nClick on the user name\nIn the page that comes up. Select Security Credentials tab (center of page).\nUnder Access Keys panel click Create access key (right side or bottom of panel).\nClick Command Line Interface CLI)\nand at the bottom of the page click the checkbox “I understand…”.\nFinally select Create access key and\nchoose Download .csv file (lower right).\nNavigate Download screen to local ~/.aws directory.\nClick Done\nNow in the terminal on your workstation, configure the aws cli app via the command.\n aws configure \nEnter info from the credentials file just downloaded. After entering the AWS Access Key ID and AWS Secret Access Key information you are asked for a Region, (My region is us-west-1), and an output format suggested output format is JSON."
   },
   {
     "objectID": "posts/setupquarto/setupquarto.html",
@@ -186,7 +172,7 @@
     "href": "index.html",
     "title": "Focus on R blog",
     "section": "",
-    "text": "Set up a virtual server on AWS (in anticipation of hosting Shiny apps)\n\n\n\n\n\n\n\nAWS\n\n\n\n\nDetailed steps for setting up a lightweight server on AWS.\n\n\n\n\n\n\nRonald (Ryy) Glenn Thomas\n\n\n\n\n\n\n  \n\n\n\n\nA simple process to get your Shiny app online (securely).\n\n\n\n\n\n\n\nDocker\n\n\nShiny\n\n\n\n\nThis is the first in a series of posts offering suggested strategies for leveraging open source technologies to effectively host data science analysis apps and reports online.\n\n\n\n\n\n\nRonald (Ryy) Glenn Thomas\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nRonald (Ryy) Glenn Thomas\n\n\n\n\n\n\n  \n\n\n\n\nA straightforward strategy to get your Shiny app online, securely and continuously updated.\n\n\nGithub, Docker-compose, EC2 version\n\n\n\n\nDocker\n\n\nShiny\n\n\ndocker-compose\n\n\n\n\nThis is the first in a series of posts offering suggested strategies for leveraging open source technologies to effectively host data science analysis apps and reports online.\n\n\n\n\n\n\nRonald (Ryy) Glenn Thomas\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nSetting up Quarto\n\n\n\n\n\n\n\n123\n\n\nSecond Tag\n\n\n\n\nThis is a second post.\n\n\n\n\n\n\nAug 31, 2022\n\n\nRonald (Ryy) Glenn Thomas\n\n\n\n\n\n\n  \n\n\n\n\nSetting up a minimal neovim environment for data science code development\n\n\nA neovim IDE for R, Python, and Julia\n\n\n\n\nNeovim\n\n\n\n\nThis is the first in a series of posts offering suggested strategies for setting up key tools for data science code development\n\n\n\n\n\n\nInvalid Date\n\n\nRonald (Ryy) Glenn Thomas\n\n\n\n\n\n\n  \n\n\n\n\nSetup Ubuntu on parallels\n\n\n\n\n\n\n\nDocker\n\n\nShiny\n\n\n\n\nstep by step description to create vitual server and setting up optimal neovim config.\n\n\n\n\n\n\nSep 10, 2022\n\n\nRonald (Ryy) Glenn Thomas\n\n\n\n\n\n\nNo matching items"
+    "text": "Writing a simple R package in S3.\n\n\n\n\n\n\n\nAWS\n\n\n\n\nGetting started with S3 OO programming in R\n\n\n\n\n\n\nRonald (Ryy) Glenn Thomas\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nRonald (Ryy) Glenn Thomas\n\n\n\n\n\n\n  \n\n\n\n\nSet up a virtual server on AWS (in anticipation of hosting Shiny apps)\n\n\n\n\n\n\n\nAWS\n\n\n\n\nDetailed steps for setting up a lightweight server on AWS.\n\n\n\n\n\n\nRonald (Ryy) Glenn Thomas\n\n\n\n\n\n\n  \n\n\n\n\nA simple process to get your Shiny app online (securely).\n\n\n\n\n\n\n\nDocker\n\n\nShiny\n\n\n\n\nThis is the first in a series of posts offering suggested strategies for leveraging open source technologies to effectively host data science analysis apps and reports online.\n\n\n\n\n\n\nRonald (Ryy) Glenn Thomas\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nRonald (Ryy) Glenn Thomas\n\n\n\n\n\n\n  \n\n\n\n\nA straightforward strategy to get your Shiny app online, securely and continuously updated.\n\n\nGithub, Docker-compose, EC2 version\n\n\n\n\nDocker\n\n\nShiny\n\n\ndocker-compose\n\n\n\n\nThis is the first in a series of posts offering suggested strategies for leveraging open source technologies to effectively host data science analysis apps and reports online.\n\n\n\n\n\n\nRonald (Ryy) Glenn Thomas\n\n\n\n\n\n\n  \n\n\n\n\nUsing the AWS command line interface to launch a EC2 server and docker compose\n\n\n\n\n\n\n\nAWS\n\n\n\n\nA single batch program to setup virtual server to host shiny app\n\n\n\n\n\n\nApr 15, 2023\n\n\nRonald (Ryy) Glenn Thomas\n\n\n\n\n\n\n  \n\n\n\n\nSetup Ubuntu on parallels\n\n\n\n\n\n\n\nDocker\n\n\nShiny\n\n\n\n\nstep by step description to create vitual server and setting up optimal neovim config.\n\n\n\n\n\n\nSep 10, 2022\n\n\nRonald (Ryy) Glenn Thomas\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nSetting up Quarto\n\n\n\n\n\n\n\n123\n\n\nSecond Tag\n\n\n\n\nThis is a second post.\n\n\n\n\n\n\nAug 31, 2022\n\n\nRonald (Ryy) Glenn Thomas\n\n\n\n\n\n\n  \n\n\n\n\nSetting up a minimal neovim environment for data science code development\n\n\nA neovim IDE for R, Python, and Julia\n\n\n\n\nNeovim\n\n\n\n\nThis is the first in a series of posts offering suggested strategies for setting up key tools for data science code development\n\n\n\n\n\n\nInvalid Date\n\n\nRonald (Ryy) Glenn Thomas\n\n\n\n\n\n\nNo matching items"
   },
   {
     "objectID": "about.html",
