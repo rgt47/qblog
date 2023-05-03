@@ -258,12 +258,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>configure a reverse proxy method (translate https (port 443) requests to Shiny (port 3838)</li>
 </ol>
 <p>In this post we’ll address the first three of these. Tasks four through seven will be accomplished using docker-compose and Caddy, as described in the next post.</p>
-<p>At first glance these 7 requirements can appear daunting, but on closer inspection all can be met with relative ease and minimal cost ( using a cloud-hosting service, e.g.&nbsp;Amazon’s EC2 or Digital Ocean, and a “leased” domain name from, e.g.&nbsp;GoDaddy, or Amazon’s Route 53) or at no cost if we have wer own server with IP address, and domain name.</p>
+<p>At first glance these 7 requirements can appear daunting, but on closer inspection all can be met with relative ease and minimal cost ( using a cloud-hosting service, e.g.&nbsp;Amazon’s EC2 or Digital Ocean, and a “leased” domain name from, e.g.&nbsp;GoDaddy, or Amazon’s Route 53) or at no cost if we have your own server with IP address, and domain name.</p>
 <section id="select-a-hosting-service" class="level2 page-columns page-full">
 <h2 class="anchored" data-anchor-id="select-a-hosting-service">Select a hosting service</h2>
 <p>There are a number of cloud based server options to choose from: Microsoft Azure, Oracle, Google Cloud, Amazon AWS EC2, Digital Ocean to name a few. Each has their own approach to setting up a custom virtual server. Several have free or low-cost service tiers available.</p>
-<p>In this power we’ll provide a step-by-step description of the process with AWS EC2.</p>
-<p>AWS is a reasonable choice for setting up a small custom server. Its not the cheapest option but the system is very well documented and, in our experience, reliable.</p>
+<p>In this post we’ll provide a step-by-step description of the process with AWS EC2.</p>
+<p>AWS is a reasonable choice for setting up a small custom server. Its not the cheapest option, but the system is very well documented and, in our experience, reliable.</p>
 <p>To start open the EC2 console visit the URL:</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>   <span class="ex">https://aws.amazon.com/console</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Next choose regional service. For me its “N. California”.</p>
@@ -274,25 +274,25 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="aws-working-environment" class="level2">
 <h2 class="anchored" data-anchor-id="aws-working-environment">AWS Working Environment</h2>
-<p>That is, along with selecting a server we’ll need to set up a working environment. We recommend setting up the working environment before launching the server, as it saves some back and forth. This working environment consists of four main components:</p>
+<p>Along with selecting a server we’ll need to set up a working environment. We recommend setting up the working environment before launching the server, as it saves some back and forth. The working environment consists of four main components:</p>
 <ol type="1">
-<li>A secure shell (ssh) key-pair to allow we to remotely and securely login to the virtual server once its launched.</li>
-<li>A firewall to restrict access to only secure connections. The firewall closes off all incoming traffic except through those ports specifically named.<br>
+<li>A secure shell (ssh) key-pair to allow us to remotely and securely login to the virtual server once its launched.</li>
+<li>A firewall which will restrict server access to only secure connections. The firewall closes off all incoming traffic except through those ports specifically named.<br>
 </li>
-<li>A static IP address. This is required for maintaining the link between the domain name and the server when rebooting. (The default is for the instance/server to be assigned a new IP each time its rebooted.) and</li>
-<li>A domain name, say rgtlab.org. A domain name is not required but will facilitate collaborator access by not needing to use the IP address directly.</li>
+<li>A static IP address. This is required for maintaining the link between the domain name and the server when rebooting. (The default is for the instance/server to be assigned a new IP address each time its rebooted).</li>
 </ol>
+<p>and 4. A domain name, say <code>rgtlab.org</code>. A domain name is not required but will facilitate collaborator access by not needing to use the IP address directly.</p>
 </section>
 <section id="ssh-key-pair" class="level2">
 <h2 class="anchored" data-anchor-id="ssh-key-pair">Ssh key pair</h2>
 <p>The first time we create an AWS account we need to exchange an ssh key pair with AWS. The pairs consist of a <strong>private</strong> and a <strong>public</strong> key. The pair of keys will allow us to login securely to any server we launch on EC2. We can generate an ssh key pair in one of two ways in EC2. Either, locally, on our workstation and upload the public key to EC2, or have EC2 generate the key pair and download the private key.</p>
 <p>For the first option we create a directory on our workstation to hold the keys and navigate to it. e.g.&nbsp;<code>~/.ssh</code>. Generate the keys with the command</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh-keygen</span> <span class="at">-m</span> PEM</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>“PEM” defines the key format. More information on public key authentication can be found <a href="https://www.ssh.com/academy/ssh/public-key-authentication">here</a>. In the interactive dialog name the key prefix something like <code>power1_app_ssh</code>. The dialog will ask for a passphrase. Enter one for an additional level of security, but its not required. The <code>ssh-keygen</code> program will generate two files: <code>power1_app_ssh</code> and <code>power1_app_ssh.pub</code></p>
-<p>To complete the process return to the EC2 dashboard select <code>Keys Pairs</code> in the left panel. The select <code>Create key pair</code> botton in the upper right of the page.</p>
-<p>A form appears and asks for a name. Enter something like <code>power1_app_ssh</code>. Select <code>RSA</code> for key pair type and <code>.pem</code> for key file format to match the <code>ssh-keygen</code> process we went through on our workstation.</p>
-<p>asks for the location of the public key. Browse to the <code>~/.ssh</code> directory on wer workstation and import the public key <code>power1_app_ssh.pub</code>.</p>
-<p>Give the pair a name, say <code>power1_app_ssh</code>, and the keys will be created and the private key <code>power1_app_ssh.pem</code> will be downloaded to our local machine to the <code>~/.ssh</code> directory. Change the access permissions for the private key with the following command:</p>
+<p>“PEM” defines the key format. More information on public key authentication can be found <a href="https://www.ssh.com/academy/ssh/public-key-authentication">here</a>. In the interactive dialog name the key prefix something like <code>power1_app.pem</code>. The dialog will ask for a passphrase. Enter one for an additional level of security, but its not required. The <code>ssh-keygen</code> program will generate two files: <code>power1_app.pem.pub</code> and <code>power1_app.pub</code></p>
+<p>To complete the process return to the EC2 dashboard select <code>Actions</code> and then <code>Import key pair</code>in the left panel. Enter the name <code>power1_app</code> and select the <code>Browse</code> button. Navigate to the file <code>power1_app.pem.pub</code> in the directory <code>~/.ssh</code>and and select the <code>Import key pair</code> button at the bottom of the page.</p>
+<p>For the second approach select <code>Create key pair</code> botton in the upper right of the page.</p>
+<p>A form appears and asks for a name. Enter something like <code>power1_app</code>. Select <code>RSA</code> for key pair type and <code>.pem</code> for key file format.</p>
+<p>Give the pair a name, say <code>power1_app</code>, and the keys will be created and the private key <code>power1_app.pem</code> will be downloaded to our local machine to the <code>~/.ssh</code> directory. Change the access permissions for the private key with the following command:</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> chmod 600 power1_app_ssh.pem</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 <section id="firewall" class="level2">
@@ -330,15 +330,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <ol start="3" type="1">
 <li><p>Next choose an instance <strong>type</strong>, e.g.&nbsp;“t2-micro”. Different instance types are combinations of, processors, memory, storage capacity, and network performance.</p></li>
 <li><p>click <strong>Configure Instance Details</strong></p></li>
-<li><p>choose a Key pair (use power1_app_ssh.rsa from wer environment) .</p></li>
-<li><p>Add security group, e.g.&nbsp;‘power1_firewall’ from wer environment.</p></li>
+<li><p>choose a Key pair (use power1_app_ssh.rsa from your environment) .</p></li>
+<li><p>Add security group, e.g.&nbsp;‘power1_firewall’ from your environment.</p></li>
 <li><p>choose 30 GB of EBS General Purpose (SSD) or Magnetic storage. Thirty GBs is the maximum allowed in the ‘Free tier’ of servers on AWS. In our experience smaller disk sizes can lead to problems.</p></li>
 <li><p>click <strong>Launch Instance</strong></p></li>
 </ol>
 <p>to Launch the Instance.</p>
 <section id="access-server" class="level2">
 <h2 class="anchored" data-anchor-id="access-server">Access server</h2>
-<p>On wer laptop log into server with</p>
+<p>On your laptop log into server with</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> <span class="at">-i</span> <span class="st">"~/.ssh/power1_app_ssh.pem"</span> ubuntu@rgtlab.org</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 </section>
