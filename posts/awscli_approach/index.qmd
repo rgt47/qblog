@@ -39,69 +39,26 @@ To get started on your workstation configure the aws cli app via the command.
 ```
 see Appendix 1 [here](#appendix-1) for details on obtaining IAM credentials from your AWS account. 
 
+create security group script
 
-
-start up script. 
-`awscli.sh`
 ```sh
-
 #!/usr/bin/env bash
-# given the following:
-# vpc
-# subnet
-# aws configured
-# id, secret, and output=json
-# e.g. call awscli.sh power1_app
-# command line arguments: 
-echo $vpc_id
-exit
-while getopts v:s:a:g:i:p: flag
-do
-    case "${flag}" in
-        v) vpc_id=${OPTARG};;
-        s) subnet_id=${OPTARG};;
-        a) ami_id=${OPTARG};;
-        g) security_grp=${OPTARG};;
-        i) static_ip=${OPTARG};;
-        p) proj_name=${OPTARG};;
-    esac
-done
-echo "vpc_id: $vpc_id";
-echo "subnet_id: $subnet_id";
-echo "ami_id: $ami_id";
-echo "security_grp: $security_grp";
-echo "static_ip: $static_ip";
-echo "proj_name: $proj_name";
-
-base=`basename $PWD`
-if [ "$#" -ne 1 ]
-then
-  proj=$base
-else proj=$1
-fi
-
-# aws environment ids
-# -v
-vpc_id="vpc-14814b73"
-# -s
-subnet_id="subnet-f02c90ab"
-# -a
-ami_id="ami-014d05e6b24240371"
-# -g
-security_grp="sg-04d0db0a59182add5"
-# -i
-static_ip="13.57.139.31"
-# -d
-proj_name="power1_app"
-
-
-exit
+# The script generates a new security group 
+# the group name is "max_restrict"
+# only ports 22 and 443 are open. 
+# to open other ports replicate the last paragraph and change the port number. 
+# Will fail if group name "max_restrict" in already in use. 
+# reads vpc_id from the environment variables set in .zshrc
+#
 aws ec2 create-security-group \
     --group-name max_restrict \
-    --description "most restrictive l2 and 443 only" \
-    --tag-specifications
-    'ResourceType=security-group,Tags=[{Key=Name,Value=max_restrict-sg}]' \
-    --vpc-id "vpc-14814b73"
+    --description "most restrictive: ports 22 and 443 only" \
+    --tag-specifications \
+    'ResourceType=security-group,Tags=[{Key=Name,Value=max_restrict}]' \
+    --vpc-id $vpc_id 
+wait    
+export security_grp=`aws ec2 describe-security-groups | \
+jq -r '.SecurityGroups[] | select(.GroupName=="max_restrict").GroupId'`
 
 aws ec2 authorize-security-group-ingress \
     --group-id $security_grp \
@@ -116,37 +73,92 @@ aws ec2 authorize-security-group-ingress \
     --port 443 \
     --cidr "0.0.0.0/0" 
 
+```
 
+
+start up script. 
+`awscli.sh`
+```sh
+#!/usr/bin/env bash
+while getopts s:t:p: flag
+do
+    case "${flag}" in
+        s) size=${OPTARG};;
+        t) type=${OPTARG};;
+        p) proj_name=${OPTARG};;
+    esac
+done
+base=`basename $PWD`
+if [ -z "$proj_name" ]
+then
+  proj_name=$base
+fi
+
+
+
+if [ -z "$type" ]
+then
+ type="t2.micro" 
+fi
+
+if [ -z "$size" ]
+then
+  size=30
+fi
+
+
+echo "proj_name is $proj_name"
+echo "vpc_id: $vpc_id";
+echo "subnet_id: $subnet_id";
+echo "ami_id: $ami_id";
+echo "security_grp: $security_grp";
+echo "static_ip: $static_ip";
+echo "type: $type";
+echo "size: $size";
+echo "proj_name: $proj_name";
+
+
+read -p "Continue (y/n)?" CONT
+if [ "$CONT" = "y" ]; then
+  echo "Here we go!";
+else
+  echo "too bad. bye."; exit; 
+fi
+
+
+cd ~/.ssh 
+rm -f  ~/.ssh/$proj_name.pem
 aws ec2 create-key-pair  --key-name  $proj_name \
    --query 'KeyMaterial' --output text > ~/.ssh/$proj_name.pem
+
+wait
+chmod 600 ~/.ssh/$proj_name.pem
+
 
 aws ec2 run-instances \
     --image-id $ami_id \
     --count 1 \
-    --instance-type t2.micro \
+    --instance-type $type \
     --key-name $proj_name \
     --security-group-ids $security_grp \
     --subnet-id $subnet_id \
-    --block-device-mappings "[{\"DeviceName\":\"/dev/sda1\",\"Ebs\":{\"VolumeSize\":30}}]" \
+    --block-device-mappings "[{\"DeviceName\":\"/dev/sda1\",\"Ebs\":{\"VolumeSize\":$size}}]" \
     --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$proj_name}]"  \
-    --user-data file://~/Dropbox/prj/qblog/posts/awscli_approach/aws_startup.sh
-
-cd ~/.ssh 
-chmod 600 ~/.ssh/$proj_name.pem
-
+    --user-data file://~/Dropbox/prj/c060/aws_startup.sh
+wait
 iid=`aws ec2 describe-instances --filters "Name=tag:Name,Values=$proj_name" | \
 	jq -r '.Reservations[].Instances[].InstanceId'`
 
-
 aws ec2 associate-address --public-ip $static_ip --instance-id $iid
+wait
+ssh -o "StrictHostKeyChecking no" rgtlab.org \
+	'cd docker_compose_power1_app; sudo docker compose up -d'
 
-ssh rgtlab.org 'sudo docker compose up'
 ```
 
 `aws_startup.sh`
 
 ```sh
-
 #!/bin/bash
 snap install docker
 git clone https://rgt47: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@github.com/rgt47/docker_compose_power1_app.git
