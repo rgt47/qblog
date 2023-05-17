@@ -3,13 +3,13 @@ title: " Set up a virtual server on AWS (in anticipation of hosting Shiny apps) 
 description: "Detailed steps for setting up a lightweight server on AWS. "
 categories: [AWS]
 image: "img/rshiny.png"
-editor: 
-  markdown: 
-    wrap: 72
-#format:
-#  pdf:
-#    toc: true
-#    date: "2023-03-26"
+#editor: 
+#  markdown: 
+#    wrap: 72
+format:
+  pdf:
+    toc: true
+date: last-modified
 ---
 
 ```{r init, include=FALSE}
@@ -27,11 +27,15 @@ Waters</a> on
 
 # Introduction
 
+::: {.callout-note}
+## Motivation for this post: 
+
 Ok! I've got my Shiny app running just the way I want it. Works great! Now how do I get it up on the
-web and shared with my client?
+web and shared with my collaborators?
+:::
 
 Assuming we have a working shiny app, we often next need to address the task of hosting the app
-on a (virtual) server to share with our collaborators. There are many ways to
+on the web to share with our collaborators. To be sure, there are many ways to
 accomplish this.  In this post, we'll describe how to  'spin up' a server on
 Amazon Web Service EC2.  In a future post we'll show how, in just a few steps,
 through the application of Docker, R, Shiny, and Caddy (webserver) functionality
@@ -40,27 +44,31 @@ we can have a fully functional and secure app available on the web to share with
 # Hosting
 
  In order to host a shiny app, say `power1_shiny`, online  we'll need to complete the
-following tasks:
+following set of tasks:
 
-1.  create a virtual server (connected via ssh) with a firewall
-2.  obtain a static IP address (to identify the server online)
-3.  obtain a domain name (name for IP address)
-4.  install and configure a webserver (tool to interact with https protocol requests and
-    respond)
+1.  create a virtual server  with a firewall
+2.  obtain a static IP address  and assign it to
+    the server. 
+3.  obtain a domain name 
+4.  install and configure a webserver 
 5.  obtain and install an SSL certificate (to allow encrypted communication)
-6.  setup an authentication method (password protection)
-7.  configure a reverse proxy method (translate https (port 443) requests to Shiny
-    (port 3838)
+6.  setup an authentication method (password protection for app access)
+7.  configure a reverse proxy method i.e. translate https (port 443) requests to Shiny
+   (port 3838). This avoids the need for URLs like
+   `https://rgtlab.org:3838/power1_shiny`
 
-In this
-post we'll address the first three of these. Tasks four through seven will be
-accomplished using docker-compose and Caddy, as described in the next post. 
 
+::: {.callout-note}
+## Not to worry: 
+
+Ok! I've got my Shiny app running just the way I want it. Works great! Now how do I get it up on the
+web and shared with my collaborators?
 At first glance these 7 requirements can appear daunting, but on closer
 inspection all can be met with relative ease and minimal  cost ( using a
 cloud-hosting service, e.g. Amazon's EC2 or Digital Ocean, and a
 "leased" domain name from, e.g. GoDaddy, or Amazon's Route 53)
 or at no cost if we have your own  server with IP address, and domain name.
+:::
 
 ## Select a hosting service 
 
@@ -116,7 +124,7 @@ and
 say `rgtlab.org`. A domain name is not required but will
 facilitate collaborator access by not needing to use the IP address directly.
 
-## Ssh key pair
+### Ssh key pair
 
 The first time we create an AWS account we need to exchange an ssh key pair with
 AWS. The pairs consist of a **private** and a **public** key. The pair of keys will allow us
@@ -163,10 +171,10 @@ the  `~/.ssh` directory. Change the access permissions for the private key with
 the following command:
 
 ``` sh
-sudo chmod 600 power1_app_ssh.pem
+sudo chmod 600 power1_app.pem
 ```
 
-## Firewall
+### Firewall
 
 
 To create a firewall click on **Network settings** in the left hand panel.
@@ -177,14 +185,14 @@ This will create a firewall that leaves open only ports 22 and 443, for `ssh` an
 The default name for the firewall will be something like `launch-wizard-6`.
 name the security group `power1_firewall`.  
 
-## Static IP address
+### Static IP address
 
 The next step is to use the `elastic IP` service to get a static IP that can be
 assigned to the server. Navigate to **Network and Security** again and select
 **Allocate Elastic IP**. An IP will be assigned from the EC2 pool of available IPv4 IP
 addresses. 
 
-## Domain Name
+### Domain Name
 
 To obtain a dedicated domain name go to  Amazon route 53 
 to select a domain name and associate it  with our static IP.
@@ -204,7 +212,7 @@ name `rgtlab.org` with elastic IP do the following in Route 53:
 ![](img/ec2a.png)
 :::
 
-# Select and launch instance
+## Select and launch instance
 
 2.  From "Quick Start" in the EC2 dashboard select an operating system for the
 server. Our recommendation is the `Ubuntu` OS. Ubuntu is based on linux. Click
@@ -218,7 +226,7 @@ the `Ubuntu` button.
 
 4.  click **Configure Instance Details**
 
-5.  choose a Key pair (use power1_app_ssh.rsa from your environment) .
+5.  choose a Key pair (use power1_app.rsa from your environment) .
 
 6.  Add security group, e.g. 'power1_firewall' from your environment.
 
@@ -230,12 +238,12 @@ smaller disk sizes can lead to problems.
 
 to Launch the Instance.
 
-## Access server
+# Access server
 
 On your laptop log into server with
 
 ``` sh
-ssh -i "~/.ssh/power1_app_ssh.pem" ubuntu@rgtlab.org
+ssh -i "~/.ssh/power1_app.pem" ubuntu@rgtlab.org
 ```
 
 
@@ -249,7 +257,7 @@ ssh -i "~/.ssh/power1_app_ssh.pem" ubuntu@rgtlab.org
 
 
 
-# Appendix:  Tips 
+# Appendix:  Tip  1
 
 ::: {.callout-tip}
 
@@ -262,7 +270,7 @@ Host rgtlab.org
 HostName 13.57.139.31 # static IP
 User ubuntu # default user on ubuntu server
 Port 22  # the default port ssh uses
-IdentityFile ~/.ssh/power1_app_ssh.rsa
+IdentityFile ~/.ssh/power1_app.pem
 ```
 
 then we can ssh into the new server with
@@ -272,7 +280,7 @@ sh> ssh rgtlab.org
 ```
 :::
 
-# Appendix: Non-opinionated instructions
+# Appendix: succinct instructions
 
 Open the Amazon EC2 console at <https://console.aws.amazon.com/ec2/>
 
@@ -286,15 +294,15 @@ In the left side panel select **Key Pairs** (under Network and Security).
 At the top right select the **Create key pair** button. A **Key Pair** form will
 open. 
 
-Give the key pair a name. Something like  `power1_app_ssh`.  Select a key pair
+Give the key pair a name. Something like  `power1_app`.  Select a key pair
 type, suggest `RSA`. Select a **Private key file format**, suggest `.pem`
 
 Below the form select the **Create key pair** button. 
 A pair of keys will be created and the private key
-`power1_app_ssh.pem` will be downloaded to we local machine. In my case to
+`power1_app.pem` will be downloaded to we local machine. In my case to
 the default `~/Downloads` directory. 
 
-Move the file to the `~/.ssh` directory: `mv ~/Downloads/power1_app_ssh.pem ~/.ssh `
+Move the file to the `~/.ssh` directory: `mv ~/Downloads/power1_app.pem ~/.ssh `
 
 Change the access permissions: `sudo chmod 600 power1ssh.pem` to be more
 restrictive. 

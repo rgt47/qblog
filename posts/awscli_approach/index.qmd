@@ -1,14 +1,14 @@
 ---
-title: "Using the AWS command line interface to launch a EC2 server and docker compose"
+title: "Using the AWS command line interface to launch an EC2 server"
 description: "A single batch program to setup virtual server to host shiny app"
 categories: [AWS]
 image: "img/rshiny.png"
-editor: 
-  markdown: 
-    wrap: 72
-#format:
-#  pdf:
-#    toc: true
+#editor: 
+#  markdown: 
+#    wrap: 72
+format:
+  pdf:
+    toc: true
 date: last-modified
 #date: "2023-04-12"
 ---
@@ -28,16 +28,26 @@ Waters</a> on
 
 # Introduction
 
-In a previous post ( [here](https://focusonr.org/posts/setupaws/)) we discussed setting up a virtual server on AWS using
+In a separate post ([here](https://focusonr.org/posts/setupaws/)) we discuss setting up a virtual server on AWS using
 the interactive EC2 dashboard. In this post we'll present a bash shell script to
 perform the same task. 
 
-To get started on your workstation configure the aws cli app via the command. 
+To get started,  on your workstation configure the aws cli app via the command. 
 
 ```sh
- aws configure 
+zsh>  aws configure 
 ```
-see Appendix 1 [here](#appendix-1) for details on obtaining IAM credentials from your AWS account. 
+
+The app will open a dialog asking for your IAM credentials. If you don't have an
+IAM ID 
+Appendix 1 [here](#appendix-1) has details on obtaining IAM credentials from your AWS account. 
+
+Below we offer four bash scripts. The first generates a security group for the
+virtual server, i.e. a firewall. The second creates a key pair to allow
+encrypted ssh communication between the server and your workstation. The third
+script generates the virtual server taking instance characteristics, firewall,
+static IP and domain name as parameters.  The fourth script installs required
+software following server launch. 
 
 create security group script
 
@@ -73,12 +83,52 @@ aws ec2 authorize-security-group-ingress \
     --port 443 \
     --cidr "0.0.0.0/0" 
 
+
 ```
+
+create new key pair with a project name flag
+
+```sh
+
+#!/usr/bin/env bash
+while getopts s:t:p: flag
+do
+    case "${flag}" in
+        p) proj_name=${OPTARG};;
+    esac
+done
+base=`basename $PWD`
+if [ -z "$proj_name" ]
+then
+  proj_name=$base
+fi
+
+echo "proj_name is $proj_name"
+
+
+read -p "Continue (y/n)?" CONT
+if [ "$CONT" = "y" ]; then
+  echo "Here we go!";
+else
+  echo "too bad. bye."; exit; 
+fi
+
+cd ~/.ssh 
+rm -f  ~/.ssh/$proj_name.pem
+aws ec2 create-key-pair  --key-name  $proj_name \
+   --query 'KeyMaterial' --output text > ~/.ssh/$proj_name.pem
+
+wait
+chmod 600 ~/.ssh/$proj_name.pem
+```
+
+
 
 
 start up script. 
 `awscli.sh`
 ```sh
+
 #!/usr/bin/env bash
 while getopts s:t:p: flag
 do
@@ -106,8 +156,10 @@ then
   size=30
 fi
 
-
+echo "Review parameters: "
+echo "---"
 echo "proj_name is $proj_name"
+echo "key_name is $proj_name"
 echo "vpc_id: $vpc_id";
 echo "subnet_id: $subnet_id";
 echo "ami_id: $ami_id";
@@ -115,8 +167,19 @@ echo "security_grp: $security_grp";
 echo "static_ip: $static_ip";
 echo "type: $type";
 echo "size: $size";
-echo "proj_name: $proj_name";
 
+read -p "Review Notes (y/n)?" NOTES
+if [ "$NOTES" = "y" ]; then
+echo "Notes on currect parameters:"
+echo "security group should be in place already. check on EC2. 
+If not, run ./awscli_create_security.sh. 
+Key pair should be in place. check in ~/.ssh. 
+If not run ./create_keypair.sh. 
+ami id is for ubuntu linux 22.04 LTS. 
+If not what is desired check EC2 list of instances. ";
+else
+  echo "I guess you know what you're doing"; 
+fi
 
 read -p "Continue (y/n)?" CONT
 if [ "$CONT" = "y" ]; then
@@ -126,13 +189,13 @@ else
 fi
 
 
-cd ~/.ssh 
-rm -f  ~/.ssh/$proj_name.pem
-aws ec2 create-key-pair  --key-name  $proj_name \
-   --query 'KeyMaterial' --output text > ~/.ssh/$proj_name.pem
-
-wait
-chmod 600 ~/.ssh/$proj_name.pem
+#cd ~/.ssh 
+#rm -f  ~/.ssh/$proj_name.pem
+#aws ec2 create-key-pair  --key-name  $proj_name \
+#   --query 'KeyMaterial' --output text > ~/.ssh/$proj_name.pem
+#
+#wait
+#chmod 600 ~/.ssh/$proj_name.pem
 
 
 aws ec2 run-instances \
@@ -159,6 +222,7 @@ ssh -o "StrictHostKeyChecking no" rgtlab.org \
 `aws_startup.sh`
 
 ```sh
+
 #!/bin/bash
 snap install docker
 git clone https://rgt47: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@github.com/rgt47/docker_compose_power1_app.git
@@ -195,8 +259,10 @@ restrictive.
 
 ## Appendix 1 Set up AWS IAM {#appendix-1} 
   
+To initiate batch processing via the AWS cli app. 
+Set up `aws` access via the `aws configure` program. 
 
-Set up `aws` access via the `aws configure` program. To get the needed credentials
+To get the needed credentials to configure command line `aws`
 use the AWS IAM service. 
 
 Details follow: 
@@ -220,7 +286,7 @@ In the page that comes up. Select `Security Credentials` tab (center of page).
 Under `Access Keys` panel click `Create access key` (right side or bottom of
 panel). 
 
-Click `Command Line Interface CLI)` 
+Click `Command Line Interface CLI` 
 
 and  at the bottom of the page click the checkbox "I understand...".
 
@@ -240,5 +306,5 @@ Now in the terminal on your workstation, configure the aws cli app via the comma
 
 Enter  info from the credentials file just downloaded. After entering the `AWS
 Access Key ID` and `AWS Secret Access Key` information you are asked for a
-Region, (My region is `us-west-1`),  and an output format suggested output format is
-`JSON`. 
+Region, (my region is `us-west-1`),  and an output format (suggested output format is
+`JSON`). 
