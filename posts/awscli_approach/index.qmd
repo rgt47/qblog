@@ -28,11 +28,26 @@ Waters</a> on
 
 # Introduction
 
-In a separate post ([here](https://focusonr.org/posts/setupaws/)) we discuss setting up a virtual server on AWS using
-the interactive EC2 dashboard. In this post we'll present a bash shell script to
-perform the same task. 
+In a separate post ([here](https://focusonr.org/posts/setupaws/)) we discuss
+setting up a virtual server on Amazon Web Services (AWS) using the interactive
+Elastic cloud Compute (EC2) dashboard. While its instructive to use the EC2
+console interface to set up a work environment and launch a custom server, it
+can become a tedious process after the first two or three times. In this post
+we'll present a bash shell script to perform the same task making use of the AWS
+command line interface (CLI). 
 
-To get started,  on your workstation configure the aws cli app via the command. 
+To get started:  on your workstation,  configure the aws cli app via the command. 
+
+Instructions for installing the AWS CLI can be found
+([here](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html/)).
+
+Alternatively, On Macos use homebrew: 
+
+```sh
+zsh> brew install awscli
+```
+
+
 
 ```sh
 zsh>  aws configure 
@@ -42,14 +57,24 @@ The app will open a dialog asking for your IAM credentials. If you don't have an
 IAM ID 
 Appendix 1 [here](#appendix-1) has details on obtaining IAM credentials from your AWS account. 
 
-Below we offer four bash scripts. The first generates a security group for the
-virtual server, i.e. a firewall. The second creates a key pair to allow
-encrypted ssh communication between the server and your workstation. The third
+# Scripts
+
+Below we offer four bash scripts. 
+
+1) The first generates a security group for the
+virtual server, i.e. a firewall. 
+
+2) The second creates a key pair to allow
+encrypted ssh communication between the server and your workstation. 
+
+3) The third
 script generates the virtual server taking instance characteristics, firewall,
-static IP and domain name as parameters.  The fourth script installs required
+static IP and domain name as parameters.  
+
+4) The fourth script installs required
 software following server launch. 
 
-create security group script
+## Create security group script
 
 ```sh
 #!/usr/bin/env bash
@@ -86,25 +111,27 @@ aws ec2 authorize-security-group-ingress \
 
 ```
 
-create new key pair with a project name flag
+## Create new key pair with a project name flag
 
 ```sh
 
+
 #!/usr/bin/env bash
-while getopts s:t:p: flag
-do
-    case "${flag}" in
-        p) proj_name=${OPTARG};;
-    esac
-done
+#while getopts n: flag
+#do
+    #case "${flag}" in
+        #n) key_pair_name=${OPTARG};;
+    #esac
+#done
 base=`basename $PWD`
-if [ -z "$proj_name" ]
+if [ -z "$1" ]
 then
-  proj_name=$base
+  key_pair_name=$base
+else
+  key_pair_name="$1"
 fi
 
-echo "proj_name is $proj_name"
-
+echo "key_pair_name is $key_pair_name"
 
 read -p "Continue (y/n)?" CONT
 if [ "$CONT" = "y" ]; then
@@ -114,12 +141,13 @@ else
 fi
 
 cd ~/.ssh 
-rm -f  ~/.ssh/$proj_name.pem
-aws ec2 create-key-pair  --key-name  $proj_name \
-   --query 'KeyMaterial' --output text > ~/.ssh/$proj_name.pem
+rm -f  ~/.ssh/$key_pair_name.pem
+aws ec2 create-key-pair  --key-name  $key_pair_name \
+   --query 'KeyMaterial' --output text > ~/.ssh/$key_pair_name.pem
 
 wait
-chmod 600 ~/.ssh/$proj_name.pem
+chmod 600 ~/.ssh/$key_pair_name.pem
+
 ```
 
 
@@ -129,12 +157,14 @@ start up script.
 `awscli.sh`
 ```sh
 
+
 #!/usr/bin/env bash
-while getopts s:t:p: flag
+while getopts s:t:k:p: flag
 do
     case "${flag}" in
         s) size=${OPTARG};;
         t) type=${OPTARG};;
+        k) key_name=${OPTARG};;
         p) proj_name=${OPTARG};;
     esac
 done
@@ -159,7 +189,7 @@ fi
 echo "Review parameters: "
 echo "---"
 echo "proj_name is $proj_name"
-echo "key_name is $proj_name"
+echo "key_name is $key_name"
 echo "vpc_id: $vpc_id";
 echo "subnet_id: $subnet_id";
 echo "ami_id: $ami_id";
@@ -223,15 +253,11 @@ ssh -o "StrictHostKeyChecking no" rgtlab.org \
 
 ```sh
 
-#!/bin/bash
-snap install docker
-git clone https://rgt47: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@github.com/rgt47/docker_compose_power1_app.git
-wait
-cp -R docker_compose_power1_app/ ~ubuntu
-cd ~ubuntu
-sudo chown -R ubuntu:ubuntu ~ubuntu/docker_compose_power1_app/
-cd ~ubuntu/docker_compose_power1_app
-```
+#!/bin/bash snap install docker git clone
+https://rgt47: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@github.com/rgt47/docker_compose_power1_app.git
+wait cp -R docker_compose_power1_app/ ~ubuntu cd ~ubuntu sudo chown -R
+ubuntu:ubuntu ~ubuntu/docker_compose_power1_app/ cd
+~ubuntu/docker_compose_power1_app ```
 
 ::: {.callout-tip}
 
