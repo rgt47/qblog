@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Ronald (Ryy) Glenn Thomas">
-<meta name="dcterms.date" content="2023-05-01">
+<meta name="dcterms.date" content="2023-05-25">
 <meta name="description" content="This is the first in a series of posts offering suggested strategies for leveraging open source technologies to effectively host data science analysis apps and reports online.">
 
 <title>Focus on R: a new qblog - A simple process to get your Shiny app online (securely).</title>
@@ -201,7 +201,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">May 1, 2023</p>
+        <p class="date">May 25, 2023</p>
       </div>
     </div>
     
@@ -242,15 +242,17 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p><img src="img/crane.jpg" class="img-fluid" alt="under construction"> <font size="1"> Photo by <a href="https://unsplash.com/@nathangwaters?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Nathan Waters</a> on <a href="https://unsplash.com/s/photos/construction?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Unsplash</a> </font></p>
 </div></div><section id="introduction" class="level1">
 <h1>Introduction</h1>
-<p>This is another in a series of posts offering suggested strategies for leveraging open source technologies to provide straight-forward solutions to one of the perpetually challenging tasks in the practice of biostatistics and data science, i.e.&nbsp;how to effectively communicate analysis results to clients and collaborators. In this post we propose a simple method to migrate a shiny app from your local workstation to the web.</p>
-<p>The list of open-source technologies (software stack) we suggest for employment here is: linux, R, Shiny, Docker, and Caddy. In this post we’ll make use of the AWS cloud service. In future posts we’ll describe alternate constructions, e.g.&nbsp;using the low cost cloud service: Hetzner.</p>
+<p>This is another in a series of posts straightforward, open-source strategies effectively communicate data analysis results to clients and collaborators.</p>
+<p>In this post we propose a simple method to migrate a shiny app from your local workstation to the web.</p>
+<p>The list of open-source technologies (software stack) we suggest for employment is: linux, R, Shiny, Docker, and Caddy. In this post we’ll make use of the AWS cloud service. In future posts we’ll describe alternate constructions, e.g.&nbsp;using the low cost cloud service: Hetzner.</p>
 <p>In the following we’ll provide a proof-of-concept example of how to apply these technologies for securely hosting an interactive Shiny application on the web.</p>
 <p>We start with a very simple, but hopefully still useful, stand-alone Shiny app developed on our local workstation. After some interfacing with the Amazon web service environment, we’ll push the Shiny app into the cloud, configure a web server, and end up with a secure (encrypted and authenticated) app running on a website with a custom domain name.</p>
 </section>
 <section id="methods" class="level1 page-columns page-full">
 <h1>Methods</h1>
-<p>To begin, lets assume we’re just finished developing a new Shiny app, named <code>power1_shiny</code>. Our working directory is named <code>power1_app</code>. The methods described here apply generically to any Shiny app, but we’ll use one of our own for illustration). See the <code>R/Shiny</code> code for our <code>power1_shiny</code> app (<code>app.R</code>) below.</p>
-<p>Our shiny app is designed to be a balance of simple and functional – one that calculates the power for a 2-sample t-test as a function of the standardized effect size. The app is intentionally minimal. Using only base R functions, with a minimum of reactive widgets and layout commands to keep it simple while still performing a useful function.</p>
+<p>To begin, lets assume we’re just finished developing a new Shiny app, named <code>power1_shiny</code>. We have a working directory named <code>power1_app</code>. Inside that directory <code>power1_shiny</code> is a sub-directory containing the shiny program file <code>app.R</code>.</p>
+<p>The methods described here apply generically to any Shiny app, but we’ll use one of our own for illustration). See the <code>R/Shiny</code> code for our <code>power1_shiny</code> app (<code>app.R</code>) below.</p>
+<p>Our shiny app is designed to be a balance of simple and functional, it calculates the power for a 2-sample t-test as a function of the standardized effect size. The app is intentionally minimal; using only base R functions, with a minimum of reactive widgets and layout commands.</p>
 <details>
 <summary>show the <code>power1_shiny/app.R</code> code</summary>
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>ui <span class="ot">&lt;-</span> <span class="fu">fluidPage</span>(</span>
@@ -272,10 +274,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>}</span>
 <span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="fu">shinyApp</span>(ui, server)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
-<p>We can test the app locally by runnning it with the following command issued from the <code>power1_app</code> directory.</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">R</span> <span class="at">-e</span> <span class="st">"library(shiny); runApp('power1_shiny/app.R', launch=T)"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>This will, in turn, run the R program, load the Shiny package, and launch the app in your default browser.</p>
-<p>Figure 1 shows the Shiny app running locally in a browser on our desktop, it consists of a widget to select the sample size and provide a dynamic visualization (2D plot) of the power as a function of the standardized effect size.</p>
+<p>We can test the app locally on our workstation by runnning it with the following command issued from the <code>power1_app</code> directory shell prompt</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">zsh</span><span class="op">&gt;</span> R <span class="at">-e</span> <span class="st">"library(shiny); runApp('power1_shiny/app.R', launch=T)"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>This will, in sequence, start the R program, load the Shiny package, run and launch the app in your default browser.</p>
+<p>The margin Figure shows our Shiny app running locally in a browser on our desktop, it consists of a widget to select the sample size and a plot to provide a dynamic visualization of the power as a function of the standardized effect size.</p>
 
 <div class="no-row-height column-margin column-container"><div class="">
 <div class="quarto-figure quarto-figure-center">
@@ -284,51 +286,42 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <figcaption class="figure-caption"><em>Shiny app</em></figcaption>
 </figure>
 </div>
-</div></div><p>Once we determine our app is working as designed, we can move on to the task of hosting the app on a (virtual) server to share with our collaborators. There are many ways to accomplish this. Here we’ll demonstrate a straightforward and efficient approach using a cloud service and open source tools. That is, we’ll describe how to ‘spin up’ a server on Amazon Web Service EC2 and in just a few steps, through the application of Docker, R, Shiny, and Caddy we’ll have a secure web app to share with colleagues.</p>
+</div></div><p>Once we determine our app is working as designed, we move on to the task of hosting the app on a (virtual) server with the goal of sharing with our collaborators. There are many ways to accomplish this. Here we’ll describe how to ‘spin up’ a server on Amazon Web Service EC2 and in just a few steps, through the application of Docker, R, Shiny, and Caddy have a secure web app running.</p>
 </section>
 <section id="hosting" class="level1 page-columns page-full">
 <h1>Hosting</h1>
 <p>In order to host <code>power1_shiny</code> online we’ll need to complete the following tasks:</p>
 <ol type="1">
-<li>create a virtual server (connected via ssh) with a firewall</li>
-<li>obtain a static IP address (to identify the server online)</li>
+<li>create a virtual server with a firewall</li>
+<li>obtain a static IP address</li>
 <li>obtain a domain name</li>
-<li>install and configure a webserver (tool to interact with https protocol requests)</li>
-<li>obtain and install an SSL certificate (to allow encrypted communication)</li>
-<li>setup an authentication method (password protection)</li>
-<li>configure a reverse proxy method – translate https (port 443) requests to Shiny (port 3838).</li>
+<li>install and configure a webserver</li>
+<li>obtain and install an SSL certificate</li>
+<li>setup an authentication method and</li>
+<li>configure a reverse proxy method to translate https (port 443) requests to Shiny (port 3838).</li>
 </ol>
-<p>At first glance these 7 requirements can appear daunting, but on closer inspection all can be met with relative ease and minimal cost ( using a cloud-hosting service, e.g.&nbsp;Amazon’s EC2 or Digital Ocean, and a “leased” domain name from, e.g.&nbsp;GoDaddy, or Amazon’s Route 53) or no cost if you have your own server with IP address, and domain name.</p>
+<p>At first glance these 7 requirements can appear daunting, but on closer inspection all can be met with relative ease and minimal cost ( using a cloud-hosting service, e.g.&nbsp;Amazon’s EC2 or Digital Ocean, and a “leased” domain name from, e.g.&nbsp;GoDaddy, or Amazon’s Route 53) or at no cost if you have your own server with IP address, and domain name.</p>
 <section id="select-a-hosting-service" class="level2">
 <h2 class="anchored" data-anchor-id="select-a-hosting-service">Select a hosting service</h2>
 <p>There are a number of cloud based server options: Microsoft Azure, Oracle, Google Cloud, Amazon AWS EC2, Digital Ocean to name a few. Each has their own approach to setting up a custom virtual server. Several have free or low-cost service tiers available.</p>
-<p>An overview of the process with EC2 follows. (Detailed instructions for AWS EC2 were described in an earlier post: <a href="https://focusonr.org/posts/setupaws/" class="uri">https://focusonr.org/posts/setupaws/</a></p>
-<ol start="0" type="1">
-<li>Create an AWS account or sign in and navigate to the EC2 dashboard.</li>
-<li>Set up an working environment with AWS server.
-<ol type="a">
-<li>define secure shell (ssh) key-pair (prefix pair with name <code>power1_app_ssh</code>.</li>
-<li>configure firewall.</li>
-<li>obtain static IP.</li>
-<li>obtain domain name (rgtlab.org).</li>
-<li>select instance operating system (<code>ubuntu</code>) and type (<code>t2-micro</code>)</li>
-<li>launch server</li>
-</ol></li>
-</ol>
-<p>Once the server is available (optionally follow instructions in <code>Tip</code>) and connect via ssh.</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> <span class="at">-i</span> <span class="st">"~/.ssh/power1_app_ssh.pem"</span>  ubuntu@rgtlab.org</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">or</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> rgtlab.org </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>An overview of the process with EC2 follows. (Detailed instructions for AWS EC2 were described in an earlier post: <a href="https://focusonr.org/posts/setupaws/" class="uri">https://focusonr.org/posts/setupaws/</a>)</p>
+<p>step 0. Create an AWS account or sign in and navigate to the EC2 dashboard. step 1. Set up an working environment with AWS server. a. define secure shell (ssh) key-pair b. configure firewall. c.&nbsp;obtain static IP. d.&nbsp;obtain domain name.</p>
+<pre><code>Once the environment is set up</code></pre>
+<p>step 2. a. select instance operating system (<code>ubuntu</code>) and type (<code>t2-micro</code>) b. launch server</p>
+<p>Once the server is available connect via ssh.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> <span class="at">-i</span> <span class="st">"~/.ssh/power1_app_ssh.pem"</span>  ubuntu@rgtlab.org</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>or using the <code>config</code> setup described in Tip 1.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> rgtlab.org </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>The only necessary software to install is Docker and Caddy. Install them with the following commands:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt install docker.io</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt install <span class="at">-y</span> debian-keyring debian-archive-keyring apt-transport-https</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-1sLf</span> <span class="st">'https://dl.cloudsmith.io/public/caddy/stable/gpg.key'</span> <span class="kw">|</span> <span class="dt">\</span></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> gpg <span class="at">--dearmor</span> <span class="at">-o</span> /usr/share/keyrings/caddy-stable-archive-keyring.gpg</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-1sLf</span> <span class="st">'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt'</span> <span class="kw">|</span> <span class="dt">\</span></span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> tee /etc/apt/sources.list.d/caddy-stable.list</span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt update</span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt install caddy</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>At this point we have a customized virtual server with a static IP address, and unique domain name and firewall in place. In other words, items 1, 2, and 3 from our ‘hosting’ list will be taken care of.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt install docker.io</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt install <span class="at">-y</span> debian-keyring debian-archive-keyring apt-transport-https</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-1sLf</span> <span class="st">'https://dl.cloudsmith.io/public/caddy/stable/gpg.key'</span> <span class="kw">|</span> <span class="dt">\</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> gpg <span class="at">--dearmor</span> <span class="at">-o</span> /usr/share/keyrings/caddy-stable-archive-keyring.gpg</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-1sLf</span> <span class="st">'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt'</span> <span class="kw">|</span> <span class="dt">\</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> tee /etc/apt/sources.list.d/caddy-stable.list</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt update</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt install caddy</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>At this point we have a customized virtual server with a static IP address, unique domain name and firewall in place. In other words, items 1, 2, and 3 from our ‘hosting’ list above are taken care of.</p>
 </section>
 <section id="website" class="level2 page-columns page-full">
 <h2 class="anchored" data-anchor-id="website">Website</h2>
@@ -343,9 +336,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div></div><p>We’ll use docker to access R/Shiny. Here is our minimal dockerfile:</p>
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>FROM rocker<span class="sc">/</span>shiny<span class="sc">:</span><span class="dv">4</span>.<span class="fl">2.0</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>COPY <span class="sc">/</span>power1_shiny<span class="sc">/</span><span class="er">*</span> <span class="er">/</span>srv<span class="sc">/</span>shiny<span class="sc">-</span>server<span class="sc">/</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>CMD [<span class="st">"/usr/bin/shiny-server"</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>FROM rocker<span class="sc">/</span>shiny<span class="sc">:</span><span class="dv">4</span>.<span class="fl">2.0</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>COPY <span class="sc">/</span>power1_shiny<span class="sc">/</span><span class="er">*</span> <span class="er">/</span>srv<span class="sc">/</span>shiny<span class="sc">-</span>server<span class="sc">/</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>CMD [<span class="st">"/usr/bin/shiny-server"</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <p>This file instructs Docker to build a container based on a Rocker/Shiny image (which is a ubuntu image with R and Shiny installed) then copy into the container the <code>power1_shiny</code> directory containing the shiny code and finally launch Shiny server listening on (default) port 3838. We placed the <code>power1_shiny/app.R</code> code in the default location <code>/srv/shiny-server</code> so we only need to start the server and it will find the shiny program.</p>
 <ol start="2" type="1">
@@ -361,16 +354,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>Our barebones Caddyfile looks like this:</p>
 <details>
 <summary><code>Caddyfile</code>: Show the code</summary>
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>rgtlab.org {</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    basicauth <span class="sc">*</span> <span class="er">/</span>power1_shiny<span class="sc">/</span><span class="er">*</span> {</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>        bob <span class="sc">$</span>2a<span class="sc">$</span><span class="dv">14</span><span class="sc">$</span>pYWd5O7JqNeGLS4m4CKkzemM2pq5ezn9bcTDowofZTl5wRVl8NTJm</span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    }</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    root <span class="sc">*</span> <span class="er">/</span>var<span class="sc">/</span>www<span class="sc">/</span>html</span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    handle_path <span class="sc">/</span>power1_shiny<span class="sc">/</span><span class="er">*</span> {</span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>            reverse_proxy <span class="dv">0</span>.<span class="dv">0</span>.<span class="fl">0.0</span><span class="sc">:</span><span class="dv">3838</span></span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    }</span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    file_server</span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>rgtlab.org {</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    basicauth <span class="sc">*</span> <span class="er">/</span>power1_shiny<span class="sc">/</span><span class="er">*</span> {</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>        bob <span class="sc">$</span>2a<span class="sc">$</span><span class="dv">14</span><span class="sc">$</span>pYWd5O7JqNeGLS4m4CKkzemM2pq5ezn9bcTDowofZTl5wRVl8NTJm</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    root <span class="sc">*</span> <span class="er">/</span>var<span class="sc">/</span>www<span class="sc">/</span>html</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    handle_path <span class="sc">/</span>power1_shiny<span class="sc">/</span><span class="er">*</span> {</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>            reverse_proxy <span class="dv">0</span>.<span class="dv">0</span>.<span class="fl">0.0</span><span class="sc">:</span><span class="dv">3838</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    file_server</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <p>We can accomplish what we need for items 4, 5, 6 and 7 through the Caddyfile.</p>
 <p>Note:</p>
@@ -384,44 +377,44 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>And the third file is the <code>index.html</code> file to provide a launch page for the app.</p>
 <details>
 <summary><code>index.html</code>: Show the code</summary>
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="sc">&lt;!</span>DOCTYPE html<span class="sc">&gt;</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="er">&lt;</span>html<span class="sc">&gt;</span></span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="er">&lt;</span>body<span class="sc">&gt;</span></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="er">&lt;</span>h1<span class="sc">&gt;</span>Power1 app<span class="sc">&lt;</span><span class="er">/</span>h1<span class="sc">&gt;</span></span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="er">&lt;</span>ul<span class="sc">&gt;</span></span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>      <span class="er">&lt;</span>li<span class="sc">&gt;</span><span class="er">&lt;</span>a href<span class="ot">=</span><span class="st">"./power1_shiny/"</span><span class="sc">&gt;</span>Power1 app<span class="sc">&lt;</span><span class="er">/</span>a<span class="sc">&gt;</span><span class="er">&lt;/</span>li<span class="sc">&gt;</span></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    <span class="er">&lt;/</span>ul<span class="sc">&gt;</span></span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  <span class="er">&lt;/</span>body<span class="sc">&gt;</span></span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="er">&lt;/</span>html<span class="sc">&gt;</span> </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="sc">&lt;!</span>DOCTYPE html<span class="sc">&gt;</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="er">&lt;</span>html<span class="sc">&gt;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="er">&lt;</span>body<span class="sc">&gt;</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    <span class="er">&lt;</span>h1<span class="sc">&gt;</span>Power1 app<span class="sc">&lt;</span><span class="er">/</span>h1<span class="sc">&gt;</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    <span class="er">&lt;</span>ul<span class="sc">&gt;</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>      <span class="er">&lt;</span>li<span class="sc">&gt;</span><span class="er">&lt;</span>a href<span class="ot">=</span><span class="st">"./power1_shiny/"</span><span class="sc">&gt;</span>Power1 app<span class="sc">&lt;</span><span class="er">/</span>a<span class="sc">&gt;</span><span class="er">&lt;/</span>li<span class="sc">&gt;</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    <span class="er">&lt;/</span>ul<span class="sc">&gt;</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  <span class="er">&lt;/</span>body<span class="sc">&gt;</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="er">&lt;/</span>html<span class="sc">&gt;</span> </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <p>Once the three config files and the the Shiny code directory are in place copy the <code>power1_app</code> directory to the server <code>rgtlab.org</code> with the command:</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">scp</span> <span class="at">-i</span> <span class="st">"~/.ssh/power1_app_ssh.pem"</span> <span class="at">-r</span> ~/prj/power1_app/  ubuntu@rgtlab.org:~</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">scp</span> <span class="at">-i</span> <span class="st">"~/.ssh/power1_app_ssh.pem"</span> <span class="at">-r</span> ~/prj/power1_app/  ubuntu@rgtlab.org:~</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Lastly, ssh to the server and cd to <code>power1_app</code> directory</p>
 <p>copy <code>Caddyfile</code> to location caddy expects in <code>/etc/caddy</code> directory</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> cp ./Caddyfile /etc/caddy/Caddyfile </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb11"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> cp ./Caddyfile /etc/caddy/Caddyfile </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>copy <code>index.html</code> to location caddy expects in <code>/var/www/html</code> directory</p>
-<div class="sourceCode" id="cb10"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cp</span>  ./index.html /var/www/html/index.html </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb12"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cp</span>  ./index.html /var/www/html/index.html </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>and run the following command to</p>
 <p>build the Docker container on <code>rgtlab.org</code></p>
-<div class="sourceCode" id="cb11"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> build <span class="at">-t</span> power1_image .</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb13"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> build <span class="at">-t</span> power1_image .</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>create container and run</p>
-<div class="sourceCode" id="cb12"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> run <span class="at">-d</span> <span class="at">--name</span><span class="op">=</span>power1_shiny <span class="at">-p</span> 3838:3838 <span class="at">--restart</span><span class="op">=</span>always power1_image</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb14"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> run <span class="at">-d</span> <span class="at">--name</span><span class="op">=</span>power1_shiny <span class="at">-p</span> 3838:3838 <span class="at">--restart</span><span class="op">=</span>always power1_image</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>restart Caddy</p>
-<div class="sourceCode" id="cb13"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> systemctl reload caddy</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb15"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> systemctl reload caddy</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>App launch page is now available at <code>https://rgtlab.org</code>.</p>
 <p>and you’re good to go!</p>
 </section>
 <section id="tip-construct-ssh-config-file." class="level2">
 <h2 class="anchored" data-anchor-id="tip-construct-ssh-config-file.">Tip construct ssh config file.</h2>
 <p>For convenience, construct a <code>config</code> file in <code>~/.ssh</code> as:</p>
-<div class="sourceCode" id="cb14"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="ex">Host</span> rgtlab.org</span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="ex">HostName</span> 13.57.139.31 <span class="co"># static IP</span></span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="ex">StrictHostKeyChecking</span> no  <span class="co">#avoid known host file error message</span></span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="ex">User</span> ubuntu <span class="co"># default user on ubuntu server</span></span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="ex">Port</span> 22  <span class="co"># the default port ssh uses</span></span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="ex">IdentityFile</span> ~/.ssh/power1_app.pem</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb16"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="ex">Host</span> rgtlab.org</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="ex">HostName</span> 13.57.139.31 <span class="co"># static IP</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="ex">StrictHostKeyChecking</span> no  <span class="co">#avoid known host file error message</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="ex">User</span> ubuntu <span class="co"># default user on ubuntu server</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a><span class="ex">Port</span> 22  <span class="co"># the default port ssh uses</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="ex">IdentityFile</span> ~/.ssh/power1_app.pem</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>then you can ssh into the new server with</p>
-<div class="sourceCode" id="cb15"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sh</span><span class="op">&gt;</span> ssh rgtlab.org </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb17"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sh</span><span class="op">&gt;</span> ssh rgtlab.org </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 
 
 </section>
@@ -430,13 +423,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div id="quarto-appendix" class="default"><section class="quarto-appendix-contents"><h2 class="anchored quarto-appendix-heading">Reuse</h2><div id="quarto-reuse" class="quarto-appendix-contents"><div><a rel="license" href="https://creativecommons.org/licenses/by/4.0/">https://creativecommons.org/licenses/by/4.0/</a></div></div></section><section class="quarto-appendix-contents"><h2 class="anchored quarto-appendix-heading">Citation</h2><div><div class="quarto-appendix-secondary-label">BibTeX citation:</div><pre class="sourceCode code-with-copy quarto-appendix-bibtex"><code class="sourceCode bibtex">@online{(ryy) glenn thomas2023,
   author = {(Ryy) Glenn Thomas, Ronald},
   title = {A Simple Process to Get Your {Shiny} App Online (Securely).},
-  date = {2023-05-16},
+  date = {2023-05-25},
   url = {https://focusonr.org/posts/dockerize_simple},
   langid = {en}
 }
 </code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre><div class="quarto-appendix-secondary-label">For attribution, please cite this work as:</div><div id="ref-(ryy) glenn thomas2023" class="csl-entry quarto-appendix-citeas" role="listitem">
 (Ryy) Glenn Thomas, Ronald. 2023. <span>“A Simple Process to Get Your
-Shiny App Online (Securely). .”</span> May 16, 2023. <a href="https://focusonr.org/posts/dockerize_simple">https://focusonr.org/posts/dockerize_simple</a>.
+Shiny App Online (Securely). .”</span> May 25, 2023. <a href="https://focusonr.org/posts/dockerize_simple">https://focusonr.org/posts/dockerize_simple</a>.
 </div></div></section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
 window.document.addEventListener("DOMContentLoaded", function (event) {
