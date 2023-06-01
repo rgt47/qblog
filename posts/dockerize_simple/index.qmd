@@ -184,19 +184,23 @@ or using the `config` setup described in Tip 1.
 ssh rgtlab.org 
 ```
 
-The only
-necessary software to install is Docker and Caddy. Install
+The only necessary software to install is Docker and Caddy. If you followed the
+cli  or console based instructions to set up a virtual server
+[here](https://focusonR) the docker and caddy will be pre-installed. 
+
+Otherwise you can install
 them  with the following commands:
 
 ``` sh
-sudo apt install docker.io
-sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
+sudo apt update
+sudo apt install docker.io -y
+sudo apt install -y curl debian-keyring debian-archive-keyring apt-transport-https
 curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | \
 sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
 curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | \
 sudo tee /etc/apt/sources.list.d/caddy-stable.list
 sudo apt update
-sudo apt install caddy
+sudo apt install caddy -y
 ```
 
 
@@ -209,9 +213,7 @@ name and firewall in place. In other words, items 1, 2, and 3 from our
 
 ## Website
 
-To configure the web server and containerize our app we need to add
-three files to the server, to go along with our Shiny app in the
-`power1_app` directory and move all files to the server.
+To containerize our Shiny app we need a Dockerfile to the `power1_app` directory.
 
 
 
@@ -232,7 +234,7 @@ We'll use docker to access  R/Shiny.  Here is our minimal dockerfile:
 
 ```{r echo=T, eval=F}
 #| code-fold: true
-#| code-summary: "Show the code"
+#| code-summary: "`Dockerfile`: Show the code"
 FROM rocker/shiny:4.2.0
 COPY /power1_shiny/* /srv/shiny-server/
 CMD ["/usr/bin/shiny-server"]
@@ -246,7 +248,9 @@ finally launch Shiny server listening on (default) port 3838. We placed the `pow
 default location `/srv/shiny-server` so we only need to start the server and it
 will find the shiny program. 
 
-2.   a Caddy web server configuration file (default name `Caddyfile`)
+To configure the web server we need to add
+a Caddy configuration file (default name `Caddyfile`) to the 
+`power1_app` directory.  
 
  We'll use `Caddy` as our web server. Caddy is an
 open-source tool that has the very useful feature of automating the
@@ -293,7 +297,8 @@ Note:
 Providing our servers domain name, `rgtlab.org` is sufficient to
 initiate an exchange with the `letsencrypt` service to generates an SSL certificate.
 
-And the third file is the `index.html` file to provide a launch page for the app.
+Lastly, we need a  `index.html` file to provide a launch page for the app.
+and move all files to the server.
 
 ```{r echo=T, eval=F}
 #| code-fold: true
@@ -310,13 +315,26 @@ And the third file is the `index.html` file to provide a launch page for the app
 </html> 
 ```
 
-Once the three config files and the the Shiny code directory are in place copy the `power1_app` directory to the server `rgtlab.org`  with the command: 
+Once the  config files and the index.html file and the Shiny code directory are
+in place copy the `power1_app` directory to the server `rgtlab.org`  with the
+secure copy command: 
 
 ```sh
-scp -i "~/.ssh/power1_app_ssh.pem" -r ~/prj/power1_app/  ubuntu@rgtlab.org:~
+scp -i "~/.ssh/power1_app.pem" -r ~/prj/power1_app/  ubuntu@rgtlab.org:~
 ```
 
 Lastly, ssh to the server and cd to `power1_app` directory
+
+Build and run the Docker containerand run. Using the docker approach allows us
+to avoid installing both R and Shiny on the virtual server `rgtlab.org`
+
+```sh
+docker build -t power1_image .
+```
+create container and run
+```sh
+docker run -d --name=power1_shiny -p 3838:3838 --restart=always power1_image
+```
 
 
 copy `Caddyfile` to location caddy expects
@@ -335,14 +353,6 @@ cp  ./index.html /var/www/html/index.html
 
 and run the following command to 
 
-build the Docker container on `rgtlab.org`
-```sh
-docker build -t power1_image .
-```
-create container and run
-```sh
-docker run -d --name=power1_shiny -p 3838:3838 --restart=always power1_image
-```
 
 restart Caddy
 ```sh
