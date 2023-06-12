@@ -27,93 +27,96 @@ options(scipen = 1, digits = 2)
 
 # Introduction
 
-## Install Mint onto a macbook pro 
+## Install Mint on a macbook pro 
 
 The target machine is a 2016 13-inch MacBook with four Thunderbolt 3 Ports. 
 
-Get an iso file from the Mint website. 
+To start the process get an iso file from the Mint website. The ISO file is 2.5 GB in size.
 The Linux Mint 21.1 Vera download site is [here](https://www.linuxmint.com/edition.php?id=302).
+ The download torrent file is  [here](https://www.linuxmint.com/torrents/)
 
-The ISO file is 2.5 GB in size. The download torrent file is  [here](https://www.linuxmint.com/torrents/)
+ on macbook pro running macos, Use an app to download the iso via torrent.  we
+suggest `Transmission`, to open torrent file and download "iso". 
 
-Use an app on macbook pro running macos, we suggest `Transmission`, to open torrent file and
-download "iso". Takes about 6 minutes via ethernet connection. 
-
-Transfer ("burn") iso file to USB drive. 
-On Macos we suggest using `balanaEtcher`. Download  `balanaEtcher` [here](https://etcher.balena.io/)
+Next transfer ("burn") the `iso` file to a USB drive. 
+On Macos we suggest using the app `balanaEtcher`. Download  `balanaEtcher` [here](https://etcher.balena.io/)
 
 Insert the USB flash drive into the target mac and reboot. 
-Hold the ALT key to allow booting from the external USB drive. 
+Hold the `ALT` key to allow booting from the external USB drive. 
 
-From the `Grub` menu choose "Start Linux Mint 21.1 Cinnamon 64-bit"
+From the `Grub` menu choose `Start Linux Mint 21.1 Cinnamon 64-bit`. 
 
 A `linux mint` desktop will appear. There is one icon on the screen
-lfbeled "install Linux Mint". Double click it. 
+labeled "install Linux Mint". Double click it. 
 
 A setup dialog will start. 
-
-*	First Language, 
-*	then Network, 
-*	then codexes, 
-*	then options for a fresh install or "something else". 
-*	next Location, 
-*	then name a root user and assign a password. 
+In sequence
+*	Language (English for us), 
+*	then Network (suggest skip), 
+*	then codexes (suggest skip), 
+*	then options for a fresh install or "something else" (choose fresh to
+*	devote full hard drive to Mint). 
+*	next Location (Pacific region for us), 
+*	then name a root user, a hostname,  and assign a password. 
 
 Thats it. Reboot and login. 
 
-Use Panda Wireless modem for internet access. Mint 21.1 has `Ralink RT5372` drivers installed. 
+At a minimum use Panda Wireless modem for internet access since Mint 21.1 has `Ralink RT5372` drivers installed. 
+(see appendix for Broadcom install instructions) 
 
-Add second monitor. Cinema display 27". 
+Add second monitor via HDMI or use Cinema display 27" via Thunderbolt adapter on older macbooks. 
 
 Open Display menu. Select 2560x1440 for resolution for both monitors. Monitor
 scale 150\%. 
 
-Turn on Timeshift to provide hourly snapshots
+Turn on Timeshift to provide hourly snapshots. 
 
 Set keyboard and trackpad preferences: 
 
-* Open "Mouse and Touchpad". Turn on "Tap to click" and "Reverse scroll". 
+* Open `Mouse and Touchpad`. Turn on `Tap to click` and `Reverse scroll`. 
 
-* Open "Keyboard" > "Layouts" > "Options" > "Caps Lock behavior" and select "Swap Esc and Caps-Lock"
+* Open `Keyboard` > `Layouts` > `Options` > `Caps Lock behavior` and select `Swap Esc and Caps-Lock`
 
-Update base software.
+Update base software. (upgrade may be an issue with 2012 macbook)
 ```sh
 sudo apt-get update ; sudo apt-get upgrade
 ```
 
 # Next steps...
 
-Basics install utilities `git`, `wget`, `curl`, `zsh`
+Install basic utilities `git`, `wget`, `curl`, `zsh`, `vim`, `zathura`
 
 ```sh
 sudo apt update
-sudo apt install zsh wget curl git -y
+sudo apt install zsh wget curl git vim zathura -y
 ```
 
 Install `oh-my-zsh`
+and
+Install oh-my-zsh plugins `z` and `z-autosuggestions`
 
 ```sh
 sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+git clone https://github.com/zsh-users/zsh-autosuggestions \
+   ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
+git clone https://github.com/agkozak/zsh-z \
+   ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-z
 ```
 
-Install `Dropbox` and `Texlive-full`. 
-The easiest way to install `Dropbox` and `Tex` is with the Mint software manager. 
+Don't forget to edit `.zshrc` to include `z` and `z-autosuggestions` in the
+plugins list. 
+
+Install `Dropbox`, `Zotero` and `Texlive-full`. 
+The easiest way to install `Dropbox`, `Zotero` and `Tex` is with the Mint software manager. 
 
 
-Install qutebrowser. 
+Install qutebrowser and firefox. 
 ```sh
 sudo apt install qutebrowser
 ```
+Add Vimium extension
 
-Install zotero. 
-Easiest method IMO is to use the Debian package 
-
-```sh
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/retorquere/zotero-deb/master/install.sh)"
-sudo apt update
-sudo apt install zotero
-```
-
+Set up `Zotero` syncing. 
 
 # Install Ubuntu on Parallels
 
@@ -136,115 +139,21 @@ alias nvim="docker run -it -v `pwd`:/mnt/volume --workdir=/mnt/volume anatoleluc
 
 ## Script to set up links from local Home to Dropbox
 
+`set_up_links.sh`
+
 ```sh
-
-#!/bin/sh
-declare -a ff=(
-".zshrc"
-".vimrc"
-".local"
-".vim"
-".config"
-)
-
-## now loop through the above array
-for i in "${ff[@]}"
-do
-   echo "$i"
-   # or do whatever with individual element of the array
-done
+#!/bin/zsh
+ff=(".zshrc" ".vimrc" ".local" ".vim" ".config")
 for P in "${ff[@]}"
 do
-    ## skip existing links
-    if [ -h "$HOME/$P" ]; then 
-	    echo " ";
-	    echo $P; 
-	    echo "exists in Home";
-    fi
-    # move existing dir out of the way
-    if [ -e "$HOME/$P" ]; then
-	if [ -e "$HOME/$P.bak" ]; then
-	    echo "want to override $HOME/$P but backup exists"
-	    continue;
-	fi
-# 
-	echo "Create a Backup .bak file "
-	mv -v "$HOME/$P" "$HOME/$P.bak"
-    fi
-# 
-    echo "create  a link for Dropbox/dotfiles version of"
-	    echo $P; 
-	    echo "in Home"; 
+echo "create  a link for Dropbox/dotfiles version of $P in Home" 
     ln -v -s "$HOME/Dropbox/dotfiles/$P" "$HOME/$P"
 done
-if [ ! -d $HOME/sbx ]
-	then 
-		echo "sandbox does not exist. Create link"
-		ln -v -s $HOME/Dropbox/sandbox/ $HOME/sandbox; 
-fi
-if [ ! -d $HOME/bin ]
-	then 
-		echo "bin does not exist. Create link"
-		ln -v -s $HOME/Dropbox/bin/ $HOME/bin; 
-fi
-if [ ! -d $HOME/docs ]
-	then 
-		echo "docs does not exist. Create link"
-		ln -v -s $HOME/Dropbox/docs/ $HOME/docs; 
-fi
-if [ ! -d $HOME/prj ]
-	then 
-		echo "prj does not exist. Create link"
-		ln -v -s $HOME/Dropbox/prj/ $HOME/prj; 
-fi
-if [ ! -d $HOME/work ]
-	then 
-		echo "work does not exist. Create link"
-		ln -v -s $HOME/Dropbox/work/ $HOME/work; 
-fi
-if [ ! -d $HOME/shr ]
-	then 
-		echo "shr does not exist. Create link"
-		ln -v -s $HOME/Dropbox/shr/ $HOME/shr; 
-fi
 
-declare -a dd=(
-"sbx"
-"bin"
-"docs"
-"prj"
-"work"
-"shr"
-)
-
-## now loop through the above array
-for i in "${dd[@]}"
-do
-   echo "$i"
-   # or do whatever with individual element of the array
-done
+dd=("sbx" "bin" "docs" "prj" "work" "shr")
 for P in "${dd[@]}"
 do
-    ## skip existing links
-    if [ -h "$HOME/$P" ]; then 
-	    echo " ";
-	    echo $P; 
-	    echo "exists in Home";
-    fi
-    # move existing dir out of the way
-    if [ -e "$HOME/$P" ]; then
-	if [ -e "$HOME/$P.bak" ]; then
-	    echo "want to override $HOME/$P but backup exists"
-	    continue;
-	fi
-# 
-	echo "Create a Backup .bak file "
-	mv -v "$HOME/$P" "$HOME/$P.bak"
-    fi
-# 
-    echo "create  a link for Dropbox/dotfiles version of"
-	    echo $P; 
-	    echo "in Home"; 
+    echo "create  a link for Dropbox/dotfiles version of echo $P in Home" 
     ln -v -s "$HOME/Dropbox/$P" "$HOME/$P"
 done
 ```
