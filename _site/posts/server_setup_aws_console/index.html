@@ -2,12 +2,12 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.3.361">
+<meta name="generator" content="quarto-1.2.313">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Ronald (Ryy) Glenn Thomas">
-<meta name="dcterms.date" content="2023-06-07">
+<meta name="dcterms.date" content="2023-06-11">
 <meta name="description" content="Detailed steps for setting up a lightweight server on AWS.">
 
 <title>Focus on R: a new qblog - Set up a virtual server on AWS (in anticipation of hosting Shiny apps)</title>
@@ -20,10 +20,9 @@ div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
 ul.task-list{list-style: none;}
 ul.task-list li input[type="checkbox"] {
   width: 0.8em;
-  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  margin: 0 0.8em 0.2em -1.6em;
   vertical-align: middle;
 }
-/* CSS for syntax highlighting */
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
@@ -50,13 +49,43 @@ pre.numberSource code > span > a:first-child::before
     -khtml-user-select: none; -moz-user-select: none;
     -ms-user-select: none; user-select: none;
     padding: 0 4px; width: 4em;
+    color: #aaaaaa;
   }
-pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
 div.sourceCode
   {   }
 @media screen {
 pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
 </style>
 
 
@@ -92,32 +121,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-more-matches-text": "more matches in this document",
     "search-clear-button-title": "Clear",
     "search-detached-cancel-button-title": "Cancel",
-    "search-submit-button-title": "Submit",
-    "search-label": "Search"
+    "search-submit-button-title": "Submit"
   }
 }</script>
 <style>
+    .quarto-title-block .quarto-title-banner {
+      background: #6b160e;
+    }
+    </style>
 
-      .quarto-title-block .quarto-title-banner {
-        background: #eeeeee;
-      }
-</style>
 
-
-<link rel="stylesheet" href="../../styles.css">
 <meta property="og:title" content="Focus on R: a new qblog - Set up a virtual server on AWS (in anticipation of hosting Shiny apps)">
 <meta property="og:description" content="Detailed steps for setting up a lightweight server on AWS.">
 <meta property="og:image" content="https://focusonr.org/posts/server_setup_aws_console/img/rshiny.png">
 <meta property="og:site-name" content="Focus on R: a new qblog">
 <meta property="og:image:height" content="482">
 <meta property="og:image:width" content="1200">
-<meta name="twitter:title" content="Focus on R: a new qblog - Set up a virtual server on AWS (in anticipation of hosting Shiny apps)">
-<meta name="twitter:description" content="Detailed steps for setting up a lightweight server on AWS.">
-<meta name="twitter:image" content="https://focusonr.org/posts/server_setup_aws_console/img/rshiny.png">
-<meta name="twitter:creator" content="@rgt47">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image-height" content="482">
-<meta name="twitter:image-width" content="1200">
 </head>
 
 <body class="floating nav-fixed slimcontent">
@@ -131,34 +150,32 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <span class="navbar-title">Focus on R: a new qblog</span>
     </a>
   </div>
-            <div id="quarto-search" class="" title="Search"></div>
           <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
   <span class="navbar-toggler-icon"></span>
 </button>
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item">
-    <a class="nav-link" href="../../about.html" rel="" target="">
+    <a class="nav-link" href="../../about.html">
  <span class="menu-text">About</span></a>
   </li>  
   <li class="nav-item compact">
-    <a class="nav-link" href="https://twitter.com/rgt47" rel="" target=""><i class="bi bi-twitter" role="img" aria-label="twitter">
+    <a class="nav-link" href="https://twitter.com/rgt47"><i class="bi bi-twitter" role="img" aria-label="twitter">
 </i> 
  <span class="menu-text"></span></a>
   </li>  
   <li class="nav-item compact">
-    <a class="nav-link" href="https://github.com/rgt47" rel="" target=""><i class="bi bi-github" role="img" aria-label="github">
+    <a class="nav-link" href="https://github.com/rgt47"><i class="bi bi-github" role="img" aria-label="github">
 </i> 
  <span class="menu-text"></span></a>
   </li>  
   <li class="nav-item compact">
-    <a class="nav-link" href="https://rgtlab.org" rel="" target=""><i class="bi bi-person-circle" role="img" aria-label="website">
+    <a class="nav-link" href="https://rgtlab.org"><i class="bi bi-person-circle" role="img" aria-label="website">
 </i> 
  <span class="menu-text"></span></a>
   </li>  
 </ul>
-            <div class="quarto-navbar-tools">
-</div>
+              <div id="quarto-search" class="" title="Search"></div>
           </div> <!-- /navcollapse -->
       </div> <!-- /container-fluid -->
     </nav>
@@ -184,7 +201,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div class="quarto-title-meta-heading">Affiliation</div>
     
       <div class="quarto-title-meta-contents">
-      <p class="author"><a href="https://rgtlab.org">Ronald (Ryy) Glenn Thomas</a> <a href="https://orcid.org/0000-0003-1686-4965" class="quarto-title-author-orcid"> <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA2ZpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDo1N0NEMjA4MDI1MjA2ODExOTk0QzkzNTEzRjZEQTg1NyIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDozM0NDOEJGNEZGNTcxMUUxODdBOEVCODg2RjdCQ0QwOSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDozM0NDOEJGM0ZGNTcxMUUxODdBOEVCODg2RjdCQ0QwOSIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ1M1IE1hY2ludG9zaCI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOkZDN0YxMTc0MDcyMDY4MTE5NUZFRDc5MUM2MUUwNEREIiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOjU3Q0QyMDgwMjUyMDY4MTE5OTRDOTM1MTNGNkRBODU3Ii8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+84NovQAAAR1JREFUeNpiZEADy85ZJgCpeCB2QJM6AMQLo4yOL0AWZETSqACk1gOxAQN+cAGIA4EGPQBxmJA0nwdpjjQ8xqArmczw5tMHXAaALDgP1QMxAGqzAAPxQACqh4ER6uf5MBlkm0X4EGayMfMw/Pr7Bd2gRBZogMFBrv01hisv5jLsv9nLAPIOMnjy8RDDyYctyAbFM2EJbRQw+aAWw/LzVgx7b+cwCHKqMhjJFCBLOzAR6+lXX84xnHjYyqAo5IUizkRCwIENQQckGSDGY4TVgAPEaraQr2a4/24bSuoExcJCfAEJihXkWDj3ZAKy9EJGaEo8T0QSxkjSwORsCAuDQCD+QILmD1A9kECEZgxDaEZhICIzGcIyEyOl2RkgwAAhkmC+eAm0TAAAAABJRU5ErkJggg=="></a></p>
+      <a href="https://rgtlab.org">Ronald (Ryy) Glenn Thomas</a> <a href="https://orcid.org/0000-0003-1686-4965" class="quarto-title-author-orcid"> <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA2ZpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDo1N0NEMjA4MDI1MjA2ODExOTk0QzkzNTEzRjZEQTg1NyIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDozM0NDOEJGNEZGNTcxMUUxODdBOEVCODg2RjdCQ0QwOSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDozM0NDOEJGM0ZGNTcxMUUxODdBOEVCODg2RjdCQ0QwOSIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ1M1IE1hY2ludG9zaCI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOkZDN0YxMTc0MDcyMDY4MTE5NUZFRDc5MUM2MUUwNEREIiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOjU3Q0QyMDgwMjUyMDY4MTE5OTRDOTM1MTNGNkRBODU3Ii8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+84NovQAAAR1JREFUeNpiZEADy85ZJgCpeCB2QJM6AMQLo4yOL0AWZETSqACk1gOxAQN+cAGIA4EGPQBxmJA0nwdpjjQ8xqArmczw5tMHXAaALDgP1QMxAGqzAAPxQACqh4ER6uf5MBlkm0X4EGayMfMw/Pr7Bd2gRBZogMFBrv01hisv5jLsv9nLAPIOMnjy8RDDyYctyAbFM2EJbRQw+aAWw/LzVgx7b+cwCHKqMhjJFCBLOzAR6+lXX84xnHjYyqAo5IUizkRCwIENQQckGSDGY4TVgAPEaraQr2a4/24bSuoExcJCfAEJihXkWDj3ZAKy9EJGaEo8T0QSxkjSwORsCAuDQCD+QILmD1A9kECEZgxDaEZhICIzGcIyEyOl2RkgwAAhkmC+eAm0TAAAAABJRU5ErkJggg=="></a>
     </div>
       <div class="quarto-title-meta-contents">
           <p class="affiliation">
@@ -201,7 +218,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">June 7, 2023</p>
+        <p class="date">June 11, 2023</p>
       </div>
     </div>
     
@@ -211,31 +228,30 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   
   </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
-  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal sidebar-navigation floating overflow-auto">
+  <nav id="quarto-sidebar" class="sidebar collapse sidebar-navigation floating overflow-auto">
     <nav id="TOC" role="doc-toc" class="toc-active">
     <h2 id="toc-title">Table of contents</h2>
    
   <ul>
-  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a></li>
-  <li><a href="#hosting" id="toc-hosting" class="nav-link" data-scroll-target="#hosting"><span class="header-section-number">2</span> Hosting</a>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="toc-section-number">1</span>  Introduction</a></li>
+  <li><a href="#hosting" id="toc-hosting" class="nav-link" data-scroll-target="#hosting"><span class="toc-section-number">2</span>  Hosting</a>
   <ul class="collapse">
-  <li><a href="#select-a-hosting-service" id="toc-select-a-hosting-service" class="nav-link" data-scroll-target="#select-a-hosting-service"><span class="header-section-number">2.1</span> Select a hosting service</a></li>
-  <li><a href="#aws-working-environment" id="toc-aws-working-environment" class="nav-link" data-scroll-target="#aws-working-environment"><span class="header-section-number">2.2</span> AWS Working Environment</a>
+  <li><a href="#select-a-hosting-service" id="toc-select-a-hosting-service" class="nav-link" data-scroll-target="#select-a-hosting-service"><span class="toc-section-number">2.1</span>  Select a hosting service</a></li>
+  <li><a href="#aws-working-environment" id="toc-aws-working-environment" class="nav-link" data-scroll-target="#aws-working-environment"><span class="toc-section-number">2.2</span>  AWS Working Environment</a>
   <ul class="collapse">
-  <li><a href="#ssh-key-pair" id="toc-ssh-key-pair" class="nav-link" data-scroll-target="#ssh-key-pair"><span class="header-section-number">2.2.1</span> Ssh key pair</a></li>
-  <li><a href="#firewall" id="toc-firewall" class="nav-link" data-scroll-target="#firewall"><span class="header-section-number">2.2.2</span> Firewall</a></li>
-  <li><a href="#static-ip-address" id="toc-static-ip-address" class="nav-link" data-scroll-target="#static-ip-address"><span class="header-section-number">2.2.3</span> Static IP address</a></li>
-  <li><a href="#domain-name" id="toc-domain-name" class="nav-link" data-scroll-target="#domain-name"><span class="header-section-number">2.2.4</span> Domain Name</a></li>
+  <li><a href="#ssh-key-pair" id="toc-ssh-key-pair" class="nav-link" data-scroll-target="#ssh-key-pair"><span class="toc-section-number">2.2.1</span>  Ssh key pair</a></li>
+  <li><a href="#firewall" id="toc-firewall" class="nav-link" data-scroll-target="#firewall"><span class="toc-section-number">2.2.2</span>  Firewall</a></li>
+  <li><a href="#static-ip-address" id="toc-static-ip-address" class="nav-link" data-scroll-target="#static-ip-address"><span class="toc-section-number">2.2.3</span>  Static IP address</a></li>
+  <li><a href="#domain-name" id="toc-domain-name" class="nav-link" data-scroll-target="#domain-name"><span class="toc-section-number">2.2.4</span>  Domain Name</a></li>
   </ul></li>
-  <li><a href="#select-and-launch-instance" id="toc-select-and-launch-instance" class="nav-link" data-scroll-target="#select-and-launch-instance"><span class="header-section-number">2.3</span> Select and launch instance</a></li>
+  <li><a href="#select-and-launch-instance" id="toc-select-and-launch-instance" class="nav-link" data-scroll-target="#select-and-launch-instance"><span class="toc-section-number">2.3</span>  Select and launch instance</a></li>
   </ul></li>
-  <li><a href="#access-server" id="toc-access-server" class="nav-link" data-scroll-target="#access-server"><span class="header-section-number">3</span> Access server</a></li>
-  <li><a href="#appendix-tip-1" id="toc-appendix-tip-1" class="nav-link" data-scroll-target="#appendix-tip-1"><span class="header-section-number">4</span> Appendix: Tip 1</a></li>
-  <li><a href="#appendix-succinct-instructions" id="toc-appendix-succinct-instructions" class="nav-link" data-scroll-target="#appendix-succinct-instructions"><span class="header-section-number">5</span> Appendix: succinct instructions</a></li>
+  <li><a href="#access-server" id="toc-access-server" class="nav-link" data-scroll-target="#access-server"><span class="toc-section-number">3</span>  Access server</a></li>
+  <li><a href="#appendix-tip-1" id="toc-appendix-tip-1" class="nav-link" data-scroll-target="#appendix-tip-1"><span class="toc-section-number">4</span>  Appendix: Tip 1</a></li>
+  <li><a href="#appendix-succinct-instructions" id="toc-appendix-succinct-instructions" class="nav-link" data-scroll-target="#appendix-succinct-instructions"><span class="toc-section-number">5</span>  Appendix: succinct instructions</a></li>
   </ul>
-<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="index.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
 </nav>
-<div id="quarto-sidebar-glass" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass"></div>
+</nav>
 <!-- margin-sidebar -->
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
     </div>
@@ -250,12 +266,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p><img src="img/crane.jpg" class="img-fluid" alt="under construction"> <font size="1"> Photo by <a href="https://unsplash.com/@nathangwaters?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Nathan Waters</a> on <a href="https://unsplash.com/s/photos/construction?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Unsplash</a> </font></p>
 </div></div><section id="introduction" class="level1" data-number="1">
 <h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
-<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-note callout callout-style-default callout-captioned">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
-<div class="callout-title-container flex-fill">
+<div class="callout-caption-container flex-fill">
 Motivation for this post:
 </div>
 </div>
@@ -281,12 +297,12 @@ Motivation for this post:
 <li>configure a reverse proxy method i.e.&nbsp;translate https (port 443) requests to Shiny (port 3838). This avoids the need for URLs like <code>https://rgtlab.org:3838/power1_shiny</code></li>
 </ol>
 <p>Technically, if the goal is simply to get the app up on the web, its not required to make a static IP or a domain name or a firewall or an authentication method or an SSL certificate, or even a reverse proxy. but if these elements of the process are skipped the server will only be able to communicate via the unencrypted HTTP protocol and the site URL will be something like 111.222.333.444:3838/power1_shiny, and anyone with the URL will be able to reach the site.</p>
-<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-note callout callout-style-default callout-captioned">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
-<div class="callout-title-container flex-fill">
+<div class="callout-caption-container flex-fill">
 Not to worry:
 </div>
 </div>
@@ -295,12 +311,12 @@ Not to worry:
 </div>
 </div>
 <div class="page-columns page-full"><p></p><div class="no-row-height column-margin column-container"><span class="">Technically, if the goal is simply to get the app up on the web, its not required to make a static IP or a domain name or a firewall or an authentication method or an SSL certificate, or even a reverse proxy. but if these elements of the process are skipped the server will only be able to communicate via the unencrypted HTTP protocol and the site URL will be something like 111.222.333.444:3838/power1_shiny, and anyone with the URL will be able to reach the site.</span></div></div>
-<div class="callout callout-style-simple callout-note callout-titled">
+<div class="callout-note callout callout-style-simple callout-captioned">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
-<div class="callout-title-container flex-fill">
+<div class="callout-caption-container flex-fill">
 Actually …:
 </div>
 </div>
@@ -322,7 +338,7 @@ Actually …:
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="img/aws_dash.png" class="img-fluid figure-img"></p>
-<figcaption class="figure-caption">AWS console</figcaption>
+<p></p><figcaption class="figure-caption">AWS console</figcaption><p></p>
 </figure>
 </div>
 </div></div><p>Next create an account, or sign in, and once you’re logged in navigate to the EC2 dashboard. Its by way of the dashboard that we’ll define the parameters for the type of server to launch and the mechanisms for communicating with it.</p>
@@ -399,12 +415,12 @@ Actually …:
 </section>
 <section id="appendix-tip-1" class="level1" data-number="4">
 <h1 data-number="4"><span class="header-section-number">4</span> Appendix: Tip 1</h1>
-<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-tip callout callout-style-default callout-captioned">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
-<div class="callout-title-container flex-fill">
+<div class="callout-caption-container flex-fill">
 Tip 1.
 </div>
 </div>
@@ -435,17 +451,17 @@ Tip 1.
 
 </section>
 
-<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents"><h2 class="anchored quarto-appendix-heading">Reuse</h2><div id="quarto-reuse" class="quarto-appendix-contents"><div><a rel="license" href="https://creativecommons.org/licenses/by/4.0/">https://creativecommons.org/licenses/by/4.0/</a></div></div></section><section class="quarto-appendix-contents"><h2 class="anchored quarto-appendix-heading">Citation</h2><div><div class="quarto-appendix-secondary-label">BibTeX citation:</div><pre class="sourceCode code-with-copy quarto-appendix-bibtex"><code class="sourceCode bibtex">@online{(ryy) glenn thomas2023,
-  author = {(Ryy) Glenn Thomas, Ronald},
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents"><h2 class="anchored quarto-appendix-heading">Reuse</h2><div quarto-reuse="quarto-reuse" class="quarto-appendix-contents"><a rel="license" href="https://creativecommons.org/licenses/by/4.0/">https://creativecommons.org/licenses/by/4.0/</a></div></section><section class="quarto-appendix-contents"><h2 class="anchored quarto-appendix-heading">Citation</h2><div><div class="quarto-appendix-secondary-label">BibTeX citation:</div><pre class="sourceCode code-with-copy quarto-appendix-bibtex"><code class="sourceCode bibtex">@online{(ryy)glennthomas2023,
+  author = {Ronald (Ryy) Glenn Thomas},
   title = {{Set} up a Virtual Server on {AWS} (in Anticipation of
     Hosting {Shiny} Apps)},
-  date = {2023-06-07},
+  date = {2023-06-11},
   url = {https://focusonr.org/posts/server_setup_aws_console},
   langid = {en}
 }
-</code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre><div class="quarto-appendix-secondary-label">For attribution, please cite this work as:</div><div id="ref-(ryy) glenn thomas2023" class="csl-entry quarto-appendix-citeas" role="listitem">
-(Ryy) Glenn Thomas, Ronald. 2023.<span>“Set up a Virtual Server on AWS
-(in Anticipation of Hosting Shiny Apps) .”</span> June 7, 2023. <a href="https://focusonr.org/posts/server_setup_aws_console">https://focusonr.org/posts/server_setup_aws_console</a>.
+</code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre><div class="quarto-appendix-secondary-label">For attribution, please cite this work as:</div><div id="ref-(ryy)glennthomas2023" class="csl-entry quarto-appendix-citeas" role="doc-biblioentry">
+Ronald (Ryy) Glenn Thomas. 2023.<span>“Set up a Virtual Server on AWS
+(in Anticipation of Hosting Shiny Apps) .”</span> June 11, 2023. <a href="https://focusonr.org/posts/server_setup_aws_console">https://focusonr.org/posts/server_setup_aws_console</a>.
 </div></div></section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
 window.document.addEventListener("DOMContentLoaded", function (event) {
@@ -474,23 +490,9 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     icon: icon
   };
   anchorJS.add('.anchored');
-  const isCodeAnnotation = (el) => {
-    for (const clz of el.classList) {
-      if (clz.startsWith('code-annotation-')) {                     
-        return true;
-      }
-    }
-    return false;
-  }
   const clipboard = new window.ClipboardJS('.code-copy-button', {
-    text: function(trigger) {
-      const codeEl = trigger.previousElementSibling.cloneNode(true);
-      for (const childEl of codeEl.children) {
-        if (isCodeAnnotation(childEl)) {
-          childEl.remove();
-        }
-      }
-      return codeEl.innerText;
+    target: function(trigger) {
+      return trigger.previousElementSibling;
     }
   });
   clipboard.on('success', function(e) {
@@ -555,92 +557,6 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
       return note.innerHTML;
     });
   }
-      let selectedAnnoteEl;
-      const selectorForAnnotation = ( cell, annotation) => {
-        let cellAttr = 'data-code-cell="' + cell + '"';
-        let lineAttr = 'data-code-annotation="' +  annotation + '"';
-        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
-        return selector;
-      }
-      const selectCodeLines = (annoteEl) => {
-        const doc = window.document;
-        const targetCell = annoteEl.getAttribute("data-target-cell");
-        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
-        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
-        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
-        const lineIds = lines.map((line) => {
-          return targetCell + "-" + line;
-        })
-        let top = null;
-        let height = null;
-        let parent = null;
-        if (lineIds.length > 0) {
-            //compute the position of the single el (top and bottom and make a div)
-            const el = window.document.getElementById(lineIds[0]);
-            top = el.offsetTop;
-            height = el.offsetHeight;
-            parent = el.parentElement.parentElement;
-          if (lineIds.length > 1) {
-            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
-            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
-            height = bottom - top;
-          }
-          if (top !== null && height !== null && parent !== null) {
-            // cook up a div (if necessary) and position it 
-            let div = window.document.getElementById("code-annotation-line-highlight");
-            if (div === null) {
-              div = window.document.createElement("div");
-              div.setAttribute("id", "code-annotation-line-highlight");
-              div.style.position = 'absolute';
-              parent.appendChild(div);
-            }
-            div.style.top = top - 2 + "px";
-            div.style.height = height + 4 + "px";
-            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
-            if (gutterDiv === null) {
-              gutterDiv = window.document.createElement("div");
-              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
-              gutterDiv.style.position = 'absolute';
-              const codeCell = window.document.getElementById(targetCell);
-              const gutter = codeCell.querySelector('.code-annotation-gutter');
-              gutter.appendChild(gutterDiv);
-            }
-            gutterDiv.style.top = top - 2 + "px";
-            gutterDiv.style.height = height + 4 + "px";
-          }
-          selectedAnnoteEl = annoteEl;
-        }
-      };
-      const unselectCodeLines = () => {
-        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
-        elementsIds.forEach((elId) => {
-          const div = window.document.getElementById(elId);
-          if (div) {
-            div.remove();
-          }
-        });
-        selectedAnnoteEl = undefined;
-      };
-      // Attach click handler to the DT
-      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
-      for (const annoteDlNode of annoteDls) {
-        annoteDlNode.addEventListener('click', (event) => {
-          const clickedEl = event.target;
-          if (clickedEl !== selectedAnnoteEl) {
-            unselectCodeLines();
-            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
-            if (activeEl) {
-              activeEl.classList.remove('code-annotation-active');
-            }
-            selectCodeLines(clickedEl);
-            clickedEl.classList.add('code-annotation-active');
-          } else {
-            // Unselect the line
-            unselectCodeLines();
-            clickedEl.classList.remove('code-annotation-active');
-          }
-        });
-      }
   const findCites = (el) => {
     const parentEl = el.parentElement;
     if (parentEl) {
