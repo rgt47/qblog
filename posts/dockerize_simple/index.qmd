@@ -35,16 +35,16 @@ Waters</a> on
 # Introduction
 
 This is another in a series of posts suggesting straightforward, open-source strategies
-to effectively communicate data analysis results to clients and collaborators. 
+for effective communication of data analysis results to clients and collaborators. 
 
 In this
-post we propose a simple method to migrate a shiny app from your local
+post we propose a simple method for migrating a shiny app from your local
 workstation to the web. 
 
-The list of open-source technologies (software stack) we
-suggest is: linux, R, Shiny, Docker, and Caddy. In this post we'll
-make use of the AWS  cloud service. In future posts we'll describe alternate
-cloud constructions, e.g. using the low cost cloud service: Hetzner.
+The list of open-source technologies (software stack) we propose for use: linux,
+R, Shiny, Docker, and Caddy. In this post we'll make use of the AWS EC2  cloud
+service. In future posts we'll describe alternate cloud constructions, e.g.
+using the low cost cloud service: Hetzner.
 
 In the following we'll provide a proof-of-concept example of how to
 apply these technologies for securely hosting an interactive Shiny application
@@ -58,17 +58,17 @@ on a website with a custom domain name.
 
 # Methods
 
-To begin, lets assume we're just finished developing a new Shiny app, named
-`power1_shiny`. We have a working directory named `power1_app`. Inside
-`power1_app` `power1_shiny` is a sub-directory containing the shiny program file
-`app.R `.
+To begin, lets assume we've just finished developing a new Shiny app, named
+`power1_shiny`. We've done our development inside a working directory named
+`power1_app`. `power1_shiny` is a sub-directory   inside `power1_app`
+containing the shiny program file `app.R `.
 
 The methods described here apply generically to any Shiny app.  See the
 `R/Shiny` code for our `power1_shiny` app (`app.R`) below.
 
-Our shiny app is designed to be a balance of simple and functional, it
-calculates the power for a 2-sample t-test as a function of the standardized
-effect size. The app is intentionally minimal; using only base R functions, with
+Our shiny app is  simple yet functional. It
+calculates the power for a two-sample t-test as a function of the standardized
+effect size. The app is intentionally minimal, using only base R functions, with
 a minimum of reactive widgets and layout commands. 
 
 ```{r echo=t, eval=FALSE}
@@ -94,6 +94,9 @@ server <- function(input, output, session) {
 shinyApp(ui, server)
 ```
 
+::: {.callout-note}
+## Motivation for this post: 
+
 We can test the app locally on our workstation by runnning it with the following command
 issued from the `power1_app` directory shell prompt  
 
@@ -104,8 +107,10 @@ zsh> R -e "library(shiny); runApp('power1_shiny/app.R', launch=T)"
 This will, in sequence, start the R
 program, load the Shiny package, run and launch the app in your default browser.
 
-The  Figure   shows our Shiny app running locally in a browser on our
-desktop, it consists of a widget to select the sample size and a plot to provide a dynamic
+:::
+
+The  margin figure   shows our Shiny app running locally in a browser on our
+desktop. It consists of a widget to select the sample size and a plot to provide a dynamic
 visualization  of the power as a function of the standardized
 effect size.
 
@@ -114,11 +119,11 @@ effect size.
 :::
 
 Once we determine our app is working as designed, we move on to the task of
-hosting the app on a (virtual) server with the goal of sharing with our
-collaborators. There are a number of ways to accomplish this. Here we'll
-describe one approach as to how to  'spin up' a server on Amazon Web Service EC2
+hosting the app on a (virtual) server with the goal of sharing it with our
+collaborators. How accomplish this? In the following we'll
+describe one approach that   'spins up' a server on Amazon Web Service EC2
 and in just a few steps, through the application of Docker, R, Shiny, and Caddy
-have a secure web app running on the web.
+yields a secure web app running on the web.
 
 # Hosting
 
@@ -127,7 +132,8 @@ following tasks:
 
 1. obtain a static IP address 
 3.  obtain a domain name 
-1.  create a virtual server with a firewall
+1.  set up a firewall
+1.  configure and launch a virtual server
 4.  install and configure a webserver 
 5.  obtain and install an SSL certificate 
 6.  setup an authentication method
@@ -136,37 +142,41 @@ following tasks:
     (port 3838).
 
 At first glance these 7 requirements can appear daunting, but on closer
-inspection all can be met with relative ease and minimal  cost ( using a
-cloud-hosting service, e.g. Amazon's EC2 or Digital Ocean, and a
-"leased" domain name from, e.g. GoDaddy, or Amazon's Route 53)
-or at no cost if you have your own  server with IP address, and domain name.
+inspection all can be met with relative ease.
 
-## Select a hosting service 
+## Pre-launch tasks
+
+Select a hosting service 
 
 There are a number of cloud based server options: Microsoft Azure, Oracle,
 Google Cloud, Amazon AWS EC2, Digital Ocean and Hetzner to name a few. Each has
 their own approach to setting up a custom virtual server. Several have free or
 low-cost service tiers available.
 
-An overview of the process with AWS EC2  follows. (Detailed
-instructions for AWS EC2 were described in an earlier post:
-[here](https://focusonr.org/posts/setupaws)
+An overview of the process with AWS EC2  follows. (Detailed instructions for
+setting up a virtual server on EC2 both through the EC2 console and the command
+line interface were described in an earlier post:
+[here](https://focusonr.org/posts/server_setup_aws_console) and
+[here](https://focusonr.org/posts/server_setup_aws_cli). 
+
 
 Preface. create an AWS account or sign in and navigate to the EC2 dashboard. 
 
-step 1. Set up an working environment with AWS server.
+step 1. Set up a working environment within EC2. That is: 
 
-a. define secure shell (ssh) key-pair 
-b. configure firewall.
-c. obtain static IP.
-d. obtain domain name. 
+a. generate secure shell (ssh) key-pair 
+b. configure a firewall.
+c. obtain a static IP.
+d. obtain a domain name. 
 
 Once the environment is set up
 
-step 2. Config and launch server
+step 2. Config and launch the server
 
-a. select instance operating system (`ubuntu`) and type (`t2-micro`) 
-b. launch server
+Configuration has two parts:
+
+a. select an instance operating system (`ubuntu`) and 
+b. select an instance type (`t2-micro`) 
 
 Once the server is available  connect via ssh. 
 
@@ -179,7 +189,7 @@ or using the `config` setup described in Tip 1 at the end of this post.
 ssh rgtlab.org 
 ```
 
-The only necessary software tools to install are Docker and Caddy. If you
+The only software tools necessary  to install are Docker and Caddy. If you
 followed the CLI  or console based instructions to set up a virtual server
 [here](https://focusonr.org/posts/server_setup_aws_cli/index.pdf) or
 [here](https://focusonr.org/posts/server_setup_aws_console/) Docker and Caddy
@@ -204,17 +214,20 @@ sudo apt install caddy -y
 
 At this point we have
 a customized virtual server with a static IP address, unique domain
-name and firewall in place. In other words, items 1, 2, and 3 from our
+name and a firewall in place. In other words, items 1, 2, 3, and 4 from our
 'hosting' list above are taken care of.
 
 
-## Website
+## Post-Launch steps on local workstation
 
-To containerize our Shiny app we need a Dockerfile to the `power1_app` directory.
+To run and host our Shiny app online we need to add a few configuration files to
+our `power1_app` development directory.
 
 
 
-The three configuation files are:
+The first configuation file is:
+
+## Docker
 
 1.   a Docker configuration file (default name `Dockerfile`)
 
@@ -227,35 +240,41 @@ Taylor</a> on
 </font>
 :::
 
-We'll use docker to access  R/Shiny.  Here is our minimal dockerfile:
+We'll use docker to access  R and Shiny.  Here is our minimal dockerfile:
 
 ```{r echo=T, eval=F}
 #| code-fold: true
 #| code-summary: "`Dockerfile`: Show the code"
 FROM rocker/shiny:4.2.0
+# there are a bunch of files in /srv/shiny-server. delete them
+RUN rm -rf /srv/shiny-server
 COPY /power1_shiny/* /srv/shiny-server/
+# rocker/shiny adds a user named shiny
+USER shiny
 CMD ["/usr/bin/shiny-server"]
 ```
 
- This  file instructs Docker
-to build a container based on a Rocker/Shiny image (which is a ubuntu
-image with R and Shiny installed) then copy into the container the
-`power1_shiny` directory containing the shiny code and
-finally launch Shiny server listening on (default) port 3838. We placed the `power1_shiny/app.R` code in the
-default location `/srv/shiny-server` so we only need to start the server and it
-will find the shiny program. 
+ This  file in just a few lines instructs Docker to build a new container based
+ on a Rocker/Shiny image (which is a ubuntu image with R and Shiny installed)
+ and layered with the addition of our Shiny code launch Shiny server listening
+ on (default) port 3838. 
+ 
+[Note: We placed the `power1_shiny/app.R` code in the default location
+`/srv/shiny-server` so we only need to start the Shiny server and it will find
+the shiny program]{.aside}
 
-To configure the web server we need to add
-a Caddy configuration file (default name `Caddyfile`) to the 
-`power1_app` directory.  
 
  We'll use `Caddy` as our web server. Caddy is an
 open-source tool that has the very useful feature of automating the
 acquiring and installing of an SSL certificate. (An SSL cert is required
 by most browsers to use the encrypted communication protocol `https`.)
 
-Caddy is configured with a file named `Caddyfile`. We use the caddy
-configuration file to specify three critical things.
+To configure the web server we need to add
+a Caddy configuration file (default name `Caddyfile`) to the 
+`power1_app` directory.  
+
+The Caddy
+configuration file specifies  three critical things.
 
 1.  the site domain name.
 2.  the authentication pair login/hash-password, for each user and
@@ -285,17 +304,16 @@ Caddyfile.
 Note:
 
 -   rgtlab.org is our domain name
--   the basicauth directive specifies login credentials for bob (password:
+-   the basicauth directive specifies login credentials for user bob (password:
     vanilla47)
 -   `handle_path` maps all https requests to port 3838 where Shiny is
     listening.
 -   `root` directive tells Caddy where to look for the `index.html` file. 
 
 Providing our servers domain name, `rgtlab.org` is sufficient to
-initiate an exchange with the `letsencrypt` service to generates an SSL certificate.
+initiate an exchange with the `letsencrypt` service to generate an SSL certificate.
 
-Lastly, we need a  `index.html` file to provide a launch page for the app.
-and move all files to the server.
+Lastly, we need an  `index.html` file to provide a launch page for the app.
 
 ```{r echo=T, eval=F}
 #| code-fold: true
@@ -312,51 +330,51 @@ and move all files to the server.
 </html> 
 ```
 
-Once the  config files and the index.html file and the Shiny code directory are
-in place copy the `power1_app` directory to the server `rgtlab.org`  with the
+Once the  config files, the index.html file and the Shiny code directory are
+in place copy we the entire `power1_app` directory to the server `rgtlab.org`  with the
 secure copy command: 
 
 ```sh
 scp -i "~/.ssh/power1_app.pem" -r ~/prj/power1_app/  ubuntu@rgtlab.org:~
 ```
 
-Lastly, ssh to the server and cd to `power1_app` directory
+## Post-Launch steps on remote server
 
-Build and run the Docker container. Using the docker approach allows us
-to avoid installing both R and Shiny on the virtual server `rgtlab.org`
+Use ssh to login to the server and cd to `power1_app` directory
+
+Build and run the Docker container (using the docker approach allows us
+to avoid installing both R and Shiny on the virtual server `rgtlab.org`).
 
 ```sh
 docker build -t power1_image .
 ```
-create container and run
+ run container
+
 ```sh
 docker run -d --name=power1_shiny -p 3838:3838 --restart=always power1_image
 ```
 
 
-copy `Caddyfile` to location caddy expects
- in `/etc/caddy` directory
+Next copy the `Caddyfile` to the location caddy expects to find it
+ in the `/etc/caddy` directory
 
 ```sh
-sudo cp ./Caddyfile /etc/caddy/Caddyfile 
+sudo cp ./Caddyfile /etc/caddy/
 ```
 
-copy `index.html` to location caddy expects
- in `/var/www/html` directory
+copy `index.html` to location Caddy expects to find it in the `/var/www/html` directory
 ```sh
-cp  ./index.html /var/www/html/index.html 
+cp  ./index.html /var/www/html/
 ```
 
 
-and run the following command to 
+Lastly, run the following command to restart Caddy
 
-
-restart Caddy
 ```sh
 sudo systemctl reload caddy
 ```
 
-App launch page is now available at `https://rgtlab.org`.
+The App launch page will now be available at `https://rgtlab.org`.
 
 and you're good to go!
 

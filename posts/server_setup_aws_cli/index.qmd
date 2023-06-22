@@ -33,21 +33,18 @@ setting up a virtual server on Amazon Web Services (AWS) using the interactive
 Elastic cloud Compute (EC2) dashboard. While its instructive to use the EC2
 console interface to set up a work environment and launch a custom server, it
 can become a tedious process after the first two or three times. In this post
-we'll present a bash shell script to perform the same task making use of the AWS
+we'll present  bash shell scripts to perform the same task making use of the AWS
 command line interface (CLI). 
 
 To get started:  on your workstation,  configure the aws cli app via the command. 
-
-Instructions for installing the AWS CLI can be found
-([here](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html/)).
-
-Alternatively, On Macos use homebrew: 
 
 ```sh
 zsh> brew install awscli
 ```
 
 
+Instructions for installing the AWS CLI can be found
+([here](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html/)).
 
 ```sh
 zsh>  aws configure 
@@ -58,6 +55,24 @@ IAM ID
 Appendix 1 [here](#appendix-1) has details on obtaining IAM credentials from your AWS account. 
 
 # Scripts
+
+Nine parameters are required. Determine them and store as environment variables.
+
+
+```sh
+# vpc_id and subnet_id are determined by user location
+		export vpc_id="vpc-14814b73"
+		export subnet_id="subnet-f02c90ab"
+# ami_id, storage_size and instance_type define the OS and capability of the server
+		export ami_id="ami-014d05e6b24240371"
+		export instance_type="t2.micro"
+		export storage_size="30"
+# key_name and security group identify the ssh and encrypted web channels
+		export key_name="aws_key"
+		export security_grp="sg-0fef542d93849669c"
+# static_ip and domain_name identify the server on the web
+		export static_ip="13.57.139.31"
+```
 
 Below we offer four bash scripts. 
 
@@ -117,12 +132,6 @@ aws ec2 authorize-security-group-ingress \
 
 
 #!/usr/bin/env bash
-#while getopts n: flag
-#do
-    #case "${flag}" in
-        #n) key_pair_name=${OPTARG};;
-    #esac
-#done
 base=`basename $PWD`
 if [ -z "$1" ]
 then
@@ -151,10 +160,10 @@ chmod 600 ~/.ssh/$key_pair_name.pem
 ```
 
 
-
+## Generate instance
 
 start up script. 
-`awscli.sh`
+`aws_create_instance.sh`
 ```sh
 
 
@@ -219,33 +228,26 @@ else
 fi
 
 
-#cd ~/.ssh 
-#rm -f  ~/.ssh/$proj_name.pem
-#aws ec2 create-key-pair  --key-name  $proj_name \
-#   --query 'KeyMaterial' --output text > ~/.ssh/$proj_name.pem
-#
-#wait
-#chmod 600 ~/.ssh/$proj_name.pem
-
 
 aws ec2 run-instances \
     --image-id $ami_id \
     --count 1 \
     --instance-type $type \
-    --key-name $proj_name \
+    --key-name $key_name \
     --security-group-ids $security_grp \
     --subnet-id $subnet_id \
     --block-device-mappings "[{\"DeviceName\":\"/dev/sda1\",\"Ebs\":{\"VolumeSize\":$size}}]" \
     --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$proj_name}]"  \
-    --user-data file://~/Dropbox/prj/c060/aws_startup.sh
+    --user-data file://~/Dropbox/prj/c060/aws_startup_code.sh
 wait
 iid=`aws ec2 describe-instances --filters "Name=tag:Name,Values=$proj_name" | \
 	jq -r '.Reservations[].Instances[].InstanceId'`
+aws ec2 wait instance-running --instance-ids $iid
+echo "the generated instance has ID: $iid"
+running=`aws ec2 describe-instance-status --instance-id $iid
+echo "the instance status is $running"
+aws ec2 associate-address --public-ip $static_ip --instance-id $iid`
 
-aws ec2 associate-address --public-ip $static_ip --instance-id $iid
-wait
-ssh -o "StrictHostKeyChecking no" rgtlab.org \
-	'cd docker_compose_power1_app; sudo docker compose up -d'
 
 ```
 
@@ -276,7 +278,7 @@ Host rgtlab.org
 HostName 13.57.139.31 # static IP
 User ubuntu # default user on ubuntu server
 Port 22  # the default port ssh uses
-IdentityFile ~/.ssh/power1_app_ssh.rsa
+IdentityFile ~/.ssh/power1_app.pem
 ```
 
 then we can ssh into the new server with
@@ -340,3 +342,41 @@ Enter  info from the credentials file just downloaded. After entering the `AWS
 Access Key ID` and `AWS Secret Access Key` information you are asked for a
 Region, (my region is `us-west-1`),  and an output format (suggested output format is
 `JSON`). 
+
+
+# Sample work session
+
+Start from scratch. Assume 
+
+1. aws is configured. 
+2. no security group
+3. no key pair
+4. vpc ID  and subnet ID known and stored in environment variables. 
+5. project name is "power1_app"
+6. we'll spin up a ubuntu server with 30 GB hard drive. 
+
+step 1. generate security group named "max_restrict" 
+
+> aws_create_security_group.sh
+get the sg ID from the script output and add to environment var list
+> echo "export subnet_id='sg-0fda72c2879d6b2ad'" >> ~/.zshrc
+
+step 2. add key pair with name power1_app
+> aws_create_keypair.sh power1_app
+
+step 3. get a new elastic IP address. 
+new IP is: 
+204.236.167.50
+
+> echo "export static_ip='204.236.167.50'" >> ~/.zshrc
+
+> aws_create_instance.sh -p power1_app
+> sed -i '.bak' '/HostName/d' config
+> sed -i '.bak' '/Ide/d' config
+> echo "HostName 204.236.167.50" >> ~/.ssh/config
+> echo "IdentityFile ~/.ssh/power1_app.pem" >> ~/.ssh/config
+
+scp -i "~/.ssh/power1_app.pem" -r ~/prj/c060/docker_compose_power1_app/  ubuntu@rgtlab.org:~
+ssh rgtlab.org
+cd docker_compose_power1_app/
+sudo docker-compose up -d
