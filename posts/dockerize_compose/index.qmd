@@ -247,20 +247,28 @@ first file is the dockerfile. Here is our minimal dockerfile with comments:
 ```{r echo=t, eval=FALSE}
 #| code-fold: true
 #| code-summary: "show the `Dockerfile` code"
-from rocker/shiny:4.2.0
-copy /power1_shiny/* /srv/shiny-server/
-cmd ["/usr/bin/shiny-server"]
+FROM rocker/shiny:4.2.0
+# there are a bunch of files in /srv/shiny-server. delete them
+RUN rm -rf /srv/shiny-server
+COPY /power1_shiny/* /srv/shiny-server/
+USER shiny
+CMD ["/usr/bin/shiny-server"]
 ```
 
-1. Grab the latest rocker/Shiny image from Docker Hub to use as a base image.
-2.  Copy the Shiny code to the default location for shiny-server
-3.  Run the Shiny-server using the default app code
+ This  file in just a few lines instructs Docker to build a new container based
+ on a Rocker/Shiny image (which is a ubuntu image with R and Shiny installed)
+ and layered with the addition of our Shiny code launch Shiny server listening
+ on (default) port 3838. 
+ 
+[Note: We placed the `power1_shiny/app.R` code in the default location
+`/srv/shiny-server` so we only need to start the Shiny server and it will find
+the shiny program]{.aside}
 
 
 This configuration file instructs Docker
 to build a container based on a Rocker/Shiny image (which itself is a ubuntu
 image with R and Shiny installed) then copy into the container the `power1_shiny.R` code and
-finally launch Shiny on (default) port 3838. We placed the power1_app.R code in the
+finally launch Shiny on (default) port 3838. We placed the app.R code in the
 default location `/srv/shiny-server` we only need to start the server and it
 will find the shiny program. 
 
@@ -268,16 +276,16 @@ will find the shiny program.
 
  We'll use `Caddy` as our web server. Caddy is an
 open-source tool that has the very useful feature of automating the
-acquiring and installing of an SSL certificate. An SSL cert is required
+acquisition and installing of an SSL certificate. An SSL cert is required
 by most browsers to use the encrypted communication protocol https.
 
-Caddy is configured with a file named `Caddyfile`. We use the caddy
+We use the caddy
 configuration file to specify three critical things.
 
 1.  the site domain name.
 2.  the 'reverse proxy' map that redirects requests to port 443 (ssl
     port) to port 3838 (Shiny port).
-3. add login credentials for bob/vanilla47:
+3. add login credentials for all users (e.g. bob/vanilla47):
 
 # Caddy
 
@@ -287,18 +295,18 @@ Our barebones `Caddyfile` looks like this:
 #| code-fold: true
 #| code-summary: "Show the `Caddyfile` code"
 # use caddy auth tool to generate a password via the `bcrypt` algorithm. 
-# > caddy hash-password --plaintext vanilla47 
-rgtlab.org {
-    basicauth * /power1_shiny/* {
-		bob $2a$14$pYWd5O7JqNeGLS4m4CKkzemM2pq5ezn9bcTDowofZTl5wRVl8NTJm
-	}
-    root * /srv
-    handle_path /power1_shiny/* {
-            reverse_proxy power1_shiny:3838
-    }
-    file_server
-}
+# > caddy hash-password --plaintext hiccup 
 
+rgtlab.org {
+basicauth /power1/* {
+	Bob $2a$14$Zkx19XLiW6VYouLHR5NmfOFU0z2GTNmpkT/5qqR7hx4IjWJPDhjvG
+}
+	root * /srv
+	handle_path /power1/* {
+		reverse_proxy power1:3838
+	}
+	file_server
+}
 
 ```
 
@@ -331,12 +339,13 @@ The docker-compose.yml file:
 version: "3.7"
 
 services:
-  power1_shiny:
-    build: .
-    expose:
-    - "3838"
+  power1:
+    image: registry.gitlab.com/rgt47/power1_app/power1_image:v1.0
+    restart: unless-stopped
+    ports:
+      - "9000:3838"
   caddy:
-    image: caddy:2.3.0-alpine
+    image: caddy:2.6.4-alpine
     ports:
       - "80:80"
       - "443:443"
@@ -347,6 +356,7 @@ services:
 volumes:
     caddy_data:
 
+
 ```
 # Landing Page
 
@@ -356,15 +366,18 @@ that provides the landing page for our server.
 ```{r echo=T, eval=F}
 #| code-fold: true
 #| code-summary: "`index.html`. Show the code"
+
 <!DOCTYPE html>
 <html>
   <body>
     <h1>Power1 app</h1>
     <ul>
-      <li><a href="./power1_shiny/">Power1 app</a></li>
+      <li><a href="./power1/">Power1 app</a></li>
     </ul>
   </body>
 </html> 
+
+
 ```
 
 At this point our `power1_app` repo looks like this: 
@@ -372,10 +385,7 @@ At this point our `power1_app` repo looks like this:
 .
 ├── Caddyfile
 ├── Dockerfile
-├── README.md
 ├── docker-compose.yml
-├── power1_shiny
-│   └── app.R
 └── site
     └── index.html
 ```
@@ -481,7 +491,8 @@ sh> ssh rgtlab.org
 
 
 # References
-* [Focus on R: a new qblog - Set up a virtual server on AWS (in anticipation of hosting Shiny apps)](https://focusonr.org/posts/setupaws/)
+* [Focus on R: a new qblog - Set up a virtual server on AWS (in anticipation of hosting Shiny apps)](https://focusonr.org/posts/server_setup_aws_console/)
+* [Focus on R: a new qblog - Set up a virtual server on AWS with AWS CLI ](https://focusonr.org/posts/server_setup_aws_cli/)
 * [Shiny Apps with Docker Compose, Part 1: Development](https://hosting.analythium.io/shiny-apps-with-docker-compose-part-1-development/)
 * [Shiny Apps with Docker Compose, Part 2: Production](https://hosting.analythium.io/shiny-apps-with-docker-compose-part-2-production/)
 
