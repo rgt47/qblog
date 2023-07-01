@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Ronald (Ryy) Glenn Thomas">
-<meta name="dcterms.date" content="2023-06-29">
+<meta name="dcterms.date" content="2023-06-30">
 <meta name="description" content="This is the first in a series of posts offering suggested strategies for leveraging open source technologies to effectively host data science analysis apps and reports online.">
 
 <title>Focus on R: a new qblog - A straightforward strategy to get your Shiny app online, securely and continuously updated.</title>
@@ -194,17 +194,19 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   <li><a href="#select-a-hosting-service" id="toc-select-a-hosting-service" class="nav-link" data-scroll-target="#select-a-hosting-service"><span class="toc-section-number">2.2</span>  Select a hosting service</a></li>
   <li><a href="#website" id="toc-website" class="nav-link" data-scroll-target="#website"><span class="toc-section-number">2.3</span>  Website</a></li>
   </ul></li>
-  <li><a href="#github" id="toc-github" class="nav-link" data-scroll-target="#github"><span class="toc-section-number">3</span>  Github</a></li>
-  <li><a href="#appendices" id="toc-appendices" class="nav-link" data-scroll-target="#appendices"><span class="toc-section-number">4</span>  Appendices</a>
+  <li><a href="#docker" id="toc-docker" class="nav-link" data-scroll-target="#docker"><span class="toc-section-number">3</span>  Docker</a></li>
+  <li><a href="#caddy" id="toc-caddy" class="nav-link" data-scroll-target="#caddy"><span class="toc-section-number">4</span>  Caddy</a></li>
+  <li><a href="#landing-page" id="toc-landing-page" class="nav-link" data-scroll-target="#landing-page"><span class="toc-section-number">5</span>  Landing Page</a></li>
+  <li><a href="#github" id="toc-github" class="nav-link" data-scroll-target="#github"><span class="toc-section-number">6</span>  Github</a></li>
+  <li><a href="#appendices" id="toc-appendices" class="nav-link" data-scroll-target="#appendices"><span class="toc-section-number">7</span>  Appendices</a>
   <ul class="collapse">
-  <li><a href="#appendix-1" id="toc-appendix-1" class="nav-link" data-scroll-target="#appendix-1"><span class="toc-section-number">4.1</span>  Appendix-1</a></li>
-  <li><a href="#app.r" id="toc-app.r" class="nav-link" data-scroll-target="#app.r"><span class="toc-section-number">4.2</span>  App.R</a></li>
-  <li><a href="#bonus-add-basic-authentication" id="toc-bonus-add-basic-authentication" class="nav-link" data-scroll-target="#bonus-add-basic-authentication"><span class="toc-section-number">4.3</span>  Bonus: Add basic authentication</a></li>
-  <li><a href="#tip-1.-docker-on-m1-macbook." id="toc-tip-1.-docker-on-m1-macbook." class="nav-link" data-scroll-target="#tip-1.-docker-on-m1-macbook."><span class="toc-section-number">4.4</span>  Tip 1. Docker on M1 macbook.</a></li>
-  <li><a href="#tip-2-add-user-to-docker-group-on-server." id="toc-tip-2-add-user-to-docker-group-on-server." class="nav-link" data-scroll-target="#tip-2-add-user-to-docker-group-on-server."><span class="toc-section-number">4.5</span>  Tip 2 add user to docker group on server.</a></li>
-  <li><a href="#tip-3-ssh-config-file." id="toc-tip-3-ssh-config-file." class="nav-link" data-scroll-target="#tip-3-ssh-config-file."><span class="toc-section-number">4.6</span>  Tip 3 ssh config file.</a></li>
+  <li><a href="#appendix-1" id="toc-appendix-1" class="nav-link" data-scroll-target="#appendix-1"><span class="toc-section-number">7.1</span>  Appendix-1</a></li>
+  <li><a href="#app.r" id="toc-app.r" class="nav-link" data-scroll-target="#app.r"><span class="toc-section-number">7.2</span>  App.R</a></li>
+  <li><a href="#tip-1.-docker-on-m1-macbook." id="toc-tip-1.-docker-on-m1-macbook." class="nav-link" data-scroll-target="#tip-1.-docker-on-m1-macbook."><span class="toc-section-number">7.3</span>  Tip 1. Docker on M1 macbook.</a></li>
+  <li><a href="#tip-2-add-user-to-docker-group-on-server." id="toc-tip-2-add-user-to-docker-group-on-server." class="nav-link" data-scroll-target="#tip-2-add-user-to-docker-group-on-server."><span class="toc-section-number">7.4</span>  Tip 2 add user to docker group on server.</a></li>
+  <li><a href="#tip-3-ssh-config-file." id="toc-tip-3-ssh-config-file." class="nav-link" data-scroll-target="#tip-3-ssh-config-file."><span class="toc-section-number">7.5</span>  Tip 3 ssh config file.</a></li>
   </ul></li>
-  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references"><span class="toc-section-number">5</span>  References</a></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references"><span class="toc-section-number">8</span>  References</a></li>
   </ul>
 </nav>
 </nav>
@@ -253,7 +255,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">June 29, 2023</p>
+      <p class="date">June 30, 2023</p>
     </div>
   </div>
   
@@ -381,11 +383,15 @@ Details for creating a Github repo follow:
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> snap install docker.io</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Once the host is set up and the requisite software installed we’ll have a customized virtual server wtih a static IP address, and a unique domain name and firewall in place. In other words, items 1, 2, and 3 from our <code>hosting</code> list above will be taken care of.</p>
 </section>
-<section id="website" class="level2 page-columns page-full" data-number="2.3">
+<section id="website" class="level2" data-number="2.3">
 <h2 data-number="2.3" class="anchored" data-anchor-id="website"><span class="header-section-number">2.3</span> Website</h2>
 <p>To configure the web server and containerize our app we need to add three files to the repo, to go along with our Shiny app.</p>
 <p>We’ll use a slightly indirect route to create and place the necessary files on the server but this approach will allow to do all our countinuing development on our local workstation and have the web app be automatically continually undated. We’ll create the configuration files we need on our workstation and push them github and from there they can be accessed from our server.</p>
 <p>These three configuation files are:</p>
+</section>
+</section>
+<section id="docker" class="level1 page-columns page-full" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Docker</h1>
 <ol type="1">
 <li>a Docker configuration file (default name <code>Dockerfile</code>)</li>
 </ol>
@@ -395,41 +401,45 @@ Details for creating a Github repo follow:
 </div></div><p>We’ll use docker to access R/Shiny, and docker-compose to access Caddy, our webserver. The first file is the dockerfile. Here is our minimal dockerfile with comments:</p>
 <details>
 <summary>show the <code>Dockerfile</code> code</summary>
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>from rocker<span class="sc">/</span>shiny<span class="sc">:</span><span class="dv">4</span>.<span class="fl">2.0</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>copy <span class="sc">/</span>power1_shiny<span class="sc">/</span><span class="er">*</span> <span class="er">/</span>srv<span class="sc">/</span>shiny<span class="sc">-</span>server<span class="sc">/</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>cmd [<span class="st">"/usr/bin/shiny-server"</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>FROM rocker<span class="sc">/</span>shiny<span class="sc">:</span><span class="dv">4</span>.<span class="fl">2.0</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="co"># there are a bunch of files in /srv/shiny-server. delete them</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>RUN rm <span class="sc">-</span>rf <span class="sc">/</span>srv<span class="sc">/</span>shiny<span class="sc">-</span>server</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>COPY <span class="sc">/</span>power1_shiny<span class="sc">/</span><span class="er">*</span> <span class="er">/</span>srv<span class="sc">/</span>shiny<span class="sc">-</span>server<span class="sc">/</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>USER shiny</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>CMD [<span class="st">"/usr/bin/shiny-server"</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
-<ol type="1">
-<li>Grab the latest rocker/Shiny image from Docker Hub to use as a base image.</li>
-<li>Copy the Shiny code to the default location for shiny-server</li>
-<li>Run the Shiny-server using the default app code</li>
-</ol>
-<p>This configuration file instructs Docker to build a container based on a Rocker/Shiny image (which itself is a ubuntu image with R and Shiny installed) then copy into the container the <code>power1_shiny.R</code> code and finally launch Shiny on (default) port 3838. We placed the power1_app.R code in the default location <code>/srv/shiny-server</code> we only need to start the server and it will find the shiny program.</p>
+<p>This file in just a few lines instructs Docker to build a new container based on a Rocker/Shiny image (which is a ubuntu image with R and Shiny installed) and layered with the addition of our Shiny code launch Shiny server listening on (default) port 3838.</p>
+<div class="page-columns page-full"><p></p><div class="no-row-height column-margin column-container"><span class="">Note: We placed the <code>power1_shiny/app.R</code> code in the default location <code>/srv/shiny-server</code> so we only need to start the Shiny server and it will find the shiny program</span></div></div>
+<p>This configuration file instructs Docker to build a container based on a Rocker/Shiny image (which itself is a ubuntu image with R and Shiny installed) then copy into the container the <code>power1_shiny.R</code> code and finally launch Shiny on (default) port 3838. We placed the app.R code in the default location <code>/srv/shiny-server</code> we only need to start the server and it will find the shiny program.</p>
 <ol start="2" type="1">
 <li>a Caddy web server configuration file (default name <code>Caddyfile</code>)</li>
 </ol>
-<p>We’ll use <code>Caddy</code> as our web server. Caddy is an open-source tool that has the very useful feature of automating the acquiring and installing of an SSL certificate. An SSL cert is required by most browsers to use the encrypted communication protocol https.</p>
-<p>Caddy is configured with a file named <code>Caddyfile</code>. We use the caddy configuration file to specify three critical things.</p>
+<p>We’ll use <code>Caddy</code> as our web server. Caddy is an open-source tool that has the very useful feature of automating the acquisition and installing of an SSL certificate. An SSL cert is required by most browsers to use the encrypted communication protocol https.</p>
+<p>We use the caddy configuration file to specify three critical things.</p>
 <ol type="1">
 <li>the site domain name.</li>
 <li>the ‘reverse proxy’ map that redirects requests to port 443 (ssl port) to port 3838 (Shiny port).</li>
-<li>add login credentials for bob/vanilla47:</li>
+<li>add login credentials for all users (e.g.&nbsp;bob/vanilla47):</li>
 </ol>
+</section>
+<section id="caddy" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Caddy</h1>
 <p>Our barebones <code>Caddyfile</code> looks like this:</p>
 <details>
 <summary>Show the <code>Caddyfile</code> code</summary>
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># use caddy auth tool to generate a password via the `bcrypt` algorithm. </span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="co"># &gt; caddy hash-password --plaintext vanilla47 </span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>rgtlab.org {</span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    basicauth <span class="sc">*</span> <span class="er">/</span>power1_shiny<span class="sc">/</span><span class="er">*</span> {</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>        bob <span class="sc">$</span>2a<span class="sc">$</span><span class="dv">14</span><span class="sc">$</span>pYWd5O7JqNeGLS4m4CKkzemM2pq5ezn9bcTDowofZTl5wRVl8NTJm</span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    }</span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    root <span class="sc">*</span> <span class="er">/</span>srv</span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    handle_path <span class="sc">/</span>power1_shiny<span class="sc">/</span><span class="er">*</span> {</span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>            reverse_proxy power1_shiny<span class="sc">:</span><span class="dv">3838</span></span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    }</span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    file_server</span>
-<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="co"># &gt; caddy hash-password --plaintext hiccup </span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>rgtlab.org {</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>basicauth <span class="sc">/</span>power1<span class="sc">/</span><span class="er">*</span> {</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    Bob <span class="sc">$</span>2a<span class="sc">$</span><span class="dv">14</span><span class="sc">$</span>Zkx19XLiW6VYouLHR5NmfOFU0z2GTNmpkT<span class="sc">/</span>5qqR7hx4IjWJPDhjvG</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    root <span class="sc">*</span> <span class="er">/</span>srv</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    handle_path <span class="sc">/</span>power1<span class="sc">/</span><span class="er">*</span> {</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>        reverse_proxy power1<span class="sc">:</span><span class="dv">3838</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>    file_server</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <p>We can accomplish what we need for items 4, 5, and 7 through the Caddyfile.</p>
 <p>Note:</p>
@@ -438,7 +448,7 @@ Details for creating a Github repo follow:
 <li><code>handle_path</code> maps all https requests to port 3838 where Shiny is listening.</li>
 </ul>
 <p>Providing our servers domain name, <code>rgtlab.org</code> is sufficient to initiate an exchange with the <code>letsencrypt</code> service to generates an SSL certificate.</p>
-<p>And a third file is the docker compose file that containerizes our Shiny app, pulls a caddy webserver image from Docker Hub and creates a local network for the two containers to communicate in.</p>
+<p>And a third file is a config file for Docker Compose. Docker Compose is a Docker module that provides a framework for running multi-container applications. This docker compose YAML file instructs Docker to containerize our Shiny app, pull a caddy webserver image from Docker Hub and create a local network for the two containers to communicate in.</p>
 <ol start="3" type="1">
 <li>a Docker-compose configuration file (default name <code>docker-compose.yml</code>).</li>
 </ol>
@@ -448,23 +458,27 @@ Details for creating a Github repo follow:
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>version<span class="sc">:</span> <span class="st">"3.7"</span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>services<span class="sc">:</span></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  power1_shiny<span class="sc">:</span></span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    build<span class="sc">:</span> .</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    expose<span class="sc">:</span></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    <span class="sc">-</span> <span class="st">"3838"</span></span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  caddy<span class="sc">:</span></span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    image<span class="sc">:</span> caddy<span class="sc">:</span><span class="dv">2</span>.<span class="fl">3.0</span><span class="sc">-</span>alpine</span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>    ports<span class="sc">:</span></span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>      <span class="sc">-</span> <span class="st">"80:80"</span></span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>      <span class="sc">-</span> <span class="st">"443:443"</span></span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>    volumes<span class="sc">:</span></span>
-<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>      <span class="sc">-</span> <span class="er">$</span>PWD<span class="sc">/</span>Caddyfile<span class="sc">:</span><span class="er">/</span>etc<span class="sc">/</span>caddy<span class="sc">/</span>Caddyfile</span>
-<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>      <span class="sc">-</span> <span class="er">$</span>PWD<span class="sc">/</span>site<span class="sc">:</span><span class="er">/</span>srv</span>
-<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>      <span class="sc">-</span> caddy_data<span class="sc">:</span><span class="er">/</span>data</span>
-<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>volumes<span class="sc">:</span></span>
-<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>    caddy_data<span class="sc">:</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  power1<span class="sc">:</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    image<span class="sc">:</span> registry.gitlab.com<span class="sc">/</span>rgt47<span class="sc">/</span>power1_app<span class="sc">/</span>power1_image<span class="sc">:</span>v1<span class="fl">.0</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    restart<span class="sc">:</span> unless<span class="sc">-</span>stopped</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    ports<span class="sc">:</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>      <span class="sc">-</span> <span class="st">"9000:3838"</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  caddy<span class="sc">:</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>    image<span class="sc">:</span> caddy<span class="sc">:</span><span class="dv">2</span>.<span class="fl">6.4</span><span class="sc">-</span>alpine</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>    ports<span class="sc">:</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>      <span class="sc">-</span> <span class="st">"80:80"</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>      <span class="sc">-</span> <span class="st">"443:443"</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>    volumes<span class="sc">:</span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>      <span class="sc">-</span> <span class="er">$</span>PWD<span class="sc">/</span>Caddyfile<span class="sc">:</span><span class="er">/</span>etc<span class="sc">/</span>caddy<span class="sc">/</span>Caddyfile</span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>      <span class="sc">-</span> <span class="er">$</span>PWD<span class="sc">/</span>site<span class="sc">:</span><span class="er">/</span>srv</span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>      <span class="sc">-</span> caddy_data<span class="sc">:</span><span class="er">/</span>data</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>volumes<span class="sc">:</span></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>    caddy_data<span class="sc">:</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
-<p>Lastly, we need an html file, <code>index.html</code> that provides the landing page for our server.</p>
+</section>
+<section id="landing-page" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Landing Page</h1>
+<p>Lastly, we need an html file, <code>index.html</code> in a subdirectory named <code>site</code> that provides the landing page for our server.</p>
 <details>
 <summary><code>index.html</code>. Show the code</summary>
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="sc">&lt;!</span>DOCTYPE html<span class="sc">&gt;</span></span>
@@ -472,7 +486,7 @@ Details for creating a Github repo follow:
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="er">&lt;</span>body<span class="sc">&gt;</span></span>
 <span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="er">&lt;</span>h1<span class="sc">&gt;</span>Power1 app<span class="sc">&lt;</span><span class="er">/</span>h1<span class="sc">&gt;</span></span>
 <span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="er">&lt;</span>ul<span class="sc">&gt;</span></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>      <span class="er">&lt;</span>li<span class="sc">&gt;</span><span class="er">&lt;</span>a href<span class="ot">=</span><span class="st">"./power1_shiny/"</span><span class="sc">&gt;</span>Power1 app<span class="sc">&lt;</span><span class="er">/</span>a<span class="sc">&gt;</span><span class="er">&lt;/</span>li<span class="sc">&gt;</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>      <span class="er">&lt;</span>li<span class="sc">&gt;</span><span class="er">&lt;</span>a href<span class="ot">=</span><span class="st">"./power1/"</span><span class="sc">&gt;</span>Power1 app<span class="sc">&lt;</span><span class="er">/</span>a<span class="sc">&gt;</span><span class="er">&lt;/</span>li<span class="sc">&gt;</span></span>
 <span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    <span class="er">&lt;/</span>ul<span class="sc">&gt;</span></span>
 <span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="er">&lt;/</span>body<span class="sc">&gt;</span></span>
 <span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="er">&lt;/</span>html<span class="sc">&gt;</span> </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -481,16 +495,12 @@ Details for creating a Github repo follow:
 <pre class="text"><code>.
 ├── Caddyfile
 ├── Dockerfile
-├── README.md
 ├── docker-compose.yml
-├── power1_shiny
-│&nbsp;&nbsp; └── app.R
 └── site
     └── index.html</code></pre>
 </section>
-</section>
-<section id="github" class="level1" data-number="3">
-<h1 data-number="3"><span class="header-section-number">3</span> Github</h1>
+<section id="github" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Github</h1>
 <p>Push the new content to Github.</p>
 <div class="sourceCode" id="cb10"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> push</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Next login to the virtual server and clone the repo from Github.</p>
@@ -501,13 +511,13 @@ Details for creating a Github repo follow:
 <p>and you’re good to go! The power1_shiny app is available at</p>
 <div class="sourceCode" id="cb13"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">https://rgtlab.org/</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
-<section id="appendices" class="level1" data-number="4">
-<h1 data-number="4"><span class="header-section-number">4</span> Appendices</h1>
-<section id="appendix-1" class="level2" data-number="4.1">
-<h2 data-number="4.1" class="anchored" data-anchor-id="appendix-1"><span class="header-section-number">4.1</span> Appendix-1</h2>
+<section id="appendices" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Appendices</h1>
+<section id="appendix-1" class="level2" data-number="7.1">
+<h2 data-number="7.1" class="anchored" data-anchor-id="appendix-1"><span class="header-section-number">7.1</span> Appendix-1</h2>
 </section>
-<section id="app.r" class="level2" data-number="4.2">
-<h2 data-number="4.2" class="anchored" data-anchor-id="app.r"><span class="header-section-number">4.2</span> App.R</h2>
+<section id="app.r" class="level2" data-number="7.2">
+<h2 data-number="7.2" class="anchored" data-anchor-id="app.r"><span class="header-section-number">7.2</span> App.R</h2>
 <p>Consider an app that is a balance of simple and functional – one that calculates the power for a 2-sample t-test as a function of the standardized effect size. re is our shiny app <code>power1_shiny.R</code>:</p>
 <p>Consider the power1.R file:</p>
 <div class="sourceCode" id="cb14"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a></span>
@@ -531,50 +541,34 @@ Details for creating a Github repo follow:
 <span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a><span class="ex">shinyApp</span><span class="er">(</span><span class="ex">ui,</span> server<span class="kw">)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>The app is designed to be maximally minimal. Using only base R functions, with a minimum of reactive widgets and layout commands to keep it simple while still performing a useful function.</p>
 </section>
-<section id="bonus-add-basic-authentication" class="level2" data-number="4.3">
-<h2 data-number="4.3" class="anchored" data-anchor-id="bonus-add-basic-authentication"><span class="header-section-number">4.3</span> Bonus: Add basic authentication</h2>
-<p>add login credentials for bob/vanilla47 to the Caddyfile:</p>
-<div class="sourceCode" id="cb15"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># use caddy auth tool to generate a password via the `bcrypt` algorithm. </span></span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> caddy <span class="ex">hash-password</span> <span class="at">--plaintext</span> vanilla47 </span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="ex">caddy</span> hash-password </span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="ex">rgtlab.org</span> {</span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="ex">basicauth</span> <span class="pp">*</span> /power1_shiny/<span class="pp">*</span> {</span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>        <span class="ex">bob</span> <span class="va">$2</span>a<span class="va">$1</span>4<span class="va">$pYWd5O7JqNeGLS4m4CKkzemM2pq5ezn9bcTDowofZTl5wRVl8NTJm</span></span>
-<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>    <span class="er">}</span></span>
-<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>    <span class="ex">root</span> <span class="pp">*</span> /var/www/html</span>
-<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>    <span class="ex">handle_path</span> /power1_shiny/<span class="pp">*</span> {</span>
-<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>            <span class="ex">reverse_proxy</span> 0.0.0.0:3838</span>
-<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>    <span class="er">}</span></span>
-<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>    <span class="ex">file_server</span></span>
-<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a><span class="er">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<section id="tip-1.-docker-on-m1-macbook." class="level2" data-number="7.3">
+<h2 data-number="7.3" class="anchored" data-anchor-id="tip-1.-docker-on-m1-macbook."><span class="header-section-number">7.3</span> Tip 1. Docker on M1 macbook.</h2>
+<p>To get docker functioning properly with <code>rocker</code> images on M1 Mac desktop use <code>--platform</code> option.</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> build <span class="at">-t</span> power1_shiny <span class="at">--platform</span> linux/x86_64 .</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> run <span class="at">-d</span> <span class="at">-p</span> 80:3838 <span class="at">--platform</span> linux/x86_64 power1_shiny</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
-<section id="tip-1.-docker-on-m1-macbook." class="level2" data-number="4.4">
-<h2 data-number="4.4" class="anchored" data-anchor-id="tip-1.-docker-on-m1-macbook."><span class="header-section-number">4.4</span> Tip 1. Docker on M1 macbook.</h2>
-<p>To get docker functioning on M1 Mac desktop</p>
-<div class="sourceCode" id="cb16"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> build <span class="at">-t</span> power1_shiny <span class="at">--platform</span> linux/x86_64 .</span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> run <span class="at">-d</span> <span class="at">-p</span> 80:3838 <span class="at">--platform</span> linux/x86_64 power1_shiny</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</section>
-<section id="tip-2-add-user-to-docker-group-on-server." class="level2" data-number="4.5">
-<h2 data-number="4.5" class="anchored" data-anchor-id="tip-2-add-user-to-docker-group-on-server."><span class="header-section-number">4.5</span> Tip 2 add user to docker group on server.</h2>
+<section id="tip-2-add-user-to-docker-group-on-server." class="level2" data-number="7.4">
+<h2 data-number="7.4" class="anchored" data-anchor-id="tip-2-add-user-to-docker-group-on-server."><span class="header-section-number">7.4</span> Tip 2 add user to docker group on server.</h2>
 <p>Add ubuntu to the docker group to allow docker to run without sudo.</p>
-<div class="sourceCode" id="cb17"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> usermod <span class="at">-aG</span> docker <span class="va">${USER}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb16"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> usermod <span class="at">-aG</span> docker <span class="va">${USER}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
-<section id="tip-3-ssh-config-file." class="level2" data-number="4.6">
-<h2 data-number="4.6" class="anchored" data-anchor-id="tip-3-ssh-config-file."><span class="header-section-number">4.6</span> Tip 3 ssh config file.</h2>
+<section id="tip-3-ssh-config-file." class="level2" data-number="7.5">
+<h2 data-number="7.5" class="anchored" data-anchor-id="tip-3-ssh-config-file."><span class="header-section-number">7.5</span> Tip 3 ssh config file.</h2>
 <p>For convenience, construct a <code>config</code> file in <code>~/.ssh</code> as:</p>
-<div class="sourceCode" id="cb18"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="ex">Host</span> rgtlab.org</span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="ex">HostName</span> 13.57.139.31 <span class="co"># static IP</span></span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="ex">User</span> ubuntu <span class="co"># default user on ubuntu server</span></span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="ex">Port</span> 22  <span class="co"># the default port ssh uses</span></span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="ex">IdentityFile</span> ~/Downloads/power1.rsa</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb17"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="ex">Host</span> rgtlab.org</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="ex">HostName</span> 13.57.139.31 <span class="co"># static IP</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="ex">User</span> ubuntu <span class="co"># default user on ubuntu server</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="ex">Port</span> 22  <span class="co"># the default port ssh uses</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="ex">IdentityFile</span> ~/Downloads/power1.rsa</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>then you can ssh into the new server with</p>
-<div class="sourceCode" id="cb19"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sh</span><span class="op">&gt;</span> ssh rgtlab.org </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb18"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sh</span><span class="op">&gt;</span> ssh rgtlab.org </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 </section>
-<section id="references" class="level1" data-number="5">
-<h1 data-number="5"><span class="header-section-number">5</span> References</h1>
+<section id="references" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> References</h1>
 <ul>
-<li><a href="https://focusonr.org/posts/setupaws/">Focus on R: a new qblog - Set up a virtual server on AWS (in anticipation of hosting Shiny apps)</a></li>
+<li><a href="https://focusonr.org/posts/server_setup_aws_console/">Focus on R: a new qblog - Set up a virtual server on AWS (in anticipation of hosting Shiny apps)</a></li>
+<li><a href="https://focusonr.org/posts/server_setup_aws_cli/">Focus on R: a new qblog - Set up a virtual server on AWS with AWS CLI</a></li>
 <li><a href="https://hosting.analythium.io/shiny-apps-with-docker-compose-part-1-development/">Shiny Apps with Docker Compose, Part 1: Development</a></li>
 <li><a href="https://hosting.analythium.io/shiny-apps-with-docker-compose-part-2-production/">Shiny Apps with Docker Compose, Part 2: Production</a></li>
 </ul>
@@ -586,14 +580,14 @@ Details for creating a Github repo follow:
   author = {Ronald (Ryy) Glenn Thomas},
   title = {A Straightforward Strategy to Get Your {Shiny} App Online,
     Securely and Continuously Updated.},
-  date = {2023-06-29},
+  date = {2023-06-30},
   url = {https://focusonr.org/posts/dockerize_compose},
   langid = {en}
 }
 </code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre><div class="quarto-appendix-secondary-label">For attribution, please cite this work as:</div><div id="ref-(ryy)glennthomas2023" class="csl-entry quarto-appendix-citeas" role="doc-biblioentry">
 Ronald (Ryy) Glenn Thomas. 2023. <span>“A Straightforward Strategy to
 Get Your Shiny App Online, Securely and Continuously Updated. .”</span>
-June 29, 2023. <a href="https://focusonr.org/posts/dockerize_compose">https://focusonr.org/posts/dockerize_compose</a>.
+June 30, 2023. <a href="https://focusonr.org/posts/dockerize_compose">https://focusonr.org/posts/dockerize_compose</a>.
 </div></div></section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
 window.document.addEventListener("DOMContentLoaded", function (event) {
@@ -727,6 +721,8 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     }
   }
 });
+</script>
+<script src="https://giscus.app/client.js" data-repo="rgt47/power0" data-repo-id="R_kgDOHyL6vw" data-category="General" data-category-id="DIC_kwDOHyL6v84CXl_4" data-mapping="title" data-reactions-enabled="1" data-emit-metadata="0" data-input-position="top" data-theme="light" data-lang="en" crossorigin="anonymous" async="">
 </script>
 </div> <!-- /content -->
 
