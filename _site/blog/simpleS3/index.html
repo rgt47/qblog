@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Ronald (Ryy) Glenn Thomas">
-<meta name="dcterms.date" content="2023-07-18">
+<meta name="dcterms.date" content="2023-08-03">
 <meta name="description" content="Getting started with S3 OO programming in R">
 
 <title>Thomas Lab home page - Writing a simple R package in S3.</title>
@@ -204,7 +204,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
     <h2 id="toc-title">Table of contents</h2>
    
   <ul>
-  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="toc-section-number">1</span>  Introduction</a></li>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="toc-section-number">1</span>  Introduction</a>
+  <ul class="collapse">
+  <li><a href="#notes" id="toc-notes" class="nav-link" data-scroll-target="#notes"><span class="toc-section-number">1.1</span>  Notes</a></li>
+  </ul></li>
   </ul>
 </nav>
 </nav>
@@ -250,7 +253,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">July 18, 2023</p>
+      <p class="date">August 3, 2023</p>
     </div>
   </div>
   
@@ -298,7 +301,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">sel</span>(species, island, bill_length_mm)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="sourceCode" id="cb2"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">table1</span>  <span class="op">&lt;</span>- function <span class="er">(</span><span class="fu">df</span>, form, ...<span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">table1</span>  <span class="op">&lt;</span>- function <span class="er">(</span><span class="ex">form,</span> data, ...<span class="kw">)</span> <span class="kw">{</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="ex">UseMethod</span><span class="er">(</span><span class="st">"table1"</span><span class="kw">)</span> </span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span> </span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
@@ -355,12 +358,12 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span><span class="kw">(</span><span class="ex">pv</span><span class="kw">)</span></span>
 <span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span>
 <span id="cb2-58"><a href="#cb2-58" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a><span class="ex">table1.data.frame</span>  <span class="op">&lt;</span>- function <span class="er">(</span><span class="fu">df</span>, form, ...<span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a><span class="ex">table1.formula</span>  <span class="op">&lt;</span>- function <span class="er">(</span><span class="ex">form,data,</span>   ...<span class="kw">)</span> <span class="kw">{</span></span>
 <span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">(</span><span class="ex">!require</span><span class="er">(</span><span class="st">"pacman"</span><span class="kw">))</span> <span class="ex">install.packages</span><span class="er">(</span><span class="st">"pacman"</span><span class="ex">,</span> repo=<span class="st">"cran.rstudio.com"</span><span class="kw">)</span></span>
 <span id="cb2-61"><a href="#cb2-61" aria-hidden="true" tabindex="-1"></a><span class="ex">p_load</span><span class="er">(</span><span class="ex">janitor,</span> broom, tibble, dplyr, purrr<span class="kw">)</span> </span>
 <span id="cb2-62"><a href="#cb2-62" aria-hidden="true" tabindex="-1"></a><span class="ex">vars</span>  <span class="op">&lt;</span>- all.vars<span class="er">(</span><span class="ex">form</span><span class="kw">)</span></span>
-<span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a><span class="ex">dep</span>  <span class="op">&lt;&lt;- df[[vars[1]]]</span></span>
-<span id="cb2-64"><a href="#cb2-64" aria-hidden="true" tabindex="-1"></a><span class="st">indep  &lt;- df[vars[-1]] </span></span>
+<span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a><span class="ex">dep</span>  <span class="op">&lt;&lt;- data[[vars[1]]]</span></span>
+<span id="cb2-64"><a href="#cb2-64" aria-hidden="true" tabindex="-1"></a><span class="st">indep  &lt;- data[vars[-1]] </span></span>
 <span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a><span class="st">col_left = indep |&gt; </span></span>
 <span id="cb2-66"><a href="#cb2-66" aria-hidden="true" tabindex="-1"></a><span class="st">imap(row_name, ...) |&gt;</span></span>
 <span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a><span class="st">unlist() |&gt; </span></span>
@@ -378,22 +381,34 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb2-79"><a href="#cb2-79" aria-hidden="true" tabindex="-1"></a><span class="st">bind_cols(col_left, col_mid, col_right)</span></span>
 <span id="cb2-80"><a href="#cb2-80" aria-hidden="true" tabindex="-1"></a><span class="st">}</span></span>
 <span id="cb2-81"><a href="#cb2-81" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-82"><a href="#cb2-82" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-83"><a href="#cb2-83" aria-hidden="true" tabindex="-1"></a></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb2-82"><a href="#cb2-82" aria-hidden="true" tabindex="-1"></a><span class="st">iris_mod  &lt;- iris |&gt; mutate(pl = Petal.Length &gt; 1.5, </span></span>
+<span id="cb2-83"><a href="#cb2-83" aria-hidden="true" tabindex="-1"></a><span class="st">  pl2 = ifelse(pl, "long","short"))</span></span>
+<span id="cb2-84"><a href="#cb2-84" aria-hidden="true" tabindex="-1"></a><span class="st">table1(Species ~ Sepal.Length+Sepal.Width+pl2, data = iris_mod)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<section id="notes" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="notes"><span class="header-section-number">1.1</span> Notes</h2>
+<p>2023-08-03 17:37:04</p>
+<ol type="1">
+<li><p>can’t handle logical variables yet</p></li>
+<li><p>categorical values should be indented</p></li>
+<li><p>add option to change continuous summary to median IQR</p></li>
+<li><p>review atable, furniture, and tableone for features.</p></li>
+<li><p>maybe a “style” option for NEJM, JAMA, lancet</p></li>
+</ol>
 
 
+</section>
 </section>
 
 <div id="quarto-appendix" class="default"><section class="quarto-appendix-contents"><h2 class="anchored quarto-appendix-heading">Reuse</h2><div quarto-reuse="quarto-reuse" class="quarto-appendix-contents"><a rel="license" href="https://creativecommons.org/licenses/by/4.0/">https://creativecommons.org/licenses/by/4.0/</a></div></section><section class="quarto-appendix-contents"><h2 class="anchored quarto-appendix-heading">Citation</h2><div><div class="quarto-appendix-secondary-label">BibTeX citation:</div><pre class="sourceCode code-with-copy quarto-appendix-bibtex"><code class="sourceCode bibtex">@online{(ryy)glennthomas2023,
   author = {Ronald (Ryy) Glenn Thomas},
   title = {{Writing} a Simple {R} Package in {S3.}},
-  date = {2023-07-18},
+  date = {2023-08-03},
   url = {https://focusonr.org/blog/simpleS3},
   langid = {en}
 }
 </code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre><div class="quarto-appendix-secondary-label">For attribution, please cite this work as:</div><div id="ref-(ryy)glennthomas2023" class="csl-entry quarto-appendix-citeas" role="doc-biblioentry">
 Ronald (Ryy) Glenn Thomas. 2023.<span>“Writing a Simple R Package in S3.
-.”</span> July 18, 2023. <a href="https://focusonr.org/blog/simpleS3">https://focusonr.org/blog/simpleS3</a>.
+.”</span> August 3, 2023. <a href="https://focusonr.org/blog/simpleS3">https://focusonr.org/blog/simpleS3</a>.
 </div></div></section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
 window.document.addEventListener("DOMContentLoaded", function (event) {
