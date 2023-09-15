@@ -11,49 +11,49 @@
     "href": "blog/dockerize_compose/index.html",
     "title": "A straightforward strategy to get your Shiny app online, securely and continuously updated.",
     "section": "",
-    "text": "Photo by Nathan Waters on Unsplash"
+    "text": "Photo by Nathan Waters"
   },
   {
     "objectID": "blog/dockerize_compose/index.html#hosting",
     "href": "blog/dockerize_compose/index.html#hosting",
     "title": "A straightforward strategy to get your Shiny app online, securely and continuously updated.",
     "section": "2.1 Hosting",
-    "text": "2.1 Hosting\n\n\n\n\n\nData flow \n\n\nFigure 2 illustrates the tools we’ll use and the flow of program and configuration files. In order to host power1_app online we’ll need to complete the following tasks:\n\nGenerate a virtual server (connected via ssh) with a firewall on EC2.\nobtain a static IP address (to identify the server online)\nobtain a domain name (name to associate with static IP address)\ninstall and configure a webserver including authentication (tool to interact with https protocol requests )\nobtain and install an SSL certificate (to allow encrypted communication)\nconfigure a reverse proxy method (translate https, port 443, requests to Shiny, port 3838 requests)\n\nAt first glance these requirements can appear daunting, but on closer inspection all can be met with relative ease and minimal cost using a cloud-hosting service, e.g. Amazon’s EC2 or Digital Ocean, and a “leased” domain name from, e.g. GoDaddy, or Amazon’s Route 53, or no cost if you have your own server with IP address, and domain name."
+    "text": "2.1 Hosting\n\n\n\n\n\nData flow\n\n\nFigure 2 illustrates the tools we’ll use and the flow of program and configuration files. In order to host power1_app online we’ll need to complete the following tasks:\n\nGenerate a virtual server (connected via ssh) with a firewall on EC2, either via the interactive EC2 console of by the AWS CLI command line tools.\nobtain a static IPv4 address (to identify the server online)\nobtain a custom domain name (name to associate with static IP address) from Route 53 or godaddy.com or another domain registration provider.\ninstall and configure a webserver (tool to interact with https protocol requests )\nconfigure authentication for web site\nobtain and install an TLS (transport layer security) security certificate (to allow encrypted communication between the server and other machines on the network)\nconfigure a reverse proxy method (translate https, port 443, requests to Shiny, port 3838 requests)\n\n\n\n“What Is An SSL/TLS Certificate?\nAn SSL/TLS certificate is a digital object that allows systems to verify the identity & subsequently establish an encrypted network connection to another system using the Secure Sockets Layer/Transport Layer Security (SSL/TLS) protocol. Certificates are used within a cryptographic system known as a public key infrastructure (PKI). PKI provides a way for one party to establish the identity of another party using certificates if they both trust a third-party - known as a certificate authority. SSL/TLS certificates thus act as digital identity cards to secure network communications, establish the identity of websites over the Internet as well as resources on private networks.”\n <a href=“https://aws.amazon.com/what-is/ssl-certificate/” \n\n“A reverse proxy is a server, app, or cloud service that sits in f”ront of one or more web servers to intercept and inspect incoming client requests before forwarding them to the web server and subsequently returning the server’s response to the client.”\n <a href=“https://www.zscaler.com/resources/security-terms-glossary/what-is-reverse-proxy” \n\nAt first glance these requirements can appear daunting, but on closer inspection all can be met with relative ease and minimal cost using a cloud-hosting service, e.g. Amazon’s EC2 or Digital Ocean, and a “leased” domain name from, e.g. GoDaddy, or Amazon’s Route 53, or no cost if you have your own server with IP address, and domain name."
   },
   {
     "objectID": "blog/dockerize_compose/index.html#select-a-hosting-service",
     "href": "blog/dockerize_compose/index.html#select-a-hosting-service",
     "title": "A straightforward strategy to get your Shiny app online, securely and continuously updated.",
     "section": "2.2 Select a hosting service",
-    "text": "2.2 Select a hosting service\nThere are a number of cloud based server options: Microsoft Azure, Oracle, Google Cloud, Amazon AWS EC2, Digital Ocean to name a few. Each has their own approach to setting up a custom virtual server. Several have free or low-cost service tiers available.\nAn overview of the process with EC2 follows. Detailed instructions for AWS EC2 are covered in an earlier post here.\n\nCreate an account or sign in.\nSet up an interactive environment with AWS server.\n\ndefine ssh key-pair.\nconfigure firewall.\nrequest static IP.\nobtain domain name.\nselect an instance and launch server.\n\n\nOnce the server is available connect via ssh, and login,\nThe only necessary software to install is docker and git. Install both with the following commands:\nsudo apt install -y git\nsudo snap install docker.io\nOnce the host is set up and the requisite software installed we’ll have a customized virtual server wtih a static IP address, and a unique domain name and firewall in place. In other words, items 1, 2, and 3 from our hosting list above will be taken care of."
+    "text": "2.2 Select a hosting service\nThere are a number of cloud based server options: Microsoft Azure, Oracle, Google Cloud, Amazon AWS EC2, Digital Ocean to name a few. Each has their own approach to setting up a custom virtual server. Several have free or low-cost service tiers available.\nAn overview of the process using AWS EC2 follows. Detailed instructions for setting up a server on EC2, both via the console and the command line interface are covered in an earlier post here and here.\nStep 0. Create an account or sign in. Step 1. Set up an interactive environment with AWS server. This entails: a. define ssh key-pair. b. configure firewall. c. obtain static IP. d. obtain domain name. e. select an instance (AMI, type and disk size), generate and launch server.\nOnce the server is available connect via ssh, and login,\nThe only software necessary to install is docker and git. Install both with the following commands:\nsudo apt install -y git\nsudo snap install docker.io\nOnce the host is set up and the requisite software installed, we’ll have a customized virtual server wtih a static IP address, with a unique domain name and firewall in place. In other words, items 1, 2, and 3 from our hosting list above will be taken care of."
   },
   {
     "objectID": "blog/dockerize_compose/index.html#website",
     "href": "blog/dockerize_compose/index.html#website",
     "title": "A straightforward strategy to get your Shiny app online, securely and continuously updated.",
     "section": "2.3 Website",
-    "text": "2.3 Website\nTo configure the web server and containerize our app we need to add three files to the repo, to go along with our Shiny app.\nWe’ll use a slightly indirect route to create and place the necessary files on the server but this approach will allow to do all our countinuing development on our local workstation and have the web app be automatically continually undated. We’ll create the configuration files we need on our workstation and push them gitlab and from there they can be accessed from our server.\nThese three configuation files are:"
+    "text": "2.3 Website\nTo configure the web server and containerize our app we need to add three files to the repo, to go along with our Shiny app.\nWe’ll use Gitlab as an intermediate repository between or workstation and the server in a slightly indirect route to create and place the necessary files on the server but this approach will allow us to do all our continuing development on our local workstation and have the web app be automatically continually undated. We’ll create the configuration files we need on our workstation and push them to Gitlab and from there they can be accessed from our server.\nThese three configuation files are:"
   },
   {
     "objectID": "blog/dockerize_compose/index.html#tip-1.-docker-on-m1-macbook.",
     "href": "blog/dockerize_compose/index.html#tip-1.-docker-on-m1-macbook.",
     "title": "A straightforward strategy to get your Shiny app online, securely and continuously updated.",
-    "section": "7.1 Tip 1. Docker on M1 macbook.",
-    "text": "7.1 Tip 1. Docker on M1 macbook.\nTo get docker functioning properly with rocker images on M1 Mac desktop use --platform option.\ndocker build -t power1_shiny --platform linux/x86_64 .\ndocker run -d -p 80:3838 --platform linux/x86_64 power1_shiny"
+    "section": "8.1 Tip 1. Docker on M1 macbook.",
+    "text": "8.1 Tip 1. Docker on M1 macbook.\nTo get docker functioning properly with rocker images on M1 Mac desktop use --platform option.\ndocker build -t power1_shiny --platform linux/x86_64 .\ndocker run -d -p 80:3838 --platform linux/x86_64 power1_shiny"
   },
   {
     "objectID": "blog/dockerize_compose/index.html#tip-2-add-user-to-docker-group-on-server.",
     "href": "blog/dockerize_compose/index.html#tip-2-add-user-to-docker-group-on-server.",
     "title": "A straightforward strategy to get your Shiny app online, securely and continuously updated.",
-    "section": "7.2 Tip 2 add user to docker group on server.",
-    "text": "7.2 Tip 2 add user to docker group on server.\nAdd ubuntu to the docker group to allow docker to run without sudo.\nsudo usermod -aG docker ${USER}"
+    "section": "8.2 Tip 2 add user to docker group on server.",
+    "text": "8.2 Tip 2 add user to docker group on server.\nAdd ubuntu to the docker group to allow docker to run without sudo.\nsudo usermod -aG docker ${USER}"
   },
   {
     "objectID": "blog/dockerize_compose/index.html#tip-3-ssh-config-file.",
     "href": "blog/dockerize_compose/index.html#tip-3-ssh-config-file.",
     "title": "A straightforward strategy to get your Shiny app online, securely and continuously updated.",
-    "section": "7.3 Tip 3 ssh config file.",
-    "text": "7.3 Tip 3 ssh config file.\nFor convenience, construct a config file in ~/.ssh as:\n\n\n\nHost rgtlab.org\nHostName 13.57.139.31 # static IP\nUser ubuntu # default user on ubuntu server\nPort 22  # the default port ssh uses\nIdentityFile ~/.ssh/power1_app.pem\nthen you can ssh into the new server with\nsh> ssh rgtlab.org"
+    "section": "8.3 Tip 3 ssh config file.",
+    "text": "8.3 Tip 3 ssh config file.\nFor convenience, construct a config file in ~/.ssh as:\n\n\n\nHost rgtlab.org\nHostName 13.57.139.31 # static IP\nUser ubuntu # default user on ubuntu server\nPort 22  # the default port ssh uses\nIdentityFile ~/.ssh/power1_app.pem\nthen you can ssh into the new server with\nsh> ssh rgtlab.org"
   },
   {
     "objectID": "blog/dockerize_simple/index.html",
