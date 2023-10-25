@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Ronald (Ryy) Glenn Thomas">
-<meta name="dcterms.date" content="2023-07-18">
+<meta name="dcterms.date" content="2023-10-24">
 <meta name="description" content="A single batch program to setup virtual server to host shiny app">
 
 <title>Thomas Lab home page - Using the AWS command line interface to launch an EC2 server</title>
@@ -213,6 +213,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   <li><a href="#appendix-1" id="toc-appendix-1" class="nav-link" data-scroll-target="#appendix-1"><span class="toc-section-number">2.4</span>  Appendix 1 Set up AWS IAM</a></li>
   </ul></li>
   <li><a href="#sample-work-session" id="toc-sample-work-session" class="nav-link" data-scroll-target="#sample-work-session"><span class="toc-section-number">3</span>  Sample work session</a></li>
+  <li><a href="#appendix-2-undo" id="toc-appendix-2-undo" class="nav-link" data-scroll-target="#appendix-2-undo"><span class="toc-section-number">4</span>  Appendix 2 Undo</a></li>
   </ul>
 </nav>
 </nav>
@@ -258,7 +259,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">July 18, 2023</p>
+      <p class="date">October 24, 2023</p>
     </div>
   </div>
   
@@ -270,200 +271,295 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 
 <div class="no-row-height column-margin column-container"><div class="">
-<p><img src="img/crane.jpg" class="img-fluid" alt="under construction"> <font size="1"> Photo by <a href="https://unsplash.com/@nathangwaters?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Nathan Waters</a> on <a href="https://unsplash.com/s/photos/construction?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Unsplash</a> </font></p>
+<img src="img/crane.jpg" class="img-fluid">
+<p style="font-size:11px">
+Photo by Nathan Waters
+</p>
 </div></div><section id="introduction" class="level1" data-number="1">
 <h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
-<p>In a separate post (<a href="https://focusonr.org/posts/setupaws/">here</a>) we discuss setting up a virtual server on Amazon Web Services (AWS) using the interactive Elastic cloud Compute (EC2) dashboard. While its instructive to use the EC2 console interface to set up a work environment and launch a custom server, it can become a tedious process after the first two or three times. In this post we’ll present bash shell scripts to perform the same task making use of the AWS command line interface (CLI).</p>
-<p>To get started: on your workstation, configure the aws cli app via the command.</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">zsh</span><span class="op">&gt;</span> brew install awscli</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>Instructions for installing the AWS CLI can be found (<a href="https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html/">here</a>).</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">zsh</span><span class="op">&gt;</span>  aws configure </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>The app will open a dialog asking for your IAM credentials. If you don’t have an IAM ID Appendix 1 <a href="#appendix-1">here</a> has details on obtaining IAM credentials from your AWS account.</p>
+<p>The goal of this post is to provide a straightforward solution to quickly getting a secure <code>AWS EC2</code> server up and running.</p>
+<p>This post follows a separate post (<a href="https://focusonr.org/posts/setupaws/">here</a>) where we discuss setting up a virtual server on Amazon Web Services (AWS) using the interactive Elastic Compute Cloud (EC2) dashboard. While its definitely instructive to use the EC2 console interface to set up a work environment and launch a custom server, it can become a tedious process after the first few repetitions. In this post we’ll present <code>bash</code> shell scripts to perform the same task, making use of the AWS command line interface (CLI).</p>
+<p>To get started: on your <code>mac</code> workstation, install and configure the <code>aws cli</code> app via the commands: (commands issued at the shell prompt are prefaced with a right arrow <code>&gt;</code> )</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> brew <span class="fu">install</span> awscli</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span>  aws <span class="ex">configure</span> </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Instructions to install the homebrew system on a mac can be found (<a href="https://brew.sh/">here</a>) The app will open a dialog asking for your <code>IAM</code> credentials. If you don’t have an <code>IAM</code> ID, Appendix 1 (<a href="#appendix-1">here</a>) provides details on obtaining <code>IAM</code> credentials from your AWS account.</p>
+<p>Additional instructions from <code>Amazon</code> for installing the <code>AWS CLI</code> can be found (<a href="https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html/">here</a>).</p>
 </section>
-<section id="scripts" class="level1" data-number="2">
+<section id="scripts" class="level1 page-columns page-full" data-number="2">
 <h1 data-number="2"><span class="header-section-number">2</span> Scripts</h1>
-<p>Nine parameters are required. Determine them and store as environment variables.</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># vpc_id and subnet_id are determined by user location</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>        <span class="bu">export</span> <span class="va">vpc_id</span><span class="op">=</span><span class="st">"vpc-14814b73"</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        <span class="bu">export</span> <span class="va">subnet_id</span><span class="op">=</span><span class="st">"subnet-f02c90ab"</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># ami_id, storage_size and instance_type define the OS and capability of the server</span></span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        <span class="bu">export</span> <span class="va">ami_id</span><span class="op">=</span><span class="st">"ami-014d05e6b24240371"</span></span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        <span class="bu">export</span> <span class="va">instance_type</span><span class="op">=</span><span class="st">"t2.micro"</span></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="bu">export</span> <span class="va">storage_size</span><span class="op">=</span><span class="st">"30"</span></span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co"># key_name and security group identify the ssh and encrypted web channels</span></span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        <span class="bu">export</span> <span class="va">key_name</span><span class="op">=</span><span class="st">"aws_key"</span></span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        <span class="bu">export</span> <span class="va">security_grp</span><span class="op">=</span><span class="st">"sg-0fef542d93849669c"</span></span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="co"># static_ip and domain_name identify the server on the web</span></span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        <span class="bu">export</span> <span class="va">static_ip</span><span class="op">=</span><span class="st">"13.57.139.31"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Nine parameters (besides the IAM ID) are required to be set for automated instance (server) generation. The first eight are likely to be static and we suggest you “hardcode” them in the scripts or assign them as environment variables in your shell configuration file, e.g.&nbsp;<code>.zshrc.</code></p>
+<p>An example follows:</p>
+<p>Parameters 1) and 2) <code>vpc_id</code> and <code>subnet_id</code> are determined by user’s location and can be found on the EC2 dashboard.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>        <span class="bu">export</span> <span class="va">vpc_id</span><span class="op">=</span><span class="st">"vpc-14814b73"</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>        <span class="bu">export</span> <span class="va">subnet_id</span><span class="op">=</span><span class="st">"subnet-f02c90ab"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Parameters 3), 4) and 5) <code>ami_id</code>, <code>storage_size</code> and <code>instance_type</code> define the OS and capabilities of the server</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>        <span class="bu">export</span> <span class="va">ami_id</span><span class="op">=</span><span class="st">"ami-014d05e6b24240371"</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>        <span class="bu">export</span> <span class="va">instance_type</span><span class="op">=</span><span class="st">"t2.micro"</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        <span class="bu">export</span> <span class="va">storage_size</span><span class="op">=</span><span class="st">"30"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Parameters 6) and 7) <code>key_name</code> and <code>security_grp</code> identify the ssh key-pair and the firewall:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>        <span class="bu">export</span> <span class="va">key_name</span><span class="op">=</span><span class="st">"power1_app"</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>        <span class="bu">export</span> <span class="va">security_grp</span><span class="op">=</span><span class="st">"sg-0fef542d93849669c"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Parameter 8) is the <code>static_ip</code> that identifies the server on the web:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>        <span class="bu">export</span> <span class="va">static_ip</span><span class="op">=</span><span class="st">"13.57.139.31"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Below we offer four bash scripts.</p>
 <ol type="1">
-<li><p>The first generates a security group for the virtual server, i.e.&nbsp;a firewall.</p></li>
-<li><p>The second creates a key pair to allow encrypted ssh communication between the server and your workstation.</p></li>
-<li><p>The third script generates the virtual server taking instance characteristics, firewall, static IP and domain name as parameters.</p></li>
+<li><p>The first creates a key pair to allow encrypted ssh communication between the server and your workstation.</p></li>
+<li><p>The second generates a security group for the virtual server, i.e.&nbsp;a firewall.</p></li>
+<li><p>The third script generates the virtual server taking physical server location, instance characteristics, firewall, static IP and domain name as parameters.</p></li>
 <li><p>The fourth script installs required software following server launch.</p></li>
 </ol>
 <section id="create-security-group-script" class="level2" data-number="2.1">
 <h2 data-number="2.1" class="anchored" data-anchor-id="create-security-group-script"><span class="header-section-number">2.1</span> Create security group script</h2>
-<div class="sourceCode" id="cb4"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">#!/usr/bin/env bash</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co"># The script generates a new security group </span></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co"># the group name is "max_restrict"</span></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># only ports 22 and 443 are open. </span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co"># to open other ports replicate the last paragraph and change the port number. </span></span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Will fail if group name "max_restrict" in already in use. </span></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># reads vpc_id from the environment variables set in .zshrc</span></span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="ex">aws</span> ec2 create-security-group <span class="dt">\</span></span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">--group-name</span> max_restrict <span class="dt">\</span></span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">--description</span> <span class="st">"most restrictive: ports 22 and 443 only"</span> <span class="dt">\</span></span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">--tag-specifications</span> <span class="dt">\</span></span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    <span class="st">'ResourceType=security-group,Tags=[{Key=Name,Value=max_restrict}]'</span> <span class="dt">\</span></span>
-<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">--vpc-id</span> <span class="va">$vpc_id</span> </span>
-<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="bu">wait</span>    </span>
-<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">security_grp</span><span class="op">=</span><span class="kw">`</span><span class="ex">aws</span> ec2 describe-security-groups <span class="kw">|</span> <span class="dt">\</span></span>
-<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="ex">jq</span> <span class="at">-r</span> <span class="st">'.SecurityGroups[] | select(.GroupName=="max_restrict").GroupId'</span><span class="kw">`</span></span>
-<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="ex">aws</span> ec2 authorize-security-group-ingress <span class="dt">\</span></span>
-<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">--group-id</span> <span class="va">$security_grp</span> <span class="dt">\</span></span>
-<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">--protocol</span> tcp <span class="dt">\</span></span>
-<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">--port</span> 22 <span class="dt">\</span></span>
-<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">--cidr</span> <span class="st">"0.0.0.0/0"</span> </span>
-<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a><span class="ex">aws</span> ec2 authorize-security-group-ingress <span class="dt">\</span></span>
-<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>    <span class="at">--group-id</span> <span class="va">$security_grp</span> <span class="dt">\</span></span>
-<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>    <span class="at">--protocol</span> tcp <span class="dt">\</span></span>
-<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>    <span class="at">--port</span> 443 <span class="dt">\</span></span>
-<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>    <span class="at">--cidr</span> <span class="st">"0.0.0.0/0"</span> </span>
-<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Generate security group: `</p>
+<p>Example:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> aws_create_security_group_rapid.sh <span class="ex">-s</span> power1_app</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>This version of the script creates a security group with open ports: 22, 80, 443, 3838, 9000, and 9001.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co">#!/usr/bin/env bash</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="co"># latest edit 2023-08-06 12:21:38</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co"># The script generates a new security group </span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="co"># the group name is given with the -s flag. </span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="co"># ports 22, 80, 3838 and 443 are options. use flags h,i,j,k respectively.  </span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Will fail if group name  is already in use. </span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="co"># reads vpc_id from the environment variables set in .zshrc</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="co"># example usage: </span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="co"># aws_create_security_group.sh -s power1_app -h y -i y -j y -k y</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span> <span class="bu">getopts</span> s<span class="op">:</span>h<span class="op">:</span>i<span class="op">:</span>j<span class="op">:</span>k<span class="op">:</span> <span class="va">flag</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="cf">do</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">case</span> <span class="st">"</span><span class="va">${flag}</span><span class="st">"</span> <span class="kw">in</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>        <span class="ss">s</span><span class="kw">)</span> <span class="va">sg_grp_name</span><span class="op">=</span><span class="va">${OPTARG}</span><span class="cf">;;</span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">esac</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a><span class="va">base</span><span class="op">=</span><span class="kw">`</span><span class="fu">basename</span> <span class="va">$PWD</span><span class="kw">`</span></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">[</span> <span class="ot">-z</span> <span class="st">"</span><span class="va">$sg_grp_name</span><span class="st">"</span> <span class="bu">]</span></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a><span class="cf">then</span></span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>  <span class="va">proj_name</span><span class="op">=</span><span class="va">$base</span></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a><span class="cf">fi</span></span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a><span class="ex">aws</span> ec2 create-security-group <span class="dt">\</span></span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">--group-name</span> <span class="va">$sg_grp_name</span> <span class="dt">\</span></span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">--description</span> <span class="st">"base security group"</span> <span class="dt">\</span></span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">--tag-specifications</span> <span class="dt">\</span></span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a>    <span class="st">"ResourceType=security-group,Tags=[{Key=Name,Value=</span><span class="va">$sg_grp_name</span><span class="st">}]"</span> <span class="dt">\</span></span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a>    <span class="at">--vpc-id</span> <span class="va">$vpc_id</span>  <span class="op">&gt;</span> temp.txt</span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a><span class="bu">wait</span>    </span>
+<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a><span class="va">security_grp_id</span><span class="op">=</span><span class="kw">`</span><span class="ex">jq</span> <span class="at">-r</span> .GroupId temp.txt<span class="kw">`</span></span>
+<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a><span class="bu">wait</span>    </span>
+<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"security group ID = </span><span class="va">$security_grp_id</span><span class="st">"</span></span>
+<span id="cb7-32"><a href="#cb7-32" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="va">$security_grp_id</span></span>
+<span id="cb7-33"><a href="#cb7-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-34"><a href="#cb7-34" aria-hidden="true" tabindex="-1"></a><span class="ex">aws</span> ec2 authorize-security-group-ingress <span class="dt">\</span></span>
+<span id="cb7-35"><a href="#cb7-35" aria-hidden="true" tabindex="-1"></a>    <span class="at">--group-id</span> <span class="va">$security_grp_id</span> <span class="dt">\</span></span>
+<span id="cb7-36"><a href="#cb7-36" aria-hidden="true" tabindex="-1"></a>    <span class="at">--protocol</span> tcp <span class="dt">\</span></span>
+<span id="cb7-37"><a href="#cb7-37" aria-hidden="true" tabindex="-1"></a>    <span class="at">--port</span> 22 <span class="dt">\</span></span>
+<span id="cb7-38"><a href="#cb7-38" aria-hidden="true" tabindex="-1"></a>    <span class="at">--cidr</span> <span class="st">"0.0.0.0/0"</span> </span>
+<span id="cb7-39"><a href="#cb7-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-40"><a href="#cb7-40" aria-hidden="true" tabindex="-1"></a><span class="ex">aws</span> ec2 authorize-security-group-ingress <span class="dt">\</span></span>
+<span id="cb7-41"><a href="#cb7-41" aria-hidden="true" tabindex="-1"></a>    <span class="at">--group-id</span> <span class="va">$security_grp_id</span> <span class="dt">\</span></span>
+<span id="cb7-42"><a href="#cb7-42" aria-hidden="true" tabindex="-1"></a>    <span class="at">--protocol</span> tcp <span class="dt">\</span></span>
+<span id="cb7-43"><a href="#cb7-43" aria-hidden="true" tabindex="-1"></a>    <span class="at">--port</span> 443 <span class="dt">\</span></span>
+<span id="cb7-44"><a href="#cb7-44" aria-hidden="true" tabindex="-1"></a>    <span class="at">--cidr</span> <span class="st">"0.0.0.0/0"</span> </span>
+<span id="cb7-45"><a href="#cb7-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-46"><a href="#cb7-46" aria-hidden="true" tabindex="-1"></a><span class="ex">aws</span> ec2 authorize-security-group-ingress <span class="dt">\</span></span>
+<span id="cb7-47"><a href="#cb7-47" aria-hidden="true" tabindex="-1"></a>    <span class="at">--group-id</span> <span class="va">$security_grp_id</span> <span class="dt">\</span></span>
+<span id="cb7-48"><a href="#cb7-48" aria-hidden="true" tabindex="-1"></a>    <span class="at">--protocol</span> tcp <span class="dt">\</span></span>
+<span id="cb7-49"><a href="#cb7-49" aria-hidden="true" tabindex="-1"></a>    <span class="at">--port</span> 80 <span class="dt">\</span></span>
+<span id="cb7-50"><a href="#cb7-50" aria-hidden="true" tabindex="-1"></a>    <span class="at">--cidr</span> <span class="st">"0.0.0.0/0"</span> </span>
+<span id="cb7-51"><a href="#cb7-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-52"><a href="#cb7-52" aria-hidden="true" tabindex="-1"></a><span class="ex">aws</span> ec2 authorize-security-group-ingress <span class="dt">\</span></span>
+<span id="cb7-53"><a href="#cb7-53" aria-hidden="true" tabindex="-1"></a>    <span class="at">--group-id</span> <span class="va">$security_grp_id</span> <span class="dt">\</span></span>
+<span id="cb7-54"><a href="#cb7-54" aria-hidden="true" tabindex="-1"></a>    <span class="at">--protocol</span> tcp <span class="dt">\</span></span>
+<span id="cb7-55"><a href="#cb7-55" aria-hidden="true" tabindex="-1"></a>    <span class="at">--port</span> 3838 <span class="dt">\</span></span>
+<span id="cb7-56"><a href="#cb7-56" aria-hidden="true" tabindex="-1"></a>    <span class="at">--cidr</span> <span class="st">"0.0.0.0/0"</span> </span>
+<span id="cb7-57"><a href="#cb7-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-58"><a href="#cb7-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-59"><a href="#cb7-59" aria-hidden="true" tabindex="-1"></a><span class="ex">aws</span> ec2 authorize-security-group-ingress <span class="dt">\</span></span>
+<span id="cb7-60"><a href="#cb7-60" aria-hidden="true" tabindex="-1"></a>    <span class="at">--group-id</span> <span class="va">$security_grp_id</span> <span class="dt">\</span></span>
+<span id="cb7-61"><a href="#cb7-61" aria-hidden="true" tabindex="-1"></a>    <span class="at">--protocol</span> tcp <span class="dt">\</span></span>
+<span id="cb7-62"><a href="#cb7-62" aria-hidden="true" tabindex="-1"></a>    <span class="at">--port</span> 9000 <span class="dt">\</span></span>
+<span id="cb7-63"><a href="#cb7-63" aria-hidden="true" tabindex="-1"></a>    <span class="at">--cidr</span> <span class="st">"0.0.0.0/0"</span> </span>
+<span id="cb7-64"><a href="#cb7-64" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-65"><a href="#cb7-65" aria-hidden="true" tabindex="-1"></a><span class="ex">aws</span> ec2 authorize-security-group-ingress <span class="dt">\</span></span>
+<span id="cb7-66"><a href="#cb7-66" aria-hidden="true" tabindex="-1"></a>    <span class="at">--group-id</span> <span class="va">$security_grp_id</span> <span class="dt">\</span></span>
+<span id="cb7-67"><a href="#cb7-67" aria-hidden="true" tabindex="-1"></a>    <span class="at">--protocol</span> tcp <span class="dt">\</span></span>
+<span id="cb7-68"><a href="#cb7-68" aria-hidden="true" tabindex="-1"></a>    <span class="at">--port</span> 9001 <span class="dt">\</span></span>
+<span id="cb7-69"><a href="#cb7-69" aria-hidden="true" tabindex="-1"></a>    <span class="at">--cidr</span> <span class="st">"0.0.0.0/0"</span> </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 <section id="create-new-key-pair-with-a-project-name-flag" class="level2" data-number="2.2">
 <h2 data-number="2.2" class="anchored" data-anchor-id="create-new-key-pair-with-a-project-name-flag"><span class="header-section-number">2.2</span> Create new key pair with a project name flag</h2>
-<div class="sourceCode" id="cb5"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co">#!/usr/bin/env bash</span></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="va">base</span><span class="op">=</span><span class="kw">`</span><span class="fu">basename</span> <span class="va">$PWD</span><span class="kw">`</span></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">[</span> <span class="ot">-z</span> <span class="st">"</span><span class="va">$1</span><span class="st">"</span> <span class="bu">]</span></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="cf">then</span></span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="va">key_pair_name</span><span class="op">=</span><span class="va">$base</span></span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span></span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="va">key_pair_name</span><span class="op">=</span><span class="st">"</span><span class="va">$1</span><span class="st">"</span></span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="cf">fi</span></span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"key_pair_name is </span><span class="va">$key_pair_name</span><span class="st">"</span></span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="bu">read</span> <span class="at">-p</span> <span class="st">"Continue (y/n)?"</span> <span class="va">CONT</span></span>
-<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">[</span> <span class="st">"</span><span class="va">$CONT</span><span class="st">"</span> <span class="ot">=</span> <span class="st">"y"</span> <span class="bu">]</span><span class="kw">;</span> <span class="cf">then</span></span>
-<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>  <span class="bu">echo</span> <span class="st">"Here we go!"</span><span class="kw">;</span></span>
-<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span></span>
-<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>  <span class="bu">echo</span> <span class="st">"too bad. bye."</span><span class="kw">;</span> <span class="bu">exit</span><span class="kw">;</span> </span>
-<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a><span class="cf">fi</span></span>
-<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ~/.ssh </span>
-<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span> <span class="at">-f</span>  ~/.ssh/<span class="va">$key_pair_name</span>.pem</span>
-<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a><span class="ex">aws</span> ec2 create-key-pair  <span class="at">--key-name</span>  <span class="va">$key_pair_name</span> <span class="dt">\</span></span>
-<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>   <span class="at">--query</span> <span class="st">'KeyMaterial'</span> <span class="at">--output</span> text <span class="op">&gt;</span> ~/.ssh/<span class="va">$key_pair_name</span>.pem</span>
-<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a><span class="bu">wait</span></span>
-<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a><span class="fu">chmod</span> 600 ~/.ssh/<span class="va">$key_pair_name</span>.pem</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Example usage: Note run with one parameter for optional keypair name.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> aws_create_keypair.sh <span class="ex">-p</span> <span class="va">$key_name</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="co">#!/usr/bin/env bash</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="va">base</span><span class="op">=</span><span class="kw">`</span><span class="fu">basename</span> <span class="va">$PWD</span><span class="kw">`</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">[</span> <span class="ot">-z</span> <span class="st">"</span><span class="va">$1</span><span class="st">"</span> <span class="bu">]</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="cf">then</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="va">key_pair_name</span><span class="op">=</span><span class="va">$base</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  <span class="va">key_pair_name</span><span class="op">=</span><span class="st">"</span><span class="va">$1</span><span class="st">"</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="cf">fi</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"key_pair_name is </span><span class="va">$key_pair_name</span><span class="st">"</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a><span class="bu">read</span> <span class="at">-p</span> <span class="st">"Continue (y/n)?"</span> <span class="va">CONT</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">[</span> <span class="st">"</span><span class="va">$CONT</span><span class="st">"</span> <span class="ot">=</span> <span class="st">"y"</span> <span class="bu">]</span><span class="kw">;</span> <span class="cf">then</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>  <span class="bu">echo</span> <span class="st">"Here we go!"</span><span class="kw">;</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>  <span class="bu">echo</span> <span class="st">"too bad. bye."</span><span class="kw">;</span> <span class="bu">exit</span><span class="kw">;</span> </span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a><span class="cf">fi</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ~/.ssh </span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span> <span class="at">-f</span>  ~/.ssh/<span class="va">$key_pair_name</span>.pem</span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a><span class="ex">aws</span> ec2 create-key-pair  <span class="at">--key-name</span>  <span class="va">$key_pair_name</span> <span class="dt">\</span></span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>   <span class="at">--query</span> <span class="st">'KeyMaterial'</span> <span class="at">--output</span> text <span class="op">&gt;</span> ~/.ssh/<span class="va">$key_pair_name</span>.pem</span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a><span class="bu">wait</span></span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a><span class="fu">chmod</span> 600 ~/.ssh/<span class="va">$key_pair_name</span>.pem</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 <section id="generate-instance" class="level2" data-number="2.3">
 <h2 data-number="2.3" class="anchored" data-anchor-id="generate-instance"><span class="header-section-number">2.3</span> Generate instance</h2>
 <p>start up script. <code>aws_create_instance.sh</code></p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co">#!/usr/bin/env bash</span></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span> <span class="bu">getopts</span> s<span class="op">:</span>t<span class="op">:</span>k<span class="op">:</span>p<span class="op">:</span> <span class="va">flag</span></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="cf">do</span></span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">case</span> <span class="st">"</span><span class="va">${flag}</span><span class="st">"</span> <span class="kw">in</span></span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>        <span class="ss">s</span><span class="kw">)</span> <span class="va">size</span><span class="op">=</span><span class="va">${OPTARG}</span><span class="cf">;;</span></span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>        <span class="ss">t</span><span class="kw">)</span> <span class="va">type</span><span class="op">=</span><span class="va">${OPTARG}</span><span class="cf">;;</span></span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>        <span class="ss">k</span><span class="kw">)</span> <span class="va">key_name</span><span class="op">=</span><span class="va">${OPTARG}</span><span class="cf">;;</span></span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>        <span class="ss">p</span><span class="kw">)</span> <span class="va">proj_name</span><span class="op">=</span><span class="va">${OPTARG}</span><span class="cf">;;</span></span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">esac</span></span>
-<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span>
-<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="va">base</span><span class="op">=</span><span class="kw">`</span><span class="fu">basename</span> <span class="va">$PWD</span><span class="kw">`</span></span>
-<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">[</span> <span class="ot">-z</span> <span class="st">"</span><span class="va">$proj_name</span><span class="st">"</span> <span class="bu">]</span></span>
-<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a><span class="cf">then</span></span>
-<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>  <span class="va">proj_name</span><span class="op">=</span><span class="va">$base</span></span>
-<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a><span class="cf">fi</span></span>
-<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">[</span> <span class="ot">-z</span> <span class="st">"</span><span class="va">$type</span><span class="st">"</span> <span class="bu">]</span></span>
-<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a><span class="cf">then</span></span>
-<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a> <span class="va">type</span><span class="op">=</span><span class="st">"t2.micro"</span> </span>
-<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a><span class="cf">fi</span></span>
-<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">[</span> <span class="ot">-z</span> <span class="st">"</span><span class="va">$size</span><span class="st">"</span> <span class="bu">]</span></span>
-<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a><span class="cf">then</span></span>
-<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a>  <span class="va">size</span><span class="op">=</span>30</span>
-<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a><span class="cf">fi</span></span>
-<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"Review parameters: "</span></span>
-<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"---"</span></span>
-<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"proj_name is </span><span class="va">$proj_name</span><span class="st">"</span></span>
-<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"key_name is </span><span class="va">$key_name</span><span class="st">"</span></span>
-<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"vpc_id: </span><span class="va">$vpc_id</span><span class="st">"</span><span class="kw">;</span></span>
-<span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"subnet_id: </span><span class="va">$subnet_id</span><span class="st">"</span><span class="kw">;</span></span>
-<span id="cb6-37"><a href="#cb6-37" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"ami_id: </span><span class="va">$ami_id</span><span class="st">"</span><span class="kw">;</span></span>
-<span id="cb6-38"><a href="#cb6-38" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"security_grp: </span><span class="va">$security_grp</span><span class="st">"</span><span class="kw">;</span></span>
-<span id="cb6-39"><a href="#cb6-39" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"static_ip: </span><span class="va">$static_ip</span><span class="st">"</span><span class="kw">;</span></span>
-<span id="cb6-40"><a href="#cb6-40" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"type: </span><span class="va">$type</span><span class="st">"</span><span class="kw">;</span></span>
-<span id="cb6-41"><a href="#cb6-41" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"size: </span><span class="va">$size</span><span class="st">"</span><span class="kw">;</span></span>
-<span id="cb6-42"><a href="#cb6-42" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-43"><a href="#cb6-43" aria-hidden="true" tabindex="-1"></a><span class="bu">read</span> <span class="at">-p</span> <span class="st">"Review Notes (y/n)?"</span> <span class="va">NOTES</span></span>
-<span id="cb6-44"><a href="#cb6-44" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">[</span> <span class="st">"</span><span class="va">$NOTES</span><span class="st">"</span> <span class="ot">=</span> <span class="st">"y"</span> <span class="bu">]</span><span class="kw">;</span> <span class="cf">then</span></span>
-<span id="cb6-45"><a href="#cb6-45" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"Notes on currect parameters:"</span></span>
-<span id="cb6-46"><a href="#cb6-46" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"security group should be in place already. check on EC2. </span></span>
-<span id="cb6-47"><a href="#cb6-47" aria-hidden="true" tabindex="-1"></a><span class="st">If not, run ./awscli_create_security.sh. </span></span>
-<span id="cb6-48"><a href="#cb6-48" aria-hidden="true" tabindex="-1"></a><span class="st">Key pair should be in place. check in ~/.ssh. </span></span>
-<span id="cb6-49"><a href="#cb6-49" aria-hidden="true" tabindex="-1"></a><span class="st">If not run ./create_keypair.sh. </span></span>
-<span id="cb6-50"><a href="#cb6-50" aria-hidden="true" tabindex="-1"></a><span class="st">ami id is for ubuntu linux 22.04 LTS. </span></span>
-<span id="cb6-51"><a href="#cb6-51" aria-hidden="true" tabindex="-1"></a><span class="st">If not what is desired check EC2 list of instances. "</span><span class="kw">;</span></span>
-<span id="cb6-52"><a href="#cb6-52" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span></span>
-<span id="cb6-53"><a href="#cb6-53" aria-hidden="true" tabindex="-1"></a>  <span class="bu">echo</span> <span class="st">"I guess you know what you're doing"</span><span class="kw">;</span> </span>
-<span id="cb6-54"><a href="#cb6-54" aria-hidden="true" tabindex="-1"></a><span class="cf">fi</span></span>
-<span id="cb6-55"><a href="#cb6-55" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-56"><a href="#cb6-56" aria-hidden="true" tabindex="-1"></a><span class="bu">read</span> <span class="at">-p</span> <span class="st">"Continue (y/n)?"</span> <span class="va">CONT</span></span>
-<span id="cb6-57"><a href="#cb6-57" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">[</span> <span class="st">"</span><span class="va">$CONT</span><span class="st">"</span> <span class="ot">=</span> <span class="st">"y"</span> <span class="bu">]</span><span class="kw">;</span> <span class="cf">then</span></span>
-<span id="cb6-58"><a href="#cb6-58" aria-hidden="true" tabindex="-1"></a>  <span class="bu">echo</span> <span class="st">"Here we go!"</span><span class="kw">;</span></span>
-<span id="cb6-59"><a href="#cb6-59" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span></span>
-<span id="cb6-60"><a href="#cb6-60" aria-hidden="true" tabindex="-1"></a>  <span class="bu">echo</span> <span class="st">"too bad. bye."</span><span class="kw">;</span> <span class="bu">exit</span><span class="kw">;</span> </span>
-<span id="cb6-61"><a href="#cb6-61" aria-hidden="true" tabindex="-1"></a><span class="cf">fi</span></span>
-<span id="cb6-62"><a href="#cb6-62" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-63"><a href="#cb6-63" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-64"><a href="#cb6-64" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-65"><a href="#cb6-65" aria-hidden="true" tabindex="-1"></a><span class="ex">aws</span> ec2 run-instances <span class="dt">\</span></span>
-<span id="cb6-66"><a href="#cb6-66" aria-hidden="true" tabindex="-1"></a>    <span class="at">--image-id</span> <span class="va">$ami_id</span> <span class="dt">\</span></span>
-<span id="cb6-67"><a href="#cb6-67" aria-hidden="true" tabindex="-1"></a>    <span class="at">--count</span> 1 <span class="dt">\</span></span>
-<span id="cb6-68"><a href="#cb6-68" aria-hidden="true" tabindex="-1"></a>    <span class="at">--instance-type</span> <span class="va">$type</span> <span class="dt">\</span></span>
-<span id="cb6-69"><a href="#cb6-69" aria-hidden="true" tabindex="-1"></a>    <span class="at">--key-name</span> <span class="va">$key_name</span> <span class="dt">\</span></span>
-<span id="cb6-70"><a href="#cb6-70" aria-hidden="true" tabindex="-1"></a>    <span class="at">--security-group-ids</span> <span class="va">$security_grp</span> <span class="dt">\</span></span>
-<span id="cb6-71"><a href="#cb6-71" aria-hidden="true" tabindex="-1"></a>    <span class="at">--subnet-id</span> <span class="va">$subnet_id</span> <span class="dt">\</span></span>
-<span id="cb6-72"><a href="#cb6-72" aria-hidden="true" tabindex="-1"></a>    <span class="at">--block-device-mappings</span> <span class="st">"[{</span><span class="dt">\"</span><span class="st">DeviceName</span><span class="dt">\"</span><span class="st">:</span><span class="dt">\"</span><span class="st">/dev/sda1</span><span class="dt">\"</span><span class="st">,</span><span class="dt">\"</span><span class="st">Ebs</span><span class="dt">\"</span><span class="st">:{</span><span class="dt">\"</span><span class="st">VolumeSize</span><span class="dt">\"</span><span class="st">:</span><span class="va">$size</span><span class="st">}}]"</span> <span class="dt">\</span></span>
-<span id="cb6-73"><a href="#cb6-73" aria-hidden="true" tabindex="-1"></a>    <span class="at">--tag-specifications</span> <span class="st">"ResourceType=instance,Tags=[{Key=Name,Value=</span><span class="va">$proj_name</span><span class="st">}]"</span>  <span class="dt">\</span></span>
-<span id="cb6-74"><a href="#cb6-74" aria-hidden="true" tabindex="-1"></a>    <span class="at">--user-data</span> file://~/Dropbox/prj/c060/aws_startup_code.sh</span>
-<span id="cb6-75"><a href="#cb6-75" aria-hidden="true" tabindex="-1"></a><span class="bu">wait</span></span>
-<span id="cb6-76"><a href="#cb6-76" aria-hidden="true" tabindex="-1"></a><span class="va">iid</span><span class="op">=</span><span class="kw">`</span><span class="ex">aws</span> ec2 describe-instances <span class="at">--filters</span> <span class="st">"Name=tag:Name,Values=</span><span class="va">$proj_name</span><span class="st">"</span> <span class="kw">|</span> <span class="dt">\</span></span>
-<span id="cb6-77"><a href="#cb6-77" aria-hidden="true" tabindex="-1"></a>    <span class="ex">jq</span> <span class="at">-r</span> <span class="st">'.Reservations[].Instances[].InstanceId'</span><span class="kw">`</span></span>
-<span id="cb6-78"><a href="#cb6-78" aria-hidden="true" tabindex="-1"></a><span class="ex">aws</span> ec2 wait instance-running <span class="at">--instance-ids</span> <span class="va">$iid</span></span>
-<span id="cb6-79"><a href="#cb6-79" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"the generated instance has ID: </span><span class="va">$iid</span><span class="st">"</span></span>
-<span id="cb6-80"><a href="#cb6-80" aria-hidden="true" tabindex="-1"></a><span class="va">running</span><span class="op">=</span><span class="kw">`</span><span class="ex">aws</span> ec2 describe-instance-status <span class="at">--instance-id</span> <span class="va">$iid</span></span>
-<span id="cb6-81"><a href="#cb6-81" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"the instance status is </span><span class="va">$running</span><span class="st">"</span></span>
-<span id="cb6-82"><a href="#cb6-82" aria-hidden="true" tabindex="-1"></a><span class="ex">aws</span> ec2 associate-address <span class="at">--public-ip</span> <span class="va">$static_ip</span> <span class="at">--instance-id</span> <span class="va">$iid</span><span class="kw">`</span></span>
-<span id="cb6-83"><a href="#cb6-83" aria-hidden="true" tabindex="-1"></a></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="co">#!/usr/bin/env bash</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span> <span class="bu">getopts</span> s<span class="op">:</span>t<span class="op">:</span>k<span class="op">:</span>p<span class="op">:</span> <span class="va">flag</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="cf">do</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">case</span> <span class="st">"</span><span class="va">${flag}</span><span class="st">"</span> <span class="kw">in</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>        <span class="ss">s</span><span class="kw">)</span> <span class="va">size</span><span class="op">=</span><span class="va">${OPTARG}</span><span class="cf">;;</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>        <span class="ss">t</span><span class="kw">)</span> <span class="va">type</span><span class="op">=</span><span class="va">${OPTARG}</span><span class="cf">;;</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>        <span class="ss">k</span><span class="kw">)</span> <span class="va">key_name</span><span class="op">=</span><span class="va">${OPTARG}</span><span class="cf">;;</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>        <span class="ss">p</span><span class="kw">)</span> <span class="va">proj_name</span><span class="op">=</span><span class="va">${OPTARG}</span><span class="cf">;;</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">esac</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a><span class="va">base</span><span class="op">=</span><span class="kw">`</span><span class="fu">basename</span> <span class="va">$PWD</span><span class="kw">`</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">[</span> <span class="ot">-z</span> <span class="st">"</span><span class="va">$proj_name</span><span class="st">"</span> <span class="bu">]</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a><span class="cf">then</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>  <span class="va">proj_name</span><span class="op">=</span><span class="va">$base</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a><span class="cf">fi</span></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">[</span> <span class="ot">-z</span> <span class="st">"</span><span class="va">$type</span><span class="st">"</span> <span class="bu">]</span></span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a><span class="cf">then</span></span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a> <span class="va">type</span><span class="op">=</span><span class="st">"t2.micro"</span> </span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a><span class="cf">fi</span></span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">[</span> <span class="ot">-z</span> <span class="st">"</span><span class="va">$size</span><span class="st">"</span> <span class="bu">]</span></span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a><span class="cf">then</span></span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a>  <span class="va">size</span><span class="op">=</span>30</span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a><span class="cf">fi</span></span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"Review parameters: "</span></span>
+<span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"---"</span></span>
+<span id="cb10-32"><a href="#cb10-32" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"proj_name is </span><span class="va">$proj_name</span><span class="st">"</span></span>
+<span id="cb10-33"><a href="#cb10-33" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"key_name is </span><span class="va">$key_name</span><span class="st">"</span></span>
+<span id="cb10-34"><a href="#cb10-34" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"vpc_id: </span><span class="va">$vpc_id</span><span class="st">"</span><span class="kw">;</span></span>
+<span id="cb10-35"><a href="#cb10-35" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"subnet_id: </span><span class="va">$subnet_id</span><span class="st">"</span><span class="kw">;</span></span>
+<span id="cb10-36"><a href="#cb10-36" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"ami_id: </span><span class="va">$ami_id</span><span class="st">"</span><span class="kw">;</span></span>
+<span id="cb10-37"><a href="#cb10-37" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"security_grp: </span><span class="va">$security_grp</span><span class="st">"</span><span class="kw">;</span></span>
+<span id="cb10-38"><a href="#cb10-38" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"static_ip: </span><span class="va">$static_ip</span><span class="st">"</span><span class="kw">;</span></span>
+<span id="cb10-39"><a href="#cb10-39" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"type: </span><span class="va">$type</span><span class="st">"</span><span class="kw">;</span></span>
+<span id="cb10-40"><a href="#cb10-40" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"size: </span><span class="va">$size</span><span class="st">"</span><span class="kw">;</span></span>
+<span id="cb10-41"><a href="#cb10-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-42"><a href="#cb10-42" aria-hidden="true" tabindex="-1"></a><span class="bu">read</span> <span class="at">-p</span> <span class="st">"Review Notes (y/n)?"</span> <span class="va">NOTES</span></span>
+<span id="cb10-43"><a href="#cb10-43" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">[</span> <span class="st">"</span><span class="va">$NOTES</span><span class="st">"</span> <span class="ot">=</span> <span class="st">"y"</span> <span class="bu">]</span><span class="kw">;</span> <span class="cf">then</span></span>
+<span id="cb10-44"><a href="#cb10-44" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"Notes on currect parameters:"</span></span>
+<span id="cb10-45"><a href="#cb10-45" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"security group should be in place already. check on EC2. </span></span>
+<span id="cb10-46"><a href="#cb10-46" aria-hidden="true" tabindex="-1"></a><span class="st">If not, run ./awscli_create_security.sh. </span></span>
+<span id="cb10-47"><a href="#cb10-47" aria-hidden="true" tabindex="-1"></a><span class="st">Key pair should be in place. check in ~/.ssh. </span></span>
+<span id="cb10-48"><a href="#cb10-48" aria-hidden="true" tabindex="-1"></a><span class="st">If not run ./create_keypair.sh. </span></span>
+<span id="cb10-49"><a href="#cb10-49" aria-hidden="true" tabindex="-1"></a><span class="st">ami id is for ubuntu linux 22.04 LTS. </span></span>
+<span id="cb10-50"><a href="#cb10-50" aria-hidden="true" tabindex="-1"></a><span class="st">If not what is desired check EC2 list of instances. </span></span>
+<span id="cb10-51"><a href="#cb10-51" aria-hidden="true" tabindex="-1"></a><span class="st">Check static IP: nslookup IPaddress. Should point to the domain name e.g. rgtlab.org "</span><span class="kw">;</span></span>
+<span id="cb10-52"><a href="#cb10-52" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span></span>
+<span id="cb10-53"><a href="#cb10-53" aria-hidden="true" tabindex="-1"></a>  <span class="bu">echo</span> <span class="st">"I guess you know what you're doing"</span><span class="kw">;</span> </span>
+<span id="cb10-54"><a href="#cb10-54" aria-hidden="true" tabindex="-1"></a><span class="cf">fi</span></span>
+<span id="cb10-55"><a href="#cb10-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-56"><a href="#cb10-56" aria-hidden="true" tabindex="-1"></a><span class="bu">read</span> <span class="at">-p</span> <span class="st">"Continue (y/n)?"</span> <span class="va">CONT</span></span>
+<span id="cb10-57"><a href="#cb10-57" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">[</span> <span class="st">"</span><span class="va">$CONT</span><span class="st">"</span> <span class="ot">=</span> <span class="st">"y"</span> <span class="bu">]</span><span class="kw">;</span> <span class="cf">then</span></span>
+<span id="cb10-58"><a href="#cb10-58" aria-hidden="true" tabindex="-1"></a>  <span class="bu">echo</span> <span class="st">"Here we go!"</span><span class="kw">;</span></span>
+<span id="cb10-59"><a href="#cb10-59" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span></span>
+<span id="cb10-60"><a href="#cb10-60" aria-hidden="true" tabindex="-1"></a>  <span class="bu">echo</span> <span class="st">"too bad. bye."</span><span class="kw">;</span> <span class="bu">exit</span><span class="kw">;</span> </span>
+<span id="cb10-61"><a href="#cb10-61" aria-hidden="true" tabindex="-1"></a><span class="cf">fi</span></span>
+<span id="cb10-62"><a href="#cb10-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-63"><a href="#cb10-63" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-64"><a href="#cb10-64" aria-hidden="true" tabindex="-1"></a><span class="co">#cd ~/.ssh </span></span>
+<span id="cb10-65"><a href="#cb10-65" aria-hidden="true" tabindex="-1"></a><span class="co">#rm -f  ~/.ssh/$proj_name.pem</span></span>
+<span id="cb10-66"><a href="#cb10-66" aria-hidden="true" tabindex="-1"></a><span class="co">#aws ec2 create-key-pair  --key-name  $proj_name \</span></span>
+<span id="cb10-67"><a href="#cb10-67" aria-hidden="true" tabindex="-1"></a><span class="co">#   --query 'KeyMaterial' --output text &gt; ~/.ssh/$proj_name.pem</span></span>
+<span id="cb10-68"><a href="#cb10-68" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
+<span id="cb10-69"><a href="#cb10-69" aria-hidden="true" tabindex="-1"></a><span class="co">#wait</span></span>
+<span id="cb10-70"><a href="#cb10-70" aria-hidden="true" tabindex="-1"></a><span class="co">#chmod 600 ~/.ssh/$proj_name.pem</span></span>
+<span id="cb10-71"><a href="#cb10-71" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-72"><a href="#cb10-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-73"><a href="#cb10-73" aria-hidden="true" tabindex="-1"></a><span class="ex">aws</span> ec2 run-instances <span class="dt">\</span></span>
+<span id="cb10-74"><a href="#cb10-74" aria-hidden="true" tabindex="-1"></a>    <span class="at">--image-id</span> <span class="va">$ami_id</span> <span class="dt">\</span></span>
+<span id="cb10-75"><a href="#cb10-75" aria-hidden="true" tabindex="-1"></a>    <span class="at">--count</span> 1 <span class="dt">\</span></span>
+<span id="cb10-76"><a href="#cb10-76" aria-hidden="true" tabindex="-1"></a>    <span class="at">--instance-type</span> <span class="va">$type</span> <span class="dt">\</span></span>
+<span id="cb10-77"><a href="#cb10-77" aria-hidden="true" tabindex="-1"></a>    <span class="at">--key-name</span> <span class="va">$key_name</span> <span class="dt">\</span></span>
+<span id="cb10-78"><a href="#cb10-78" aria-hidden="true" tabindex="-1"></a>    <span class="at">--security-group-ids</span> <span class="va">$security_grp</span> <span class="dt">\</span></span>
+<span id="cb10-79"><a href="#cb10-79" aria-hidden="true" tabindex="-1"></a>    <span class="at">--subnet-id</span> <span class="va">$subnet_id</span> <span class="dt">\</span></span>
+<span id="cb10-80"><a href="#cb10-80" aria-hidden="true" tabindex="-1"></a>    <span class="at">--block-device-mappings</span> <span class="st">"[{</span><span class="dt">\"</span><span class="st">DeviceName</span><span class="dt">\"</span><span class="st">:</span><span class="dt">\"</span><span class="st">/dev/sda1</span><span class="dt">\"</span><span class="st">,</span><span class="dt">\"</span><span class="st">Ebs</span><span class="dt">\"</span><span class="st">:{</span><span class="dt">\"</span><span class="st">VolumeSize</span><span class="dt">\"</span><span class="st">:</span><span class="va">$size</span><span class="st">}}]"</span> <span class="dt">\</span></span>
+<span id="cb10-81"><a href="#cb10-81" aria-hidden="true" tabindex="-1"></a>    <span class="at">--tag-specifications</span> <span class="st">"ResourceType=instance,Tags=[{Key=Name,Value=</span><span class="va">$proj_name</span><span class="st">}]"</span>  <span class="dt">\</span></span>
+<span id="cb10-82"><a href="#cb10-82" aria-hidden="true" tabindex="-1"></a>    <span class="at">--user-data</span> file://~/Dropbox/prj/c060/aws_startup_code.sh</span>
+<span id="cb10-83"><a href="#cb10-83" aria-hidden="true" tabindex="-1"></a><span class="co">#    </span></span>
+<span id="cb10-84"><a href="#cb10-84" aria-hidden="true" tabindex="-1"></a><span class="co"># wait</span></span>
+<span id="cb10-85"><a href="#cb10-85" aria-hidden="true" tabindex="-1"></a> <span class="va">iid0</span><span class="op">=</span><span class="kw">`</span><span class="ex">aws</span> ec2 describe-instances <span class="at">--filters</span> <span class="st">"Name=tag:Name,Values=</span><span class="va">$proj_name</span><span class="st">"</span> <span class="kw">|</span> <span class="dt">\</span></span>
+<span id="cb10-86"><a href="#cb10-86" aria-hidden="true" tabindex="-1"></a>    <span class="ex">jq</span> <span class="at">-r</span> <span class="st">'.Reservations[].Instances[].InstanceId'</span><span class="kw">`</span></span>
+<span id="cb10-87"><a href="#cb10-87" aria-hidden="true" tabindex="-1"></a> <span class="bu">echo</span> <span class="va">$iid0</span></span>
+<span id="cb10-88"><a href="#cb10-88" aria-hidden="true" tabindex="-1"></a><span class="co"># aws ec2 wait instance-running --instance-ids $iid</span></span>
+<span id="cb10-89"><a href="#cb10-89" aria-hidden="true" tabindex="-1"></a><span class="co"># echo "the generated instance has ID: $iid"</span></span>
+<span id="cb10-90"><a href="#cb10-90" aria-hidden="true" tabindex="-1"></a><span class="co"># running=`aws ec2 describe-instance-status --instance-id $iid</span></span>
+<span id="cb10-91"><a href="#cb10-91" aria-hidden="true" tabindex="-1"></a><span class="co"># echo "the instance status is $running"</span></span>
+<span id="cb10-92"><a href="#cb10-92" aria-hidden="true" tabindex="-1"></a><span class="bu">read</span> <span class="at">-p</span> <span class="st">"enter instance id:"</span> <span class="va">iid</span></span>
+<span id="cb10-93"><a href="#cb10-93" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"instance id: </span><span class="va">$iid</span><span class="st">"</span></span>
+<span id="cb10-94"><a href="#cb10-94" aria-hidden="true" tabindex="-1"></a><span class="ex">aws</span> ec2 associate-address <span class="at">--public-ip</span> <span class="va">$static_ip</span> <span class="at">--instance-id</span> <span class="va">$iid</span></span>
+<span id="cb10-95"><a href="#cb10-95" aria-hidden="true" tabindex="-1"></a><span class="co">#wait</span></span>
+<span id="cb10-96"><a href="#cb10-96" aria-hidden="true" tabindex="-1"></a><span class="co">#ssh -o "StrictHostKeyChecking no" rgtlab.org \</span></span>
+<span id="cb10-97"><a href="#cb10-97" aria-hidden="true" tabindex="-1"></a>    <span class="co">#'cd docker_compose_power1_app; sudo docker compose up -d'</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p><code>aws_startup.sh</code></p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co">#!/bin/bash</span></span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt update</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt install docker.io <span class="at">-y</span></span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt install <span class="at">-y</span> curl debian-keyring debian-archive-keyring apt-transport-https</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-1sLf</span> <span class="st">'https://dl.cloudsmith.io/public/caddy/stable/gpg.key'</span> <span class="kw">|</span> <span class="dt">\</span></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> gpg <span class="at">--dearmor</span> <span class="at">-o</span> /usr/share/keyrings/caddy-stable-archive-keyring.gpg</span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-1sLf</span> <span class="st">'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt'</span> <span class="kw">|</span> <span class="dt">\</span></span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> tee /etc/apt/sources.list.d/caddy-stable.list</span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt update</span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt install caddy <span class="at">-y</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb11"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="co">#!/bin/bash</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="ex">apt</span> update</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="co"># apt upgrade</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="ex">apt-get</span> install curl <span class="at">-y</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="ex">apt-get</span> install gnupg <span class="at">-y</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="ex">apt-get</span> install ca-certificates <span class="at">-y</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="ex">apt-get</span> install lsb-release <span class="at">-y</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> install <span class="at">-m</span> 0755 <span class="at">-d</span> /etc/apt/keyrings</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-fsSL</span> https://download.docker.com/linux/ubuntu/gpg <span class="kw">|</span> <span class="dt">\</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sudo</span> gpg <span class="at">--dearmor</span> <span class="at">-o</span> /etc/apt/keyrings/docker.gpg</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> chmod a+r /etc/apt/keyrings/docker.gpg</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a><span class="co">### Add Docker and docker compose support to the Ubuntu's packages list</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="dt">\</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>  <span class="st">"deb [arch="</span><span class="va">$(</span><span class="ex">dpkg</span> <span class="at">--print-architecture</span><span class="va">)</span><span class="st">" </span><span class="dt">\</span></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a><span class="st">  signed-by=/etc/apt/keyrings/docker.gpg] </span><span class="dt">\</span></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a><span class="st">  https://download.docker.com/linux/ubuntu </span><span class="dt">\</span></span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a><span class="st">  "</span><span class="va">$(</span><span class="bu">.</span> /etc/os-release <span class="kw">&amp;&amp;</span> <span class="bu">echo</span> <span class="st">"</span><span class="va">$VERSION_CODENAME</span><span class="st">"</span><span class="va">)</span><span class="st">" stable"</span> <span class="kw">|</span> <span class="dt">\</span></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sudo</span> tee /etc/apt/sources.list.d/docker.list <span class="op">&gt;</span> /dev/null</span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a><span class="ex">apt-get</span> update</span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a><span class="co">### Install docker and docker compose on Ubuntu</span></span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a><span class="ex">apt-get</span> install docker-ce docker-ce-cli containerd.io docker-compose-plugin <span class="at">-y</span></span>
+<span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a><span class="ex">apt</span> install neovim <span class="at">-y</span></span>
+<span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a><span class="ex">apt</span> install exa trash-cli ripgrep  <span class="at">-y</span></span>
+<span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a><span class="ex">apt</span> install zsh <span class="at">-y</span></span>
+<span id="cb11-29"><a href="#cb11-29" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-fLo</span> ~/.vim/autoload/plug.vim <span class="at">--create-dirs</span> <span class="dt">\</span></span>
+<span id="cb11-30"><a href="#cb11-30" aria-hidden="true" tabindex="-1"></a>    https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim</span>
+<span id="cb11-31"><a href="#cb11-31" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> ubuntu <span class="at">-</span> </span>
+<span id="cb11-32"><a href="#cb11-32" aria-hidden="true" tabindex="-1"></a><span class="ex">usermod</span> <span class="at">-aG</span> docker ubuntu</span>
+<span id="cb11-33"><a href="#cb11-33" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> chsh <span class="at">-s</span> <span class="va">$(</span><span class="fu">which</span> zsh<span class="va">)</span></span>
+<span id="cb11-34"><a href="#cb11-34" aria-hidden="true" tabindex="-1"></a><span class="co"># install oh my zsh, with zsh-z and zsh-autosuggestions plugins</span></span>
+<span id="cb11-35"><a href="#cb11-35" aria-hidden="true" tabindex="-1"></a><span class="fu">sh</span> <span class="at">-c</span> <span class="st">"</span><span class="va">$(</span><span class="ex">curl</span> <span class="at">-fsSL</span> </span>
+<span id="cb11-36"><a href="#cb11-36" aria-hidden="true" tabindex="-1"></a><span class="ex">https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh</span><span class="va">)</span><span class="st">"</span> <span class="dt">\</span></span>
+<span id="cb11-37"><a href="#cb11-37" aria-hidden="true" tabindex="-1"></a><span class="st">""</span> <span class="at">--unattended</span></span>
+<span id="cb11-38"><a href="#cb11-38" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"alias lt='exa -lrFha -sold'"</span> <span class="op">&gt;&gt;</span> .zshrc</span>
+<span id="cb11-39"><a href="#cb11-39" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"alias tp='trash-put -v'"</span> <span class="op">&gt;&gt;</span> .zshrc</span>
+<span id="cb11-40"><a href="#cb11-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-41"><a href="#cb11-41" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone https://github.com/zsh-users/zsh-autosuggestions <span class="dt">\</span></span>
+<span id="cb11-42"><a href="#cb11-42" aria-hidden="true" tabindex="-1"></a><span class="va">${ZSH_CUSTOM</span><span class="op">:-</span>~/.oh-my-zsh/custom<span class="va">}</span>/plugins/zsh-autosuggestions</span>
+<span id="cb11-43"><a href="#cb11-43" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone https://github.com/MichaelAquilina/zsh-you-should-use.git <span class="dt">\</span></span>
+<span id="cb11-44"><a href="#cb11-44" aria-hidden="true" tabindex="-1"></a><span class="va">$ZSH_CUSTOM</span>/plugins/you-should-use</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="callout-tip callout callout-style-default callout-captioned">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -475,66 +571,109 @@ Tip 1.
 </div>
 <div class="callout-body-container callout-body">
 <p>For convenience, construct a <code>config</code> file in <code>~/.ssh</code> as:</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">Host</span> rgtlab.org</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="ex">HostName</span> 13.57.139.31 <span class="co"># static IP</span></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="ex">User</span> ubuntu <span class="co"># default user on ubuntu server</span></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="ex">Port</span> 22  <span class="co"># the default port ssh uses</span></span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="ex">IdentityFile</span> ~/.ssh/power1_app.pem</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb12"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">Host</span> rgtlab.org</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="ex">HostName</span> 13.57.139.31 <span class="co"># static IP</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="ex">User</span> ubuntu <span class="co"># default user on ubuntu server</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="ex">Port</span> 22  <span class="co"># the default port ssh uses</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="ex">IdentityFile</span> ~/.ssh/power1_app.pem</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>then we can ssh into the new server with</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sh</span><span class="op">&gt;</span> ssh rgtlab.org</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb13"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sh</span><span class="op">&gt;</span> ssh rgtlab.org</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
 <p>Change the access permissions: <code>sudo chmod 600 power1ssh.pem</code> to be more restrictive.</p>
 </section>
-<section id="appendix-1" class="level2" data-number="2.4">
+<section id="appendix-1" class="level2 page-columns page-full" data-number="2.4">
 <h2 data-number="2.4" class="anchored" data-anchor-id="appendix-1"><span class="header-section-number">2.4</span> Appendix 1 Set up AWS IAM</h2>
-<p>To initiate batch processing via the AWS cli app. Set up <code>aws</code> access via the <code>aws configure</code> program.</p>
-<p>To get the needed credentials to configure command line <code>aws</code> use the AWS IAM service.</p>
-<p>Details follow:</p>
-<p>Log into <code>AWS</code> console.</p>
-<p>Search for <code>IAM service</code>. Navigate to IAM dashboard.</p>
+<p>This appendix provides details on how to initiate batch processing via the <code>AWS CLI</code> desktop application. Start by launching the <code>aws configure</code> program.</p>
+<p>From aws web site:</p>
+<p>“AWS Identity and Access Management (IAM) is a web service that helps you securely control access to AWS resources.”</p>
+
+<div class="no-row-height column-margin column-container"><div class="">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="img/iam.png" class="img-fluid figure-img"></p>
+<p></p><figcaption class="figure-caption">IAM description</figcaption><p></p>
+</figure>
+</div>
+</div></div><p>Log into the <code>AWS</code> console.</p>
+<p>Search for <code>IAM service</code>. Navigate to <code>IAM dashboard</code>.</p>
+<p>Select User groups. Create a user group based on the Power User profile.</p>
+<p>Call it poweruser. Include zenn in the poweruser group.</p>
 <p>Select <code>Users</code> in left hand panel.</p>
-<p>Then select <code>Add Users</code> button (in upper right).</p>
-<p>Then enter a <code>User name</code> in the form. Click <code>Next</code> (lower right)</p>
+<p>Then select <code>Create User</code> button (in upper right).</p>
+<p>Then enter a <code>User name</code> in the form, say zenn. Click <code>Next</code> (lower right)</p>
 <p>Then <code>Create User</code>.</p>
 <p>Click on the user name</p>
 <p>In the page that comes up. Select <code>Security Credentials</code> tab (center of page).</p>
-<p>Under <code>Access Keys</code> panel click <code>Create access key</code> (right side or bottom of panel).</p>
+<p>Under <code>Access Keys</code> panel click <code>Create access key</code> (left side or bottom of panel).</p>
 <p>Click <code>Command Line Interface CLI</code></p>
 <p>and at the bottom of the page click the checkbox “I understand…”.</p>
 <p>Finally select <code>Create access key</code> and</p>
 <p>choose <code>Download .csv file</code> (lower right).</p>
-<p>Navigate Download screen to local <code>~/.aws</code> directory.</p>
+<p>Navigate Download screen to local <code>~/.aws</code> directory.(may need shift-cmd-. on mac)</p>
 <p>Click <code>Done</code></p>
 <p>Now in the terminal on your workstation, configure the aws cli app via the command.</p>
-<div class="sourceCode" id="cb10"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a> <span class="ex">aws</span> configure </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>Enter info from the credentials file just downloaded. After entering the <code>AWS Access Key ID</code> and <code>AWS Secret Access Key</code> information you are asked for a Region, (my region is <code>us-west-1</code>), and an output format (suggested output format is <code>JSON</code>).</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> aws <span class="ex">configure</span> </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Using cut and paste enter info from the credentials file just downloaded. After entering the <code>AWS Access Key ID</code> and <code>AWS Secret Access Key</code> information you are asked for a Region, (my region is <code>us-west-1</code>), and an output format (suggested output format is <code>JSON</code>).</p>
 </section>
 </section>
 <section id="sample-work-session" class="level1" data-number="3">
 <h1 data-number="3"><span class="header-section-number">3</span> Sample work session</h1>
-<p>Start from scratch. Assume</p>
+<p>Start from scratch. Assume the following:</p>
 <ol type="1">
-<li>aws is configured.</li>
-<li>no security group</li>
-<li>no key pair</li>
-<li>vpc ID and subnet ID known and stored in environment variables.</li>
-<li>project name is “power1_app”</li>
-<li>we’ll spin up a ubuntu server with 30 GB hard drive.</li>
+<li><code>aws cli</code> is configured.</li>
+<li>no security group has been defined</li>
+<li>no key pair has been generated</li>
+<li><code>vpc ID</code> and <code>subnet ID</code> known and stored as environment variables.</li>
+<li>project name is <code>power1_app</code></li>
 </ol>
-<p>step 1. generate security group named “max_restrict”</p>
-<blockquote class="blockquote">
-<p>aws_create_security_group.sh get the sg ID from the script output and add to environment var list echo “export subnet_id=‘sg-0fda72c2879d6b2ad’” &gt;&gt; ~/.zshrc</p>
-</blockquote>
-<p>step 2. add key pair with name power1_app &gt; aws_create_keypair.sh power1_app</p>
-<p>step 3. get a new elastic IP address. new IP is: 204.236.167.50</p>
-<blockquote class="blockquote">
-<p>echo “export static_ip=‘204.236.167.50’” &gt;&gt; ~/.zshrc</p>
-</blockquote>
-<blockquote class="blockquote">
-<p>aws_create_instance.sh -p power1_app sed -i ‘.bak’ ‘/HostName/d’ config sed -i ‘.bak’ ‘/Ide/d’ config echo “HostName 204.236.167.50” &gt;&gt; ~/.ssh/config echo “IdentityFile ~/.ssh/power1_app.pem” &gt;&gt; ~/.ssh/config</p>
-</blockquote>
-<p>scp -i “~/.ssh/power1_app.pem” -r ~/prj/c060/docker_compose_power1_app/ ubuntu@rgtlab.org:~ ssh rgtlab.org cd docker_compose_power1_app/ sudo docker-compose up -d</p>
+<p>In the following we’ll spin up a ubuntu server (AMI) with type <code>t2-micro</code> (1 vCPU and 1gb memory) and 30 GB (size) hard drive.</p>
+<p>step 1. generate security group named <code>power1_app</code>, and get the <code>SG ID</code> from the script output and store it as an environment variable.</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="ex">Note</span>  </span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="ex">2023-10-24</span> 17:25:06</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="ex">compare</span>  code from </span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="ex">aws_create_security_group.sh</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="ex">and</span> </span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a><span class="ex">aws_create_security_group_rapid.sh</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> aws_create_security_group.sh</span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> echo <span class="st">"export subnet_id='sg-0fda72c2879d6b2ad'"</span> <span class="op">&gt;&gt;</span> ~/.zshrc</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>step 2. add key pair with name <code>power1_app</code></p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="ex">aws_create_keypair.sh</span> power1_app</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>step 3. get a new elastic IP address and add it to z-shell configuration file. and modify ssh config file to add the IP address and the ssh private key name. if new IP is: 204.236.167.50</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"export static_ip='204.236.167.50'"</span> <span class="op">&gt;&gt;</span> ~/.zshrc</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Generate instance: <code>aws_create_instance.sh -p power1_app</code></p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a> <span class="fu">sed</span> <span class="at">-i</span> <span class="st">'.bak'</span> <span class="st">'/HostName/d'</span> config</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a> <span class="fu">sed</span> <span class="at">-i</span> <span class="st">'.bak'</span> <span class="st">'/Ide/d'</span> config</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a> <span class="bu">echo</span> <span class="st">"HostName 204.236.167.50"</span> <span class="op">&gt;&gt;</span> ~/.ssh/config</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a> <span class="bu">echo</span> <span class="st">"IdentityFile ~/.ssh/power1_app.pem"</span> <span class="op">&gt;&gt;</span> ~/.ssh/config</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a><span class="fu">scp</span> <span class="at">-i</span> <span class="st">"~/.ssh/power1_app.pem"</span> <span class="at">-r</span> ~/prj/c060/docker_compose_power1_app/  <span class="dt">\</span></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>    ubuntu@rgtlab.org:~</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> rgtlab.org</span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> docker_compose_power1_app/</span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> docker-compose up <span class="at">-d</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="appendix-2-undo" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Appendix 2 Undo</h1>
+<ul>
+<li>To remove the AWS instance and Gitlab elements of project do the following:</li>
+<li></li>
+<li>log into AWS/EC2 console</li>
+<li></li>
+<li>Terminate instance</li>
+<li></li>
+<li>delete security group</li>
+<li></li>
+<li>release IP address</li>
+<li></li>
+<li>delete SSH key pair</li>
+<li></li>
+<li>Log into Gitlab</li>
+<li></li>
+<li>Delete project(s) settings/General/advanced</li>
+</ul>
 
 
 </section>
@@ -543,13 +682,13 @@ Tip 1.
   author = {Ronald (Ryy) Glenn Thomas},
   title = {Using the {AWS} Command Line Interface to Launch an {EC2}
     Server},
-  date = {2023-07-18},
+  date = {2023-10-24},
   url = {https://focusonr.org/blog/server_setup_aws_cli},
   langid = {en}
 }
 </code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre><div class="quarto-appendix-secondary-label">For attribution, please cite this work as:</div><div id="ref-(ryy)glennthomas2023" class="csl-entry quarto-appendix-citeas" role="doc-biblioentry">
 Ronald (Ryy) Glenn Thomas. 2023. <span>“Using the AWS Command Line
-Interface to Launch an EC2 Server.”</span> July 18, 2023. <a href="https://focusonr.org/blog/server_setup_aws_cli">https://focusonr.org/blog/server_setup_aws_cli</a>.
+Interface to Launch an EC2 Server.”</span> October 24, 2023. <a href="https://focusonr.org/blog/server_setup_aws_cli">https://focusonr.org/blog/server_setup_aws_cli</a>.
 </div></div></section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
 window.document.addEventListener("DOMContentLoaded", function (event) {
