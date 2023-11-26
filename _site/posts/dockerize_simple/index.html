@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Ronald (Ryy) Glenn Thomas">
-<meta name="dcterms.date" content="2023-07-18">
+<meta name="dcterms.date" content="2023-09-02">
 <meta name="description" content="This is the first in a series of posts offering suggested strategies for leveraging open source technologies to effectively host data science analysis apps and reports online.">
 
 <title>Thomas Lab home page - A simple process to get your Shiny app online (securely).</title>
@@ -155,7 +155,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
-    <a class="nav-link" href="../../blog/index.html">
+    <a class="nav-link" href="../../posts/index.html">
  <span class="menu-text">Blog</span></a>
   </li>  
   <li class="nav-item">
@@ -205,7 +205,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
    
   <ul>
   <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="toc-section-number">1</span>  Introduction</a></li>
-  <li><a href="#methods" id="toc-methods" class="nav-link" data-scroll-target="#methods"><span class="toc-section-number">2</span>  Methods</a></li>
+  <li><a href="#shiny-app" id="toc-shiny-app" class="nav-link" data-scroll-target="#shiny-app"><span class="toc-section-number">2</span>  Shiny app</a></li>
   <li><a href="#hosting" id="toc-hosting" class="nav-link" data-scroll-target="#hosting"><span class="toc-section-number">3</span>  Hosting</a>
   <ul class="collapse">
   <li><a href="#pre-launch-tasks" id="toc-pre-launch-tasks" class="nav-link" data-scroll-target="#pre-launch-tasks"><span class="toc-section-number">3.1</span>  Pre-launch tasks</a></li>
@@ -260,7 +260,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">July 18, 2023</p>
+      <p class="date">September 2, 2023</p>
     </div>
   </div>
   
@@ -278,14 +278,13 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>This is another in a series of posts suggesting straightforward, open-source strategies for effective communication of data analysis results to clients and collaborators.</p>
 <p>In this post we propose a simple method for migrating a shiny app from your local workstation to the web.</p>
 <p>The list of open-source technologies (software stack) we propose for use: linux, R, Shiny, Docker, and Caddy. In this post we’ll make use of the AWS EC2 cloud service. In future posts we’ll describe alternate cloud constructions, e.g. using the low cost cloud service: Hetzner.</p>
-<p>In the following we’ll provide a proof-of-concept example of how to apply these technologies for securely hosting an interactive Shiny application on the web.</p>
-<p>We start with a very simple, but hopefully still useful, stand-alone Shiny app developed on our local workstation. After some interfacing with the Amazon web service environment, we’ll push the Shiny app into the cloud, configure a web server, and end up with a secure (encrypted and authenticated) app running on a website with a custom domain name.</p>
+<p>In the following we’ll provide a proof-of-concept trial of how to apply these technologies for securely hosting an interactive Shiny application on the web.</p>
+<p>We start with a very simple, but hopefully still useful, stand-alone Shiny app developed on our local workstation. After some interfacing with the Amazon web service EC2 environment, we’ll push the Shiny app into the cloud, configure a web server, and end up with a secure (encrypted and authenticated) app running on a website with a custom domain name.</p>
 </section>
-<section id="methods" class="level1 page-columns page-full" data-number="2">
-<h1 data-number="2"><span class="header-section-number">2</span> Methods</h1>
-<p>To begin, lets assume we’ve just finished developing a new Shiny app, named <code>power1_shiny</code>. We’ve done our development inside a working directory named <code>power1_app</code>. <code>power1_shiny</code> is a sub-directory inside <code>power1_app</code> containing the shiny program file <code>app.R</code>.</p>
-<p>The methods described here apply generically to any Shiny app. See the <code>R/Shiny</code> code for our <code>power1_shiny</code> app (<code>app.R</code>) below.</p>
-<p>Our shiny app is simple yet functional. It calculates the power for a two-sample t-test as a function of the standardized effect size. The app is intentionally minimal, using only base R functions, with a minimum of reactive widgets and layout commands.</p>
+<section id="shiny-app" class="level1 page-columns page-full" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Shiny app</h1>
+<p>To begin, lets assume we’ve just finished developing a new Shiny app, named <code>power1_shiny</code>. We’ve done our development inside a working directory named <code>power1_app</code>. That is, <code>power1_shiny</code> is a sub-directory inside <code>power1_app</code> containing the shiny program file <code>app.R</code>. The methods described here apply to any Shiny app regardless of its complexity. See the <code>R/Shiny</code> code for our <code>power1_shiny</code> app (<code>app.R</code>) below.</p>
+<p>Our shiny app is simple but still functional. It calculates the power for a two-sample t-test as a function of the standardized effect size. The app is intentionally minimal, using only base R functions, with a minimum of reactive widgets and layout commands.</p>
 <details>
 <summary>show the <code>power1_shiny/app.R</code> code</summary>
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>ui <span class="ot">&lt;-</span> <span class="fu">fluidPage</span>(</span>
@@ -307,22 +306,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>}</span>
 <span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="fu">shinyApp</span>(ui, server)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
-<div class="callout-note callout callout-style-default callout-captioned">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-caption-container flex-fill">
-Motivation for this post:
-</div>
-</div>
-<div class="callout-body-container callout-body">
 <p>We can test the app locally on our workstation by runnning it with the following command issued from the <code>power1_app</code> directory shell prompt</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">zsh</span><span class="op">&gt;</span> R <span class="at">-e</span> <span class="st">"library(shiny); runApp('power1_shiny/app.R', launch=T)"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>This will, in sequence, start the R program, load the Shiny package, run and launch the app in your default browser.</p>
-</div>
-</div>
-<p>The margin figure shows our Shiny app running locally in a browser on our desktop. It consists of a widget to select the sample size and a plot to provide a dynamic visualization of the power as a function of the standardized effect size.</p>
+<p>The margin figure shows a screenshot of our Shiny app running locally in a browser on our desktop. It consists of a widget to select the sample size and a plot to provide a dynamic visualization of the power as a function of the standardized effect size.</p>
 
 <div class="no-row-height column-margin column-container"><div class="">
 <div class="quarto-figure quarto-figure-center">
@@ -331,7 +318,7 @@ Motivation for this post:
 <p></p><figcaption class="figure-caption"><em>Shiny app</em></figcaption><p></p>
 </figure>
 </div>
-</div></div><p>Once we determine our app is working as designed, we move on to the task of hosting the app on a (virtual) server with the goal of sharing it with our collaborators. How accomplish this? In the following we’ll describe one approach that ‘spins up’ a server on Amazon Web Service EC2 and in just a few steps, through the application of Docker, R, Shiny, and Caddy yields a secure web app running on the web.</p>
+</div></div><p>Once we determine our app is working as designed, we move on to the task of hosting the app on a (virtual) server with the goal of sharing it with our collaborators. How to accomplish this? In the following we’ll describe one approach that ‘spins up’ a server on Amazon Web Service EC2 and in just a few steps, through the application of Docker, R, Shiny, and Caddy yields a secure web app running on the web.</p>
 </section>
 <section id="hosting" class="level1 page-columns page-full" data-number="3">
 <h1 data-number="3"><span class="header-section-number">3</span> Hosting</h1>
@@ -346,29 +333,30 @@ Motivation for this post:
 <li>setup an authentication method and</li>
 <li>configure a reverse proxy method to translate https (port 443) requests to Shiny (port 3838).</li>
 </ol>
-<p>At first glance these 7 requirements can appear daunting, but on closer inspection all can be met with relative ease.</p>
+<p>At first glance these 7 requirements can appear daunting, but on closer inspection all can be met with relative ease as described in the following.</p>
 <section id="pre-launch-tasks" class="level2" data-number="3.1">
 <h2 data-number="3.1" class="anchored" data-anchor-id="pre-launch-tasks"><span class="header-section-number">3.1</span> Pre-launch tasks</h2>
 <p>Select a hosting service</p>
 <p>There are a number of cloud based server options: Microsoft Azure, Oracle, Google Cloud, Amazon AWS EC2, Digital Ocean and Hetzner to name a few. Each has their own approach to setting up a custom virtual server. Several have free or low-cost service tiers available.</p>
-<p>An overview of the process with AWS EC2 follows. (Detailed instructions for setting up a virtual server on EC2 both through the EC2 console and the command line interface were described in an earlier post: <a href="https://focusonr.org/posts/server_setup_aws_console">here</a> and <a href="https://focusonr.org/posts/server_setup_aws_cli">here</a>.</p>
-<p>Preface. create an AWS account or sign in and navigate to the EC2 dashboard.</p>
-<p>step 1. Set up a working environment within EC2. That is:</p>
+<p>An overview of the process with AWS EC2 follows. (Detailed instructions for setting up a virtual server on EC2 both through the EC2 console and the command line interface were described in earlier posts: <a href="https://focusonr.org/posts/server_setup_aws_console">here</a> and <a href="https://focusonr.org/posts/server_setup_aws_cli">here</a>.</p>
+<p>The first step is to create an AWS account or sign in to an existing account and navigate to the EC2 dashboard.</p>
+<p>Before launching the server instance itself we need to define a working environment within EC2. That is, we need to do the following:</p>
 <ol type="a">
 <li>generate secure shell (ssh) key-pair</li>
 <li>configure a firewall.</li>
 <li>obtain a static IP.</li>
 <li>obtain a domain name.</li>
 </ol>
-<p>Once the environment is set up</p>
-<p>step 2. Config and launch the server</p>
-<p>Configuration has two parts:</p>
+<p>The configuration has three components:</p>
 <ol type="a">
 <li>select an instance operating system (<code>ubuntu</code>) and</li>
 <li>select an instance type (<code>t2-micro</code>)</li>
+<li>determine the size of the storage space.</li>
 </ol>
-<p>Once the server is available connect via ssh.</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> <span class="at">-i</span> <span class="st">"~/.ssh/power1_app_ssh.pem"</span>  ubuntu@rgtlab.org</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Once the environment and configuration is set up we can launch the server.</p>
+<p>When the server is available we can connect via ssh.</p>
+<p>Lastly associate the IP address with the domain name.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> <span class="at">-i</span> <span class="st">"~/.ssh/power1_app.pem"</span>  ubuntu@rgtlab.org</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>or using the <code>config</code> setup described in Tip 1 at the end of this post.</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> rgtlab.org </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>The only software tools necessary to install are Docker and Caddy. If you followed the CLI or console based instructions to set up a virtual server <a href="https://focusonr.org/posts/server_setup_aws_cli/index.pdf">here</a> or <a href="https://focusonr.org/posts/server_setup_aws_console/">here</a> Docker and Caddy will be pre-installed.</p>
@@ -492,13 +480,13 @@ Motivation for this post:
 <div id="quarto-appendix" class="default"><section class="quarto-appendix-contents"><h2 class="anchored quarto-appendix-heading">Reuse</h2><div quarto-reuse="quarto-reuse" class="quarto-appendix-contents"><a rel="license" href="https://creativecommons.org/licenses/by/4.0/">https://creativecommons.org/licenses/by/4.0/</a></div></section><section class="quarto-appendix-contents"><h2 class="anchored quarto-appendix-heading">Citation</h2><div><div class="quarto-appendix-secondary-label">BibTeX citation:</div><pre class="sourceCode code-with-copy quarto-appendix-bibtex"><code class="sourceCode bibtex">@online{(ryy)glennthomas2023,
   author = {Ronald (Ryy) Glenn Thomas},
   title = {A Simple Process to Get Your {Shiny} App Online (Securely).},
-  date = {2023-07-18},
+  date = {2023-09-02},
   url = {https://focusonr.org/posts/dockerize_simple},
   langid = {en}
 }
 </code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre><div class="quarto-appendix-secondary-label">For attribution, please cite this work as:</div><div id="ref-(ryy)glennthomas2023" class="csl-entry quarto-appendix-citeas" role="doc-biblioentry">
 Ronald (Ryy) Glenn Thomas. 2023. <span>“A Simple Process to Get Your
-Shiny App Online (Securely). .”</span> July 18, 2023. <a href="https://focusonr.org/posts/dockerize_simple">https://focusonr.org/posts/dockerize_simple</a>.
+Shiny App Online (Securely). .”</span> September 2, 2023. <a href="https://focusonr.org/posts/dockerize_simple">https://focusonr.org/posts/dockerize_simple</a>.
 </div></div></section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
 window.document.addEventListener("DOMContentLoaded", function (event) {

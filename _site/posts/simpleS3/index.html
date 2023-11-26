@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Ronald (Ryy) Glenn Thomas">
-<meta name="dcterms.date" content="2023-07-18">
+<meta name="dcterms.date" content="2023-11-25">
 <meta name="description" content="Getting started with S3 OO programming in R">
 
 <title>Thomas Lab home page - Writing a simple R package in S3.</title>
@@ -155,7 +155,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
-    <a class="nav-link" href="../../blog/index.html">
+    <a class="nav-link" href="../../posts/index.html">
  <span class="menu-text">Blog</span></a>
   </li>  
   <li class="nav-item">
@@ -204,7 +204,11 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
     <h2 id="toc-title">Table of contents</h2>
    
   <ul>
-  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="toc-section-number">1</span>  Introduction</a></li>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="toc-section-number">1</span>  Introduction</a>
+  <ul class="collapse">
+  <li><a href="#notes" id="toc-notes" class="nav-link" data-scroll-target="#notes"><span class="toc-section-number">1.1</span>  Notes</a></li>
+  </ul></li>
+  <li><a href="#bug-1" id="toc-bug-1" class="nav-link" data-scroll-target="#bug-1"><span class="toc-section-number">2</span>  Bug 1</a></li>
   </ul>
 </nav>
 </nav>
@@ -250,7 +254,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">July 18, 2023</p>
+      <p class="date">November 25, 2023</p>
     </div>
   </div>
   
@@ -289,21 +293,22 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"~/shr/zz.tools.R"</span>)</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(pacman)</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">p_load</span>(tidyverse, dplyr, gapminder, thematic, palmerpenguins, tidyverse, knitr, lubridate, readxl)</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>knitr<span class="sc">::</span>opts_chunk<span class="sc">$</span><span class="fu">set</span>(<span class="at">collapse =</span> T)</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">101</span>)</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>dat <span class="ot">&lt;-</span> palmerpenguins<span class="sc">::</span>penguins <span class="sc">%&gt;%</span> </span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(sex))  </span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>dat1  <span class="ot">&lt;-</span> <span class="fu">slice_sample</span>(dat, <span class="at">n=</span><span class="dv">10</span>) <span class="sc">|&gt;</span> </span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">sel</span>(species, island, bill_length_mm)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">p_load</span>(tidyverse, dplyr, gapminder, thematic, palmerpenguins, tidyverse, knitr, lubridate, readxl)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>knitr<span class="sc">::</span>opts_chunk<span class="sc">$</span><span class="fu">set</span>(<span class="at">collapse =</span> T)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">101</span>)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>dat <span class="ot">&lt;-</span> palmerpenguins<span class="sc">::</span>penguins <span class="sc">%&gt;%</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">fil</span>(<span class="sc">!</span><span class="fu">is.na</span>(sex))</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>dat1  <span class="ot">&lt;-</span> <span class="fu">slice_sample</span>(dat, <span class="at">n=</span><span class="dv">10</span>) <span class="sc">|&gt;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="fu">sel</span>(species, island, bill_length_mm)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="sourceCode" id="cb2"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">table1</span>  <span class="op">&lt;</span>- function <span class="er">(</span><span class="fu">df</span>, form, ...<span class="kw">)</span> <span class="kw">{</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="ex">UseMethod</span><span class="er">(</span><span class="st">"table1"</span><span class="kw">)</span> </span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span> </span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">table1</span>  <span class="op">&lt;</span>- function <span class="er">(</span><span class="ex">form,</span> data, ...<span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="ex">UseMethod</span><span class="er">(</span><span class="st">"table1"</span><span class="kw">)</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="ex">row_name</span>  <span class="op">&lt;</span>- function <span class="er">(</span><span class="ex">x,</span> nm, ...<span class="kw">)</span> <span class="kw">{</span></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="ex">UseMethod</span><span class="er">(</span><span class="st">"row_name"</span><span class="kw">)</span>   </span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="ex">UseMethod</span><span class="er">(</span><span class="st">"row_name"</span><span class="kw">)</span></span>
 <span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span>
 <span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="ex">row_name.character</span> <span class="op">&lt;</span>- function <span class="er">(</span><span class="ex">x,</span> nm, annot=TRUE, annot_cat_text=<span class="st">"-- no. (%)"</span>, ... <span class="kw">)</span> <span class="kw">{</span></span>
@@ -315,38 +320,38 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span><span class="kw">(</span><span class="fu">nm</span><span class="kw">)</span></span>
 <span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span>
 <span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="ex">row_summary</span>  <span class="op">&lt;</span>- function <span class="er">(</span><span class="ex">x</span><span class="kw">)</span> <span class="kw">{</span></span>
-<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="ex">UseMethod</span><span class="er">(</span><span class="st">"row_summary"</span><span class="kw">)</span>    </span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="ex">UseMethod</span><span class="er">(</span><span class="st">"row_summary"</span><span class="kw">)</span></span>
 <span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span>
 <span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="ex">row_summary.character</span> <span class="op">&lt;</span>- function <span class="er">(</span><span class="ex">x</span><span class="kw">)</span> <span class="kw">{</span></span>
 <span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="fu">df</span> = data.frame<span class="er">(</span><span class="ex">x</span> = x, y = dep<span class="kw">)</span></span>
-<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="ex">t1</span> = df <span class="kw">|</span><span class="op">&gt;</span> tabyl<span class="kw">(</span><span class="ex">x,</span> y<span class="kw">)</span> <span class="kw">|</span><span class="op">&gt;</span>     </span>
-<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="ex">adorn_percentages</span><span class="er">(</span><span class="st">"col"</span><span class="kw">)</span> <span class="kw">|</span><span class="op">&gt;</span>    </span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="ex">t1</span> = df <span class="kw">|</span><span class="op">&gt;</span> tabyl<span class="kw">(</span><span class="ex">x,</span> y<span class="kw">)</span> <span class="kw">|</span><span class="op">&gt;</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="ex">adorn_percentages</span><span class="er">(</span><span class="st">"col"</span><span class="kw">)</span> <span class="kw">|</span><span class="op">&gt;</span></span>
 <span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="ex">adorn_pct_formatting</span><span class="er">(</span><span class="ex">digits</span> = 0<span class="kw">)|</span><span class="op">&gt;</span></span>
 <span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a><span class="ex">adorn_ns</span><span class="er">(</span><span class="ex">position</span> = <span class="st">"front"</span><span class="kw">)</span>    <span class="kw">|</span><span class="op">&gt;</span></span>
 <span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a><span class="cf">select</span><span class="kw">(</span><span class="ex">-x</span><span class="kw">)</span></span>
 <span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a><span class="va">t1</span><span class="op">=</span> <span class="ex">as_tibble</span><span class="er">(</span><span class="ex">t1</span><span class="kw">)</span></span>
-<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a> <span class="ex">t2</span> = table<span class="er">(</span><span class="ex">df</span><span class="va">$x</span><span class="ex">,df</span><span class="va">$y</span><span class="kw">)</span> <span class="kw">|</span><span class="op">&gt;</span> as.data.frame.matrix<span class="kw">()</span> </span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a> <span class="ex">t2</span> = table<span class="er">(</span><span class="ex">df</span><span class="va">$x</span><span class="ex">,df</span><span class="va">$y</span><span class="kw">)</span> <span class="kw">|</span><span class="op">&gt;</span> as.data.frame.matrix<span class="kw">()</span></span>
 <span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="ex">rbind</span><span class="er">(</span><span class="ex">NA,</span> t1<span class="kw">)</span></span>
 <span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span>
 <span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a><span class="ex">row_summary.numeric</span> <span class="op">&lt;</span>- function <span class="er">(</span><span class="ex">x</span><span class="kw">)</span> <span class="kw">{</span></span>
-<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a><span class="ex">sp</span> = split<span class="er">(</span><span class="ex">x,</span> dep<span class="kw">)</span> </span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a><span class="ex">sp</span> = split<span class="er">(</span><span class="ex">x,</span> dep<span class="kw">)</span></span>
 <span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a><span class="ex">nms</span> = names<span class="er">(</span><span class="ex">sp</span><span class="kw">)</span></span>
 <span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a><span class="ex">mm</span> = sp <span class="kw">|</span><span class="op">&gt;</span> map_vec<span class="kw">(</span><span class="ex">mean</span><span class="kw">)</span> <span class="kw">|</span><span class="op">&gt;</span> round<span class="kw">(</span><span class="ex">2</span><span class="kw">)</span>  <span class="kw">|</span><span class="op">&gt;</span> as.character<span class="kw">()</span> <span class="kw">|</span><span class="op">&gt;</span> matrix<span class="kw">(</span><span class="ex">1</span><span class="kw">)</span></span>
 <span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a><span class="ex">ss</span> = sp <span class="kw">|</span><span class="op">&gt;</span> map_vec<span class="kw">(</span><span class="ex">sd</span><span class="kw">)</span> <span class="kw">|</span><span class="op">&gt;</span> round<span class="kw">(</span><span class="ex">2</span><span class="kw">)|</span><span class="op">&gt;</span> paste0<span class="kw">(</span><span class="st">"("</span><span class="ex">,x</span> = _ ,<span class="st">")"</span><span class="kw">)</span> <span class="kw">|</span><span class="op">&gt;</span>  matrix<span class="kw">(</span><span class="ex">1</span><span class="kw">)</span></span>
-<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a><span class="ex">bb</span> = paste<span class="er">(</span><span class="ex">unlist</span><span class="er">(</span><span class="ex">mm</span><span class="kw">)</span><span class="ex">,</span> unlist<span class="er">(</span><span class="ex">ss</span><span class="kw">))</span> <span class="kw">|</span><span class="op">&gt;</span>    matrix<span class="kw">(</span> <span class="ex">nrow</span> = nrow<span class="er">(</span><span class="ex">mm</span><span class="kw">))</span> </span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a><span class="ex">bb</span> = paste<span class="er">(</span><span class="ex">unlist</span><span class="er">(</span><span class="ex">mm</span><span class="kw">)</span><span class="ex">,</span> unlist<span class="er">(</span><span class="ex">ss</span><span class="kw">))</span> <span class="kw">|</span><span class="op">&gt;</span>    matrix<span class="kw">(</span> <span class="ex">nrow</span> = nrow<span class="er">(</span><span class="ex">mm</span><span class="kw">))</span></span>
 <span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a><span class="ex">colnames</span><span class="er">(</span><span class="ex">bb</span><span class="kw">)</span> <span class="ex">=</span> nms</span>
 <span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a><span class="ex">bb</span> = bb <span class="kw">|</span><span class="op">&gt;</span> as_tibble<span class="kw">()</span></span>
 <span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a><span class="ex">bb</span></span>
 <span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span>
 <span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a><span class="ex">row_pv</span>  <span class="op">&lt;</span>- function <span class="er">(</span><span class="ex">x</span><span class="kw">)</span> <span class="kw">{</span></span>
-<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a><span class="ex">UseMethod</span><span class="er">(</span><span class="st">"row_pv"</span><span class="kw">)</span> </span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a><span class="ex">UseMethod</span><span class="er">(</span><span class="st">"row_pv"</span><span class="kw">)</span></span>
 <span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span>
 <span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a><span class="ex">row_pv.character</span> <span class="op">&lt;</span>- function <span class="er">(</span><span class="ex">x</span><span class="kw">)</span> <span class="kw">{</span></span>
 <span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a>    <span class="fu">df</span> = data.frame<span class="er">(</span><span class="ex">x</span> = x, y = dep<span class="kw">)</span></span>
 <span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a><span class="ex">tab</span> =  table<span class="er">(</span><span class="va">df</span><span class="op">[</span>,1<span class="op">]</span><span class="ex">,</span> df[,2]<span class="kw">)</span></span>
-<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a><span class="ex">pv</span>  <span class="op">&lt;</span>- ifelse<span class="er">(</span><span class="kw">(</span><span class="ex">nrow</span><span class="er">(</span><span class="ex">tab</span><span class="kw">)</span> <span class="op">&gt;</span>=2 <span class="kw">&amp;</span> <span class="ex">ncol</span><span class="er">(</span><span class="ex">tab</span><span class="kw">)</span> <span class="op">&gt;</span>=2<span class="kw">)</span><span class="ex">,</span> </span>
-<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a>       <span class="ex">stats::fisher.test</span><span class="er">(</span><span class="ex">tab,simulate.p.value=T</span><span class="kw">)</span><span class="va">$p</span><span class="ex">.value,</span> NA<span class="kw">)</span> </span>
+<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a><span class="ex">pv</span>  <span class="op">&lt;</span>- ifelse<span class="er">(</span><span class="kw">(</span><span class="ex">nrow</span><span class="er">(</span><span class="ex">tab</span><span class="kw">)</span> <span class="op">&gt;</span>=2 <span class="kw">&amp;</span> <span class="ex">ncol</span><span class="er">(</span><span class="ex">tab</span><span class="kw">)</span> <span class="op">&gt;</span>=2<span class="kw">)</span><span class="ex">,</span></span>
+<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a>       <span class="ex">stats::fisher.test</span><span class="er">(</span><span class="ex">tab,simulate.p.value=T</span><span class="kw">)</span><span class="va">$p</span><span class="ex">.value,</span> NA<span class="kw">)</span></span>
 <span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span><span class="kw">(</span><span class="ex">c</span><span class="er">(</span><span class="ex">pv,</span> rep<span class="er">(</span><span class="ex">NA,</span> nrow<span class="er">(</span><span class="ex">tab</span><span class="kw">))))</span></span>
 <span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span>
 <span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a><span class="ex">row_pv.numeric</span> <span class="op">&lt;</span>- function <span class="er">(</span><span class="ex">x</span><span class="kw">)</span> <span class="kw">{</span></span>
@@ -355,31 +360,144 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span><span class="kw">(</span><span class="ex">pv</span><span class="kw">)</span></span>
 <span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span>
 <span id="cb2-58"><a href="#cb2-58" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a><span class="ex">table1.data.frame</span>  <span class="op">&lt;</span>- function <span class="er">(</span><span class="fu">df</span>, form, ...<span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a><span class="ex">table1.formula</span>  <span class="op">&lt;</span>- function <span class="er">(</span><span class="ex">form,data,</span>   ...<span class="kw">)</span> <span class="kw">{</span></span>
 <span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">(</span><span class="ex">!require</span><span class="er">(</span><span class="st">"pacman"</span><span class="kw">))</span> <span class="ex">install.packages</span><span class="er">(</span><span class="st">"pacman"</span><span class="ex">,</span> repo=<span class="st">"cran.rstudio.com"</span><span class="kw">)</span></span>
-<span id="cb2-61"><a href="#cb2-61" aria-hidden="true" tabindex="-1"></a><span class="ex">p_load</span><span class="er">(</span><span class="ex">janitor,</span> broom, tibble, dplyr, purrr<span class="kw">)</span> </span>
+<span id="cb2-61"><a href="#cb2-61" aria-hidden="true" tabindex="-1"></a><span class="ex">p_load</span><span class="er">(</span><span class="ex">janitor,</span> broom, tibble, dplyr, purrr<span class="kw">)</span></span>
 <span id="cb2-62"><a href="#cb2-62" aria-hidden="true" tabindex="-1"></a><span class="ex">vars</span>  <span class="op">&lt;</span>- all.vars<span class="er">(</span><span class="ex">form</span><span class="kw">)</span></span>
-<span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a><span class="ex">dep</span>  <span class="op">&lt;&lt;- df[[vars[1]]]</span></span>
-<span id="cb2-64"><a href="#cb2-64" aria-hidden="true" tabindex="-1"></a><span class="st">indep  &lt;- df[vars[-1]] </span></span>
-<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a><span class="st">col_left = indep |&gt; </span></span>
+<span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a><span class="ex">dep</span>  <span class="op">&lt;&lt;- data[[vars[1]]]</span></span>
+<span id="cb2-64"><a href="#cb2-64" aria-hidden="true" tabindex="-1"></a><span class="st">indep  &lt;- data[vars[-1]]</span></span>
+<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a><span class="st">col_left = indep |&gt;</span></span>
 <span id="cb2-66"><a href="#cb2-66" aria-hidden="true" tabindex="-1"></a><span class="st">imap(row_name, ...) |&gt;</span></span>
-<span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a><span class="st">unlist() |&gt; </span></span>
+<span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a><span class="st">unlist() |&gt;</span></span>
 <span id="cb2-68"><a href="#cb2-68" aria-hidden="true" tabindex="-1"></a><span class="st">enframe(name=NULL)|&gt;</span></span>
 <span id="cb2-69"><a href="#cb2-69" aria-hidden="true" tabindex="-1"></a><span class="st">setNames("variable")</span></span>
-<span id="cb2-70"><a href="#cb2-70" aria-hidden="true" tabindex="-1"></a><span class="st">col_right = indep |&gt; </span></span>
+<span id="cb2-70"><a href="#cb2-70" aria-hidden="true" tabindex="-1"></a><span class="st">col_right = indep |&gt;</span></span>
 <span id="cb2-71"><a href="#cb2-71" aria-hidden="true" tabindex="-1"></a><span class="st">map(row_pv) |&gt;</span></span>
-<span id="cb2-72"><a href="#cb2-72" aria-hidden="true" tabindex="-1"></a><span class="st">unlist() |&gt; </span></span>
-<span id="cb2-73"><a href="#cb2-73" aria-hidden="true" tabindex="-1"></a><span class="st">enframe(name=NULL)|&gt; </span></span>
+<span id="cb2-72"><a href="#cb2-72" aria-hidden="true" tabindex="-1"></a><span class="st">unlist() |&gt;</span></span>
+<span id="cb2-73"><a href="#cb2-73" aria-hidden="true" tabindex="-1"></a><span class="st">enframe(name=NULL)|&gt;</span></span>
 <span id="cb2-74"><a href="#cb2-74" aria-hidden="true" tabindex="-1"></a><span class="st">setNames("p-value")</span></span>
-<span id="cb2-75"><a href="#cb2-75" aria-hidden="true" tabindex="-1"></a><span class="st">col_mid = indep |&gt; </span></span>
+<span id="cb2-75"><a href="#cb2-75" aria-hidden="true" tabindex="-1"></a><span class="st">col_mid = indep |&gt;</span></span>
 <span id="cb2-76"><a href="#cb2-76" aria-hidden="true" tabindex="-1"></a><span class="st">map_dfr(row_summary) |&gt;</span></span>
 <span id="cb2-77"><a href="#cb2-77" aria-hidden="true" tabindex="-1"></a><span class="st">identity()</span></span>
 <span id="cb2-78"><a href="#cb2-78" aria-hidden="true" tabindex="-1"></a><span class="st">col_mid = bind_rows(col_mid)</span></span>
 <span id="cb2-79"><a href="#cb2-79" aria-hidden="true" tabindex="-1"></a><span class="st">bind_cols(col_left, col_mid, col_right)</span></span>
 <span id="cb2-80"><a href="#cb2-80" aria-hidden="true" tabindex="-1"></a><span class="st">}</span></span>
 <span id="cb2-81"><a href="#cb2-81" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-82"><a href="#cb2-82" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-83"><a href="#cb2-83" aria-hidden="true" tabindex="-1"></a></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb2-82"><a href="#cb2-82" aria-hidden="true" tabindex="-1"></a><span class="st">iris_mod  &lt;- iris |&gt; mutate(pl = Petal.Length &gt; 1.5,</span></span>
+<span id="cb2-83"><a href="#cb2-83" aria-hidden="true" tabindex="-1"></a><span class="st">  pl2 = ifelse(pl, "long","short"))</span></span>
+<span id="cb2-84"><a href="#cb2-84" aria-hidden="true" tabindex="-1"></a><span class="st">table1(Species ~ Sepal.Length+Sepal.Width+pl2, data = iris_mod)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<section id="notes" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="notes"><span class="header-section-number">1.1</span> Notes</h2>
+<p>2023-08-03 17:37:04</p>
+<ol type="1">
+<li><p>can’t handle logical variables yet</p></li>
+<li><p>categorical values should be indented</p></li>
+<li><p>add option to change continuous summary to median IQR</p></li>
+<li><p>review atable, furniture, and tableone for features.</p></li>
+<li><p>maybe a “style” option for NEJM, JAMA, lancet</p></li>
+</ol>
+</section>
+</section>
+<section id="bug-1" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Bug 1</h1>
+<div class="cell" data-fig.showtext="false">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(palmerpenguins)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># table1(species ~ sex + body_mass_g, data = penguins) */</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Error in `map2()`:</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co"># ℹ In index: 1.</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co"># ℹ With name: sex.</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Caused by error in `UseMethod()`:</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="co"># ! no applicable method for 'row_name' applied to an object of class "factor"</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Run `rlang::last_trace()` to see where the error occurred.</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>solved. needed to add “addNA” to the p-value.factor function.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">zz.table1.c</span> = function<span class="er">(</span><span class="fu">df</span>, form, pv=TRUE, totl=TRUE, grps=TRUE<span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">(</span><span class="ex">!require</span><span class="er">(</span><span class="st">"pacman"</span><span class="kw">))</span> <span class="ex">install.packages</span><span class="er">(</span><span class="st">"pacman"</span><span class="ex">,</span> repo=<span class="st">"cran.rstudio.com"</span><span class="kw">)</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="ex">pacman::p_load</span><span class="er">(</span><span class="ex">janitor</span> <span class="kw">)</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="ex">prep</span> =  function<span class="er">(</span><span class="fu">df</span>, form<span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="ex">dfr</span> = df %<span class="op">&gt;</span>%</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="ex">ungroup</span> %<span class="op">&gt;</span>%</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="ex">sel</span><span class="er">(</span><span class="ex">all.vars</span><span class="er">(</span><span class="va">form</span><span class="op">[</span>[3<span class="op">]</span><span class="ex">]</span><span class="kw">))</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="ex">df_list</span> = dfr %<span class="op">&gt;</span>%  split<span class="er">(</span> <span class="ex">df_grp</span><span class="kw">)</span> <span class="ex">%</span><span class="op">&gt;</span>%</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="ex">list_merge</span><span class="er">(</span><span class="bu">.</span>, <span class="st">"Total"</span> = dfr<span class="kw">)</span> <span class="ex">%</span><span class="op">&gt;</span>%</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="fu">purrr::transpose()</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="ex">process1</span> = function<span class="er">(</span><span class="ex">x</span><span class="kw">){</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="ex">pv_chr</span> = data.frame<span class="er">(</span><span class="va">x</span><span class="op">[</span>[<span class="st">"Total"</span><span class="op">]</span><span class="ex">],df_grp</span><span class="kw">)</span> <span class="ex">%</span><span class="op">&gt;</span>%</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="ex">pvalue_chr</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="ex">ll</span> = x[[length<span class="er">(</span><span class="ex">x</span><span class="kw">)</span><span class="ex">]]%</span><span class="op">&gt;</span>%  as.factor %<span class="op">&gt;</span>% levels</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="ex">ll_indent</span> = paste<span class="er">(</span><span class="st">"</span><span class="dt">\\</span><span class="st">hspace{5mm}   "</span><span class="ex">,ll</span><span class="kw">)</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="ex">sum_chr</span> = x %<span class="op">&gt;</span>%</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>    <span class="ex">lapply</span><span class="er">(</span><span class="kw">function(</span><span class="ex">x</span><span class="kw">)</span> <span class="ex">factor</span><span class="er">(</span><span class="ex">x,</span> levels=ll<span class="kw">))</span> <span class="ex">%</span><span class="op">&gt;</span>%</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>    <span class="ex">map</span><span class="er">(</span><span class="ex">categ</span><span class="kw">)</span>   <span class="ex">%</span><span class="op">&gt;</span>% as_tibble  %<span class="op">&gt;</span>%</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>    <span class="ex">cbind</span><span class="er">(</span><span class="va">variable</span><span class="op">=</span>ll_indent, <span class="bu">.</span>, <span class="st">'p-value'</span>=NA<span class="kw">)</span> <span class="ex">%</span><span class="op">&gt;</span>%</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>    <span class="ex">mut</span><span class="er">(</span><span class="va">variable</span><span class="op">=</span>as.character<span class="kw">(</span><span class="ex">variable</span><span class="kw">))</span> <span class="ex">%</span><span class="op">&gt;</span>%</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>    <span class="ex">rbind</span><span class="er">(</span><span class="ex">NA,</span> .<span class="kw">)</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a><span class="va">sum_chr</span><span class="op">[</span><span class="dv">1</span>,ncol(sum_chr)<span class="op">]=</span>pv_chr</span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="co"># browser()</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span><span class="kw">(</span><span class="ex">sum_chr</span><span class="kw">)</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a><span class="ex">process2</span> = function<span class="er">(</span><span class="ex">x</span><span class="kw">){</span></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a><span class="ex">pv_num</span> = data.frame<span class="er">(</span><span class="va">x</span><span class="op">[</span>[<span class="st">"Total"</span><span class="op">]</span><span class="ex">],df_grp</span><span class="kw">)</span> <span class="ex">%</span><span class="op">&gt;</span>%</span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>   <span class="ex">pvalue_num</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a><span class="ex">sum_num</span> = x %<span class="op">&gt;</span>%</span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>   <span class="ex">map_chr</span><span class="er">(</span><span class="ex">contin</span><span class="kw">)</span>  <span class="ex">%</span><span class="op">&gt;</span>%</span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>   <span class="ex">bind_rows</span>  %<span class="op">&gt;</span>%</span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>   <span class="ex">cbind</span><span class="er">(</span><span class="va">variable</span><span class="op">=</span>NA,., <span class="st">'p-value'</span><span class="ex">=pv_num</span><span class="kw">)</span>    <span class="ex">%</span><span class="op">&gt;</span>%</span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>   <span class="ex">mut</span><span class="er">(</span><span class="va">variable</span><span class="op">=</span>as.character<span class="kw">(</span><span class="ex">variable</span><span class="kw">))</span></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span><span class="kw">(</span><span class="ex">sum_num</span><span class="kw">)</span></span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a><span class="va">contin</span><span class="op">=</span> <span class="kw">function(</span><span class="ex">x</span><span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a><span class="ex">s1</span> = zz.sum.min<span class="er">(</span><span class="ex">x</span><span class="kw">)</span></span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a><span class="ex">paste0</span><span class="er">(</span><span class="va">s1</span><span class="op">[</span><span class="st">'Mean'</span><span class="op">]</span><span class="ex">,</span><span class="st">"$</span><span class="dt">\\</span><span class="st">pm$"</span><span class="ex">,</span> s1[<span class="st">'SD'</span>], <span class="st">" ({</span><span class="dt">\\</span><span class="st">scriptsize $"</span>,s1[<span class="st">'N'</span>],<span class="st">"$})"</span><span class="kw">)</span> <span class="kw">}</span></span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a><span class="ex">categ</span> = function<span class="er">(</span><span class="ex">x</span><span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a><span class="ex">prps</span> = table<span class="er">(</span><span class="ex">x</span><span class="kw">)</span> <span class="ex">%</span><span class="op">&gt;</span>% prop.table  %<span class="op">&gt;</span>%  round<span class="er">(</span><span class="ex">2</span><span class="kw">)</span><span class="ex">*100</span></span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a><span class="ex">cnts_prps</span> =  table<span class="er">(</span><span class="ex">x</span><span class="kw">)</span><span class="ex">%</span><span class="op">&gt;</span>%</span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a><span class="ex">paste0</span><span class="er">(</span><span class="bu">.</span>,<span class="st">" ({</span><span class="dt">\\</span><span class="st">scriptsize $"</span>,prps,<span class="st">"$})"</span><span class="kw">)</span></span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a><span class="ex">pvalue_num</span> = function<span class="er">(</span><span class="fu">df</span><span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a><span class="ex">tidy</span><span class="er">(</span><span class="ex">anova</span><span class="er">(</span><span class="ex">lm</span><span class="er">(</span><span class="ex">as.formula</span><span class="er">(</span><span class="fu">paste</span><span class="er">(</span><span class="ex">names</span><span class="er">(</span><span class="fu">df</span><span class="kw">)</span><span class="ex">,</span>  <span class="dt">\</span></span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a>collapse=<span class="st">"~"</span><span class="kw">))</span><span class="ex">,</span> data = df<span class="kw">)))</span><span class="va">$p</span><span class="ex">.value[1]</span></span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a><span class="ex">pvalue_chr</span> = function<span class="er">(</span><span class="fu">df</span><span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a><span class="ex">tab</span> =  table<span class="er">(</span><span class="va">df</span><span class="op">[</span>,1<span class="op">]</span><span class="ex">,</span> df[,2]<span class="kw">)</span></span>
+<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a><span class="ex">ifelse</span><span class="er">((</span><span class="va">nrow</span>(<span class="va">tab</span>) <span class="op">&gt;=</span><span class="dv">2</span> <span class="op">&amp;</span> <span class="va">ncol</span>(<span class="va">tab</span>) <span class="op">&gt;=</span><span class="dv">2</span><span class="kw">)</span><span class="ex">,</span></span>
+<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a>       <span class="ex">stats::fisher.test</span><span class="er">(</span><span class="ex">tab,simulate.p.value=T</span><span class="kw">)</span><span class="va">$p</span><span class="ex">.value,</span> NA<span class="kw">)</span></span>
+<span id="cb4-53"><a href="#cb4-53" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span>
+<span id="cb4-54"><a href="#cb4-54" aria-hidden="true" tabindex="-1"></a><span class="ex">fieldclass</span> =sapply<span class="er">(</span><span class="fu">df</span>, class<span class="kw">)</span><span class="ex">%</span><span class="op">&gt;</span>%  enframe %<span class="op">&gt;</span>%</span>
+<span id="cb4-55"><a href="#cb4-55" aria-hidden="true" tabindex="-1"></a><span class="ex">slice</span><span class="er">(</span><span class="ex">match</span><span class="er">(</span><span class="ex">all.vars</span><span class="er">(</span><span class="va">form</span><span class="op">[</span>[3<span class="op">]</span><span class="ex">]</span><span class="kw">)</span><span class="ex">,name</span><span class="kw">))</span></span>
+<span id="cb4-56"><a href="#cb4-56" aria-hidden="true" tabindex="-1"></a><span class="ex">groupclass</span> =sapply<span class="er">(</span><span class="fu">df</span>, class<span class="kw">)</span><span class="ex">%</span><span class="op">&gt;</span>%  enframe %<span class="op">&gt;</span>%</span>
+<span id="cb4-57"><a href="#cb4-57" aria-hidden="true" tabindex="-1"></a><span class="ex">slice</span><span class="er">(</span><span class="ex">match</span><span class="er">(</span><span class="ex">all.vars</span><span class="er">(</span><span class="va">form</span><span class="op">[</span>[2<span class="op">]</span><span class="ex">]</span><span class="kw">)</span><span class="ex">,name</span><span class="kw">))</span></span>
+<span id="cb4-58"><a href="#cb4-58" aria-hidden="true" tabindex="-1"></a><span class="ex">df_grp</span><span class="op">&lt;</span>- df %<span class="op">&gt;</span>%  pull<span class="er">(</span><span class="ex">groupclass</span><span class="va">$name</span><span class="kw">)</span></span>
+<span id="cb4-59"><a href="#cb4-59" aria-hidden="true" tabindex="-1"></a><span class="ex">df2</span> = prep<span class="er">(</span><span class="fu">df</span>, form<span class="kw">)</span></span>
+<span id="cb4-60"><a href="#cb4-60" aria-hidden="true" tabindex="-1"></a><span class="ex">out</span> = df2 %<span class="op">&gt;</span>%</span>
+<span id="cb4-61"><a href="#cb4-61" aria-hidden="true" tabindex="-1"></a>  <span class="ex">map_if</span><span class="er">(</span><span class="ex">fieldclass</span><span class="va">$value</span><span class="ex">==</span><span class="st">"numeric"</span> <span class="kw">|</span> <span class="ex">fieldclass</span><span class="va">$value</span><span class="ex">==</span><span class="st">"integer"</span><span class="ex">,</span> <span class="dt">\</span></span>
+<span id="cb4-62"><a href="#cb4-62" aria-hidden="true" tabindex="-1"></a>  function<span class="er">(</span><span class="ex">x</span><span class="kw">)</span><span class="ex">{process2</span><span class="er">(</span><span class="ex">x</span><span class="kw">)</span><span class="er">}</span><span class="kw">)</span> <span class="ex">%</span><span class="op">&gt;</span>%</span>
+<span id="cb4-63"><a href="#cb4-63" aria-hidden="true" tabindex="-1"></a>       <span class="ex">map_if</span><span class="er">(</span><span class="ex">fieldclass</span><span class="va">$value</span><span class="ex">==</span><span class="st">"character"</span><span class="ex">,</span> function<span class="er">(</span><span class="ex">x</span><span class="kw">)</span><span class="ex">{process1</span><span class="er">(</span><span class="ex">x</span><span class="kw">)</span><span class="er">}</span><span class="kw">)</span>   <span class="ex">%</span><span class="op">&gt;</span>%</span>
+<span id="cb4-64"><a href="#cb4-64" aria-hidden="true" tabindex="-1"></a><span class="ex">imap</span><span class="er">(</span><span class="kw">function(</span><span class="ex">x,y</span><span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb4-65"><a href="#cb4-65" aria-hidden="true" tabindex="-1"></a>         <span class="ex">y2</span> = ifelse<span class="er">(</span><span class="ex">fieldclass</span><span class="va">$value</span><span class="ex">[fieldclass</span><span class="va">$name</span> == y]==<span class="st">"character"</span>,</span>
+<span id="cb4-66"><a href="#cb4-66" aria-hidden="true" tabindex="-1"></a>             <span class="fu">paste</span><span class="er">(</span><span class="ex">y,</span> <span class="st">"-- {</span><span class="dt">\\</span><span class="st">scriptsize no. (</span><span class="dt">\\</span><span class="st">%)}"</span><span class="kw">)</span><span class="ex">,</span> y<span class="kw">)</span></span>
+<span id="cb4-67"><a href="#cb4-67" aria-hidden="true" tabindex="-1"></a>     <span class="va">x</span><span class="op">[</span><span class="dv">1</span>,1<span class="op">]=</span>y2</span>
+<span id="cb4-68"><a href="#cb4-68" aria-hidden="true" tabindex="-1"></a><span class="co">#  browser()</span></span>
+<span id="cb4-69"><a href="#cb4-69" aria-hidden="true" tabindex="-1"></a>     <span class="ex">x</span></span>
+<span id="cb4-70"><a href="#cb4-70" aria-hidden="true" tabindex="-1"></a>       <span class="kw">})</span> <span class="ex">%</span><span class="op">&gt;</span>%</span>
+<span id="cb4-71"><a href="#cb4-71" aria-hidden="true" tabindex="-1"></a>   <span class="fu">bind_rows()</span></span>
+<span id="cb4-72"><a href="#cb4-72" aria-hidden="true" tabindex="-1"></a><span class="va">on</span><span class="op">=</span> <span class="ex">names</span><span class="er">(</span><span class="ex">out</span><span class="kw">)</span></span>
+<span id="cb4-73"><a href="#cb4-73" aria-hidden="true" tabindex="-1"></a><span class="ex">nn</span> = tabyl<span class="er">(</span><span class="ex">df_grp</span><span class="kw">)</span><span class="ex">%</span><span class="op">&gt;</span>%</span>
+<span id="cb4-74"><a href="#cb4-74" aria-hidden="true" tabindex="-1"></a>    <span class="fu">adorn_totals()</span> <span class="ex">%</span><span class="op">&gt;</span>%</span>
+<span id="cb4-75"><a href="#cb4-75" aria-hidden="true" tabindex="-1"></a>    <span class="ex">pull</span><span class="er">(</span><span class="ex">n</span><span class="kw">)</span></span>
+<span id="cb4-76"><a href="#cb4-76" aria-hidden="true" tabindex="-1"></a><span class="ex">names</span><span class="er">(</span><span class="ex">out</span><span class="kw">)</span> <span class="ex">=</span> paste<span class="er">(</span><span class="ex">rep</span><span class="er">(</span><span class="st">"{</span><span class="dt">\\</span><span class="st">bf"</span><span class="ex">,length</span><span class="er">(</span><span class="ex">on</span><span class="kw">))</span><span class="ex">,on,</span> <span class="dt">\</span></span>
+<span id="cb4-77"><a href="#cb4-77" aria-hidden="true" tabindex="-1"></a>c<span class="er">(</span><span class="st">""</span><span class="ex">,paste0</span><span class="er">(</span><span class="st">"</span><span class="dt">\\</span><span class="st">scriptsize(n="</span><span class="ex">,nn,</span><span class="st">")"</span><span class="kw">)</span><span class="ex">,</span><span class="st">""</span><span class="kw">)</span><span class="ex">,rep</span><span class="er">(</span><span class="st">"}"</span><span class="ex">,length</span><span class="er">(</span><span class="ex">on</span><span class="kw">)))</span></span>
+<span id="cb4-78"><a href="#cb4-78" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">(</span><span class="ex">!grps</span><span class="kw">)</span> <span class="ex">out</span> = out %<span class="op">&gt;</span>%  sel<span class="er">(</span><span class="ex">contains</span><span class="er">(</span><span class="st">"variable"</span><span class="kw">)</span><span class="ex">,</span><span class="dt">\</span></span>
+<span id="cb4-79"><a href="#cb4-79" aria-hidden="true" tabindex="-1"></a><span class="ex">contains</span><span class="er">(</span><span class="st">"Total"</span><span class="kw">)</span><span class="ex">,contains</span><span class="er">(</span><span class="st">"p-value"</span><span class="kw">))</span></span>
+<span id="cb4-80"><a href="#cb4-80" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">(</span><span class="ex">!pv</span><span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb4-81"><a href="#cb4-81" aria-hidden="true" tabindex="-1"></a>    <span class="ex">out</span> = out %<span class="op">&gt;</span>%  sel<span class="er">(</span><span class="ex">-contains</span><span class="er">(</span><span class="st">"p-value"</span><span class="kw">))}</span></span>
+<span id="cb4-82"><a href="#cb4-82" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">(</span><span class="ex">!totl</span><span class="kw">)</span> <span class="ex">out</span> = out %<span class="op">&gt;</span>%  sel<span class="er">(</span><span class="ex">-contains</span><span class="er">(</span><span class="st">"Total"</span><span class="kw">))</span></span>
+<span id="cb4-83"><a href="#cb4-83" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span><span class="kw">(</span><span class="ex">out</span><span class="kw">)</span></span>
+<span id="cb4-84"><a href="#cb4-84" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 
 
 </section>
@@ -387,13 +505,13 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div id="quarto-appendix" class="default"><section class="quarto-appendix-contents"><h2 class="anchored quarto-appendix-heading">Reuse</h2><div quarto-reuse="quarto-reuse" class="quarto-appendix-contents"><a rel="license" href="https://creativecommons.org/licenses/by/4.0/">https://creativecommons.org/licenses/by/4.0/</a></div></section><section class="quarto-appendix-contents"><h2 class="anchored quarto-appendix-heading">Citation</h2><div><div class="quarto-appendix-secondary-label">BibTeX citation:</div><pre class="sourceCode code-with-copy quarto-appendix-bibtex"><code class="sourceCode bibtex">@online{(ryy)glennthomas2023,
   author = {Ronald (Ryy) Glenn Thomas},
   title = {{Writing} a Simple {R} Package in {S3.}},
-  date = {2023-07-18},
+  date = {2023-11-25},
   url = {https://focusonr.org/posts/simpleS3},
   langid = {en}
 }
 </code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre><div class="quarto-appendix-secondary-label">For attribution, please cite this work as:</div><div id="ref-(ryy)glennthomas2023" class="csl-entry quarto-appendix-citeas" role="doc-biblioentry">
 Ronald (Ryy) Glenn Thomas. 2023.<span>“Writing a Simple R Package in S3.
-.”</span> July 18, 2023. <a href="https://focusonr.org/posts/simpleS3">https://focusonr.org/posts/simpleS3</a>.
+.”</span> November 25, 2023. <a href="https://focusonr.org/posts/simpleS3">https://focusonr.org/posts/simpleS3</a>.
 </div></div></section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
 window.document.addEventListener("DOMContentLoaded", function (event) {
