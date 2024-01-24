@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Ronald (Ryy) Glenn Thomas">
-<meta name="dcterms.date" content="2023-09-02">
+<meta name="dcterms.date" content="2024-01-20">
 <meta name="description" content="This is the first in a series of posts offering suggested strategies for leveraging open source technologies to effectively host data science analysis apps and reports online.">
 
 <title>Thomas Lab home page - A simple process to get your Shiny app online (securely).</title>
@@ -190,9 +190,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul class="collapse">
   <li><a href="#pre-launch-tasks" id="toc-pre-launch-tasks" class="nav-link" data-scroll-target="#pre-launch-tasks"><span class="header-section-number">3.1</span> Pre-launch tasks</a></li>
   <li><a href="#post-launch-steps-on-local-workstation" id="toc-post-launch-steps-on-local-workstation" class="nav-link" data-scroll-target="#post-launch-steps-on-local-workstation"><span class="header-section-number">3.2</span> Post-Launch steps on local workstation</a></li>
-  <li><a href="#docker" id="toc-docker" class="nav-link" data-scroll-target="#docker"><span class="header-section-number">3.3</span> Docker</a></li>
-  <li><a href="#post-launch-steps-on-remote-server" id="toc-post-launch-steps-on-remote-server" class="nav-link" data-scroll-target="#post-launch-steps-on-remote-server"><span class="header-section-number">3.4</span> Post-Launch steps on remote server</a></li>
-  <li><a href="#tip-construct-ssh-config-file." id="toc-tip-construct-ssh-config-file." class="nav-link" data-scroll-target="#tip-construct-ssh-config-file."><span class="header-section-number">3.5</span> Tip construct ssh config file.</a></li>
+  <li><a href="#we-want-to-containerize-our-app." id="toc-we-want-to-containerize-our-app." class="nav-link" data-scroll-target="#we-want-to-containerize-our-app."><span class="header-section-number">3.3</span> We want to containerize our app.</a></li>
+  <li><a href="#docker" id="toc-docker" class="nav-link" data-scroll-target="#docker"><span class="header-section-number">3.4</span> Docker</a></li>
+  <li><a href="#post-launch-steps-on-remote-server" id="toc-post-launch-steps-on-remote-server" class="nav-link" data-scroll-target="#post-launch-steps-on-remote-server"><span class="header-section-number">3.5</span> Post-Launch steps on remote server</a></li>
+  <li><a href="#tip-construct-ssh-config-file." id="toc-tip-construct-ssh-config-file." class="nav-link" data-scroll-target="#tip-construct-ssh-config-file."><span class="header-section-number">3.6</span> Tip construct ssh config file.</a></li>
   </ul></li>
   </ul>
 <div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="index.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
@@ -241,7 +242,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">September 2, 2023</p>
+      <p class="date">January 20, 2024</p>
     </div>
   </div>
   
@@ -283,7 +284,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  output<span class="sc">$</span>plot <span class="ot">&lt;-</span> <span class="fu">renderPlot</span>({</span>
 <span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plot</span>(delta, <span class="fu">pow</span>(), <span class="at">cex=</span><span class="fl">1.5</span>, <span class="at">ylab=</span><span class="st">"power"</span>)</span>
 <span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">abline</span>(<span class="at">h =</span> .<span class="dv">8</span>,  <span class="at">col =</span> <span class="st">"red"</span>, <span class="at">lwd =</span><span class="fl">2.5</span>, <span class="at">lty =</span> <span class="dv">4</span>)</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">abline</span>(<span class="at">v =</span> <span class="fu">eff</span>(), <span class="at">col =</span> <span class="st">"blue"</span>,<span class="at">lwd =</span><span class="fl">2.5</span>, <span class="at">lty =</span> <span class="dv">4</span>)})  </span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">abline</span>(<span class="at">v =</span> <span class="fu">eff</span>(), <span class="at">col =</span> <span class="st">"blue"</span>,<span class="at">lwd =</span><span class="fl">2.5</span>, <span class="at">lty =</span> <span class="dv">4</span>)})</span>
 <span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  output<span class="sc">$</span>eff <span class="ot">&lt;-</span> <span class="fu">renderText</span>(</span>
 <span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">paste0</span>(<span class="st">"Std. effect detectable with power 80% = "</span>, <span class="fu">eff</span>()) )</span>
 <span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>}</span>
@@ -341,7 +342,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>Lastly associate the IP address with the domain name.</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> <span class="at">-i</span> <span class="st">"~/.ssh/power1_app.pem"</span>  ubuntu@rgtlab.org</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>or using the <code>config</code> setup described in Tip 1 at the end of this post.</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> rgtlab.org </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> rgtlab.org</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>The only software tools necessary to install are Docker and Caddy. If you followed the CLI or console based instructions to set up a virtual server <a href="https://focusonr.org/posts/server_setup_aws_cli/index.pdf">here</a> or <a href="https://focusonr.org/posts/server_setup_aws_console/">here</a> Docker and Caddy will be pre-installed.</p>
 <p>Otherwise you can install them with the following commands:</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt update</span>
@@ -358,10 +359,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="post-launch-steps-on-local-workstation" class="level2" data-number="3.2">
 <h2 data-number="3.2" class="anchored" data-anchor-id="post-launch-steps-on-local-workstation"><span class="header-section-number">3.2</span> Post-Launch steps on local workstation</h2>
 <p>To run and host our Shiny app online we need to add a few configuration files to our <code>power1_app</code> development directory.</p>
+</section>
+<section id="we-want-to-containerize-our-app." class="level2" data-number="3.3">
+<h2 data-number="3.3" class="anchored" data-anchor-id="we-want-to-containerize-our-app."><span class="header-section-number">3.3</span> We want to containerize our app.</h2>
+<p>By dockerizing the Shiny app we can assure that whenever its run all the required software and the right versions are ava</p>
 <p>The first configuation file is:</p>
 </section>
-<section id="docker" class="level2 page-columns page-full" data-number="3.3">
-<h2 data-number="3.3" class="anchored" data-anchor-id="docker"><span class="header-section-number">3.3</span> Docker</h2>
+<section id="docker" class="level2 page-columns page-full" data-number="3.4">
+<h2 data-number="3.4" class="anchored" data-anchor-id="docker"><span class="header-section-number">3.4</span> Docker</h2>
 <ol type="1">
 <li>a Docker configuration file (default name <code>Dockerfile</code>)</li>
 </ol>
@@ -423,13 +428,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>      <span class="er">&lt;</span>li<span class="sc">&gt;</span><span class="er">&lt;</span>a href<span class="ot">=</span><span class="st">"./power1_shiny/"</span><span class="sc">&gt;</span>Power1 app<span class="sc">&lt;</span><span class="er">/</span>a<span class="sc">&gt;</span><span class="er">&lt;/</span>li<span class="sc">&gt;</span></span>
 <span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    <span class="er">&lt;/</span>ul<span class="sc">&gt;</span></span>
 <span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="er">&lt;/</span>body<span class="sc">&gt;</span></span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="er">&lt;/</span>html<span class="sc">&gt;</span> </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="er">&lt;/</span>html<span class="sc">&gt;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <p>Once the config files, the index.html file and the Shiny code directory are in place copy we the entire <code>power1_app</code> directory to the server <code>rgtlab.org</code> with the secure copy command:</p>
 <div class="sourceCode" id="cb9"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">scp</span> <span class="at">-i</span> <span class="st">"~/.ssh/power1_app.pem"</span> <span class="at">-r</span> ~/prj/power1_app/  ubuntu@rgtlab.org:~</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
-<section id="post-launch-steps-on-remote-server" class="level2" data-number="3.4">
-<h2 data-number="3.4" class="anchored" data-anchor-id="post-launch-steps-on-remote-server"><span class="header-section-number">3.4</span> Post-Launch steps on remote server</h2>
+<section id="post-launch-steps-on-remote-server" class="level2" data-number="3.5">
+<h2 data-number="3.5" class="anchored" data-anchor-id="post-launch-steps-on-remote-server"><span class="header-section-number">3.5</span> Post-Launch steps on remote server</h2>
 <p>Use ssh to login to the server and cd to <code>power1_app</code> directory</p>
 <p>Build and run the Docker container (using the docker approach allows us to avoid installing both R and Shiny on the virtual server <code>rgtlab.org</code>).</p>
 <div class="sourceCode" id="cb10"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> build <span class="at">-t</span> power1_image .</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -444,8 +449,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>The App launch page will now be available at <code>https://rgtlab.org</code>.</p>
 <p>and you’re good to go!</p>
 </section>
-<section id="tip-construct-ssh-config-file." class="level2" data-number="3.5">
-<h2 data-number="3.5" class="anchored" data-anchor-id="tip-construct-ssh-config-file."><span class="header-section-number">3.5</span> Tip construct ssh config file.</h2>
+<section id="tip-construct-ssh-config-file." class="level2" data-number="3.6">
+<h2 data-number="3.6" class="anchored" data-anchor-id="tip-construct-ssh-config-file."><span class="header-section-number">3.6</span> Tip construct ssh config file.</h2>
 <p>For convenience, construct a <code>config</code> file in <code>~/.ssh</code> as:</p>
 <div class="sourceCode" id="cb15"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="ex">Host</span> rgtlab.org</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="ex">HostName</span> 13.57.139.31 <span class="co"># static IP</span></span>
@@ -454,23 +459,23 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="ex">Port</span> 22  <span class="co"># the default port ssh uses</span></span>
 <span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="ex">IdentityFile</span> ~/.ssh/power1_app.pem</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>then you can ssh into the new server with</p>
-<div class="sourceCode" id="cb16"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sh</span><span class="op">&gt;</span> ssh rgtlab.org </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb16"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sh</span><span class="op">&gt;</span> ssh rgtlab.org</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 
 
 </section>
 </section>
 
-<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents"><h2 class="anchored quarto-appendix-heading">Reuse</h2><div id="quarto-reuse" class="quarto-appendix-contents"><div><a rel="license" href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></div></div></section><section class="quarto-appendix-contents"><h2 class="anchored quarto-appendix-heading">Citation</h2><div><div class="quarto-appendix-secondary-label">BibTeX citation:</div><pre class="sourceCode code-with-copy quarto-appendix-bibtex"><code class="sourceCode bibtex">@online{(ryy) glenn thomas2023,
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents"><h2 class="anchored quarto-appendix-heading">Reuse</h2><div id="quarto-reuse" class="quarto-appendix-contents"><div><a rel="license" href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></div></div></section><section class="quarto-appendix-contents"><h2 class="anchored quarto-appendix-heading">Citation</h2><div><div class="quarto-appendix-secondary-label">BibTeX citation:</div><pre class="sourceCode code-with-copy quarto-appendix-bibtex"><code class="sourceCode bibtex">@online{(ryy) glenn thomas2024,
   author = {(Ryy) Glenn Thomas, Ronald},
   title = {A Simple Process to Get Your {Shiny} App Online (Securely).},
   pages = {undefined},
-  date = {2023-09-02},
+  date = {2024-01-20},
   url = {https://focusonr.org/posts/dockerize_simple},
   langid = {en}
 }
-</code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre><div class="quarto-appendix-secondary-label">For attribution, please cite this work as:</div><div id="ref-(ryy) glenn thomas2023" class="csl-entry quarto-appendix-citeas" role="listitem">
-(Ryy) Glenn Thomas, Ronald. 2023. <span>“A Simple Process to Get Your
-Shiny App Online (Securely). .”</span> September 2, 2023. <a href="https://focusonr.org/posts/dockerize_simple">https://focusonr.org/posts/dockerize_simple</a>.
+</code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre><div class="quarto-appendix-secondary-label">For attribution, please cite this work as:</div><div id="ref-(ryy) glenn thomas2024" class="csl-entry quarto-appendix-citeas" role="listitem">
+(Ryy) Glenn Thomas, Ronald. 2024. <span>“A Simple Process to Get Your
+Shiny App Online (Securely). .”</span> January 20, 2024. <a href="https://focusonr.org/posts/dockerize_simple">https://focusonr.org/posts/dockerize_simple</a>.
 </div></div></section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
 window.document.addEventListener("DOMContentLoaded", function (event) {
