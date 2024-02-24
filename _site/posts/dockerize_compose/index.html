@@ -2,12 +2,12 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.4.549">
+<meta name="generator" content="quarto-1.4.550">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Ronald (Ryy) Glenn Thomas">
-<meta name="dcterms.date" content="2024-02-05">
+<meta name="dcterms.date" content="2024-02-21">
 <meta name="description" content="This is the first in a series of posts offering suggested strategies for leveraging open source technologies to effectively host data science analysis apps and reports online.”">
 
 <title>Thomas Lab home page - A Concise Strategy to get your Shiny App Online, Securely and Continuously Updated.</title>
@@ -72,12 +72,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
-<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-dark.css" rel="prefetch" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../../site_libs/bootstrap/bootstrap-dark.min.css" rel="prefetch" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -159,7 +157,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </ul>
           </div> <!-- /navcollapse -->
           <div class="quarto-navbar-tools">
-  <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
 </div>
       </div> <!-- /container-fluid -->
     </nav>
@@ -243,7 +240,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">February 5, 2024</p>
+      <p class="date">February 21, 2024</p>
     </div>
   </div>
   
@@ -261,16 +258,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 utm_medium=referral&amp;utm_content=creditCopyText">Nathan Waters</a> </font></p>
 </div></div><section id="introduction" class="level1" data-number="1">
 <h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
-<p>This is the second in a series of posts offering suggested strategies to solving one of the central challenges in the practice of data science, i.e.&nbsp;how to effectively communicate analysis results to clients and collaborators. The strategies are all based on a set of open source tools: linux, R, Shiny, Docker, docker-compose, Git, and Caddy. In this post we’ll make use of two cloud services: Gitlab and Amazon Web Service (AWS). Further posts will describe alternative cloud services, e.g.&nbsp;using the low cost cloud service: Hetzner.</p>
+<p>This is the second in a series of posts offering suggested strategies for solving one of the central practical challenges in the practice of data science, i.e.&nbsp;how to effectively communicate analysis results to clients and collaborators. The strategies offered in this series of posts are all based on open source tools: linux, R, Shiny, Docker, Git, and Caddy. In this post we’ll make use of two cloud services: Gitlab and Amazon Web Service (AWS). Further posts will describe alternative cloud services, e.g.&nbsp;using the low cost service: Hetzner.</p>
 <p>A similarly straightforward strategy, but one that avoids Gitlab and docker-compose is described here <a href="https://focusonr.org/blog/dockerize_simple/">( here )</a>. This approach provides a simpler initial construction, but a more labor intensive updating process.</p>
-<p>This post provides a proof-of-concept example of how to apply these technologies for hosting an interactive Shiny application. We start with a simple, stand-alone Shiny app on our local workstation, and end with an app running securely on a dedicated website with a custom domain name.</p>
+<p>Here we post provide a proof-of-concept example applying these technologies with the goal of hosting an interactive Shiny application. We start with a simple, stand-alone Shiny app on our local workstation, and end the process with the app running securely on a dedicated website with a custom domain name.</p>
 </section>
 <section id="methods" class="level1 page-columns page-full" data-number="2">
 <h1 data-number="2"><span class="header-section-number">2</span> Methods</h1>
-<p>We’ll start by creating a workspace for the project locally. We accomplish this indirectly by initiating a repo on <code>Gitlab</code> and then <code>clone</code> it to our local workstation. In other words, log into Gitlab and create a new empty private repo, call it, e.g.&nbsp;<code>power1_app</code>. Then on your local workstation navigate to your Shiny development directory, say e.g.&nbsp;<code>~/prj/shiny</code>, and clone the <code>power1_app</code> repo from Gitlab:</p>
+<p>We’ll start by creating a repository for the project on the cloud service <code>Gitlab</code>. We’ll then <code>clone</code> the repo to our local workstation to create a local workspace. In other words, we’ll log into Gitlab and create a new empty private repo, call it, e.g.&nbsp;<code>power1_app</code>. Then on your local workstation navigate to a development directory, say e.g.&nbsp;<code>~/prj/shiny</code>, and clone the <code>power1_app</code> repo from Gitlab:</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> cd <span class="ex">~/prj/shiny</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span> git <span class="ex">clone</span> https://gitlab.com/rgt47/power1_app.git</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>After cloning the repo to change directories into <code>~/prj/shiny/power1_app</code> and create two new sub-directories, <code>power1_shiny</code> and <code>site</code>. These directories will house our shiny app and our web site landing page, respectively.</p>
+<p>After cloning the repo change directories into <code>~/prj/shiny/power1_app</code> and create two new sub-directories, <code>power1_shiny</code> and <code>site</code>. These directories will house our shiny app and our web site landing page, respectively.</p>
 <div class="callout callout-style-default callout-note callout-titled">
 <div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-1-contents" aria-controls="callout-1" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
@@ -832,14 +829,14 @@ Details for creating a gitlab repo follow:
   author = {(Ryy) Glenn Thomas, Ronald},
   title = {A {Concise} {Strategy} to Get Your {Shiny} {App} {Online,}
     {Securely} and {Continuously} {Updated.}},
-  date = {2024-02-05},
+  date = {2024-02-21},
   url = {https://focusonr.org/posts/dockerize_compose},
   langid = {en}
 }
 </code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre><div class="quarto-appendix-secondary-label">For attribution, please cite this work as:</div><div id="ref-(ryy) glenn thomas2024" class="csl-entry quarto-appendix-citeas" role="listitem">
 (Ryy) Glenn Thomas, Ronald. 2024. <span>“A Concise Strategy to Get Your
 Shiny App Online, Securely and Continuously Updated. .”</span> February
-5, 2024. <a href="https://focusonr.org/posts/dockerize_compose">https://focusonr.org/posts/dockerize_compose</a>.
+21, 2024. <a href="https://focusonr.org/posts/dockerize_compose">https://focusonr.org/posts/dockerize_compose</a>.
 </div></div></section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
 window.document.addEventListener("DOMContentLoaded", function (event) {
@@ -861,150 +858,6 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     }
   }
   toggleBodyColorPrimary();  
-  const disableStylesheet = (stylesheets) => {
-    for (let i=0; i < stylesheets.length; i++) {
-      const stylesheet = stylesheets[i];
-      stylesheet.rel = 'prefetch';
-    }
-  }
-  const enableStylesheet = (stylesheets) => {
-    for (let i=0; i < stylesheets.length; i++) {
-      const stylesheet = stylesheets[i];
-      stylesheet.rel = 'stylesheet';
-    }
-  }
-  const manageTransitions = (selector, allowTransitions) => {
-    const els = window.document.querySelectorAll(selector);
-    for (let i=0; i < els.length; i++) {
-      const el = els[i];
-      if (allowTransitions) {
-        el.classList.remove('notransition');
-      } else {
-        el.classList.add('notransition');
-      }
-    }
-  }
-  const toggleGiscusIfUsed = (isAlternate, darkModeDefault) => {
-    const baseTheme = document.querySelector('#giscus-base-theme')?.value ?? 'light';
-    const alternateTheme = document.querySelector('#giscus-alt-theme')?.value ?? 'dark';
-    let newTheme = '';
-    if(darkModeDefault) {
-      newTheme = isAlternate ? baseTheme : alternateTheme;
-    } else {
-      newTheme = isAlternate ? alternateTheme : baseTheme;
-    }
-    const changeGiscusTheme = () => {
-      // From: https://github.com/giscus/giscus/issues/336
-      const sendMessage = (message) => {
-        const iframe = document.querySelector('iframe.giscus-frame');
-        if (!iframe) return;
-        iframe.contentWindow.postMessage({ giscus: message }, 'https://giscus.app');
-      }
-      sendMessage({
-        setConfig: {
-          theme: newTheme
-        }
-      });
-    }
-    const isGiscussLoaded = window.document.querySelector('iframe.giscus-frame') !== null;
-    if (isGiscussLoaded) {
-      changeGiscusTheme();
-    }
-  }
-  const toggleColorMode = (alternate) => {
-    // Switch the stylesheets
-    const alternateStylesheets = window.document.querySelectorAll('link.quarto-color-scheme.quarto-color-alternate');
-    manageTransitions('#quarto-margin-sidebar .nav-link', false);
-    if (alternate) {
-      enableStylesheet(alternateStylesheets);
-      for (const sheetNode of alternateStylesheets) {
-        if (sheetNode.id === "quarto-bootstrap") {
-          toggleBodyColorMode(sheetNode);
-        }
-      }
-    } else {
-      disableStylesheet(alternateStylesheets);
-      toggleBodyColorPrimary();
-    }
-    manageTransitions('#quarto-margin-sidebar .nav-link', true);
-    // Switch the toggles
-    const toggles = window.document.querySelectorAll('.quarto-color-scheme-toggle');
-    for (let i=0; i < toggles.length; i++) {
-      const toggle = toggles[i];
-      if (toggle) {
-        if (alternate) {
-          toggle.classList.add("alternate");     
-        } else {
-          toggle.classList.remove("alternate");
-        }
-      }
-    }
-    // Hack to workaround the fact that safari doesn't
-    // properly recolor the scrollbar when toggling (#1455)
-    if (navigator.userAgent.indexOf('Safari') > 0 && navigator.userAgent.indexOf('Chrome') == -1) {
-      manageTransitions("body", false);
-      window.scrollTo(0, 1);
-      setTimeout(() => {
-        window.scrollTo(0, 0);
-        manageTransitions("body", true);
-      }, 40);  
-    }
-  }
-  const isFileUrl = () => { 
-    return window.location.protocol === 'file:';
-  }
-  const hasAlternateSentinel = () => {  
-    let styleSentinel = getColorSchemeSentinel();
-    if (styleSentinel !== null) {
-      return styleSentinel === "alternate";
-    } else {
-      return false;
-    }
-  }
-  const setStyleSentinel = (alternate) => {
-    const value = alternate ? "alternate" : "default";
-    if (!isFileUrl()) {
-      window.localStorage.setItem("quarto-color-scheme", value);
-    } else {
-      localAlternateSentinel = value;
-    }
-  }
-  const getColorSchemeSentinel = () => {
-    if (!isFileUrl()) {
-      const storageValue = window.localStorage.getItem("quarto-color-scheme");
-      return storageValue != null ? storageValue : localAlternateSentinel;
-    } else {
-      return localAlternateSentinel;
-    }
-  }
-  const darkModeDefault = false;
-  let localAlternateSentinel = darkModeDefault ? 'alternate' : 'default';
-  // Dark / light mode switch
-  window.quartoToggleColorScheme = () => {
-    // Read the current dark / light value 
-    let toAlternate = !hasAlternateSentinel();
-    toggleColorMode(toAlternate);
-    setStyleSentinel(toAlternate);
-    toggleGiscusIfUsed(toAlternate, darkModeDefault);
-  };
-  // Ensure there is a toggle, if there isn't float one in the top right
-  if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
-    const a = window.document.createElement('a');
-    a.classList.add('top-right');
-    a.classList.add('quarto-color-scheme-toggle');
-    a.href = "";
-    a.onclick = function() { try { window.quartoToggleColorScheme(); } catch {} return false; };
-    const i = window.document.createElement("i");
-    i.classList.add('bi');
-    a.appendChild(i);
-    window.document.body.appendChild(a);
-  }
-  // Switch to dark mode if need be
-  if (hasAlternateSentinel()) {
-    toggleColorMode(true);
-  } else {
-    toggleColorMode(false);
-  }
   const icon = "";
   const anchorJS = new window.AnchorJS();
   anchorJS.options = {
