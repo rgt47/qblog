@@ -474,5 +474,110 @@
     "title": "Donna Brogan problem",
     "section": "",
     "text": "quarto\n\n\n\n1 Introduction\nThe question arises as to whether in the case of two treatment groups and two timepoints does MMRM reduce exactly to ANCOVA.\n\nDoes if matter if the analysis is adjusting for baseline (i.e. not including baseline in MMRM response.).\nDoes it matter if response is observed value or is a change score? Consider the article by Brogan and Kutner [@Brogan1980] Here are all the responses bundled into a single markdown code block:\n\nI'll explain the key differences between using a linear model and a random effects model for your clinical trial scenario.\n\nLinear Model (e.g., ANCOVA):\nIn a linear model, you would typically analyze the post-treatment measurements as your dependent variable, with treatment group as a predictor and pre-treatment measurements as a covariate. This approach:\n- Treats all observations as independent\n- Handles missing post-treatment data through complete case analysis (dropping those cases)\n- Assumes the relationship between pre and post measurements is the same for all subjects\n- Same error variance for all observations\n\nRandom Effects Model (Mixed Model):\nThis approach would model both time points together and account for the fact that measurements from the same person are correlated. Key features:\n- Includes subject-specific random effects to account for individual differences\n- Can handle missing data more efficiently (uses all available data)\n- Allows for different variances at different time points\n- Models the correlation between repeated measurements within subjects\n\nFor your specific case, the random effects model has several advantages:\n1. It can use all available data, including subjects who only have pre-treatment measurements\n2. It accounts for the correlation between pre and post measurements from the same person\n3. It provides more accurate standard errors by modeling the dependency structure\n\nThe basic random effects model for your case might look like this in R:\n```r\nlmer(outcome ~ time * treatment + (1|subject))\nWould you like me to elaborate on any of these points or provide more specific guidance for your analysis?\n\nYes, the linear model can be seen as a special case of the random effects model where the random effects variance components are set to zero. This means:\n\nIn mathematical terms, if we write a random effects model as: y = Xβ + Zu + ε where:\n\nXβ represents the fixed effects\nZu represents the random effects\nε is the error term\n\nWhen we set Var(u) = 0, the random effects term Zu disappears, and we’re left with: y = Xβ + ε which is the standard linear model\nThis relationship is why random effects models are sometimes called “mixed models” - they mix both fixed effects (like your linear model) and random effects together. The fixed effects portion is essentially the same as what you’d have in a linear model.\nYou can actually test this relationship formally using a likelihood ratio test comparing the models, though there are some technical considerations since you’re testing on the boundary of the parameter space (variance can’t be negative).\n\nThis hierarchical relationship between the models is one reason why random effects models are so flexible - they can “collapse” down to simpler models when the data suggest that’s appropriate. Would you like me to explain more about how this relationship plays out in practice with your clinical trial data? ``` \n\n\n2 Methods\nSet up the model, no covariates, in both settings with 3 observations per group. Work out analytic formula\n\nRepeat for unequal variances\nRepeat w covariates\n\n\n\n3 Methods\n\n\n4 Results\n\n\n5 Code\n\n\n\n6 References\n\n\n\n\n\nReuseCC BY 4.0CitationBibTeX citation:@online{(ryy)_glenn_thomas2025,\n  author = {(Ryy) Glenn Thomas, Ronald},\n  title = {Donna {Brogan} Problem},\n  date = {2025-01-31},\n  url = {https://focusonr.org/posts/donna/},\n  langid = {en}\n}\nFor attribution, please cite this work as:\n(Ryy) Glenn Thomas, Ronald. 2025. “Donna Brogan Problem.”\nJanuary 31, 2025. https://focusonr.org/posts/donna/."
+  },
+  {
+    "objectID": "posts/configure_vim_for_r/chat_blog_draft.html",
+    "href": "posts/configure_vim_for_r/chat_blog_draft.html",
+    "title": "Setting Up a Vim Environment for Data Science Work",
+    "section": "",
+    "text": "Vim is a powerful and efficient text editor that, with the right setup, can serve as a productive environment for data science work in Python, Julia, and R. This guide will walk you through the essential plugins and configurations to transform Vim into a fully functional IDE for data science.\n\n\n\nLightweight & Fast: Vim is optimized for speed, making it ideal for large datasets and remote work.\nHighly Customizable: You can tailor Vim to your workflow using plugins.\nKeyboard-Driven Efficiency: Eliminates the need for excessive mouse usage.\n\n\n\n\nA plugin manager is essential for maintaining and updating plugins. Popular choices include:\n\nvim-plug: A minimalist and fast plugin manager.\nVundle: An alternative with similar capabilities.\nPathogen: Loads plugins automatically from a directory.\n\nTo install vim-plug, add the following to your .vimrc:\ncall plug#begin('~/.vim/plugged')\n\n\" Add plugins here\n\ncall plug#end()\nRun :PlugInstall after adding plugins.\n\n\n\nPlug 'sheerun/vim-polyglot' \" Syntax highlighting for multiple languages\nPlug 'vim-python/python-syntax' \" Improved Python syntax highlighting\nPlug 'JuliaEditorSupport/julia-vim' \" Julia support\nPlug 'jalvesaq/Nvim-R' \" R support for Vim\n\n\n\nPlug 'neoclide/coc.nvim', {'branch': 'release'} \" LSP support\nPlug 'dense-analysis/ale' \" Linter for multiple languages\nInstall language servers:\npip install python-lsp-server\njulia -e 'using Pkg; Pkg.add(\"LanguageServer\")'\nR -e 'install.packages(\"languageserver\")'\nConfigure CoC in .vimrc:\nlet g:coc_global_extensions = ['coc-pyright', 'coc-julia', 'coc-r-lsp']\n\n\n\nPlug 'junegunn/fzf', { 'do': { -&gt; fzf#install() } }\nPlug 'junegunn/fzf.vim' \" Fuzzy file searching\nPlug 'preservim/tagbar' \" Code structure browser\nPlug 'scrooloose/nerdtree' \" File explorer\n\nOpen NERDTree with :NERDTreeToggle\nOpen Tagbar with :TagbarToggle\n\n\n\n\nPlug 'jpalardy/vim-slime' \" Send code to a REPL\nPlug 'hkupty/iron.nvim' \" Interactive REPL support\nConfigure Vim-Slime:\nlet g:slime_target = 'tmux'\nlet g:slime_python_ipython = 1\n\n\n\nPlug 'tpope/vim-fugitive' \" Git commands in Vim\nPlug 'airblade/vim-gitgutter' \" Show git diff in sign column\nUse :Git for Git commands and :GitGutterToggle to view changes inline.\n\n\n\nPlug 'psf/black', { 'for': 'python' } \" Black formatter for Python\nPlug 'mhartington/formatter.nvim' \" General-purpose formatter\nConfigure formatter.nvim for Julia and R:\nrequire('formatter').setup({\n  filetype = {\n    python = {require('formatter.filetypes.python').black},\n    julia = {require('formatter.filetypes.julia').default},\n    r = {require('formatter.filetypes.r').styler}\n  }\n})\nUse :Format to auto-format code.\n\n\n\nPlug 'sirver/ultisnips' \" Snippet engine\nPlug 'honza/vim-snippets' \" Collection of snippets\nUse &lt;Tab&gt; to expand snippets.\n\n\n\nPlug 'puremourning/vimspector' \" Multi-language debugger\nFollow the setup guide for debugging Python, Julia, and R.\n\n\n\nPlug 'tpope/vim-surround' \" Quick surround modifications\nPlug 'tpope/vim-commentary' \" Easy commenting\nPlug 'junegunn/goyo.vim' \" Distraction-free mode\n\n\n\n\nScreenshots & Diagrams: Use images to demonstrate concepts.\nCode Blocks: Ensure syntax highlighting for better readability.\nSEO Optimization: Use keywords like Vim plugins for data science.\n\n\n\n\nWith this setup, Vim becomes a powerful tool for data science work, supporting Python, Julia, and R. Whether you need syntax highlighting, REPL integration, or debugging, these plugins will help you create an efficient workflow.\nWhat are your favorite Vim plugins for data science? Share your thoughts in the comments!\n\n\n\n\n\n\nHow to Exit Vim"
+  },
+  {
+    "objectID": "posts/configure_vim_for_r/chat_blog_draft.html#why-use-vim-for-data-science",
+    "href": "posts/configure_vim_for_r/chat_blog_draft.html#why-use-vim-for-data-science",
+    "title": "Setting Up a Vim Environment for Data Science Work",
+    "section": "",
+    "text": "Lightweight & Fast: Vim is optimized for speed, making it ideal for large datasets and remote work.\nHighly Customizable: You can tailor Vim to your workflow using plugins.\nKeyboard-Driven Efficiency: Eliminates the need for excessive mouse usage."
+  },
+  {
+    "objectID": "posts/configure_vim_for_r/chat_blog_draft.html#getting-started-package-management",
+    "href": "posts/configure_vim_for_r/chat_blog_draft.html#getting-started-package-management",
+    "title": "Setting Up a Vim Environment for Data Science Work",
+    "section": "",
+    "text": "A plugin manager is essential for maintaining and updating plugins. Popular choices include:\n\nvim-plug: A minimalist and fast plugin manager.\nVundle: An alternative with similar capabilities.\nPathogen: Loads plugins automatically from a directory.\n\nTo install vim-plug, add the following to your .vimrc:\ncall plug#begin('~/.vim/plugged')\n\n\" Add plugins here\n\ncall plug#end()\nRun :PlugInstall after adding plugins."
+  },
+  {
+    "objectID": "posts/configure_vim_for_r/chat_blog_draft.html#enhancing-syntax-highlighting-language-support",
+    "href": "posts/configure_vim_for_r/chat_blog_draft.html#enhancing-syntax-highlighting-language-support",
+    "title": "Setting Up a Vim Environment for Data Science Work",
+    "section": "",
+    "text": "Plug 'sheerun/vim-polyglot' \" Syntax highlighting for multiple languages\nPlug 'vim-python/python-syntax' \" Improved Python syntax highlighting\nPlug 'JuliaEditorSupport/julia-vim' \" Julia support\nPlug 'jalvesaq/Nvim-R' \" R support for Vim"
+  },
+  {
+    "objectID": "posts/configure_vim_for_r/chat_blog_draft.html#code-completion-linting",
+    "href": "posts/configure_vim_for_r/chat_blog_draft.html#code-completion-linting",
+    "title": "Setting Up a Vim Environment for Data Science Work",
+    "section": "",
+    "text": "Plug 'neoclide/coc.nvim', {'branch': 'release'} \" LSP support\nPlug 'dense-analysis/ale' \" Linter for multiple languages\nInstall language servers:\npip install python-lsp-server\njulia -e 'using Pkg; Pkg.add(\"LanguageServer\")'\nR -e 'install.packages(\"languageserver\")'\nConfigure CoC in .vimrc:\nlet g:coc_global_extensions = ['coc-pyright', 'coc-julia', 'coc-r-lsp']"
+  },
+  {
+    "objectID": "posts/configure_vim_for_r/chat_blog_draft.html#navigating-code-files",
+    "href": "posts/configure_vim_for_r/chat_blog_draft.html#navigating-code-files",
+    "title": "Setting Up a Vim Environment for Data Science Work",
+    "section": "",
+    "text": "Plug 'junegunn/fzf', { 'do': { -&gt; fzf#install() } }\nPlug 'junegunn/fzf.vim' \" Fuzzy file searching\nPlug 'preservim/tagbar' \" Code structure browser\nPlug 'scrooloose/nerdtree' \" File explorer\n\nOpen NERDTree with :NERDTreeToggle\nOpen Tagbar with :TagbarToggle"
+  },
+  {
+    "objectID": "posts/configure_vim_for_r/chat_blog_draft.html#interactive-execution-repl-integration",
+    "href": "posts/configure_vim_for_r/chat_blog_draft.html#interactive-execution-repl-integration",
+    "title": "Setting Up a Vim Environment for Data Science Work",
+    "section": "",
+    "text": "Plug 'jpalardy/vim-slime' \" Send code to a REPL\nPlug 'hkupty/iron.nvim' \" Interactive REPL support\nConfigure Vim-Slime:\nlet g:slime_target = 'tmux'\nlet g:slime_python_ipython = 1"
+  },
+  {
+    "objectID": "posts/configure_vim_for_r/chat_blog_draft.html#version-control-integration",
+    "href": "posts/configure_vim_for_r/chat_blog_draft.html#version-control-integration",
+    "title": "Setting Up a Vim Environment for Data Science Work",
+    "section": "",
+    "text": "Plug 'tpope/vim-fugitive' \" Git commands in Vim\nPlug 'airblade/vim-gitgutter' \" Show git diff in sign column\nUse :Git for Git commands and :GitGutterToggle to view changes inline."
+  },
+  {
+    "objectID": "posts/configure_vim_for_r/chat_blog_draft.html#code-formatting-auto-indentation",
+    "href": "posts/configure_vim_for_r/chat_blog_draft.html#code-formatting-auto-indentation",
+    "title": "Setting Up a Vim Environment for Data Science Work",
+    "section": "",
+    "text": "Plug 'psf/black', { 'for': 'python' } \" Black formatter for Python\nPlug 'mhartington/formatter.nvim' \" General-purpose formatter\nConfigure formatter.nvim for Julia and R:\nrequire('formatter').setup({\n  filetype = {\n    python = {require('formatter.filetypes.python').black},\n    julia = {require('formatter.filetypes.julia').default},\n    r = {require('formatter.filetypes.r').styler}\n  }\n})\nUse :Format to auto-format code."
+  },
+  {
+    "objectID": "posts/configure_vim_for_r/chat_blog_draft.html#snippet-support-for-faster-coding",
+    "href": "posts/configure_vim_for_r/chat_blog_draft.html#snippet-support-for-faster-coding",
+    "title": "Setting Up a Vim Environment for Data Science Work",
+    "section": "",
+    "text": "Plug 'sirver/ultisnips' \" Snippet engine\nPlug 'honza/vim-snippets' \" Collection of snippets\nUse &lt;Tab&gt; to expand snippets."
+  },
+  {
+    "objectID": "posts/configure_vim_for_r/chat_blog_draft.html#debugging-tools",
+    "href": "posts/configure_vim_for_r/chat_blog_draft.html#debugging-tools",
+    "title": "Setting Up a Vim Environment for Data Science Work",
+    "section": "",
+    "text": "Plug 'puremourning/vimspector' \" Multi-language debugger\nFollow the setup guide for debugging Python, Julia, and R."
+  },
+  {
+    "objectID": "posts/configure_vim_for_r/chat_blog_draft.html#additional-productivity-plugins",
+    "href": "posts/configure_vim_for_r/chat_blog_draft.html#additional-productivity-plugins",
+    "title": "Setting Up a Vim Environment for Data Science Work",
+    "section": "",
+    "text": "Plug 'tpope/vim-surround' \" Quick surround modifications\nPlug 'tpope/vim-commentary' \" Easy commenting\nPlug 'junegunn/goyo.vim' \" Distraction-free mode"
+  },
+  {
+    "objectID": "posts/configure_vim_for_r/chat_blog_draft.html#visual-aids-accessibility",
+    "href": "posts/configure_vim_for_r/chat_blog_draft.html#visual-aids-accessibility",
+    "title": "Setting Up a Vim Environment for Data Science Work",
+    "section": "",
+    "text": "Screenshots & Diagrams: Use images to demonstrate concepts.\nCode Blocks: Ensure syntax highlighting for better readability.\nSEO Optimization: Use keywords like Vim plugins for data science."
+  },
+  {
+    "objectID": "posts/configure_vim_for_r/chat_blog_draft.html#conclusion",
+    "href": "posts/configure_vim_for_r/chat_blog_draft.html#conclusion",
+    "title": "Setting Up a Vim Environment for Data Science Work",
+    "section": "",
+    "text": "With this setup, Vim becomes a powerful tool for data science work, supporting Python, Julia, and R. Whether you need syntax highlighting, REPL integration, or debugging, these plugins will help you create an efficient workflow.\nWhat are your favorite Vim plugins for data science? Share your thoughts in the comments!"
+  },
+  {
+    "objectID": "posts/configure_vim_for_r/chat_blog_draft.html#exiting",
+    "href": "posts/configure_vim_for_r/chat_blog_draft.html#exiting",
+    "title": "Setting Up a Vim Environment for Data Science Work",
+    "section": "",
+    "text": "How to Exit Vim"
   }
 ]
