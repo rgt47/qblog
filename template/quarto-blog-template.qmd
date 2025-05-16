@@ -1,9 +1,9 @@
 ---
 title: "Your Technical Blog Post Title"
-author: "Your Name"
-date: "2024-12-22"
+author: "Ronald G. Thomas"
+date: last-modified
 categories: [R, Analysis, Tutorial]
-image: "thumbnail.png"
+image: "img/thumbnail.png"
 description: |
   A brief, engaging description of your post (appears in previews and social sharing).
   Keep it under 2-3 sentences.
@@ -14,19 +14,22 @@ tags:
 format:
   html:
     toc: true
-    code-fold: false
+    code-fold: show
     code-tools: true
+    code-copy: true
+    highlight-style: github
+    toc-location: right
 execute:
   warning: false
   message: false
+  echo: true
 ---
 
-```{r setup}
+```{r}
 #| label: load-packages
 #| include: false
 
 library(tidyverse)
-library(here)
 # Add other required packages
 ```
 
@@ -37,6 +40,12 @@ Brief introduction that:
 - Hooks the reader with an interesting problem or observation
 - States the purpose of your analysis/tutorial
 - Outlines what readers will learn or gain
+
+::: {.callout-tip}
+## Key Takeaway
+
+Highlight the main insight readers will gain from this post.
+:::
 
 ## Required Packages and Setup
 
@@ -57,7 +66,8 @@ Brief explanation of why these packages were chosen and any setup requirements.
 #| label: data-prep
 
 # Data loading and initial preparation
-data <- read_csv("peng.csv")
+# Replace with your actual data source
+data <- mtcars
 glimpse(data)
 ```
 
@@ -74,11 +84,24 @@ glimpse(data)
 #| fig-cap: "Description of your visualization"
 
 # Your analysis code here
-ggplot(data) +
-  # Your visualization
+ggplot(data, aes(x = mpg, y = hp)) +
+  geom_point(aes(color = factor(cyl)), alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE, color = "#1e3a5f") +
+  labs(
+    title = "Relationship between MPG and Horsepower",
+    subtitle = "Grouped by number of cylinders",
+    x = "Miles Per Gallon",
+    y = "Horsepower",
+    color = "Cylinders"
+  ) +
+  theme_minimal()
 ```
 
 Explain what you found and why it's interesting.
+
+::: {.column-margin}
+Here you can add additional context, references, or notes that might be helpful but aren't essential to the main flow of the post.
+:::
 
 ### Step 2: Main Analysis
 
@@ -86,6 +109,8 @@ Explain what you found and why it's interesting.
 #| label: analysis
 
 # Core analysis code
+model <- lm(mpg ~ hp + wt + cyl, data = data)
+summary(model)
 ```
 
 Walk through your analysis, explaining:
@@ -99,17 +124,34 @@ Walk through your analysis, explaining:
 #| label: visualization
 #| fig-width: 8
 #| fig-height: 6
+#| fig-cap: "Visualization of your results with clear interpretation"
 
 # Create compelling visualizations
+library(broom)
+augmented_data <- augment(model)
+
+ggplot(augmented_data, aes(x = .fitted, y = .resid)) +
+  geom_point(alpha = 0.7) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(
+    title = "Residual Plot",
+    x = "Fitted Values",
+    y = "Residuals"
+  ) +
+  theme_minimal()
 ```
 
 Interpret your results and explain their significance.
 
 ## Key Takeaways
 
+::: {.callout-note}
+## Summary of Findings
+
 - Bullet point summary of main findings
 - Practical applications
 - Important insights
+:::
 
 ## Reproducibility
 
@@ -132,8 +174,3 @@ sessionInfo()
 - Cite your sources
 - Link to relevant documentation
 - Credit other contributors
-
----
-<!-- R-bloggers submission metadata -->
-Tags: R, your-topic-tags
-Category: R
