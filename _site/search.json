@@ -133,123 +133,284 @@
     "text": "5.3 Tip 3 ssh config file.\nFor convenience, construct a config file in ~/.ssh as:\n\n\n\nHost rgtlab.org\nHostName 13.57.139.31 # static IP\nUser ubuntu # default user on ubuntu server\nPort 22  # the default port ssh uses\nIdentityFile ~/.ssh/power1_app.pem\nthen you can ssh into the new server with\nsh&gt; ssh rgtlab.org"
   },
   {
-    "objectID": "posts/setupquarto/index.html",
-    "href": "posts/setupquarto/index.html",
-    "title": "Setting up a minimal Quarto blog",
+    "objectID": "posts/dockerize_simple/index.html",
+    "href": "posts/dockerize_simple/index.html",
+    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
     "section": "",
-    "text": "quarto"
+    "text": "Photo by Nathan Waters on Unsplash"
   },
   {
-    "objectID": "posts/setupquarto/index.html#prerequisites",
-    "href": "posts/setupquarto/index.html#prerequisites",
-    "title": "Setting up a minimal Quarto blog",
-    "section": "3.1 Prerequisites",
-    "text": "3.1 Prerequisites\nIn development"
+    "objectID": "posts/dockerize_simple/index.html#introduction",
+    "href": "posts/dockerize_simple/index.html#introduction",
+    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
+    "section": "1 Introduction",
+    "text": "1 Introduction\nThis guide demonstrates how to deploy a Shiny application from your local workstation to a secure web environment. We’ll use a stack of open-source technologies including Linux, R, Shiny, Docker, and Caddy, deployed on AWS EC2. While we focus on AWS here, the principles apply to other cloud providers like Hetzner, which we’ll cover in future posts."
   },
   {
-    "objectID": "posts/setupquarto/index.html#step-by-step-implementation",
-    "href": "posts/setupquarto/index.html#step-by-step-implementation",
-    "title": "Setting up a minimal Quarto blog",
-    "section": "3.2 Step-by-Step Implementation",
-    "text": "3.2 Step-by-Step Implementation\nIn development"
+    "objectID": "posts/dockerize_simple/index.html#prerequisites",
+    "href": "posts/dockerize_simple/index.html#prerequisites",
+    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
+    "section": "2 Prerequisites",
+    "text": "2 Prerequisites\nBefore beginning this tutorial, you’ll need:\n\nA working Shiny application on your local machine\nAn AWS account with permissions to create EC2 instances\nBasic familiarity with the Linux command line\nGit (optional, for version control)"
   },
   {
-    "objectID": "posts/setupquarto/index.html#key-takeaways",
-    "href": "posts/setupquarto/index.html#key-takeaways",
-    "title": "Setting up a minimal Quarto blog",
-    "section": "3.3 Key Takeaways",
-    "text": "3.3 Key Takeaways\nIn development"
+    "objectID": "posts/dockerize_simple/index.html#the-example-application",
+    "href": "posts/dockerize_simple/index.html#the-example-application",
+    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
+    "section": "3 The Example Application",
+    "text": "3 The Example Application\nLet’s start with a simple but practical example: hosting a shiny web application that provides a power calculator for two-sample t-tests. While straightforward, this application demonstrates all the key deployment concepts.\nHere is the code for the Shiny app (The app is intentionally minimal, using only base R functions, with a minimum of reactive widgets and layout commands.):\n\nPower Calculator Shiny App Code (power1_shiny/app.R)\nui &lt;- fluidPage(\n  titlePanel(\"Power Calculator for Two Group Parallel Designs\"),\n  sliderInput(\"N\", \"Total Sample Size:\", min = 0, max = 300, value = 100),\n  plotOutput(\"plot\"),\n  verbatimTextOutput(\"eff\"))\n\nserver &lt;- function(input, output, session) {\n  delta = seq(0, 1.5,.05)\n  pow = reactive(sapply(delta, function(x) power.t.test(input$N, d=x)$power ))\n  eff =  renderText(power.t.test(input$N, power=.8)$d)\n  output$plot &lt;- renderPlot({\n    plot(delta, pow(), cex=1.5, ylab=\"power\")\n    abline(h = .8,  col = \"red\", lwd =2.5, lty = 4)\n    abline(v = eff(), col = \"blue\",lwd =2.5, lty = 4)})\n  output$eff &lt;- renderText(\n    paste0(\"Std. effect detectable with power 80% = \", eff()) )\n}\nshinyApp(ui, server)\n\n\n\n\n\n\nShiny app interface"
   },
   {
-    "objectID": "posts/setupquarto/index.html#further-reading",
-    "href": "posts/setupquarto/index.html#further-reading",
-    "title": "Setting up a minimal Quarto blog",
-    "section": "3.4 Further Reading",
-    "text": "3.4 Further Reading\nIn development"
+    "objectID": "posts/dockerize_simple/index.html#step-by-step-implementation",
+    "href": "posts/dockerize_simple/index.html#step-by-step-implementation",
+    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
+    "section": "4 Step-by-Step Implementation",
+    "text": "4 Step-by-Step Implementation\n\n4.1 Deployment Checklist\nAs an overview, to host our Shiny app securely online, we need to:\n\nObtain a static IP address\nRegister a domain name\nConfigure a firewall\nSet up the virtual server\nInstall and configure a web server\nImplement SSL encryption\nSet up user authentication\nConfigure reverse proxy routing\n\nWhile this might seem complex, we’ll break it down into manageable steps.\nDetailed instructions for setting up a virtual server (items 1 through 4 above) on EC2 both through the EC2 console and the command line interface can be found: here and here\n\n\n4.2 Step 1: Server Setup\nFirst, we’ll prepare our AWS EC2 environment: In the course of setting up your server, you’ll need to: 1. Create or access your AWS account 2. Generate SSH key-pair, named for example, power1_app.pem 3. Configure firewall settings, allowing SSH (port 22), HTTP (port 80) traffic and HTTPS (port 443) traffic. 4. Obtain static IP, e.g., 13.57.139.31 5. Register domain name, e.g. rgtlab.org 6. Launch Ubuntu instance (t2-micro is sufficient)\n\n\n4.3 Step 2: Installing Required Software\nconnect to your server via SSH:\nssh -i \"~/.ssh/power1_app.pem\"  ubuntu@rgtlab.org\nOn your server, install Docker and Caddy (a modern web server with automatic HTTPS) using the following commands.\nsudo apt update\nsudo apt install docker.io -y\nsudo apt install -y curl debian-keyring debian-archive-keyring apt-transport-https\ncurl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | \\\nsudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg\ncurl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | \\\nsudo tee /etc/apt/sources.list.d/caddy-stable.list\nsudo apt update\nsudo apt install caddy -y\n\n\n4.4 Step 3: Containerizing the Application\nCreate a Dockerfile in your app directory:\n\nDockerfile Configuration\nFROM rocker/shiny:4.2.0\nRUN rm -rf /srv/shiny-server\nCOPY /power1_shiny/* /srv/shiny-server/\nUSER shiny\nCMD [\"/usr/bin/shiny-server\"]\n\n\n\n4.5 Step 4: Configuring the Web Server\nCreate a Caddyfile:\n\nCaddy Server Configuration\nrgtlab.org {\n    basicauth * /power1_shiny/* {\n        bob $2a$14$pYWd5O7JqNeGLS4m4CKkzemM2pq5ezn9bcTDowofZTl5wRVl8NTJm\n    }\n    root * /var/www/html\n    handle_path /power1_shiny/* {\n            reverse_proxy 0.0.0.0:3838\n    }\n    file_server\n}\n\nCreate an index.html:\n\nLanding Page HTML\n&lt;!DOCTYPE html&gt;\n&lt;html&gt;\n  &lt;body&gt;\n    &lt;h1&gt;Power1 app&lt;/h1&gt;\n    &lt;ul&gt;\n      &lt;li&gt;&lt;a href=\"./power1_shiny/\"&gt;Power1 app&lt;/a&gt;&lt;/li&gt;\n    &lt;/ul&gt;\n  &lt;/body&gt;\n&lt;/html&gt;\n\n\n\n4.6 Step 5: Deployment\n\nCopy files to server:\n\nscp -r ~/prj/power1_app/ ubuntu@rgtlab.org:~\n\nBuild and run Docker container:\n\ndocker build -t power1_image .\ndocker run -d --name=power1_shiny -p 3838:3838 --restart=always power1_image\n\nConfigure Caddy:\n\nsudo cp ./Caddyfile /etc/caddy/\ncp ./index.html /var/www/html/\nsudo systemctl reload caddy\nYour app should now be available at https://rgtlab.org!"
   },
   {
-    "objectID": "posts/plots_from_purrr/index.html",
-    "href": "posts/plots_from_purrr/index.html",
-    "title": "Working example for generating multiple plots inside a map2 call",
+    "objectID": "posts/dockerize_simple/index.html#advanced-tips",
+    "href": "posts/dockerize_simple/index.html#advanced-tips",
+    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
+    "section": "5 Advanced Tips",
+    "text": "5 Advanced Tips\nFor easier SSH access, create a ~/.ssh/config file:\nHost rgtlab.org\nHostName 13.57.139.31\nStrictHostKeyChecking no\nUser ubuntu\nPort 22\nIdentityFile ~/.ssh/power1_app.pem\nThis enables simple SSH access:\nssh rgtlab.org"
+  },
+  {
+    "objectID": "posts/dockerize_simple/index.html#key-takeaways",
+    "href": "posts/dockerize_simple/index.html#key-takeaways",
+    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
+    "section": "6 Key Takeaways",
+    "text": "6 Key Takeaways\n\nDocker containers provide isolation and reproducibility for your Shiny applications\nCaddy web server automatically handles SSL certificates and security\nBasic authentication provides a simple access control mechanism\nAWS EC2 offers a reliable platform for hosting web applications\nThe entire deployment can be automated for continuous delivery workflows"
+  },
+  {
+    "objectID": "posts/dockerize_simple/index.html#further-reading",
+    "href": "posts/dockerize_simple/index.html#further-reading",
+    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
+    "section": "7 Further Reading",
+    "text": "7 Further Reading\n\nShiny Server documentation\nDocker documentation\nCaddy Web Server documentation\nAWS EC2 documentation"
+  },
+  {
+    "objectID": "posts/dockerize_simple/index.html#step-by-step-implementation-1",
+    "href": "posts/dockerize_simple/index.html#step-by-step-implementation-1",
+    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
+    "section": "8 Step-by-Step Implementation",
+    "text": "8 Step-by-Step Implementation\nIn development"
+  },
+  {
+    "objectID": "posts/dockerize_simple/index.html#key-takeaways-1",
+    "href": "posts/dockerize_simple/index.html#key-takeaways-1",
+    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
+    "section": "9 Key Takeaways",
+    "text": "9 Key Takeaways\nIn development"
+  },
+  {
+    "objectID": "posts/dockerize_simple/index.html#further-reading-1",
+    "href": "posts/dockerize_simple/index.html#further-reading-1",
+    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
+    "section": "10 Further Reading",
+    "text": "10 Further Reading\nIn development"
+  },
+  {
+    "objectID": "posts/develop_r_package/index.html",
+    "href": "posts/develop_r_package/index.html",
+    "title": "Setting up an R development environment on github",
     "section": "",
     "text": "purrr"
   },
   {
-    "objectID": "posts/plots_from_purrr/index.html#prerequisites",
-    "href": "posts/plots_from_purrr/index.html#prerequisites",
-    "title": "Working example for generating multiple plots inside a map2 call",
-    "section": "5.1 Prerequisites",
-    "text": "5.1 Prerequisites\nIn development"
+    "objectID": "posts/develop_r_package/index.html#introduction",
+    "href": "posts/develop_r_package/index.html#introduction",
+    "title": "Setting up an R development environment on github",
+    "section": "0.1 Introduction",
+    "text": "0.1 Introduction\nIts often the case that a data scientist needs to share an R function with a co-worker or a student. This post describes a step by step methodology for wrapping the function in a package, that includes a number of support files, and sharing it either via github or CRAN. This may seem like overkill for the simple task of sharing some code, but over time, not having to address the many technical issues that can arise when sharing a code in a more ad hoc manner will undoubtedly be appreciated."
   },
   {
-    "objectID": "posts/plots_from_purrr/index.html#step-by-step-implementation",
-    "href": "posts/plots_from_purrr/index.html#step-by-step-implementation",
-    "title": "Working example for generating multiple plots inside a map2 call",
-    "section": "5.2 Step-by-Step Implementation",
-    "text": "5.2 Step-by-Step Implementation\nIn development"
+    "objectID": "posts/develop_r_package/index.html#the-problemdata",
+    "href": "posts/develop_r_package/index.html#the-problemdata",
+    "title": "Setting up an R development environment on github",
+    "section": "0.2 The Problem/Data",
+    "text": "0.2 The Problem/Data\nThe initial goal is to create a directory (or repository) that contains the package contents on your local computer. The top level elements of the package are the DESCRIPTION file, the NAMESPACE file, the R directory, the tests directory, and the man directory. Additional files such as a README.md, a LICENSE file are optional but recommended. The DESCRIPTION file contains metadata about the package such as the package name, the version number, the author, and the license. The NAMESPACE file contains the export and import declarations. The R directory contains the R functions. The tests directory contains the unit tests. The man directory contains the documentation for the functions.\n\n0.2.1 Step 1: Initial Repo Setup\nStart by using the various helpful tools in the devtools and usethis packages to facilitate the repository building process.\nOpen R from the shell prompt in your development directory. and run the command usethis::create_package(\"zz_package\") to create the package directory, an R subdirectory, and the DESCRIPTION and NAMESPACE files. Assuming the package will be named zz_package.\nThe code below creates the package directory structure.\ninstall.packages(\"devtools\")\nlibrary(devtools)\nusethis::create_package(\"zz_package\")\nThis creates the following directory structure and generates the DESCRIPTION and NAMESPACE files.\nzz_package ☕ tree --charset=ascii\n.\n|-- DESCRIPTION\n|-- NAMESPACE\n`-- R\n\nzz_package ☕ more DESCRIPTION\nPackage: my_package\nTitle: What the Package Does (One Line, Title Case)\nVersion: 0.0.0.9000\nAuthors@R:\n    person(\"First\", \"Last\", , \"first.last@example.com\", role = c(\"aut\", \"cre\"),\n           comment = c(ORCID = \"YOUR-ORCID-ID\"))\nDescription: What the package does (one paragraph).\nLicense: `use_mit_license()`, `use_gpl3_license()` or friends to pick a\n    license\nEncoding: UTF-8\nRoxygen: list(markdown = TRUE)\nRoxygenNote: 7.3.2\nNext use the usethis package tools to generate repository support files.\nusethis::use_git()\nusethis::use_github()\nuse_gpl_license(version = 3, include_future = TRUE)\nusethis::use_readme_md()\nusethis::use_code_of_conduct(\"rgthomas@ucsd.edu\")\nusethis::use_tidy_contributing()\nNext copy the R file containing the function to the R directory and add a #' Roxygen2 comment block to the top of the file providing a description of the functions in the file.\nThen call devtools::document() to generate the man directory containing the help page.\ndevtools::document()\nAt this point the directory structure looks like this.\njulia prj/zz_package ☕ tree --charset=ascii\n.\n|-- DESCRIPTION   # package Metadata\n|-- NAMESPACE     # Exports and imports declarations\n|-- R             # R functions\n|   `-- zz_package.R\n|-- man           # Documentation for the functions\n    `-- zz_package.Rd\nThe next step is to set up testing.\nusethis::use_testthat()\ncall inside R\nusethis::use_test(\"zz_package\")\nThis open an editor. Enter the unit tests using the test_that function.\n# Test: Empty dataframe error\ntest_that(\"t2f throws an error for empty dataframe\", {\n  empty_df &lt;- data.frame()\n  expect_error(my_package(empty_df, filename = \"empty_table\"), \"`df` must not be empty\")\n})\nInitate a git repository, add the files, and do an initial commit. When any of files change repeat the commit process to commit the changes.\ngit init\ngit add .\ngit commit -m \"Initial commit\"\nOnce all the pieces are in place in the local repository push the content to the cloud. First step is to set up a new repository on github.\nAs the code is developed and additional packages are required add each dependency (e.g. kableExtra) (e.g. kableExtra) (e.g. kableExtra) whth the use_package function. For example if the kableExtra package is required to generate a formatted table add\nusethis::use_package(\"kableExtra\", type = \"Imports\")\nAt interim stages run the build, install, and test functions to ensure that the package is functioning correctly. Finally do a full check using devtools::check(). This reflects the checks that CRAN will perform when you submit the package.\ndevtools::build()\ndevtools::install()\ndevtools::test()\ndevtools::check()"
   },
   {
-    "objectID": "posts/plots_from_purrr/index.html#key-takeaways",
-    "href": "posts/plots_from_purrr/index.html#key-takeaways",
-    "title": "Working example for generating multiple plots inside a map2 call",
-    "section": "5.3 Key Takeaways",
-    "text": "5.3 Key Takeaways\nIn development"
+    "objectID": "posts/develop_r_package/index.html#reproducibility",
+    "href": "posts/develop_r_package/index.html#reproducibility",
+    "title": "Setting up an R development environment on github",
+    "section": "2.1 Reproducibility",
+    "text": "2.1 Reproducibility\n\n# Print session info for reproducibility\nsessionInfo()\n\nR version 4.5.0 (2025-04-11)\nPlatform: aarch64-apple-darwin20\nRunning under: macOS Sequoia 15.5\n\nMatrix products: default\nBLAS:   /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/lib/libRblas.0.dylib \nLAPACK: /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.1\n\nlocale:\n[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8\n\ntime zone: America/Los_Angeles\ntzcode source: internal\n\nattached base packages:\n[1] stats     graphics  grDevices utils     datasets  methods   base     \n\nother attached packages:\n [1] here_1.0.1      lubridate_1.9.4 forcats_1.0.0   stringr_1.5.1  \n [5] dplyr_1.1.4     purrr_1.0.4     readr_2.1.5     tidyr_1.3.1    \n [9] tibble_3.3.0    ggplot2_3.5.2   tidyverse_2.0.0\n\nloaded via a namespace (and not attached):\n [1] gtable_0.3.6       jsonlite_2.0.0     compiler_4.5.0     tidyselect_1.2.1  \n [5] scales_1.4.0       yaml_2.3.10        fastmap_1.2.0      R6_2.6.1          \n [9] generics_0.1.4     knitr_1.50         htmlwidgets_1.6.4  rprojroot_2.0.4   \n[13] pillar_1.10.2      RColorBrewer_1.1-3 tzdb_0.5.0         rlang_1.1.6       \n[17] stringi_1.8.7      xfun_0.52          timechange_0.3.0   cli_3.6.5         \n[21] withr_3.0.2        magrittr_2.0.3     digest_0.6.37      grid_4.5.0        \n[25] hms_1.1.3          lifecycle_1.0.4    vctrs_0.6.5        evaluate_1.0.3    \n[29] glue_1.8.0         farver_2.1.2       rmarkdown_2.29     tools_4.5.0       \n[33] pkgconfig_2.0.3    htmltools_0.5.8.1"
   },
   {
-    "objectID": "posts/plots_from_purrr/index.html#further-reading",
-    "href": "posts/plots_from_purrr/index.html#further-reading",
-    "title": "Working example for generating multiple plots inside a map2 call",
-    "section": "5.4 Further Reading",
-    "text": "5.4 Further Reading\nIn development"
+    "objectID": "posts/develop_r_package/index.html#next-steps",
+    "href": "posts/develop_r_package/index.html#next-steps",
+    "title": "Setting up an R development environment on github",
+    "section": "2.2 Next Steps",
+    "text": "2.2 Next Steps\n\nSuggest areas for further exploration\nMention potential improvements\nInvite reader engagement"
   },
   {
-    "objectID": "posts/install_arch_on_macbook/index.html#connect-to-target-machine-with-ssh",
-    "href": "posts/install_arch_on_macbook/index.html#connect-to-target-machine-with-ssh",
-    "title": "Install Arch Linux on a Macbook Air",
-    "section": "4.1 Connect to target machine with ssh",
-    "text": "4.1 Connect to target machine with ssh\nconfigure WIFI\n\nbash&gt; iwctl\n\nidw&gt; device list (optional) (assume device is wlan0)\nidw&gt; station wlan0 scan (optional)\nidw&gt; station wlan0 connect rgtnet2\npassphrase for rgtnet2\nidw&gt; exit\n(assume the local IP address is 10.0.1.176)\nSet a password for root user. You’ll need it to log in.\nbash&gt; passwd\n  (enter `z` password)\nNew password: z\nRetype new password: z\n\nNow switch over to the mac.\n ssh  root@10.0.1.176"
+    "objectID": "posts/develop_r_package/index.html#references",
+    "href": "posts/develop_r_package/index.html#references",
+    "title": "Setting up an R development environment on github",
+    "section": "2.3 References",
+    "text": "2.3 References\n\nCite your sources\nLink to relevant documentation\nCredit other contributors"
   },
   {
-    "objectID": "posts/install_arch_on_macbook/index.html#begin-install-process",
-    "href": "posts/install_arch_on_macbook/index.html#begin-install-process",
-    "title": "Install Arch Linux on a Macbook Air",
-    "section": "4.2 Begin install process",
-    "text": "4.2 Begin install process\nFirst step:\n\npartition harddisk:\n\nbash&gt; cfdisk /dev/nvme0n1\nUse interface to create two partitions:\n\nEFI type of size 1gb\nroot of size entire rest of disk.\nwrite partition to disk\n\ncheck the partition:\n\nFormat the partitions.\n\nEFI disk is fat32\nRoot is ext4\n\n\n# run in three parts\n# part 1\nmkfs.fat -F32 /dev/nvme0n1p1\nmkfs.ext4 /dev/nvme0n1p2\nloadkeys mac-us\ntimedatectl set-ntp true\nmount /dev/nvme0n1p2 /mnt\nreflector -p https  --save /etc/pacman.d/mirrorlist --country US --latest 15\\\n    --sort rate \npacman -Sy\npacstrap /mnt base  linux linux-firmware sudo\ngenfstab -U /mnt &gt;&gt; /mnt/etc/fstab\n\n# part 2\narch-chroot /mnt\n\n# part 3\nln -sf /usr/share/zoneinfo/America/Los\\_Angeles /etc/localtime\nsed -i.bak 's/#en_US\\.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen\nlocale-gen\necho zz &gt;&gt; /etc/hostname\necho LANG=en_US.UTF-8  &gt;&gt; locale.conf\npacman -S  --noconfirm networkmanager intel-ucode grub efibootmgr \\\n  docker xorg-server xf86-video-intel gnome cinnamon vim sudo openssh \\\n  zsh base-devel  pandoc r firefox git fzf ripgrep zathura\n\nsystemctl enable NetworkManager gdm sshd docker\nmkdir /boot/efi\nmount /dev/nvme0n1p1 /boot/efi\ngrub-install --target=x86_64-efi --bootloader-id=GRUB --efi-directory=/boot/efi\ngrub-mkconfig -o /boot/grub/grub.cfg\n\n# next items are interactive\n#### in sudoers uncomment # %wheel ALL=(ALL) ALL\n\nvim /etc/sudoers\nuseradd -m -G wheel -s /bin/bash z\npasswd z\n# password for root\npasswd\nexit\numount -l /mnt\nThats it. The base system is ready to go. Reboot and login with the admin username and password you provided earlier. To choose the Cinnamon desktop environment, select z as the user and then click on the selection wheel. The default desktop is Gnome, but an option to switch to Cinnamon is offered."
+    "objectID": "posts/develop_r_package/index.html#step-1-understand-the-devtoolstest-workflow",
+    "href": "posts/develop_r_package/index.html#step-1-understand-the-devtoolstest-workflow",
+    "title": "Setting up an R development environment on github",
+    "section": "3.1 Step 1: Understand the devtools::test() Workflow",
+    "text": "3.1 Step 1: Understand the devtools::test() Workflow\n\nWhat It Does:\n\nRuns all test scripts in the tests/testthat/ directory using the testthat package.\nReports errors, warnings, and failed assertions.\n\nOutput Format:\n\nLists the file and test name where the error occurred.\nProvides the expected and actual outputs (if applicable).\nShows the error message and traceback for debugging."
   },
   {
-    "objectID": "posts/install_arch_on_macbook/index.html#setup-yay",
-    "href": "posts/install_arch_on_macbook/index.html#setup-yay",
-    "title": "Install Arch Linux on a Macbook Air",
-    "section": "6.1 setup YAY",
-    "text": "6.1 setup YAY\n sudo git clone https://aur.archlinux.org/yay-git.git  \n sudo chown -R z:z ./yay-git\n cd yay-git\n makepkg -si\n yay -Syu \n yay -S autojump\n yay -S zsh-autosuggestions-git\n yay -S zotero\nMake zsh the default shell.\n&gt; chsh -s $(which zsh)\nStart Dropbox to transfer working environment\nyay -S dropbox\ndropbox \n# builtin autostart from preferences 8/12/24\nDropbox startup process will launch a “Sign in” web page. Login with Dropbox credentials through web page.\nNext\nRun bash shell script ~/Dropbox/dotfiles/set_up_links.sh to set up symbolic links (e.g. ln -s ~/Dropbox/prj ~/prj). See Appendix 1 below for details.\nSet up the shell (zsh) per the post [link to set up terminal post]\nInstall zotero using software manager and set up syncing (login: rgthomas)\nadd vimium extension to firefox"
+    "objectID": "posts/develop_r_package/index.html#step-2-interpret-the-error-message",
+    "href": "posts/develop_r_package/index.html#step-2-interpret-the-error-message",
+    "title": "Setting up an R development environment on github",
+    "section": "3.2 Step 2: Interpret the Error Message",
+    "text": "3.2 Step 2: Interpret the Error Message\nRun devtools::test() in your R console or IDE terminal and note the output. Focus on:\n\nTest File and Test Name:\n\nExample:\n── Failure (test-zzlongplot.R:31:3): parse_formula handles grouping and faceting variables ──\nresult$y (`actual`) not equal to \"y\" (`expected`).\nThis indicates:\n\nThe error is in test-zzlongplot.R.\nIt occurred in the test named parse_formula handles grouping and faceting variables.\n\n\nError Details:\n\nExample:\n`actual`:   \"y ~ x | group\"\n`expected`: \"y\"\nThe test expected result$y to be \"y\", but the actual output was \"y ~ x | group\".\n\nTraceback:\n\nThe traceback provides a stack of function calls leading to the error. Use traceback() immediately after the test failure to get additional context."
   },
   {
-    "objectID": "posts/install_arch_on_macbook/index.html#prerequisites",
-    "href": "posts/install_arch_on_macbook/index.html#prerequisites",
-    "title": "Install Arch Linux on a Macbook Air",
-    "section": "8.1 Prerequisites",
-    "text": "8.1 Prerequisites\nIn development"
+    "objectID": "posts/develop_r_package/index.html#step-3-isolate-the-problem",
+    "href": "posts/develop_r_package/index.html#step-3-isolate-the-problem",
+    "title": "Setting up an R development environment on github",
+    "section": "3.3 Step 3: Isolate the Problem",
+    "text": "3.3 Step 3: Isolate the Problem\n\nRun the Test Manually:\n\nExtract the failing test from the test file and run it manually:\nlibrary(testthat)\nsource(\"path/to/zzlongplot/R/parse_formula.R\")\nresult &lt;- parse_formula(y ~ x | group ~ facet_y + facet_x)\nexpect_equal(result$y, \"y\")\nThis helps verify if the error occurs outside the testing framework.\n\nVerify Input Data:\n\nEnsure that the inputs to the function are as expected. For example, check if the formula passed to parse_formula matches the expected format.\n\nUse Debugging Tools:\n\nInsert browser() into the failing function to step through its execution:\nparse_formula &lt;- function(formula) {\n  browser()\n  # Function logic...\n}\nWhen the code pauses at browser(), inspect the environment using:\nls()\nprint(formula)"
   },
   {
-    "objectID": "posts/install_arch_on_macbook/index.html#step-by-step-implementation",
-    "href": "posts/install_arch_on_macbook/index.html#step-by-step-implementation",
-    "title": "Install Arch Linux on a Macbook Air",
-    "section": "8.2 Step-by-Step Implementation",
-    "text": "8.2 Step-by-Step Implementation\nIn development"
+    "objectID": "posts/develop_r_package/index.html#step-4-debugging-common-errors",
+    "href": "posts/develop_r_package/index.html#step-4-debugging-common-errors",
+    "title": "Setting up an R development environment on github",
+    "section": "3.4 Step 4: Debugging Common Errors",
+    "text": "3.4 Step 4: Debugging Common Errors\n\n3.4.1 Error 1: Assertion Failures\nExample:\nresult$y (`actual`) not equal to \"y\" (`expected`).\nSteps: 1. Check the test code: - Verify if the expect_equal() or similar assertion accurately reflects the intended behavior. - Example: r      expect_equal(result$y, \"y\") - If the test expectation is wrong, update it to match the correct behavior.\n\nCheck the function output:\n\nRun the function manually with the same inputs and inspect its output:\nparse_formula(y ~ x | group ~ facet_y + facet_x)\n\nFix the function logic:\n\nIf the function output is incorrect, debug the function implementation.\n\n\n\n\n\n3.4.2 Error 2: Unexpected Errors or Warnings\nExample:\nError: Input must be a formula object\nSteps: 1. Reproduce the Error: - Identify the exact input that triggers the error.\n\nAdd Input Validation:\n\nValidate inputs at the start of the function to catch issues early.\nif (!inherits(formula, \"formula\")) {\n  stop(\"Input must be a formula object\")\n}\n\nCheck for Edge Cases:\n\nTest the function with edge cases, such as missing or malformed inputs.\n\n\n\n\n\n3.4.3 Error 3: Missing Dependencies\nExample:\nError: could not find function \"mutate\"\nSteps: 1. Check Imports: - Ensure the missing function’s package is listed under Imports in DESCRIPTION.\n\nExplicitly Load Dependencies:\n\nUse the :: operator to call functions explicitly:\ndplyr::mutate(...)\n\nAdd requireNamespace():\n\nDynamically load namespaces if not attached:\nif (!requireNamespace(\"dplyr\", quietly = TRUE)) {\n  stop(\"dplyr is required for this function.\")\n}"
   },
   {
-    "objectID": "posts/install_arch_on_macbook/index.html#key-takeaways",
-    "href": "posts/install_arch_on_macbook/index.html#key-takeaways",
-    "title": "Install Arch Linux on a Macbook Air",
-    "section": "8.3 Key Takeaways",
-    "text": "8.3 Key Takeaways\nIn development"
+    "objectID": "posts/develop_r_package/index.html#step-5-add-debugging-output",
+    "href": "posts/develop_r_package/index.html#step-5-add-debugging-output",
+    "title": "Setting up an R development environment on github",
+    "section": "3.5 Step 5: Add Debugging Output",
+    "text": "3.5 Step 5: Add Debugging Output\n\nPrint Debugging Information:\n\nAdd print() or cat() statements to inspect variables:\ncat(\"Parsed y:\", y_var, \"\\n\")\n\nUse Logging:\n\nUse a logging package like logger to add structured debug messages."
   },
   {
-    "objectID": "posts/install_arch_on_macbook/index.html#further-reading",
-    "href": "posts/install_arch_on_macbook/index.html#further-reading",
-    "title": "Install Arch Linux on a Macbook Air",
-    "section": "8.4 Further Reading",
-    "text": "8.4 Further Reading\nIn development"
+    "objectID": "posts/develop_r_package/index.html#step-6-rerun-tests",
+    "href": "posts/develop_r_package/index.html#step-6-rerun-tests",
+    "title": "Setting up an R development environment on github",
+    "section": "3.6 Step 6: Rerun Tests",
+    "text": "3.6 Step 6: Rerun Tests\nAfter making changes: 1. Save the modified code and test files. 2. Re-run the tests: r    devtools::test()"
+  },
+  {
+    "objectID": "posts/develop_r_package/index.html#step-7-finalize-fixes",
+    "href": "posts/develop_r_package/index.html#step-7-finalize-fixes",
+    "title": "Setting up an R development environment on github",
+    "section": "3.7 Step 7: Finalize Fixes",
+    "text": "3.7 Step 7: Finalize Fixes\n\nRemove Debugging Code:\n\nRemove browser(), print(), and other debug artifacts.\n\nRe-run Full Checks:\n\nRun devtools::check() to ensure the package passes all CRAN checks."
+  },
+  {
+    "objectID": "posts/develop_r_package/index.html#example-workflow-for-debugging",
+    "href": "posts/develop_r_package/index.html#example-workflow-for-debugging",
+    "title": "Setting up an R development environment on github",
+    "section": "3.8 Example Workflow for Debugging",
+    "text": "3.8 Example Workflow for Debugging\n\nIdentify the failing test:\ndevtools::test()\nManually isolate and debug the test:\nresult &lt;- parse_formula(y ~ x | group ~ facet_y + facet_x)\nprint(result)\nAdd debugging statements:\nparse_formula &lt;- function(formula) {\n  print(formula)\n  browser()\n  # Logic...\n}\nFix the issue and re-test:\ndevtools::test()\nRemove debugging artifacts and run final checks:\ndevtools::check()"
+  },
+  {
+    "objectID": "posts/develop_r_package/index.html#conclusion",
+    "href": "posts/develop_r_package/index.html#conclusion",
+    "title": "Setting up an R development environment on github",
+    "section": "3.9 Conclusion",
+    "text": "3.9 Conclusion\nDebugging devtools::test() errors involves interpreting error messages, isolating failing tests, and systematically diagnosing issues in your code. With these steps, you can identify and fix problems effectively."
+  },
+  {
+    "objectID": "posts/develop_r_package/index.html#prerequisites",
+    "href": "posts/develop_r_package/index.html#prerequisites",
+    "title": "Setting up an R development environment on github",
+    "section": "3.10 Prerequisites",
+    "text": "3.10 Prerequisites\nIn development"
+  },
+  {
+    "objectID": "posts/develop_r_package/index.html#step-by-step-implementation",
+    "href": "posts/develop_r_package/index.html#step-by-step-implementation",
+    "title": "Setting up an R development environment on github",
+    "section": "3.11 Step-by-Step Implementation",
+    "text": "3.11 Step-by-Step Implementation\nIn development"
+  },
+  {
+    "objectID": "posts/develop_r_package/index.html#key-takeaways",
+    "href": "posts/develop_r_package/index.html#key-takeaways",
+    "title": "Setting up an R development environment on github",
+    "section": "3.12 Key Takeaways",
+    "text": "3.12 Key Takeaways\nIn development"
+  },
+  {
+    "objectID": "posts/develop_r_package/index.html#further-reading",
+    "href": "posts/develop_r_package/index.html#further-reading",
+    "title": "Setting up an R development environment on github",
+    "section": "3.13 Further Reading",
+    "text": "3.13 Further Reading\nIn development"
+  },
+  {
+    "objectID": "posts/simpleS3/index.html",
+    "href": "posts/simpleS3/index.html",
+    "title": "Writing a simple R package in S3.",
+    "section": "",
+    "text": "S3 OOP in R"
+  },
+  {
+    "objectID": "posts/simpleS3/index.html#prerequisites",
+    "href": "posts/simpleS3/index.html#prerequisites",
+    "title": "Writing a simple R package in S3.",
+    "section": "2.1 Prerequisites",
+    "text": "2.1 Prerequisites\nIn development"
+  },
+  {
+    "objectID": "posts/simpleS3/index.html#step-by-step-implementation",
+    "href": "posts/simpleS3/index.html#step-by-step-implementation",
+    "title": "Writing a simple R package in S3.",
+    "section": "2.2 Step-by-Step Implementation",
+    "text": "2.2 Step-by-Step Implementation\nIn development"
+  },
+  {
+    "objectID": "posts/simpleS3/index.html#key-takeaways",
+    "href": "posts/simpleS3/index.html#key-takeaways",
+    "title": "Writing a simple R package in S3.",
+    "section": "2.3 Key Takeaways",
+    "text": "2.3 Key Takeaways\nIn development"
+  },
+  {
+    "objectID": "posts/simpleS3/index.html#further-reading",
+    "href": "posts/simpleS3/index.html#further-reading",
+    "title": "Writing a simple R package in S3.",
+    "section": "2.4 Further Reading",
+    "text": "2.4 Further Reading\nIn development"
+  },
+  {
+    "objectID": "tutorials/git-setup-guide/index.html",
+    "href": "tutorials/git-setup-guide/index.html",
+    "title": "Setting up git for (solo) data science workflow",
+    "section": "",
+    "text": "purrr"
+  },
+  {
+    "objectID": "tutorials/git-setup-guide/index.html#prerequisites",
+    "href": "tutorials/git-setup-guide/index.html#prerequisites",
+    "title": "Setting up git for (solo) data science workflow",
+    "section": "4.1 Prerequisites",
+    "text": "4.1 Prerequisites\nIn development"
+  },
+  {
+    "objectID": "tutorials/git-setup-guide/index.html#step-by-step-implementation",
+    "href": "tutorials/git-setup-guide/index.html#step-by-step-implementation",
+    "title": "Setting up git for (solo) data science workflow",
+    "section": "4.2 Step-by-Step Implementation",
+    "text": "4.2 Step-by-Step Implementation\nIn development"
+  },
+  {
+    "objectID": "tutorials/git-setup-guide/index.html#key-takeaways",
+    "href": "tutorials/git-setup-guide/index.html#key-takeaways",
+    "title": "Setting up git for (solo) data science workflow",
+    "section": "4.3 Key Takeaways",
+    "text": "4.3 Key Takeaways\nIn development"
+  },
+  {
+    "objectID": "tutorials/git-setup-guide/index.html#further-reading",
+    "href": "tutorials/git-setup-guide/index.html#further-reading",
+    "title": "Setting up git for (solo) data science workflow",
+    "section": "4.4 Further Reading",
+    "text": "4.4 Further Reading\nIn development"
   },
   {
     "objectID": "posts/simple_vim_plugin/index.html#title-add-the-normal-mode-mapping-zy-for-quarto-files.",
@@ -592,7 +753,7 @@
     "href": "tutorials/index.html",
     "title": "Tutorials",
     "section": "",
-    "text": "Comprehensive tutorials designed to teach you new skills from the ground up. These evergreen resources are regularly updated and expanded with new content.\nEach tutorial includes: - Clear learning objectives - Step-by-step instructions - Working examples - Practice exercises - Troubleshooting tips\n\n\n\n\n\n\n   \n     \n     \n       Order By\n       Default\n         \n          Title\n        \n     \n  \n    \n      \n      \n    \n\n\n\n\n\n\n\n\n\n\nR Package Development: From Idea to CRAN\n\n\nComplete tutorial for creating your first R package\n\n\n\nR\n\n\npackages\n\n\ndevelopment\n\n\ntutorial\n\n\n\nStep-by-step guide to developing, documenting, and submitting an R package to CRAN.\n\n\n\n\n\n\n\nNo matching items"
+    "text": "Comprehensive tutorials designed to teach you new skills from the ground up. These evergreen resources are regularly updated and expanded with new content.\nEach tutorial includes: - Clear learning objectives - Step-by-step instructions - Working examples - Practice exercises - Troubleshooting tips\n\n\n\n\n\n\n   \n     \n     \n       Order By\n       Default\n         \n          Title\n        \n     \n  \n    \n      \n      \n    \n\n\n\n\n\n\n\n\n\n\nR Package Development: From Idea to CRAN\n\n\nComplete tutorial for creating your first R package\n\n\n\nR\n\n\npackages\n\n\ndevelopment\n\n\ntutorial\n\n\n\nStep-by-step guide to developing, documenting, and submitting an R package to CRAN.\n\n\n\n\n\n\n\n\n\n\n\n\n\nSecurely Deploying Your Shiny App Online: A Step-by-Step Guide\n\n\n\nDeployment & Operations\n\n\n\nA practical guide for data scientists on how to deploy R Shiny applications securely using open-source technologies.\n\n\n\n\n\n\n\n\n\n\n\n\n\nSetting up git for (solo) data science workflow\n\n\n\n\n\n\n\n\n\n\nNo matching items"
   },
   {
     "objectID": "references/r-commands-cheatsheet.html",
@@ -1295,11 +1456,109 @@
     "text": "Practical guides for solving specific problems and accomplishing particular tasks. These step-by-step instructions help you tackle real-world challenges.\nEach guide provides: - Clear problem definition - Prerequisites and assumptions - Detailed implementation steps - Alternative approaches - Common pitfalls and solutions\n\n\n\n\n\n\n   \n     \n     \n       Order By\n       Default\n         \n          Title\n        \n     \n  \n    \n      \n      \n    \n\n\n\n\n\n\n\n\nFixing Common R Errors: A Troubleshooting Guide\n\n\nStep-by-step solutions for frequent R programming problems\n\n\n\nR\n\n\ntroubleshooting\n\n\ndebugging\n\n\nguide\n\n\n\nPractical solutions for the most common R errors encountered by data scientists and analysts.\n\n\n\n\n\n\n\nNo matching items"
   },
   {
-    "objectID": "blog/index.html",
-    "href": "blog/index.html",
-    "title": "Blog",
+    "objectID": "blog/research-management/index.html",
+    "href": "blog/research-management/index.html",
+    "title": "Mac Workflow for Tracking Daily Research Progress",
     "section": "",
-    "text": "Welcome to my blog! Here you’ll find my latest thoughts on R programming, data science, statistical computing, and research workflows. These posts capture timely insights, new discoveries, and evolving perspectives on technical topics.\nBrowse by category or scroll through the chronological feed below.\n\n\n\n\n\n\n\n\n\n\n\n\nLooking Ahead: 2025 Plans for R and Data Science\n\n\nNew directions and goals for the year\n\n\n\nreflection\n\n\nplanning\n\n\nR\n\n\ndata-science\n\n\n\nMy plans and goals for R programming, data science, and research computing in 2025.\n\n\n\nJan 1, 2025\n\n\n\n\n\n\n\n\nNo matching items"
+    "text": "quarto"
+  },
+  {
+    "objectID": "blog/research-management/index.html#step-3.1-initialize-a-chatgpt-dictation-prompt-by",
+    "href": "blog/research-management/index.html#step-3.1-initialize-a-chatgpt-dictation-prompt-by",
+    "title": "Mac Workflow for Tracking Daily Research Progress",
+    "section": "4.1 Step 3.1: Initialize a chatGPT dictation prompt by",
+    "text": "4.1 Step 3.1: Initialize a chatGPT dictation prompt by\nrunning this bash script to copy a prelude to the chatGPT prompt to your clipboard: Call it dp (dictation prompt).\n#!/bin/bash\n\n# Get current date and time\ncurrent_time=$(date +\"%Y-%m-%d %H:%M:%S\")\n\n# Get the current directory name\ncurrent_dir=$(basename \"$PWD\")\n\n# Define the prompt with explicit instructions\nprompt=\"I'm an academic biostatistician. I'm working on a data analysis project.\nI'm about to dictate daily research progress notes.  \nWhen I'm done, provide a concise summary that includes:  \n\n1. The date  and time of dictation ($current_time).  The line with date and time\nshould be the second line of the summary. The first line should be blank. The\ndate and time line shound be enclosed in a box of ascii characters to set it apart.\n2. The name of the current research project directory ($current_dir).  \n3. Each line of the summary including the blank line and the date and time line\nand enclosing box lines should begin with \\\"$current_dir:\\\" so that it can be\nextracted using ripgrep.  \n\nThe notes start here: \"\n\n# Copy the prompt to clipboard (MacOS pbcopy)\necho -n \"$prompt\" | pbcopy\n\n# Notify the user\necho \"Prompt copied to clipboard. Paste it into ChatGPT when ready.\"\n\n\n\n\n\nworkflow"
+  },
+  {
+    "objectID": "blog/research-management/index.html#step-3.2-dictating-notes",
+    "href": "blog/research-management/index.html#step-3.2-dictating-notes",
+    "title": "Mac Workflow for Tracking Daily Research Progress",
+    "section": "4.2 Step 3.2: Dictating Notes",
+    "text": "4.2 Step 3.2: Dictating Notes\n\nOpen ChatGPT (done automatically by “dp” script) and follow these steps:\ncopy text from clipboard into the prompt box.\nsubmit prompt to prep chatGPT for summarization.\nClick chatGPT microphone and Dictate your research notes.\nWhen finished dictating submit prompt to ChatGPT for summarization.\nCopy and generated summary onto the clipboard.\n\nUse the following script to append the summary to your daily log: and push the changes to daily_log.md to the remote repository on GitHub.\n#!/bin/bash\n\n# Get the current directory name\ncurrent_dir=$(basename \"$PWD\")\n\n# Get the current date and time\ncurrent_time=$(date +\"%Y-%m-%d %H:%M:%S\")\n\n# Get the clipboard content (MacOS pbpaste)\nclipboard_content=$(pbpaste)\n\n# Echo the output\n#\necho \"$clipboard_content\" &gt;&gt; ~/prj/research_update/daily_log.md\necho \"\" &gt;&gt; ~/prj/research_update/daily_log.md\n\n# Confirm success\necho \"Update for $current_dir appended to daily_log.md in ~/prj/research_update\"\ncd ~/prj/research_update\n  git add .\n    git commit -a -m \"Daily log update $(date +'%Y-%m-%d')\"\n    git push"
+  },
+  {
+    "objectID": "blog/research-management/index.html#prerequisites",
+    "href": "blog/research-management/index.html#prerequisites",
+    "title": "Mac Workflow for Tracking Daily Research Progress",
+    "section": "7.1 Prerequisites",
+    "text": "7.1 Prerequisites\nIn development"
+  },
+  {
+    "objectID": "blog/research-management/index.html#step-by-step-implementation",
+    "href": "blog/research-management/index.html#step-by-step-implementation",
+    "title": "Mac Workflow for Tracking Daily Research Progress",
+    "section": "7.2 Step-by-Step Implementation",
+    "text": "7.2 Step-by-Step Implementation\nIn development"
+  },
+  {
+    "objectID": "blog/research-management/index.html#key-takeaways",
+    "href": "blog/research-management/index.html#key-takeaways",
+    "title": "Mac Workflow for Tracking Daily Research Progress",
+    "section": "7.3 Key Takeaways",
+    "text": "7.3 Key Takeaways\nIn development"
+  },
+  {
+    "objectID": "blog/research-management/index.html#further-reading",
+    "href": "blog/research-management/index.html#further-reading",
+    "title": "Mac Workflow for Tracking Daily Research Progress",
+    "section": "7.4 Further Reading",
+    "text": "7.4 Further Reading\nIn development"
+  },
+  {
+    "objectID": "blog/coding-with-genai/index.html",
+    "href": "blog/coding-with-genai/index.html",
+    "title": "Coding with Generative AI",
+    "section": "",
+    "text": "View this post in multiple formats:\n\n\n\n  HTML    PDF    Word"
+  },
+  {
+    "objectID": "blog/coding-with-genai/index.html#prerequisites",
+    "href": "blog/coding-with-genai/index.html#prerequisites",
+    "title": "Coding with Generative AI",
+    "section": "1.1 Prerequisites",
+    "text": "1.1 Prerequisites\nIn development"
+  },
+  {
+    "objectID": "blog/coding-with-genai/index.html#step-by-step-implementation",
+    "href": "blog/coding-with-genai/index.html#step-by-step-implementation",
+    "title": "Coding with Generative AI",
+    "section": "1.2 Step-by-Step Implementation",
+    "text": "1.2 Step-by-Step Implementation\nIn development"
+  },
+  {
+    "objectID": "blog/coding-with-genai/index.html#key-takeaways",
+    "href": "blog/coding-with-genai/index.html#key-takeaways",
+    "title": "Coding with Generative AI",
+    "section": "1.3 Key Takeaways",
+    "text": "1.3 Key Takeaways\nIn development"
+  },
+  {
+    "objectID": "blog/coding-with-genai/index.html#further-reading",
+    "href": "blog/coding-with-genai/index.html#further-reading",
+    "title": "Coding with Generative AI",
+    "section": "1.4 Further Reading",
+    "text": "1.4 Further Reading\nIn development"
+  },
+  {
+    "objectID": "blog/2025-01-01-year-ahead.html",
+    "href": "blog/2025-01-01-year-ahead.html",
+    "title": "Looking Ahead: 2025 Plans for R and Data Science",
+    "section": "",
+    "text": "As we start 2025, I’m excited to share some thoughts on where I’m heading with R programming, data science tools, and research computing workflows."
+  },
+  {
+    "objectID": "blog/2025-01-01-year-ahead.html#this-years-focus-areas",
+    "href": "blog/2025-01-01-year-ahead.html#this-years-focus-areas",
+    "title": "Looking Ahead: 2025 Plans for R and Data Science",
+    "section": "1 This Year’s Focus Areas",
+    "text": "1 This Year’s Focus Areas\nPackage Development: Planning to release two new R packages focusing on statistical visualization and research workflow automation.\nDocker Integration: Expanding my containerization work to include more complex multi-service setups for data science teams.\nAI-Assisted Coding: Exploring how LLMs can enhance R development workflows without replacing fundamental programming skills."
+  },
+  {
+    "objectID": "blog/2025-01-01-year-ahead.html#whats-coming-to-the-blog",
+    "href": "blog/2025-01-01-year-ahead.html#whats-coming-to-the-blog",
+    "title": "Looking Ahead: 2025 Plans for R and Data Science",
+    "section": "2 What’s Coming to the Blog",
+    "text": "2 What’s Coming to the Blog\nYou’ll see more content in our new structure: - Tutorials on advanced R topics - References for quick command lookups\n- Guides for solving specific problems - Blog posts like this for timely thoughts and updates\nLooking forward to sharing the journey!"
   },
   {
     "objectID": "about/index.html",
@@ -1351,25 +1610,116 @@
     "text": "6 Contact\nFor inquiries about collaboration, research opportunities, or educational resources, please reach out through the social media links above or email us directly."
   },
   {
-    "objectID": "blog/2025-01-01-year-ahead.html",
-    "href": "blog/2025-01-01-year-ahead.html",
-    "title": "Looking Ahead: 2025 Plans for R and Data Science",
+    "objectID": "blog/chatbots-in-stats/index.html",
+    "href": "blog/chatbots-in-stats/index.html",
+    "title": "Making optimal use of ChatGPT and other chatbots for data science",
     "section": "",
-    "text": "As we start 2025, I’m excited to share some thoughts on where I’m heading with R programming, data science tools, and research computing workflows."
+    "text": "chatGPT"
   },
   {
-    "objectID": "blog/2025-01-01-year-ahead.html#this-years-focus-areas",
-    "href": "blog/2025-01-01-year-ahead.html#this-years-focus-areas",
-    "title": "Looking Ahead: 2025 Plans for R and Data Science",
-    "section": "1 This Year’s Focus Areas",
-    "text": "1 This Year’s Focus Areas\nPackage Development: Planning to release two new R packages focusing on statistical visualization and research workflow automation.\nDocker Integration: Expanding my containerization work to include more complex multi-service setups for data science teams.\nAI-Assisted Coding: Exploring how LLMs can enhance R development workflows without replacing fundamental programming skills."
+    "objectID": "blog/chatbots-in-stats/index.html#whats-in-a-name",
+    "href": "blog/chatbots-in-stats/index.html#whats-in-a-name",
+    "title": "Making optimal use of ChatGPT and other chatbots for data science",
+    "section": "1.1 Whats in a name?",
+    "text": "1.1 Whats in a name?\nGPT in ChatGPT stands for Generative Pre-trained Transformer. • Generative: It generates text rather than just analyzing or classifying it. • Pre-trained: It is trained on a large dataset before being fine-tuned for specific tasks. • Transformer: It uses the Transformer architecture, a neural network model designed for natural language processing (NLP).\nEssentially, ChatGPT is a chatbot built on a GPT model, which is designed to understand and generate human-like text based on prompts\nFrom a recent article in Nature:\n“ChatGPT stunned the world on its launch in November 2022. Powered by a large language model (LLM) and trained on much of the text published on the Internet, the artificial intelligence (AI) chatbot, created by OpenAI in San Francisco, California, makes the latest advances in natural-language processing broadly accessible by providing a dialogue-based interface capable of answering complex questions, composing sophisticated essays and generating source code. One obvious question was: how could this tool improve science?”\nNature: Chatbots in science: What can ChatGPT do for you?\nLets start with a couple examples to get an idea of how to use ChatGPT for data science tasks."
   },
   {
-    "objectID": "blog/2025-01-01-year-ahead.html#whats-coming-to-the-blog",
-    "href": "blog/2025-01-01-year-ahead.html#whats-coming-to-the-blog",
-    "title": "Looking Ahead: 2025 Plans for R and Data Science",
-    "section": "2 What’s Coming to the Blog",
-    "text": "2 What’s Coming to the Blog\nYou’ll see more content in our new structure: - Tutorials on advanced R topics - References for quick command lookups\n- Guides for solving specific problems - Blog posts like this for timely thoughts and updates\nLooking forward to sharing the journey!"
+    "objectID": "blog/chatbots-in-stats/index.html#example-work-up-of-a-regression-analysis-for-the-iris-data-set.",
+    "href": "blog/chatbots-in-stats/index.html#example-work-up-of-a-regression-analysis-for-the-iris-data-set.",
+    "title": "Making optimal use of ChatGPT and other chatbots for data science",
+    "section": "1.2 Example work up of a regression analysis for the iris data set.",
+    "text": "1.2 Example work up of a regression analysis for the iris data set.\n\nPrompt: “I want to do a trial data analysis in R of the Fisher iris data set that is distributed with R. I want to start with logistic regression analysis and want to use K-fold cross-validation. I want to use an ROC curve to visualize the results.”\n\ncomment: this is a good example of a prompt that is clear and specific. It provides many of the necessary context and requirements for the task. However, it is not completely unambiguous. It does not specify the number of folds for cross-validatikn. It also does not specify the R package to use for the aanalysis. There ae several to choose from.\ninstall.packages(\"caret\")  # Install if not already installed\ninstall.packages(\"pROC\")   # Install if not already installed\ninstall.packages(\"glmnet\") # Install if not already installed\nlibrary(caret)\nlibrary(pROC)\nlibrary(glmnet)\n\n# Prepare binary dataset\ndata(iris)\niris_binary &lt;- iris[iris$Species != \"setosa\", ]\niris_binary$Species &lt;- factor(iris_binary$Species)\n\n# Split the data into training and test sets\nset.seed(42)\ntrainIndex &lt;- createDataPartition(iris_binary$Species, p = 0.8, list = FALSE)\ntrain_data &lt;- iris_binary[trainIndex, ]\ntest_data &lt;- iris_binary[-trainIndex, ]\n\n# Convert the data into matrix format as required by glmnet\nx_train &lt;- model.matrix(Species ~ ., train_data)[,-1]\ny_train &lt;- train_data$Species\n\nx_test &lt;- model.matrix(Species ~ ., test_data)[,-1]\ny_test &lt;- test_data$Species\n\n# Set up cross-validation for Lasso regression on the training data\ntrain_control &lt;- trainControl(method = \"cv\", number = 10, classProbs = TRUE, summaryFunction = twoClassSummary)\n\n# Define the lasso model using glmnet (alpha=1 for Lasso)\nlasso_model &lt;- train(x = x_train, y = y_train, method = \"glmnet\", trControl = train_control, tuneGrid = expand.grid(alpha = 1, lambda = seq(0.001, 0.1, by = 0.001)), family = \"binomial\", metric = \"ROC\")\n\n# Make predictions on the test set\ntest_predictions &lt;- predict(lasso_model, newdata = x_test, type = \"prob\")[,2]\n\n# Plot ROC curve for the test set\nroc_curve_test &lt;- roc(y_test, test_predictions, levels = rev(levels(y_test)))\nplot(roc_curve_test, col = \"blue\", lwd = 2, main = \"ROC Curve for Lasso Regression on Test Data\")\nv\n# Calculate AUC and its 95% confidence interval\nauc_value &lt;- auc(roc_curve_test)\nci &lt;- ci.auc(roc_curve_test, conf.level = 0.95)\n\n# Add AUC with 95% confidence interval to the plot\nlegend_text &lt;- paste(\"AUC =\", round(auc_value, 2), \"\\n95% CI:\", round(ci[1], 2), \"-\", round(ci[3], 2))\nlegend(\"bottomright\", legend = legend_text, col = \"blue\", lwd = 2)\nOn completion of the analysis, the user may have additional questions or requests. For example, they may ask why use 10 folds specifically? Or why split the 80:20? Why use the lasso regression model?\nThey can just ask the chatbot directly.\nPronpt: why split the data set if we’re doing 10-fold cross validation?\nChatGPT answer: ### Why Not Split? - 10-fold CV inherently splits the data multiple times\n- Each fold acts as a validation set once, while the remaining 9 folds serve as the training set. - Every observation is used for both training and testing across different iterations.\n\nAn additional 80:20 split is redundant\n\nIt would unnecessarily reduce the amount of data available for training.\nK-fold CV already provides a better estimate of model performance.\n\n\n\n1.2.1 When Would We Still Use an 80:20 Split?\n\nIf we want one final test set to evaluate model performance after tuning hyperparameters using K-fold CV.\n\nExample: Use 80% for training, perform 10-fold CV on this training set, and then evaluate on the held-out 20% test set.\nThis prevents data leakage and ensures the final model is evaluated on completely unseen data.\n\n\n\n\n\n1.2.2 Best Practice for Model Selection\n\nCross-validation alone (no 80:20 split)\n\nWhen optimizing model parameters and assessing performance.\n\nAvoids unnecessary data loss.\n\nEvery observation contributes to both training and validation.\n\n80:20 Split + Cross-validation on training set\n\nIf we want to train the final model on the full dataset,\n\nThen evaluate generalization on a completely independent holdout test set.\n\n\nFor your Fisher Iris dataset analysis, just using 10-fold CV is sufficient unless you plan to tune hyperparameters before a final evaluation. 🚀 for a 95% confidence interval calculationgM “should I split my data set into train and test parts if I’m using k-fold cross-validation?” “add a 95% confidence interval calculation to the AUC annotation in the ROC plot” “do the same analysis but use lasso regression instead of logistic regression”"
+  },
+  {
+    "objectID": "blog/chatbots-in-stats/index.html#step-1-setting-up-the-package-structure",
+    "href": "blog/chatbots-in-stats/index.html#step-1-setting-up-the-package-structure",
+    "title": "Making optimal use of ChatGPT and other chatbots for data science",
+    "section": "6.1 Step 1: Setting Up the Package Structure",
+    "text": "6.1 Step 1: Setting Up the Package Structure\n\nCreate a New Package Directory:\n\nUse usethis to create a package directory:\nusethis::create_package(\"path/to/zzlongplot\")\nThis sets up the necessary directory structure with folders like R/ and files like DESCRIPTION.\n\nAdd the Core Script:\n\nPlace the zzlongplot.R file in the R/ directory.\n\nSet Up the DESCRIPTION File:\n\nEdit the DESCRIPTION file to include metadata about the package. Use usethis::use_description() to create and fill this file:\nusethis::use_description(fields = list(\n  Title = \"Flexible Longitudinal Plotting in R\",\n  Description = \"Provides tools for generating observed and change plots in longitudinal datasets.\",\n  Version = \"0.1.0\",\n  Author = \"Your Name [aut, cre]\",\n  Maintainer = \"Your Name &lt;your_email@example.com&gt;\",\n  License = \"MIT\",\n  Encoding = \"UTF-8\"\n))\n\nAdd Dependencies:\n\nList package dependencies in the DESCRIPTION file under Imports. For example:\nImports:\n  dplyr,\n  ggplot2,\n  patchwork"
+  },
+  {
+    "objectID": "blog/chatbots-in-stats/index.html#step-2-document-the-package",
+    "href": "blog/chatbots-in-stats/index.html#step-2-document-the-package",
+    "title": "Making optimal use of ChatGPT and other chatbots for data science",
+    "section": "6.2 Step 2: Document the Package",
+    "text": "6.2 Step 2: Document the Package\n\nAdd Roxygen2 Comments:\n\nEnsure all functions in zzlongplot.R have Roxygen2 comments for documentation.\n\nGenerate Documentation:\n\nRun:\ndevtools::document()\nThis creates help files in the man/ directory and updates the NAMESPACE file.\n\nCreate a Vignette:\n\nAdd the vignette to introduce the package:\nusethis::use_vignette(\"Introduction_to_zzlongplot\")\nPlace the provided zzlongplot-vignette.Rmd file in the vignettes/ directory and build it:\ndevtools::build_vignettes()"
+  },
+  {
+    "objectID": "blog/chatbots-in-stats/index.html#step-3-test-the-package",
+    "href": "blog/chatbots-in-stats/index.html#step-3-test-the-package",
+    "title": "Making optimal use of ChatGPT and other chatbots for data science",
+    "section": "6.3 Step 3: Test the Package",
+    "text": "6.3 Step 3: Test the Package\n\nAdd Unit Tests:\n\nUse usethis to set up a testing framework:\nusethis::use_testthat()\nPlace the test-zzlongplot.R file in tests/testthat/.\n\nRun Tests:\n\nRun all tests:\ndevtools::test()"
+  },
+  {
+    "objectID": "blog/chatbots-in-stats/index.html#step-4-check-the-package",
+    "href": "blog/chatbots-in-stats/index.html#step-4-check-the-package",
+    "title": "Making optimal use of ChatGPT and other chatbots for data science",
+    "section": "6.4 Step 4: Check the Package",
+    "text": "6.4 Step 4: Check the Package\n\nBuild and Check:\n\nBuild the package:\ndevtools::build()\nCheck the package for CRAN compliance:\ndevtools::check()\n\nFix Issues:\n\nAddress any warnings or errors reported by devtools::check()."
+  },
+  {
+    "objectID": "blog/chatbots-in-stats/index.html#step-5-submit-to-cran",
+    "href": "blog/chatbots-in-stats/index.html#step-5-submit-to-cran",
+    "title": "Making optimal use of ChatGPT and other chatbots for data science",
+    "section": "6.5 Step 5: Submit to CRAN",
+    "text": "6.5 Step 5: Submit to CRAN\n\nPrepare for Submission:\n\nEnsure the package passes R CMD check with no warnings, errors, or notes.\nCompress the package into a .tar.gz file using:\ndevtools::build()\n\nSubmit to CRAN:\n\nGo to the CRAN submission page.\nUpload the .tar.gz file and fill out the required metadata.\n\nRespond to Feedback:\n\nCRAN maintainers might request changes. Address them promptly and resubmit if needed."
+  },
+  {
+    "objectID": "blog/chatbots-in-stats/index.html#step-6-set-up-a-github-repository",
+    "href": "blog/chatbots-in-stats/index.html#step-6-set-up-a-github-repository",
+    "title": "Making optimal use of ChatGPT and other chatbots for data science",
+    "section": "6.6 Step 6: Set Up a GitHub Repository",
+    "text": "6.6 Step 6: Set Up a GitHub Repository\n\nInitialize a Git Repository:\n\nIn the package directory, run:\ngit init\ngit add .\ngit commit -m \"Initial commit\"\n\nCreate a Repository on GitHub:\n\nUse the GitHub website or the gh CLI tool:\ngh repo create yourusername/zzlongplot --public --source=.\n\nPush the Code:\n\nPush the code to GitHub:\ngit branch -M main\ngit push -u origin main"
+  },
+  {
+    "objectID": "blog/chatbots-in-stats/index.html#step-7-manage-the-development-repository",
+    "href": "blog/chatbots-in-stats/index.html#step-7-manage-the-development-repository",
+    "title": "Making optimal use of ChatGPT and other chatbots for data science",
+    "section": "6.7 Step 7: Manage the Development Repository",
+    "text": "6.7 Step 7: Manage the Development Repository\n\nAdd Version Control:\n\nUse Git for version control. For example, create a branch for new features:\ngit checkout -b feature-new-plot\n\nTag Releases:\n\nTag versions for releases:\ngit tag -a v0.1.0 -m \"First release\"\ngit push origin v0.1.0\n\nAdd Continuous Integration:\n\nSet up GitHub Actions for testing:\nusethis::use_github_action_check_standard()\n\nPublish Development Versions:\n\nUse GitHub to manage development versions and issues."
+  },
+  {
+    "objectID": "blog/chatbots-in-stats/index.html#step-8-maintain-the-package",
+    "href": "blog/chatbots-in-stats/index.html#step-8-maintain-the-package",
+    "title": "Making optimal use of ChatGPT and other chatbots for data science",
+    "section": "6.8 Step 8: Maintain the Package",
+    "text": "6.8 Step 8: Maintain the Package\n\nAddress Issues:\n\nMonitor and address issues reported by users.\n\nUpdate the Package:\n\nFor updates, increment the version number in DESCRIPTION and tag the new version."
+  },
+  {
+    "objectID": "blog/chatbots-in-stats/index.html#prerequisites",
+    "href": "blog/chatbots-in-stats/index.html#prerequisites",
+    "title": "Making optimal use of ChatGPT and other chatbots for data science",
+    "section": "6.9 Prerequisites",
+    "text": "6.9 Prerequisites\nIn development"
+  },
+  {
+    "objectID": "blog/chatbots-in-stats/index.html#step-by-step-implementation",
+    "href": "blog/chatbots-in-stats/index.html#step-by-step-implementation",
+    "title": "Making optimal use of ChatGPT and other chatbots for data science",
+    "section": "6.10 Step-by-Step Implementation",
+    "text": "6.10 Step-by-Step Implementation\nIn development"
+  },
+  {
+    "objectID": "blog/chatbots-in-stats/index.html#key-takeaways",
+    "href": "blog/chatbots-in-stats/index.html#key-takeaways",
+    "title": "Making optimal use of ChatGPT and other chatbots for data science",
+    "section": "6.11 Key Takeaways",
+    "text": "6.11 Key Takeaways\nIn development"
+  },
+  {
+    "objectID": "blog/chatbots-in-stats/index.html#further-reading",
+    "href": "blog/chatbots-in-stats/index.html#further-reading",
+    "title": "Making optimal use of ChatGPT and other chatbots for data science",
+    "section": "6.12 Further Reading",
+    "text": "6.12 Further Reading\nIn development"
+  },
+  {
+    "objectID": "blog/index.html",
+    "href": "blog/index.html",
+    "title": "Blog",
+    "section": "",
+    "text": "Welcome to my blog! Here you’ll find my latest thoughts on R programming, data science, statistical computing, and research workflows. These posts capture timely insights, new discoveries, and evolving perspectives on technical topics.\nBrowse by category or scroll through the chronological feed below.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nMac Workflow for Tracking Daily Research Progress\n\n\n\n\n\n\nJun 30, 2025\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nMaking optimal use of ChatGPT and other chatbots for data science\n\n\nAI-powered data science workflows\n\n\n\nAI\n\n\nautomation\n\n\nR\n\n\ndata-science\n\n\n\nHow ChatGPT and other LLM tools can enhance statistical analysis and research workflows.\n\n\n\nJan 18, 2025\n\n\n\n\n\n\n\n\n\n\n\n\nLooking Ahead: 2025 Plans for R and Data Science\n\n\nNew directions and goals for the year\n\n\n\nreflection\n\n\nplanning\n\n\nR\n\n\ndata-science\n\n\n\nMy plans and goals for R programming, data science, and research computing in 2025.\n\n\n\nJan 1, 2025\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nCoding with Generative AI\n\n\nBest practices for AI-assisted programming\n\n\n\nAI\n\n\nprogramming\n\n\nproductivity\n\n\n\nHow to effectively use AI tools like ChatGPT and GitHub Copilot for coding while maintaining good practices.\n\n\n\nDec 15, 2024\n\n\n\n\n\n\n\n\nNo matching items"
   },
   {
     "objectID": "guides/fixing-common-r-errors.html",
@@ -2842,246 +3192,197 @@
     "text": "This is a test document.\n\n\nCode\n1 + 1\n\n\n[1] 2"
   },
   {
-    "objectID": "posts/simpleS3/index.html",
-    "href": "posts/simpleS3/index.html",
-    "title": "Writing a simple R package in S3.",
-    "section": "",
-    "text": "S3 OOP in R"
+    "objectID": "posts/install_arch_on_macbook/index.html#connect-to-target-machine-with-ssh",
+    "href": "posts/install_arch_on_macbook/index.html#connect-to-target-machine-with-ssh",
+    "title": "Install Arch Linux on a Macbook Air",
+    "section": "4.1 Connect to target machine with ssh",
+    "text": "4.1 Connect to target machine with ssh\nconfigure WIFI\n\nbash&gt; iwctl\n\nidw&gt; device list (optional) (assume device is wlan0)\nidw&gt; station wlan0 scan (optional)\nidw&gt; station wlan0 connect rgtnet2\npassphrase for rgtnet2\nidw&gt; exit\n(assume the local IP address is 10.0.1.176)\nSet a password for root user. You’ll need it to log in.\nbash&gt; passwd\n  (enter `z` password)\nNew password: z\nRetype new password: z\n\nNow switch over to the mac.\n ssh  root@10.0.1.176"
   },
   {
-    "objectID": "posts/simpleS3/index.html#prerequisites",
-    "href": "posts/simpleS3/index.html#prerequisites",
-    "title": "Writing a simple R package in S3.",
-    "section": "2.1 Prerequisites",
-    "text": "2.1 Prerequisites\nIn development"
+    "objectID": "posts/install_arch_on_macbook/index.html#begin-install-process",
+    "href": "posts/install_arch_on_macbook/index.html#begin-install-process",
+    "title": "Install Arch Linux on a Macbook Air",
+    "section": "4.2 Begin install process",
+    "text": "4.2 Begin install process\nFirst step:\n\npartition harddisk:\n\nbash&gt; cfdisk /dev/nvme0n1\nUse interface to create two partitions:\n\nEFI type of size 1gb\nroot of size entire rest of disk.\nwrite partition to disk\n\ncheck the partition:\n\nFormat the partitions.\n\nEFI disk is fat32\nRoot is ext4\n\n\n# run in three parts\n# part 1\nmkfs.fat -F32 /dev/nvme0n1p1\nmkfs.ext4 /dev/nvme0n1p2\nloadkeys mac-us\ntimedatectl set-ntp true\nmount /dev/nvme0n1p2 /mnt\nreflector -p https  --save /etc/pacman.d/mirrorlist --country US --latest 15\\\n    --sort rate \npacman -Sy\npacstrap /mnt base  linux linux-firmware sudo\ngenfstab -U /mnt &gt;&gt; /mnt/etc/fstab\n\n# part 2\narch-chroot /mnt\n\n# part 3\nln -sf /usr/share/zoneinfo/America/Los\\_Angeles /etc/localtime\nsed -i.bak 's/#en_US\\.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen\nlocale-gen\necho zz &gt;&gt; /etc/hostname\necho LANG=en_US.UTF-8  &gt;&gt; locale.conf\npacman -S  --noconfirm networkmanager intel-ucode grub efibootmgr \\\n  docker xorg-server xf86-video-intel gnome cinnamon vim sudo openssh \\\n  zsh base-devel  pandoc r firefox git fzf ripgrep zathura\n\nsystemctl enable NetworkManager gdm sshd docker\nmkdir /boot/efi\nmount /dev/nvme0n1p1 /boot/efi\ngrub-install --target=x86_64-efi --bootloader-id=GRUB --efi-directory=/boot/efi\ngrub-mkconfig -o /boot/grub/grub.cfg\n\n# next items are interactive\n#### in sudoers uncomment # %wheel ALL=(ALL) ALL\n\nvim /etc/sudoers\nuseradd -m -G wheel -s /bin/bash z\npasswd z\n# password for root\npasswd\nexit\numount -l /mnt\nThats it. The base system is ready to go. Reboot and login with the admin username and password you provided earlier. To choose the Cinnamon desktop environment, select z as the user and then click on the selection wheel. The default desktop is Gnome, but an option to switch to Cinnamon is offered."
   },
   {
-    "objectID": "posts/simpleS3/index.html#step-by-step-implementation",
-    "href": "posts/simpleS3/index.html#step-by-step-implementation",
-    "title": "Writing a simple R package in S3.",
-    "section": "2.2 Step-by-Step Implementation",
-    "text": "2.2 Step-by-Step Implementation\nIn development"
+    "objectID": "posts/install_arch_on_macbook/index.html#setup-yay",
+    "href": "posts/install_arch_on_macbook/index.html#setup-yay",
+    "title": "Install Arch Linux on a Macbook Air",
+    "section": "6.1 setup YAY",
+    "text": "6.1 setup YAY\n sudo git clone https://aur.archlinux.org/yay-git.git  \n sudo chown -R z:z ./yay-git\n cd yay-git\n makepkg -si\n yay -Syu \n yay -S autojump\n yay -S zsh-autosuggestions-git\n yay -S zotero\nMake zsh the default shell.\n&gt; chsh -s $(which zsh)\nStart Dropbox to transfer working environment\nyay -S dropbox\ndropbox \n# builtin autostart from preferences 8/12/24\nDropbox startup process will launch a “Sign in” web page. Login with Dropbox credentials through web page.\nNext\nRun bash shell script ~/Dropbox/dotfiles/set_up_links.sh to set up symbolic links (e.g. ln -s ~/Dropbox/prj ~/prj). See Appendix 1 below for details.\nSet up the shell (zsh) per the post [link to set up terminal post]\nInstall zotero using software manager and set up syncing (login: rgthomas)\nadd vimium extension to firefox"
   },
   {
-    "objectID": "posts/simpleS3/index.html#key-takeaways",
-    "href": "posts/simpleS3/index.html#key-takeaways",
-    "title": "Writing a simple R package in S3.",
-    "section": "2.3 Key Takeaways",
-    "text": "2.3 Key Takeaways\nIn development"
+    "objectID": "posts/install_arch_on_macbook/index.html#prerequisites",
+    "href": "posts/install_arch_on_macbook/index.html#prerequisites",
+    "title": "Install Arch Linux on a Macbook Air",
+    "section": "8.1 Prerequisites",
+    "text": "8.1 Prerequisites\nIn development"
   },
   {
-    "objectID": "posts/simpleS3/index.html#further-reading",
-    "href": "posts/simpleS3/index.html#further-reading",
-    "title": "Writing a simple R package in S3.",
-    "section": "2.4 Further Reading",
-    "text": "2.4 Further Reading\nIn development"
+    "objectID": "posts/install_arch_on_macbook/index.html#step-by-step-implementation",
+    "href": "posts/install_arch_on_macbook/index.html#step-by-step-implementation",
+    "title": "Install Arch Linux on a Macbook Air",
+    "section": "8.2 Step-by-Step Implementation",
+    "text": "8.2 Step-by-Step Implementation\nIn development"
   },
   {
-    "objectID": "posts/develop_r_package/index.html",
-    "href": "posts/develop_r_package/index.html",
-    "title": "Setting up an R development environment on github",
+    "objectID": "posts/install_arch_on_macbook/index.html#key-takeaways",
+    "href": "posts/install_arch_on_macbook/index.html#key-takeaways",
+    "title": "Install Arch Linux on a Macbook Air",
+    "section": "8.3 Key Takeaways",
+    "text": "8.3 Key Takeaways\nIn development"
+  },
+  {
+    "objectID": "posts/install_arch_on_macbook/index.html#further-reading",
+    "href": "posts/install_arch_on_macbook/index.html#further-reading",
+    "title": "Install Arch Linux on a Macbook Air",
+    "section": "8.4 Further Reading",
+    "text": "8.4 Further Reading\nIn development"
+  },
+  {
+    "objectID": "posts/plots_from_purrr/index.html",
+    "href": "posts/plots_from_purrr/index.html",
+    "title": "Working example for generating multiple plots inside a map2 call",
     "section": "",
     "text": "purrr"
   },
   {
-    "objectID": "posts/develop_r_package/index.html#introduction",
-    "href": "posts/develop_r_package/index.html#introduction",
-    "title": "Setting up an R development environment on github",
-    "section": "0.1 Introduction",
-    "text": "0.1 Introduction\nIts often the case that a data scientist needs to share an R function with a co-worker or a student. This post describes a step by step methodology for wrapping the function in a package, that includes a number of support files, and sharing it either via github or CRAN. This may seem like overkill for the simple task of sharing some code, but over time, not having to address the many technical issues that can arise when sharing a code in a more ad hoc manner will undoubtedly be appreciated."
+    "objectID": "posts/plots_from_purrr/index.html#prerequisites",
+    "href": "posts/plots_from_purrr/index.html#prerequisites",
+    "title": "Working example for generating multiple plots inside a map2 call",
+    "section": "5.1 Prerequisites",
+    "text": "5.1 Prerequisites\nIn development"
   },
   {
-    "objectID": "posts/develop_r_package/index.html#the-problemdata",
-    "href": "posts/develop_r_package/index.html#the-problemdata",
-    "title": "Setting up an R development environment on github",
-    "section": "0.2 The Problem/Data",
-    "text": "0.2 The Problem/Data\nThe initial goal is to create a directory (or repository) that contains the package contents on your local computer. The top level elements of the package are the DESCRIPTION file, the NAMESPACE file, the R directory, the tests directory, and the man directory. Additional files such as a README.md, a LICENSE file are optional but recommended. The DESCRIPTION file contains metadata about the package such as the package name, the version number, the author, and the license. The NAMESPACE file contains the export and import declarations. The R directory contains the R functions. The tests directory contains the unit tests. The man directory contains the documentation for the functions.\n\n0.2.1 Step 1: Initial Repo Setup\nStart by using the various helpful tools in the devtools and usethis packages to facilitate the repository building process.\nOpen R from the shell prompt in your development directory. and run the command usethis::create_package(\"zz_package\") to create the package directory, an R subdirectory, and the DESCRIPTION and NAMESPACE files. Assuming the package will be named zz_package.\nThe code below creates the package directory structure.\ninstall.packages(\"devtools\")\nlibrary(devtools)\nusethis::create_package(\"zz_package\")\nThis creates the following directory structure and generates the DESCRIPTION and NAMESPACE files.\nzz_package ☕ tree --charset=ascii\n.\n|-- DESCRIPTION\n|-- NAMESPACE\n`-- R\n\nzz_package ☕ more DESCRIPTION\nPackage: my_package\nTitle: What the Package Does (One Line, Title Case)\nVersion: 0.0.0.9000\nAuthors@R:\n    person(\"First\", \"Last\", , \"first.last@example.com\", role = c(\"aut\", \"cre\"),\n           comment = c(ORCID = \"YOUR-ORCID-ID\"))\nDescription: What the package does (one paragraph).\nLicense: `use_mit_license()`, `use_gpl3_license()` or friends to pick a\n    license\nEncoding: UTF-8\nRoxygen: list(markdown = TRUE)\nRoxygenNote: 7.3.2\nNext use the usethis package tools to generate repository support files.\nusethis::use_git()\nusethis::use_github()\nuse_gpl_license(version = 3, include_future = TRUE)\nusethis::use_readme_md()\nusethis::use_code_of_conduct(\"rgthomas@ucsd.edu\")\nusethis::use_tidy_contributing()\nNext copy the R file containing the function to the R directory and add a #' Roxygen2 comment block to the top of the file providing a description of the functions in the file.\nThen call devtools::document() to generate the man directory containing the help page.\ndevtools::document()\nAt this point the directory structure looks like this.\njulia prj/zz_package ☕ tree --charset=ascii\n.\n|-- DESCRIPTION   # package Metadata\n|-- NAMESPACE     # Exports and imports declarations\n|-- R             # R functions\n|   `-- zz_package.R\n|-- man           # Documentation for the functions\n    `-- zz_package.Rd\nThe next step is to set up testing.\nusethis::use_testthat()\ncall inside R\nusethis::use_test(\"zz_package\")\nThis open an editor. Enter the unit tests using the test_that function.\n# Test: Empty dataframe error\ntest_that(\"t2f throws an error for empty dataframe\", {\n  empty_df &lt;- data.frame()\n  expect_error(my_package(empty_df, filename = \"empty_table\"), \"`df` must not be empty\")\n})\nInitate a git repository, add the files, and do an initial commit. When any of files change repeat the commit process to commit the changes.\ngit init\ngit add .\ngit commit -m \"Initial commit\"\nOnce all the pieces are in place in the local repository push the content to the cloud. First step is to set up a new repository on github.\nAs the code is developed and additional packages are required add each dependency (e.g. kableExtra) (e.g. kableExtra) (e.g. kableExtra) whth the use_package function. For example if the kableExtra package is required to generate a formatted table add\nusethis::use_package(\"kableExtra\", type = \"Imports\")\nAt interim stages run the build, install, and test functions to ensure that the package is functioning correctly. Finally do a full check using devtools::check(). This reflects the checks that CRAN will perform when you submit the package.\ndevtools::build()\ndevtools::install()\ndevtools::test()\ndevtools::check()"
+    "objectID": "posts/plots_from_purrr/index.html#step-by-step-implementation",
+    "href": "posts/plots_from_purrr/index.html#step-by-step-implementation",
+    "title": "Working example for generating multiple plots inside a map2 call",
+    "section": "5.2 Step-by-Step Implementation",
+    "text": "5.2 Step-by-Step Implementation\nIn development"
   },
   {
-    "objectID": "posts/develop_r_package/index.html#reproducibility",
-    "href": "posts/develop_r_package/index.html#reproducibility",
-    "title": "Setting up an R development environment on github",
-    "section": "2.1 Reproducibility",
-    "text": "2.1 Reproducibility\n\n# Print session info for reproducibility\nsessionInfo()\n\nR version 4.5.0 (2025-04-11)\nPlatform: aarch64-apple-darwin20\nRunning under: macOS Sequoia 15.5\n\nMatrix products: default\nBLAS:   /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/lib/libRblas.0.dylib \nLAPACK: /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.1\n\nlocale:\n[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8\n\ntime zone: America/Los_Angeles\ntzcode source: internal\n\nattached base packages:\n[1] stats     graphics  grDevices utils     datasets  methods   base     \n\nother attached packages:\n [1] here_1.0.1      lubridate_1.9.4 forcats_1.0.0   stringr_1.5.1  \n [5] dplyr_1.1.4     purrr_1.0.4     readr_2.1.5     tidyr_1.3.1    \n [9] tibble_3.3.0    ggplot2_3.5.2   tidyverse_2.0.0\n\nloaded via a namespace (and not attached):\n [1] gtable_0.3.6       jsonlite_2.0.0     compiler_4.5.0     tidyselect_1.2.1  \n [5] scales_1.4.0       yaml_2.3.10        fastmap_1.2.0      R6_2.6.1          \n [9] generics_0.1.4     knitr_1.50         htmlwidgets_1.6.4  rprojroot_2.0.4   \n[13] pillar_1.10.2      RColorBrewer_1.1-3 tzdb_0.5.0         rlang_1.1.6       \n[17] stringi_1.8.7      xfun_0.52          timechange_0.3.0   cli_3.6.5         \n[21] withr_3.0.2        magrittr_2.0.3     digest_0.6.37      grid_4.5.0        \n[25] hms_1.1.3          lifecycle_1.0.4    vctrs_0.6.5        evaluate_1.0.3    \n[29] glue_1.8.0         farver_2.1.2       rmarkdown_2.29     tools_4.5.0       \n[33] pkgconfig_2.0.3    htmltools_0.5.8.1"
+    "objectID": "posts/plots_from_purrr/index.html#key-takeaways",
+    "href": "posts/plots_from_purrr/index.html#key-takeaways",
+    "title": "Working example for generating multiple plots inside a map2 call",
+    "section": "5.3 Key Takeaways",
+    "text": "5.3 Key Takeaways\nIn development"
   },
   {
-    "objectID": "posts/develop_r_package/index.html#next-steps",
-    "href": "posts/develop_r_package/index.html#next-steps",
-    "title": "Setting up an R development environment on github",
-    "section": "2.2 Next Steps",
-    "text": "2.2 Next Steps\n\nSuggest areas for further exploration\nMention potential improvements\nInvite reader engagement"
+    "objectID": "posts/plots_from_purrr/index.html#further-reading",
+    "href": "posts/plots_from_purrr/index.html#further-reading",
+    "title": "Working example for generating multiple plots inside a map2 call",
+    "section": "5.4 Further Reading",
+    "text": "5.4 Further Reading\nIn development"
   },
   {
-    "objectID": "posts/develop_r_package/index.html#references",
-    "href": "posts/develop_r_package/index.html#references",
-    "title": "Setting up an R development environment on github",
-    "section": "2.3 References",
-    "text": "2.3 References\n\nCite your sources\nLink to relevant documentation\nCredit other contributors"
+    "objectID": "posts/setupquarto/index.html",
+    "href": "posts/setupquarto/index.html",
+    "title": "Setting up a minimal Quarto blog",
+    "section": "",
+    "text": "quarto"
   },
   {
-    "objectID": "posts/develop_r_package/index.html#step-1-understand-the-devtoolstest-workflow",
-    "href": "posts/develop_r_package/index.html#step-1-understand-the-devtoolstest-workflow",
-    "title": "Setting up an R development environment on github",
-    "section": "3.1 Step 1: Understand the devtools::test() Workflow",
-    "text": "3.1 Step 1: Understand the devtools::test() Workflow\n\nWhat It Does:\n\nRuns all test scripts in the tests/testthat/ directory using the testthat package.\nReports errors, warnings, and failed assertions.\n\nOutput Format:\n\nLists the file and test name where the error occurred.\nProvides the expected and actual outputs (if applicable).\nShows the error message and traceback for debugging."
+    "objectID": "posts/setupquarto/index.html#prerequisites",
+    "href": "posts/setupquarto/index.html#prerequisites",
+    "title": "Setting up a minimal Quarto blog",
+    "section": "3.1 Prerequisites",
+    "text": "3.1 Prerequisites\nIn development"
   },
   {
-    "objectID": "posts/develop_r_package/index.html#step-2-interpret-the-error-message",
-    "href": "posts/develop_r_package/index.html#step-2-interpret-the-error-message",
-    "title": "Setting up an R development environment on github",
-    "section": "3.2 Step 2: Interpret the Error Message",
-    "text": "3.2 Step 2: Interpret the Error Message\nRun devtools::test() in your R console or IDE terminal and note the output. Focus on:\n\nTest File and Test Name:\n\nExample:\n── Failure (test-zzlongplot.R:31:3): parse_formula handles grouping and faceting variables ──\nresult$y (`actual`) not equal to \"y\" (`expected`).\nThis indicates:\n\nThe error is in test-zzlongplot.R.\nIt occurred in the test named parse_formula handles grouping and faceting variables.\n\n\nError Details:\n\nExample:\n`actual`:   \"y ~ x | group\"\n`expected`: \"y\"\nThe test expected result$y to be \"y\", but the actual output was \"y ~ x | group\".\n\nTraceback:\n\nThe traceback provides a stack of function calls leading to the error. Use traceback() immediately after the test failure to get additional context."
+    "objectID": "posts/setupquarto/index.html#step-by-step-implementation",
+    "href": "posts/setupquarto/index.html#step-by-step-implementation",
+    "title": "Setting up a minimal Quarto blog",
+    "section": "3.2 Step-by-Step Implementation",
+    "text": "3.2 Step-by-Step Implementation\nIn development"
   },
   {
-    "objectID": "posts/develop_r_package/index.html#step-3-isolate-the-problem",
-    "href": "posts/develop_r_package/index.html#step-3-isolate-the-problem",
-    "title": "Setting up an R development environment on github",
-    "section": "3.3 Step 3: Isolate the Problem",
-    "text": "3.3 Step 3: Isolate the Problem\n\nRun the Test Manually:\n\nExtract the failing test from the test file and run it manually:\nlibrary(testthat)\nsource(\"path/to/zzlongplot/R/parse_formula.R\")\nresult &lt;- parse_formula(y ~ x | group ~ facet_y + facet_x)\nexpect_equal(result$y, \"y\")\nThis helps verify if the error occurs outside the testing framework.\n\nVerify Input Data:\n\nEnsure that the inputs to the function are as expected. For example, check if the formula passed to parse_formula matches the expected format.\n\nUse Debugging Tools:\n\nInsert browser() into the failing function to step through its execution:\nparse_formula &lt;- function(formula) {\n  browser()\n  # Function logic...\n}\nWhen the code pauses at browser(), inspect the environment using:\nls()\nprint(formula)"
+    "objectID": "posts/setupquarto/index.html#key-takeaways",
+    "href": "posts/setupquarto/index.html#key-takeaways",
+    "title": "Setting up a minimal Quarto blog",
+    "section": "3.3 Key Takeaways",
+    "text": "3.3 Key Takeaways\nIn development"
   },
   {
-    "objectID": "posts/develop_r_package/index.html#step-4-debugging-common-errors",
-    "href": "posts/develop_r_package/index.html#step-4-debugging-common-errors",
-    "title": "Setting up an R development environment on github",
-    "section": "3.4 Step 4: Debugging Common Errors",
-    "text": "3.4 Step 4: Debugging Common Errors\n\n3.4.1 Error 1: Assertion Failures\nExample:\nresult$y (`actual`) not equal to \"y\" (`expected`).\nSteps: 1. Check the test code: - Verify if the expect_equal() or similar assertion accurately reflects the intended behavior. - Example: r      expect_equal(result$y, \"y\") - If the test expectation is wrong, update it to match the correct behavior.\n\nCheck the function output:\n\nRun the function manually with the same inputs and inspect its output:\nparse_formula(y ~ x | group ~ facet_y + facet_x)\n\nFix the function logic:\n\nIf the function output is incorrect, debug the function implementation.\n\n\n\n\n\n3.4.2 Error 2: Unexpected Errors or Warnings\nExample:\nError: Input must be a formula object\nSteps: 1. Reproduce the Error: - Identify the exact input that triggers the error.\n\nAdd Input Validation:\n\nValidate inputs at the start of the function to catch issues early.\nif (!inherits(formula, \"formula\")) {\n  stop(\"Input must be a formula object\")\n}\n\nCheck for Edge Cases:\n\nTest the function with edge cases, such as missing or malformed inputs.\n\n\n\n\n\n3.4.3 Error 3: Missing Dependencies\nExample:\nError: could not find function \"mutate\"\nSteps: 1. Check Imports: - Ensure the missing function’s package is listed under Imports in DESCRIPTION.\n\nExplicitly Load Dependencies:\n\nUse the :: operator to call functions explicitly:\ndplyr::mutate(...)\n\nAdd requireNamespace():\n\nDynamically load namespaces if not attached:\nif (!requireNamespace(\"dplyr\", quietly = TRUE)) {\n  stop(\"dplyr is required for this function.\")\n}"
+    "objectID": "posts/setupquarto/index.html#further-reading",
+    "href": "posts/setupquarto/index.html#further-reading",
+    "title": "Setting up a minimal Quarto blog",
+    "section": "3.4 Further Reading",
+    "text": "3.4 Further Reading\nIn development"
   },
   {
-    "objectID": "posts/develop_r_package/index.html#step-5-add-debugging-output",
-    "href": "posts/develop_r_package/index.html#step-5-add-debugging-output",
-    "title": "Setting up an R development environment on github",
-    "section": "3.5 Step 5: Add Debugging Output",
-    "text": "3.5 Step 5: Add Debugging Output\n\nPrint Debugging Information:\n\nAdd print() or cat() statements to inspect variables:\ncat(\"Parsed y:\", y_var, \"\\n\")\n\nUse Logging:\n\nUse a logging package like logger to add structured debug messages."
-  },
-  {
-    "objectID": "posts/develop_r_package/index.html#step-6-rerun-tests",
-    "href": "posts/develop_r_package/index.html#step-6-rerun-tests",
-    "title": "Setting up an R development environment on github",
-    "section": "3.6 Step 6: Rerun Tests",
-    "text": "3.6 Step 6: Rerun Tests\nAfter making changes: 1. Save the modified code and test files. 2. Re-run the tests: r    devtools::test()"
-  },
-  {
-    "objectID": "posts/develop_r_package/index.html#step-7-finalize-fixes",
-    "href": "posts/develop_r_package/index.html#step-7-finalize-fixes",
-    "title": "Setting up an R development environment on github",
-    "section": "3.7 Step 7: Finalize Fixes",
-    "text": "3.7 Step 7: Finalize Fixes\n\nRemove Debugging Code:\n\nRemove browser(), print(), and other debug artifacts.\n\nRe-run Full Checks:\n\nRun devtools::check() to ensure the package passes all CRAN checks."
-  },
-  {
-    "objectID": "posts/develop_r_package/index.html#example-workflow-for-debugging",
-    "href": "posts/develop_r_package/index.html#example-workflow-for-debugging",
-    "title": "Setting up an R development environment on github",
-    "section": "3.8 Example Workflow for Debugging",
-    "text": "3.8 Example Workflow for Debugging\n\nIdentify the failing test:\ndevtools::test()\nManually isolate and debug the test:\nresult &lt;- parse_formula(y ~ x | group ~ facet_y + facet_x)\nprint(result)\nAdd debugging statements:\nparse_formula &lt;- function(formula) {\n  print(formula)\n  browser()\n  # Logic...\n}\nFix the issue and re-test:\ndevtools::test()\nRemove debugging artifacts and run final checks:\ndevtools::check()"
-  },
-  {
-    "objectID": "posts/develop_r_package/index.html#conclusion",
-    "href": "posts/develop_r_package/index.html#conclusion",
-    "title": "Setting up an R development environment on github",
-    "section": "3.9 Conclusion",
-    "text": "3.9 Conclusion\nDebugging devtools::test() errors involves interpreting error messages, isolating failing tests, and systematically diagnosing issues in your code. With these steps, you can identify and fix problems effectively."
-  },
-  {
-    "objectID": "posts/develop_r_package/index.html#prerequisites",
-    "href": "posts/develop_r_package/index.html#prerequisites",
-    "title": "Setting up an R development environment on github",
-    "section": "3.10 Prerequisites",
-    "text": "3.10 Prerequisites\nIn development"
-  },
-  {
-    "objectID": "posts/develop_r_package/index.html#step-by-step-implementation",
-    "href": "posts/develop_r_package/index.html#step-by-step-implementation",
-    "title": "Setting up an R development environment on github",
-    "section": "3.11 Step-by-Step Implementation",
-    "text": "3.11 Step-by-Step Implementation\nIn development"
-  },
-  {
-    "objectID": "posts/develop_r_package/index.html#key-takeaways",
-    "href": "posts/develop_r_package/index.html#key-takeaways",
-    "title": "Setting up an R development environment on github",
-    "section": "3.12 Key Takeaways",
-    "text": "3.12 Key Takeaways\nIn development"
-  },
-  {
-    "objectID": "posts/develop_r_package/index.html#further-reading",
-    "href": "posts/develop_r_package/index.html#further-reading",
-    "title": "Setting up an R development environment on github",
-    "section": "3.13 Further Reading",
-    "text": "3.13 Further Reading\nIn development"
-  },
-  {
-    "objectID": "posts/dockerize_simple/index.html",
-    "href": "posts/dockerize_simple/index.html",
+    "objectID": "tutorials/docker-for-beginners/index.html",
+    "href": "tutorials/docker-for-beginners/index.html",
     "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
     "section": "",
     "text": "Photo by Nathan Waters on Unsplash"
   },
   {
-    "objectID": "posts/dockerize_simple/index.html#introduction",
-    "href": "posts/dockerize_simple/index.html#introduction",
+    "objectID": "tutorials/docker-for-beginners/index.html#introduction",
+    "href": "tutorials/docker-for-beginners/index.html#introduction",
     "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
     "section": "1 Introduction",
     "text": "1 Introduction\nThis guide demonstrates how to deploy a Shiny application from your local workstation to a secure web environment. We’ll use a stack of open-source technologies including Linux, R, Shiny, Docker, and Caddy, deployed on AWS EC2. While we focus on AWS here, the principles apply to other cloud providers like Hetzner, which we’ll cover in future posts."
   },
   {
-    "objectID": "posts/dockerize_simple/index.html#prerequisites",
-    "href": "posts/dockerize_simple/index.html#prerequisites",
+    "objectID": "tutorials/docker-for-beginners/index.html#prerequisites",
+    "href": "tutorials/docker-for-beginners/index.html#prerequisites",
     "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
     "section": "2 Prerequisites",
     "text": "2 Prerequisites\nBefore beginning this tutorial, you’ll need:\n\nA working Shiny application on your local machine\nAn AWS account with permissions to create EC2 instances\nBasic familiarity with the Linux command line\nGit (optional, for version control)"
   },
   {
-    "objectID": "posts/dockerize_simple/index.html#the-example-application",
-    "href": "posts/dockerize_simple/index.html#the-example-application",
+    "objectID": "tutorials/docker-for-beginners/index.html#the-example-application",
+    "href": "tutorials/docker-for-beginners/index.html#the-example-application",
     "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
     "section": "3 The Example Application",
     "text": "3 The Example Application\nLet’s start with a simple but practical example: hosting a shiny web application that provides a power calculator for two-sample t-tests. While straightforward, this application demonstrates all the key deployment concepts.\nHere is the code for the Shiny app (The app is intentionally minimal, using only base R functions, with a minimum of reactive widgets and layout commands.):\n\nPower Calculator Shiny App Code (power1_shiny/app.R)\nui &lt;- fluidPage(\n  titlePanel(\"Power Calculator for Two Group Parallel Designs\"),\n  sliderInput(\"N\", \"Total Sample Size:\", min = 0, max = 300, value = 100),\n  plotOutput(\"plot\"),\n  verbatimTextOutput(\"eff\"))\n\nserver &lt;- function(input, output, session) {\n  delta = seq(0, 1.5,.05)\n  pow = reactive(sapply(delta, function(x) power.t.test(input$N, d=x)$power ))\n  eff =  renderText(power.t.test(input$N, power=.8)$d)\n  output$plot &lt;- renderPlot({\n    plot(delta, pow(), cex=1.5, ylab=\"power\")\n    abline(h = .8,  col = \"red\", lwd =2.5, lty = 4)\n    abline(v = eff(), col = \"blue\",lwd =2.5, lty = 4)})\n  output$eff &lt;- renderText(\n    paste0(\"Std. effect detectable with power 80% = \", eff()) )\n}\nshinyApp(ui, server)\n\n\n\n\n\n\nShiny app interface"
   },
   {
-    "objectID": "posts/dockerize_simple/index.html#step-by-step-implementation",
-    "href": "posts/dockerize_simple/index.html#step-by-step-implementation",
+    "objectID": "tutorials/docker-for-beginners/index.html#step-by-step-implementation",
+    "href": "tutorials/docker-for-beginners/index.html#step-by-step-implementation",
     "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
     "section": "4 Step-by-Step Implementation",
     "text": "4 Step-by-Step Implementation\n\n4.1 Deployment Checklist\nAs an overview, to host our Shiny app securely online, we need to:\n\nObtain a static IP address\nRegister a domain name\nConfigure a firewall\nSet up the virtual server\nInstall and configure a web server\nImplement SSL encryption\nSet up user authentication\nConfigure reverse proxy routing\n\nWhile this might seem complex, we’ll break it down into manageable steps.\nDetailed instructions for setting up a virtual server (items 1 through 4 above) on EC2 both through the EC2 console and the command line interface can be found: here and here\n\n\n4.2 Step 1: Server Setup\nFirst, we’ll prepare our AWS EC2 environment: In the course of setting up your server, you’ll need to: 1. Create or access your AWS account 2. Generate SSH key-pair, named for example, power1_app.pem 3. Configure firewall settings, allowing SSH (port 22), HTTP (port 80) traffic and HTTPS (port 443) traffic. 4. Obtain static IP, e.g., 13.57.139.31 5. Register domain name, e.g. rgtlab.org 6. Launch Ubuntu instance (t2-micro is sufficient)\n\n\n4.3 Step 2: Installing Required Software\nconnect to your server via SSH:\nssh -i \"~/.ssh/power1_app.pem\"  ubuntu@rgtlab.org\nOn your server, install Docker and Caddy (a modern web server with automatic HTTPS) using the following commands.\nsudo apt update\nsudo apt install docker.io -y\nsudo apt install -y curl debian-keyring debian-archive-keyring apt-transport-https\ncurl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | \\\nsudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg\ncurl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | \\\nsudo tee /etc/apt/sources.list.d/caddy-stable.list\nsudo apt update\nsudo apt install caddy -y\n\n\n4.4 Step 3: Containerizing the Application\nCreate a Dockerfile in your app directory:\n\nDockerfile Configuration\nFROM rocker/shiny:4.2.0\nRUN rm -rf /srv/shiny-server\nCOPY /power1_shiny/* /srv/shiny-server/\nUSER shiny\nCMD [\"/usr/bin/shiny-server\"]\n\n\n\n4.5 Step 4: Configuring the Web Server\nCreate a Caddyfile:\n\nCaddy Server Configuration\nrgtlab.org {\n    basicauth * /power1_shiny/* {\n        bob $2a$14$pYWd5O7JqNeGLS4m4CKkzemM2pq5ezn9bcTDowofZTl5wRVl8NTJm\n    }\n    root * /var/www/html\n    handle_path /power1_shiny/* {\n            reverse_proxy 0.0.0.0:3838\n    }\n    file_server\n}\n\nCreate an index.html:\n\nLanding Page HTML\n&lt;!DOCTYPE html&gt;\n&lt;html&gt;\n  &lt;body&gt;\n    &lt;h1&gt;Power1 app&lt;/h1&gt;\n    &lt;ul&gt;\n      &lt;li&gt;&lt;a href=\"./power1_shiny/\"&gt;Power1 app&lt;/a&gt;&lt;/li&gt;\n    &lt;/ul&gt;\n  &lt;/body&gt;\n&lt;/html&gt;\n\n\n\n4.6 Step 5: Deployment\n\nCopy files to server:\n\nscp -r ~/prj/power1_app/ ubuntu@rgtlab.org:~\n\nBuild and run Docker container:\n\ndocker build -t power1_image .\ndocker run -d --name=power1_shiny -p 3838:3838 --restart=always power1_image\n\nConfigure Caddy:\n\nsudo cp ./Caddyfile /etc/caddy/\ncp ./index.html /var/www/html/\nsudo systemctl reload caddy\nYour app should now be available at https://rgtlab.org!"
   },
   {
-    "objectID": "posts/dockerize_simple/index.html#advanced-tips",
-    "href": "posts/dockerize_simple/index.html#advanced-tips",
+    "objectID": "tutorials/docker-for-beginners/index.html#advanced-tips",
+    "href": "tutorials/docker-for-beginners/index.html#advanced-tips",
     "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
     "section": "5 Advanced Tips",
     "text": "5 Advanced Tips\nFor easier SSH access, create a ~/.ssh/config file:\nHost rgtlab.org\nHostName 13.57.139.31\nStrictHostKeyChecking no\nUser ubuntu\nPort 22\nIdentityFile ~/.ssh/power1_app.pem\nThis enables simple SSH access:\nssh rgtlab.org"
   },
   {
-    "objectID": "posts/dockerize_simple/index.html#key-takeaways",
-    "href": "posts/dockerize_simple/index.html#key-takeaways",
+    "objectID": "tutorials/docker-for-beginners/index.html#key-takeaways",
+    "href": "tutorials/docker-for-beginners/index.html#key-takeaways",
     "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
     "section": "6 Key Takeaways",
     "text": "6 Key Takeaways\n\nDocker containers provide isolation and reproducibility for your Shiny applications\nCaddy web server automatically handles SSL certificates and security\nBasic authentication provides a simple access control mechanism\nAWS EC2 offers a reliable platform for hosting web applications\nThe entire deployment can be automated for continuous delivery workflows"
   },
   {
-    "objectID": "posts/dockerize_simple/index.html#further-reading",
-    "href": "posts/dockerize_simple/index.html#further-reading",
+    "objectID": "tutorials/docker-for-beginners/index.html#further-reading",
+    "href": "tutorials/docker-for-beginners/index.html#further-reading",
     "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
     "section": "7 Further Reading",
     "text": "7 Further Reading\n\nShiny Server documentation\nDocker documentation\nCaddy Web Server documentation\nAWS EC2 documentation"
   },
   {
-    "objectID": "posts/dockerize_simple/index.html#step-by-step-implementation-1",
-    "href": "posts/dockerize_simple/index.html#step-by-step-implementation-1",
+    "objectID": "tutorials/docker-for-beginners/index.html#step-by-step-implementation-1",
+    "href": "tutorials/docker-for-beginners/index.html#step-by-step-implementation-1",
     "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
     "section": "8 Step-by-Step Implementation",
     "text": "8 Step-by-Step Implementation\nIn development"
   },
   {
-    "objectID": "posts/dockerize_simple/index.html#key-takeaways-1",
-    "href": "posts/dockerize_simple/index.html#key-takeaways-1",
+    "objectID": "tutorials/docker-for-beginners/index.html#key-takeaways-1",
+    "href": "tutorials/docker-for-beginners/index.html#key-takeaways-1",
     "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
     "section": "9 Key Takeaways",
     "text": "9 Key Takeaways\nIn development"
   },
   {
-    "objectID": "posts/dockerize_simple/index.html#further-reading-1",
-    "href": "posts/dockerize_simple/index.html#further-reading-1",
+    "objectID": "tutorials/docker-for-beginners/index.html#further-reading-1",
+    "href": "tutorials/docker-for-beginners/index.html#further-reading-1",
     "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
     "section": "10 Further Reading",
     "text": "10 Further Reading\nIn development"
