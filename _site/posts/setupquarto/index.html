@@ -1248,21 +1248,77 @@ function showDownloadButton(pdfPath) {
 }
 
 function showGenerateButton(htmlPath) {
-  var qmdPath = htmlPath.replace('/posts/', 'posts/').replace('index.html', 'index.qmd');
+  var qmdPath = htmlPath.replace('/posts/', 'posts/').replace('/index.html', '/index.qmd').replace('.html', '.qmd');
 
   var generateBtn = document.createElement('div');
   generateBtn.className = 'pdf-download-button';
   generateBtn.innerHTML =
-    '<div class="alert alert-secondary d-flex flex-column gap-2 p-3" role="alert">' +
-    '  <div><i class="bi bi-file-pdf me-2"></i><strong>PDF version available</strong></div>' +
-    '  <div class="small">Generate a PDF version of this article by running this command in the terminal:</div>' +
-    '  <pre class="bg-light p-2 rounded mb-0 mt-1"><code>./generate_pdf.sh ' + qmdPath + '</code></pre>' +
+    '<div class="alert alert-info d-flex align-items-center p-3" role="alert">' +
+    '  <div class="me-3">' +
+    '    <i class="bi bi-file-pdf" style="font-size: 1.5rem;"></i>' +
+    '  </div>' +
+    '  <div class="flex-grow-1">' +
+    '    <strong>PDF Version Available</strong><br>' +
+    '    <span class="small text-muted">This article can be generated as a PDF for offline reading or printing.</span>' +
+    '  </div>' +
+    '  <div>' +
+    '    <button class="btn btn-outline-primary btn-sm" onclick="copyGenerateCommand(\'' + qmdPath + '\')">' +
+    '      <i class="bi bi-clipboard me-1"></i>Copy Command' +
+    '    </button>' +
+    '  </div>' +
+    '</div>' +
+    '<div class="collapse mt-2" id="generateInstructions">' +
+    '  <div class="card card-body bg-light">' +
+    '    <small>' +
+    '      <strong>To generate PDF:</strong> Run this command in your terminal:<br>' +
+    '      <code class="user-select-all" id="generateCommand">./generate_pdf.sh ' + qmdPath + '</code>' +
+    '    </small>' +
+    '  </div>' +
     '</div>';
 
   // Find where to insert the button (right after the title block)
   var titleBlock = document.querySelector('.quarto-title-meta');
   if (titleBlock) {
     titleBlock.after(generateBtn);
+  }
+}
+
+function copyGenerateCommand(qmdPath) {
+  var command = './generate_pdf.sh ' + qmdPath;
+  
+  // Try to copy to clipboard
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(command).then(function() {
+      showCopyFeedback('Command copied to clipboard!');
+    }, function() {
+      showGenerateInstructions();
+    });
+  } else {
+    // Fallback: show instructions
+    showGenerateInstructions();
+  }
+}
+
+function showCopyFeedback(message) {
+  // Show brief success message
+  var btn = event.target.closest('button');
+  var originalHtml = btn.innerHTML;
+  btn.innerHTML = '<i class="bi bi-check me-1"></i>Copied!';
+  btn.classList.remove('btn-outline-primary');
+  btn.classList.add('btn-success');
+  
+  setTimeout(function() {
+    btn.innerHTML = originalHtml;
+    btn.classList.remove('btn-success');
+    btn.classList.add('btn-outline-primary');
+  }, 2000);
+}
+
+function showGenerateInstructions() {
+  // Toggle instructions visibility
+  var instructions = document.getElementById('generateInstructions');
+  if (instructions) {
+    instructions.classList.toggle('show');
   }
 }
 </script>

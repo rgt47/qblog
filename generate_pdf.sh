@@ -1,9 +1,11 @@
 #!/bin/bash
 
 # This script renders individual blog posts as both HTML and PDF
-# Usage: ./generate_pdf.sh [path/to/post.qmd]
+# Usage: ./generate_pdf.sh [path/to/post.qmd] [--no-open]
 # Example: ./generate_pdf.sh posts/dockerize_simple/index.qmd
+# Example: ./generate_pdf.sh posts/dockerize_simple/index.qmd --no-open
 # If no argument is provided, it will generate a PDF for the most recently modified post
+# Use --no-open flag to skip the interactive "open PDF" prompt
 
 # Check if an argument was provided
 if [ $# -eq 0 ]; then
@@ -72,8 +74,8 @@ if [ -f "$PDF_PATH" ]; then
   PDF_SIZE=$(du -h "$PDF_PATH" | cut -f1)
   echo "PDF size: $PDF_SIZE"
 
-  # If we're on macOS, offer to open the PDF
-  if [[ "$OSTYPE" == "darwin"* ]]; then
+  # If we're on macOS, offer to open the PDF (unless --no-open flag is used)
+  if [[ "$OSTYPE" == "darwin"* ]] && [[ "$*" != *"--no-open"* ]]; then
     echo "Would you like to open the PDF? (y/n)"
     read -r OPEN_PDF
     if [[ "$OPEN_PDF" =~ ^[Yy]$ ]]; then
