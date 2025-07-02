@@ -283,10 +283,16 @@ document.addEventListener('DOMContentLoaded', function() {
   margin-bottom: 1rem;
 }
 
-.category-filter {
+.category-filter, .category-badge {
   cursor: pointer;
   margin: 0.2rem;
   padding: 0.3rem 0.6rem;
+}
+
+.category-badge:hover {
+  opacity: 0.8;
+  transform: scale(1.05);
+  transition: all 0.2s ease;
 }
 
 .sidebar {
@@ -331,21 +337,6 @@ July 01, 2025
 Latest thoughts, updates, and discoveries
 </div>
 <p><a href="blog/" class="btn btn-primary btn-sm">Read More →</a></p>
-</div>
-<div class="post-card" data-categories="AI, automation, R, data-science">
-<div class="post-title">
-<a href="blog/chatbots-in-stats/">Making optimal use of ChatGPT and other chatbots for data science</a>
-</div>
-<div class="post-date">
-January 18, 2025
-</div>
-<div class="post-description">
-How ChatGPT and other LLM tools can enhance statistical analysis and research workflows.
-</div>
-<div class="post-categories">
-<span class="badge bg-primary category-badge" data-category="AI">AI</span> <span class="badge bg-primary category-badge" data-category="automation">automation</span> <span class="badge bg-primary category-badge" data-category="R">R</span> <span class="badge bg-primary category-badge" data-category="data-science">data-science</span>
-</div>
-<p><a href="blog/chatbots-in-stats/" class="btn btn-primary btn-sm">Read More →</a></p>
 </div>
 <div class="post-card" data-categories="R Programming, Data Science, Statistical Computing, Machine Learning, Random Forest, Model Comparison, Palmer Penguins">
 <div class="post-title">
@@ -580,7 +571,7 @@ Show All
 📊 Blog Stats
 </h4>
 <div>
-Total Posts: <span id="total-posts">16</span>
+Total Posts: <span id="total-posts">15</span>
 </div>
 <div>
 Showing: <span id="visible-posts">All</span>
@@ -592,6 +583,7 @@ Showing: <span id="visible-posts">All</span>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const categoryFilters = document.querySelectorAll('.category-filter');
+    const categoryBadges = document.querySelectorAll('.category-badge');
     const postCards = document.querySelectorAll('.post-card');
     const clearButton = document.getElementById('clear-filters');
     const visiblePostsSpan = document.getElementById('visible-posts');
@@ -621,21 +613,42 @@ document.addEventListener('DOMContentLoaded', function() {
         visiblePostsSpan.textContent = activeCategories.size === 0 ? 'All' : visibleCount;
     }
 
+    function handleCategoryClick(category) {
+        if (activeCategories.has(category)) {
+            activeCategories.delete(category);
+            // Update sidebar filters
+            categoryFilters.forEach(filter => {
+                if (filter.getAttribute('data-category') === category) {
+                    filter.classList.remove('bg-primary');
+                    filter.classList.add('bg-secondary');
+                }
+            });
+        } else {
+            activeCategories.add(category);
+            // Update sidebar filters
+            categoryFilters.forEach(filter => {
+                if (filter.getAttribute('data-category') === category) {
+                    filter.classList.remove('bg-secondary');
+                    filter.classList.add('bg-primary');
+                }
+            });
+        }
+        updateDisplay();
+    }
+
+    // Handle sidebar filter clicks
     categoryFilters.forEach(filter => {
         filter.addEventListener('click', function() {
             const category = this.getAttribute('data-category');
-            
-            if (activeCategories.has(category)) {
-                activeCategories.delete(category);
-                this.classList.remove('bg-primary');
-                this.classList.add('bg-secondary');
-            } else {
-                activeCategories.add(category);
-                this.classList.remove('bg-secondary');
-                this.classList.add('bg-primary');
-            }
-            
-            updateDisplay();
+            handleCategoryClick(category);
+        });
+    });
+
+    // Handle post category badge clicks
+    categoryBadges.forEach(badge => {
+        badge.addEventListener('click', function() {
+            const category = this.getAttribute('data-category');
+            handleCategoryClick(category);
         });
     });
 

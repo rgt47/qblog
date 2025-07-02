@@ -315,130 +315,39 @@
     "text": "7.4 Further Reading\nIn development"
   },
   {
-    "objectID": "tutorials/docker-for-beginners/index.html",
-    "href": "tutorials/docker-for-beginners/index.html",
-    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
+    "objectID": "tutorials/git-setup-guide/index.html",
+    "href": "tutorials/git-setup-guide/index.html",
+    "title": "Setting up git for (solo) data science workflow",
     "section": "",
-    "text": "Photo by Nathan Waters on Unsplash"
+    "text": "purrr"
   },
   {
-    "objectID": "tutorials/docker-for-beginners/index.html#introduction",
-    "href": "tutorials/docker-for-beginners/index.html#introduction",
-    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
-    "section": "1 Introduction",
-    "text": "1 Introduction\nThis guide demonstrates how to deploy a Shiny application from your local workstation to a secure web environment. We’ll use a stack of open-source technologies including Linux, R, Shiny, Docker, and Caddy, deployed on AWS EC2. While we focus on AWS here, the principles apply to other cloud providers like Hetzner, which we’ll cover in future posts."
+    "objectID": "tutorials/git-setup-guide/index.html#prerequisites",
+    "href": "tutorials/git-setup-guide/index.html#prerequisites",
+    "title": "Setting up git for (solo) data science workflow",
+    "section": "4.1 Prerequisites",
+    "text": "4.1 Prerequisites\nIn development"
   },
   {
-    "objectID": "tutorials/docker-for-beginners/index.html#prerequisites",
-    "href": "tutorials/docker-for-beginners/index.html#prerequisites",
-    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
-    "section": "2 Prerequisites",
-    "text": "2 Prerequisites\nBefore beginning this tutorial, you’ll need:\n\nA working Shiny application on your local machine\nAn AWS account with permissions to create EC2 instances\nBasic familiarity with the Linux command line\nGit (optional, for version control)"
+    "objectID": "tutorials/git-setup-guide/index.html#step-by-step-implementation",
+    "href": "tutorials/git-setup-guide/index.html#step-by-step-implementation",
+    "title": "Setting up git for (solo) data science workflow",
+    "section": "4.2 Step-by-Step Implementation",
+    "text": "4.2 Step-by-Step Implementation\nIn development"
   },
   {
-    "objectID": "tutorials/docker-for-beginners/index.html#the-example-application",
-    "href": "tutorials/docker-for-beginners/index.html#the-example-application",
-    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
-    "section": "3 The Example Application",
-    "text": "3 The Example Application\nLet’s start with a simple but practical example: hosting a shiny web application that provides a power calculator for two-sample t-tests. While straightforward, this application demonstrates all the key deployment concepts.\nHere is the code for the Shiny app (The app is intentionally minimal, using only base R functions, with a minimum of reactive widgets and layout commands.):\n\nPower Calculator Shiny App Code (power1_shiny/app.R)\nui &lt;- fluidPage(\n  titlePanel(\"Power Calculator for Two Group Parallel Designs\"),\n  sliderInput(\"N\", \"Total Sample Size:\", min = 0, max = 300, value = 100),\n  plotOutput(\"plot\"),\n  verbatimTextOutput(\"eff\"))\n\nserver &lt;- function(input, output, session) {\n  delta = seq(0, 1.5,.05)\n  pow = reactive(sapply(delta, function(x) power.t.test(input$N, d=x)$power ))\n  eff =  renderText(power.t.test(input$N, power=.8)$d)\n  output$plot &lt;- renderPlot({\n    plot(delta, pow(), cex=1.5, ylab=\"power\")\n    abline(h = .8,  col = \"red\", lwd =2.5, lty = 4)\n    abline(v = eff(), col = \"blue\",lwd =2.5, lty = 4)})\n  output$eff &lt;- renderText(\n    paste0(\"Std. effect detectable with power 80% = \", eff()) )\n}\nshinyApp(ui, server)\n\n\n\n\n\n\nShiny app interface"
+    "objectID": "tutorials/git-setup-guide/index.html#key-takeaways",
+    "href": "tutorials/git-setup-guide/index.html#key-takeaways",
+    "title": "Setting up git for (solo) data science workflow",
+    "section": "4.3 Key Takeaways",
+    "text": "4.3 Key Takeaways\nIn development"
   },
   {
-    "objectID": "tutorials/docker-for-beginners/index.html#step-by-step-implementation",
-    "href": "tutorials/docker-for-beginners/index.html#step-by-step-implementation",
-    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
-    "section": "4 Step-by-Step Implementation",
-    "text": "4 Step-by-Step Implementation\n\n4.1 Deployment Checklist\nAs an overview, to host our Shiny app securely online, we need to:\n\nObtain a static IP address\nRegister a domain name\nConfigure a firewall\nSet up the virtual server\nInstall and configure a web server\nImplement SSL encryption\nSet up user authentication\nConfigure reverse proxy routing\n\nWhile this might seem complex, we’ll break it down into manageable steps.\nDetailed instructions for setting up a virtual server (items 1 through 4 above) on EC2 both through the EC2 console and the command line interface can be found: here and here\n\n\n4.2 Step 1: Server Setup\nFirst, we’ll prepare our AWS EC2 environment: In the course of setting up your server, you’ll need to: 1. Create or access your AWS account 2. Generate SSH key-pair, named for example, power1_app.pem 3. Configure firewall settings, allowing SSH (port 22), HTTP (port 80) traffic and HTTPS (port 443) traffic. 4. Obtain static IP, e.g., 13.57.139.31 5. Register domain name, e.g. rgtlab.org 6. Launch Ubuntu instance (t2-micro is sufficient)\n\n\n4.3 Step 2: Installing Required Software\nconnect to your server via SSH:\nssh -i \"~/.ssh/power1_app.pem\"  ubuntu@rgtlab.org\nOn your server, install Docker and Caddy (a modern web server with automatic HTTPS) using the following commands.\nsudo apt update\nsudo apt install docker.io -y\nsudo apt install -y curl debian-keyring debian-archive-keyring apt-transport-https\ncurl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | \\\nsudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg\ncurl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | \\\nsudo tee /etc/apt/sources.list.d/caddy-stable.list\nsudo apt update\nsudo apt install caddy -y\n\n\n4.4 Step 3: Containerizing the Application\nCreate a Dockerfile in your app directory:\n\nDockerfile Configuration\nFROM rocker/shiny:4.2.0\nRUN rm -rf /srv/shiny-server\nCOPY /power1_shiny/* /srv/shiny-server/\nUSER shiny\nCMD [\"/usr/bin/shiny-server\"]\n\n\n\n4.5 Step 4: Configuring the Web Server\nCreate a Caddyfile:\n\nCaddy Server Configuration\nrgtlab.org {\n    basicauth * /power1_shiny/* {\n        bob $2a$14$pYWd5O7JqNeGLS4m4CKkzemM2pq5ezn9bcTDowofZTl5wRVl8NTJm\n    }\n    root * /var/www/html\n    handle_path /power1_shiny/* {\n            reverse_proxy 0.0.0.0:3838\n    }\n    file_server\n}\n\nCreate an index.html:\n\nLanding Page HTML\n&lt;!DOCTYPE html&gt;\n&lt;html&gt;\n  &lt;body&gt;\n    &lt;h1&gt;Power1 app&lt;/h1&gt;\n    &lt;ul&gt;\n      &lt;li&gt;&lt;a href=\"./power1_shiny/\"&gt;Power1 app&lt;/a&gt;&lt;/li&gt;\n    &lt;/ul&gt;\n  &lt;/body&gt;\n&lt;/html&gt;\n\n\n\n4.6 Step 5: Deployment\n\nCopy files to server:\n\nscp -r ~/prj/power1_app/ ubuntu@rgtlab.org:~\n\nBuild and run Docker container:\n\ndocker build -t power1_image .\ndocker run -d --name=power1_shiny -p 3838:3838 --restart=always power1_image\n\nConfigure Caddy:\n\nsudo cp ./Caddyfile /etc/caddy/\ncp ./index.html /var/www/html/\nsudo systemctl reload caddy\nYour app should now be available at https://rgtlab.org!"
-  },
-  {
-    "objectID": "tutorials/docker-for-beginners/index.html#advanced-tips",
-    "href": "tutorials/docker-for-beginners/index.html#advanced-tips",
-    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
-    "section": "5 Advanced Tips",
-    "text": "5 Advanced Tips\nFor easier SSH access, create a ~/.ssh/config file:\nHost rgtlab.org\nHostName 13.57.139.31\nStrictHostKeyChecking no\nUser ubuntu\nPort 22\nIdentityFile ~/.ssh/power1_app.pem\nThis enables simple SSH access:\nssh rgtlab.org"
-  },
-  {
-    "objectID": "tutorials/docker-for-beginners/index.html#key-takeaways",
-    "href": "tutorials/docker-for-beginners/index.html#key-takeaways",
-    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
-    "section": "6 Key Takeaways",
-    "text": "6 Key Takeaways\n\nDocker containers provide isolation and reproducibility for your Shiny applications\nCaddy web server automatically handles SSL certificates and security\nBasic authentication provides a simple access control mechanism\nAWS EC2 offers a reliable platform for hosting web applications\nThe entire deployment can be automated for continuous delivery workflows"
-  },
-  {
-    "objectID": "tutorials/docker-for-beginners/index.html#further-reading",
-    "href": "tutorials/docker-for-beginners/index.html#further-reading",
-    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
-    "section": "7 Further Reading",
-    "text": "7 Further Reading\n\nShiny Server documentation\nDocker documentation\nCaddy Web Server documentation\nAWS EC2 documentation"
-  },
-  {
-    "objectID": "tutorials/docker-for-beginners/index.html#step-by-step-implementation-1",
-    "href": "tutorials/docker-for-beginners/index.html#step-by-step-implementation-1",
-    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
-    "section": "8 Step-by-Step Implementation",
-    "text": "8 Step-by-Step Implementation\nIn development"
-  },
-  {
-    "objectID": "tutorials/docker-for-beginners/index.html#key-takeaways-1",
-    "href": "tutorials/docker-for-beginners/index.html#key-takeaways-1",
-    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
-    "section": "9 Key Takeaways",
-    "text": "9 Key Takeaways\nIn development"
-  },
-  {
-    "objectID": "tutorials/docker-for-beginners/index.html#further-reading-1",
-    "href": "tutorials/docker-for-beginners/index.html#further-reading-1",
-    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
-    "section": "10 Further Reading",
-    "text": "10 Further Reading\nIn development"
-  },
-  {
-    "objectID": "blog/coding-with-genai/index.html",
-    "href": "blog/coding-with-genai/index.html",
-    "title": "Coding with Generative AI",
-    "section": "",
-    "text": "View this post in multiple formats:\n\n\n\n  HTML    PDF    Word"
-  },
-  {
-    "objectID": "blog/coding-with-genai/index.html#prerequisites",
-    "href": "blog/coding-with-genai/index.html#prerequisites",
-    "title": "Coding with Generative AI",
-    "section": "1.1 Prerequisites",
-    "text": "1.1 Prerequisites\nIn development"
-  },
-  {
-    "objectID": "blog/coding-with-genai/index.html#step-by-step-implementation",
-    "href": "blog/coding-with-genai/index.html#step-by-step-implementation",
-    "title": "Coding with Generative AI",
-    "section": "1.2 Step-by-Step Implementation",
-    "text": "1.2 Step-by-Step Implementation\nIn development"
-  },
-  {
-    "objectID": "blog/coding-with-genai/index.html#key-takeaways",
-    "href": "blog/coding-with-genai/index.html#key-takeaways",
-    "title": "Coding with Generative AI",
-    "section": "1.3 Key Takeaways",
-    "text": "1.3 Key Takeaways\nIn development"
-  },
-  {
-    "objectID": "blog/coding-with-genai/index.html#further-reading",
-    "href": "blog/coding-with-genai/index.html#further-reading",
-    "title": "Coding with Generative AI",
-    "section": "1.4 Further Reading",
-    "text": "1.4 Further Reading\nIn development"
-  },
-  {
-    "objectID": "test_minimal.html",
-    "href": "test_minimal.html",
-    "title": "Test Document",
-    "section": "",
-    "text": "This is a test document.\n\n\nCode\n1 + 1\n\n\n[1] 2"
-  },
-  {
-    "objectID": "test_minimal.html#test",
-    "href": "test_minimal.html#test",
-    "title": "Test Document",
-    "section": "",
-    "text": "This is a test document.\n\n\nCode\n1 + 1\n\n\n[1] 2"
+    "objectID": "tutorials/git-setup-guide/index.html#further-reading",
+    "href": "tutorials/git-setup-guide/index.html#further-reading",
+    "title": "Setting up git for (solo) data science workflow",
+    "section": "4.4 Further Reading",
+    "text": "4.4 Further Reading\nIn development"
   },
   {
     "objectID": "white-papers/index.html",
@@ -854,111 +763,6 @@
     "text": "7.4 Further Reading\nIn development"
   },
   {
-    "objectID": "blog/chatbots-in-stats/index.html",
-    "href": "blog/chatbots-in-stats/index.html",
-    "title": "Making optimal use of ChatGPT and other chatbots for data science",
-    "section": "",
-    "text": "chatGPT"
-  },
-  {
-    "objectID": "blog/chatbots-in-stats/index.html#whats-in-a-name",
-    "href": "blog/chatbots-in-stats/index.html#whats-in-a-name",
-    "title": "Making optimal use of ChatGPT and other chatbots for data science",
-    "section": "1.1 Whats in a name?",
-    "text": "1.1 Whats in a name?\nGPT in ChatGPT stands for Generative Pre-trained Transformer. • Generative: It generates text rather than just analyzing or classifying it. • Pre-trained: It is trained on a large dataset before being fine-tuned for specific tasks. • Transformer: It uses the Transformer architecture, a neural network model designed for natural language processing (NLP).\nEssentially, ChatGPT is a chatbot built on a GPT model, which is designed to understand and generate human-like text based on prompts\nFrom a recent article in Nature:\n“ChatGPT stunned the world on its launch in November 2022. Powered by a large language model (LLM) and trained on much of the text published on the Internet, the artificial intelligence (AI) chatbot, created by OpenAI in San Francisco, California, makes the latest advances in natural-language processing broadly accessible by providing a dialogue-based interface capable of answering complex questions, composing sophisticated essays and generating source code. One obvious question was: how could this tool improve science?”\nNature: Chatbots in science: What can ChatGPT do for you?\nLets start with a couple examples to get an idea of how to use ChatGPT for data science tasks."
-  },
-  {
-    "objectID": "blog/chatbots-in-stats/index.html#example-work-up-of-a-regression-analysis-for-the-iris-data-set.",
-    "href": "blog/chatbots-in-stats/index.html#example-work-up-of-a-regression-analysis-for-the-iris-data-set.",
-    "title": "Making optimal use of ChatGPT and other chatbots for data science",
-    "section": "1.2 Example work up of a regression analysis for the iris data set.",
-    "text": "1.2 Example work up of a regression analysis for the iris data set.\n\nPrompt: “I want to do a trial data analysis in R of the Fisher iris data set that is distributed with R. I want to start with logistic regression analysis and want to use K-fold cross-validation. I want to use an ROC curve to visualize the results.”\n\ncomment: this is a good example of a prompt that is clear and specific. It provides many of the necessary context and requirements for the task. However, it is not completely unambiguous. It does not specify the number of folds for cross-validatikn. It also does not specify the R package to use for the aanalysis. There ae several to choose from.\ninstall.packages(\"caret\")  # Install if not already installed\ninstall.packages(\"pROC\")   # Install if not already installed\ninstall.packages(\"glmnet\") # Install if not already installed\nlibrary(caret)\nlibrary(pROC)\nlibrary(glmnet)\n\n# Prepare binary dataset\ndata(iris)\niris_binary &lt;- iris[iris$Species != \"setosa\", ]\niris_binary$Species &lt;- factor(iris_binary$Species)\n\n# Split the data into training and test sets\nset.seed(42)\ntrainIndex &lt;- createDataPartition(iris_binary$Species, p = 0.8, list = FALSE)\ntrain_data &lt;- iris_binary[trainIndex, ]\ntest_data &lt;- iris_binary[-trainIndex, ]\n\n# Convert the data into matrix format as required by glmnet\nx_train &lt;- model.matrix(Species ~ ., train_data)[,-1]\ny_train &lt;- train_data$Species\n\nx_test &lt;- model.matrix(Species ~ ., test_data)[,-1]\ny_test &lt;- test_data$Species\n\n# Set up cross-validation for Lasso regression on the training data\ntrain_control &lt;- trainControl(method = \"cv\", number = 10, classProbs = TRUE, summaryFunction = twoClassSummary)\n\n# Define the lasso model using glmnet (alpha=1 for Lasso)\nlasso_model &lt;- train(x = x_train, y = y_train, method = \"glmnet\", trControl = train_control, tuneGrid = expand.grid(alpha = 1, lambda = seq(0.001, 0.1, by = 0.001)), family = \"binomial\", metric = \"ROC\")\n\n# Make predictions on the test set\ntest_predictions &lt;- predict(lasso_model, newdata = x_test, type = \"prob\")[,2]\n\n# Plot ROC curve for the test set\nroc_curve_test &lt;- roc(y_test, test_predictions, levels = rev(levels(y_test)))\nplot(roc_curve_test, col = \"blue\", lwd = 2, main = \"ROC Curve for Lasso Regression on Test Data\")\nv\n# Calculate AUC and its 95% confidence interval\nauc_value &lt;- auc(roc_curve_test)\nci &lt;- ci.auc(roc_curve_test, conf.level = 0.95)\n\n# Add AUC with 95% confidence interval to the plot\nlegend_text &lt;- paste(\"AUC =\", round(auc_value, 2), \"\\n95% CI:\", round(ci[1], 2), \"-\", round(ci[3], 2))\nlegend(\"bottomright\", legend = legend_text, col = \"blue\", lwd = 2)\nOn completion of the analysis, the user may have additional questions or requests. For example, they may ask why use 10 folds specifically? Or why split the 80:20? Why use the lasso regression model?\nThey can just ask the chatbot directly.\nPronpt: why split the data set if we’re doing 10-fold cross validation?\nChatGPT answer: ### Why Not Split? - 10-fold CV inherently splits the data multiple times\n- Each fold acts as a validation set once, while the remaining 9 folds serve as the training set. - Every observation is used for both training and testing across different iterations.\n\nAn additional 80:20 split is redundant\n\nIt would unnecessarily reduce the amount of data available for training.\nK-fold CV already provides a better estimate of model performance.\n\n\n\n1.2.1 When Would We Still Use an 80:20 Split?\n\nIf we want one final test set to evaluate model performance after tuning hyperparameters using K-fold CV.\n\nExample: Use 80% for training, perform 10-fold CV on this training set, and then evaluate on the held-out 20% test set.\nThis prevents data leakage and ensures the final model is evaluated on completely unseen data.\n\n\n\n\n\n1.2.2 Best Practice for Model Selection\n\nCross-validation alone (no 80:20 split)\n\nWhen optimizing model parameters and assessing performance.\n\nAvoids unnecessary data loss.\n\nEvery observation contributes to both training and validation.\n\n80:20 Split + Cross-validation on training set\n\nIf we want to train the final model on the full dataset,\n\nThen evaluate generalization on a completely independent holdout test set.\n\n\nFor your Fisher Iris dataset analysis, just using 10-fold CV is sufficient unless you plan to tune hyperparameters before a final evaluation. 🚀 for a 95% confidence interval calculationgM “should I split my data set into train and test parts if I’m using k-fold cross-validation?” “add a 95% confidence interval calculation to the AUC annotation in the ROC plot” “do the same analysis but use lasso regression instead of logistic regression”"
-  },
-  {
-    "objectID": "blog/chatbots-in-stats/index.html#step-1-setting-up-the-package-structure",
-    "href": "blog/chatbots-in-stats/index.html#step-1-setting-up-the-package-structure",
-    "title": "Making optimal use of ChatGPT and other chatbots for data science",
-    "section": "6.1 Step 1: Setting Up the Package Structure",
-    "text": "6.1 Step 1: Setting Up the Package Structure\n\nCreate a New Package Directory:\n\nUse usethis to create a package directory:\nusethis::create_package(\"path/to/zzlongplot\")\nThis sets up the necessary directory structure with folders like R/ and files like DESCRIPTION.\n\nAdd the Core Script:\n\nPlace the zzlongplot.R file in the R/ directory.\n\nSet Up the DESCRIPTION File:\n\nEdit the DESCRIPTION file to include metadata about the package. Use usethis::use_description() to create and fill this file:\nusethis::use_description(fields = list(\n  Title = \"Flexible Longitudinal Plotting in R\",\n  Description = \"Provides tools for generating observed and change plots in longitudinal datasets.\",\n  Version = \"0.1.0\",\n  Author = \"Your Name [aut, cre]\",\n  Maintainer = \"Your Name &lt;your_email@example.com&gt;\",\n  License = \"MIT\",\n  Encoding = \"UTF-8\"\n))\n\nAdd Dependencies:\n\nList package dependencies in the DESCRIPTION file under Imports. For example:\nImports:\n  dplyr,\n  ggplot2,\n  patchwork"
-  },
-  {
-    "objectID": "blog/chatbots-in-stats/index.html#step-2-document-the-package",
-    "href": "blog/chatbots-in-stats/index.html#step-2-document-the-package",
-    "title": "Making optimal use of ChatGPT and other chatbots for data science",
-    "section": "6.2 Step 2: Document the Package",
-    "text": "6.2 Step 2: Document the Package\n\nAdd Roxygen2 Comments:\n\nEnsure all functions in zzlongplot.R have Roxygen2 comments for documentation.\n\nGenerate Documentation:\n\nRun:\ndevtools::document()\nThis creates help files in the man/ directory and updates the NAMESPACE file.\n\nCreate a Vignette:\n\nAdd the vignette to introduce the package:\nusethis::use_vignette(\"Introduction_to_zzlongplot\")\nPlace the provided zzlongplot-vignette.Rmd file in the vignettes/ directory and build it:\ndevtools::build_vignettes()"
-  },
-  {
-    "objectID": "blog/chatbots-in-stats/index.html#step-3-test-the-package",
-    "href": "blog/chatbots-in-stats/index.html#step-3-test-the-package",
-    "title": "Making optimal use of ChatGPT and other chatbots for data science",
-    "section": "6.3 Step 3: Test the Package",
-    "text": "6.3 Step 3: Test the Package\n\nAdd Unit Tests:\n\nUse usethis to set up a testing framework:\nusethis::use_testthat()\nPlace the test-zzlongplot.R file in tests/testthat/.\n\nRun Tests:\n\nRun all tests:\ndevtools::test()"
-  },
-  {
-    "objectID": "blog/chatbots-in-stats/index.html#step-4-check-the-package",
-    "href": "blog/chatbots-in-stats/index.html#step-4-check-the-package",
-    "title": "Making optimal use of ChatGPT and other chatbots for data science",
-    "section": "6.4 Step 4: Check the Package",
-    "text": "6.4 Step 4: Check the Package\n\nBuild and Check:\n\nBuild the package:\ndevtools::build()\nCheck the package for CRAN compliance:\ndevtools::check()\n\nFix Issues:\n\nAddress any warnings or errors reported by devtools::check()."
-  },
-  {
-    "objectID": "blog/chatbots-in-stats/index.html#step-5-submit-to-cran",
-    "href": "blog/chatbots-in-stats/index.html#step-5-submit-to-cran",
-    "title": "Making optimal use of ChatGPT and other chatbots for data science",
-    "section": "6.5 Step 5: Submit to CRAN",
-    "text": "6.5 Step 5: Submit to CRAN\n\nPrepare for Submission:\n\nEnsure the package passes R CMD check with no warnings, errors, or notes.\nCompress the package into a .tar.gz file using:\ndevtools::build()\n\nSubmit to CRAN:\n\nGo to the CRAN submission page.\nUpload the .tar.gz file and fill out the required metadata.\n\nRespond to Feedback:\n\nCRAN maintainers might request changes. Address them promptly and resubmit if needed."
-  },
-  {
-    "objectID": "blog/chatbots-in-stats/index.html#step-6-set-up-a-github-repository",
-    "href": "blog/chatbots-in-stats/index.html#step-6-set-up-a-github-repository",
-    "title": "Making optimal use of ChatGPT and other chatbots for data science",
-    "section": "6.6 Step 6: Set Up a GitHub Repository",
-    "text": "6.6 Step 6: Set Up a GitHub Repository\n\nInitialize a Git Repository:\n\nIn the package directory, run:\ngit init\ngit add .\ngit commit -m \"Initial commit\"\n\nCreate a Repository on GitHub:\n\nUse the GitHub website or the gh CLI tool:\ngh repo create yourusername/zzlongplot --public --source=.\n\nPush the Code:\n\nPush the code to GitHub:\ngit branch -M main\ngit push -u origin main"
-  },
-  {
-    "objectID": "blog/chatbots-in-stats/index.html#step-7-manage-the-development-repository",
-    "href": "blog/chatbots-in-stats/index.html#step-7-manage-the-development-repository",
-    "title": "Making optimal use of ChatGPT and other chatbots for data science",
-    "section": "6.7 Step 7: Manage the Development Repository",
-    "text": "6.7 Step 7: Manage the Development Repository\n\nAdd Version Control:\n\nUse Git for version control. For example, create a branch for new features:\ngit checkout -b feature-new-plot\n\nTag Releases:\n\nTag versions for releases:\ngit tag -a v0.1.0 -m \"First release\"\ngit push origin v0.1.0\n\nAdd Continuous Integration:\n\nSet up GitHub Actions for testing:\nusethis::use_github_action_check_standard()\n\nPublish Development Versions:\n\nUse GitHub to manage development versions and issues."
-  },
-  {
-    "objectID": "blog/chatbots-in-stats/index.html#step-8-maintain-the-package",
-    "href": "blog/chatbots-in-stats/index.html#step-8-maintain-the-package",
-    "title": "Making optimal use of ChatGPT and other chatbots for data science",
-    "section": "6.8 Step 8: Maintain the Package",
-    "text": "6.8 Step 8: Maintain the Package\n\nAddress Issues:\n\nMonitor and address issues reported by users.\n\nUpdate the Package:\n\nFor updates, increment the version number in DESCRIPTION and tag the new version."
-  },
-  {
-    "objectID": "blog/chatbots-in-stats/index.html#prerequisites",
-    "href": "blog/chatbots-in-stats/index.html#prerequisites",
-    "title": "Making optimal use of ChatGPT and other chatbots for data science",
-    "section": "6.9 Prerequisites",
-    "text": "6.9 Prerequisites\nIn development"
-  },
-  {
-    "objectID": "blog/chatbots-in-stats/index.html#step-by-step-implementation",
-    "href": "blog/chatbots-in-stats/index.html#step-by-step-implementation",
-    "title": "Making optimal use of ChatGPT and other chatbots for data science",
-    "section": "6.10 Step-by-Step Implementation",
-    "text": "6.10 Step-by-Step Implementation\nIn development"
-  },
-  {
-    "objectID": "blog/chatbots-in-stats/index.html#key-takeaways",
-    "href": "blog/chatbots-in-stats/index.html#key-takeaways",
-    "title": "Making optimal use of ChatGPT and other chatbots for data science",
-    "section": "6.11 Key Takeaways",
-    "text": "6.11 Key Takeaways\nIn development"
-  },
-  {
-    "objectID": "blog/chatbots-in-stats/index.html#further-reading",
-    "href": "blog/chatbots-in-stats/index.html#further-reading",
-    "title": "Making optimal use of ChatGPT and other chatbots for data science",
-    "section": "6.12 Further Reading",
-    "text": "6.12 Further Reading\nIn development"
-  },
-  {
     "objectID": "about/index.html",
     "href": "about/index.html",
     "title": "About Thomas Lab",
@@ -1033,7 +837,7 @@
     "href": "blog/index.html",
     "title": "Blog",
     "section": "",
-    "text": "Welcome to my blog! Here you’ll find my latest thoughts on R programming, data science, statistical computing, and research workflows.\n\n\n\n\n📚 Latest Posts\n\n\n\n\nBlog\n\n\nJuly 01, 2025\n\n\nLatest thoughts, updates, and discoveries\n\nRead More →\n\n\n\nMaking optimal use of ChatGPT and other chatbots for data science\n\n\nJanuary 18, 2025\n\n\nHow ChatGPT and other LLM tools can enhance statistical analysis and research workflows.\n\n\nAI automation R data-science\n\nRead More →\n\n\n\nPalmer Penguins Data Analysis Series (Part 5): Random Forest vs Linear Models - The Final Comparison\n\n\nJanuary 05, 2025\n\n\nThe final part of our 5-part series comparing linear models with random forests and providing guidance for model selection in ecological research\n\n\nR Programming Data Science Statistical Computing Machine Learning Random Forest Model Comparison Palmer Penguins\n\nRead More →\n\n\n\nPalmer Penguins Data Analysis Series (Part 4): Model Diagnostics and Interpretation\n\n\nJanuary 04, 2025\n\n\nPart 4 of our 5-part series focusing on rigorous diagnostic procedures, assumption checking, and biological interpretation of our penguin models\n\n\nR Programming Data Science Statistical Computing Model Diagnostics Regression Analysis Palmer Penguins\n\nRead More →\n\n\n\nPalmer Penguins Data Analysis Series (Part 3): Advanced Models and Cross-Validation\n\n\nJanuary 03, 2025\n\n\nPart 3 of our 5-part series where we rigorously validate our models and introduce polynomial features and random forest competitors\n\n\nR Programming Data Science Statistical Computing Cross-Validation Machine Learning Palmer Penguins\n\nRead More →\n\n\n\nPalmer Penguins Data Analysis Series (Part 2): Multiple Regression and Species Effects\n\n\nJanuary 02, 2025\n\n\nPart 2 of our 5-part series exploring how multiple predictors and species information dramatically improve penguin body mass predictions\n\n\nR Programming Data Science Statistical Computing Multiple Regression Palmer Penguins\n\nRead More →\n\n\n\nPalmer Penguins Data Analysis Series (Part 1): Exploratory Data Analysis and Simple Regression\n\n\nJanuary 01, 2025\n\n\nPart 1 of a comprehensive 5-part series exploring Palmer penguin morphometrics through exploratory data analysis and simple regression modeling\n\n\nR Programming Data Science Statistical Computing Exploratory Data Analysis Palmer Penguins\n\nRead More →\n\n\n\nMaking optimal use of ChatGPT and other chatbots for data science\n\n\nNA\n\nRead More →\n\n\n\nCoding with Generative AI\n\n\nNA\n\n\nHow to effectively use AI tools like ChatGPT and GitHub Copilot for coding while maintaining good practices\n\n\nAI-Automation Programming-Development\n\nRead More →\n\n\n\ncoding with genAI\n\n\nNA\n\nRead More →\n\n\n\nMac Workflow for Tracking Daily Research Progress\n\n\nNA\n\nRead More →\n\n\n\nMac Workflow for Tracking Daily Research Progress\n\n\nNA\n\nRead More →\n\n\n\nResearch Compendia for Full Reproducibility in R: A zzrrtools, renv, draft: true and Docker Strategy\n\n\nNA\n\nRead More →\n\n\n\nA simple shiny app to explore Palmer Penguin data using ChatGPT to draft: true prototype.\n\n\nNA\n\nRead More →\n\n\n\nConverting R data.frames to pdf for better placement control in latex draft: true pdf report\n\n\nNA\n\nRead More →\n\n\n\nConverting R data.frames to pdf for better placement control in latex draft: true pdf report\n\n\nNA\n\nRead More →\n\n\n\n\n\n\n\n🔍 Filter by Category\n\n\nShow All\n\n\nAI\n\n\nAI-Automation\n\n\nautomation\n\n\nCross-Validation\n\n\nData Science\n\n\ndata-science\n\n\nExploratory Data Analysis\n\n\nMachine Learning\n\n\nModel Comparison\n\n\nModel Diagnostics\n\n\nMultiple Regression\n\n\nPalmer Penguins\n\n\nProgramming-Development\n\n\nR\n\n\nR Programming\n\n\nRandom Forest\n\n\nRegression Analysis\n\n\nStatistical Computing\n\n\n\n\n📊 Blog Stats\n\n\nTotal Posts: 16\n\n\nShowing: All"
+    "text": "Welcome to my blog! Here you’ll find my latest thoughts on R programming, data science, statistical computing, and research workflows.\n\n\n\n\n📚 Latest Posts\n\n\n\n\nBlog\n\n\nJuly 01, 2025\n\n\nLatest thoughts, updates, and discoveries\n\nRead More →\n\n\n\nPalmer Penguins Data Analysis Series (Part 5): Random Forest vs Linear Models - The Final Comparison\n\n\nJanuary 05, 2025\n\n\nThe final part of our 5-part series comparing linear models with random forests and providing guidance for model selection in ecological research\n\n\nR Programming Data Science Statistical Computing Machine Learning Random Forest Model Comparison Palmer Penguins\n\nRead More →\n\n\n\nPalmer Penguins Data Analysis Series (Part 4): Model Diagnostics and Interpretation\n\n\nJanuary 04, 2025\n\n\nPart 4 of our 5-part series focusing on rigorous diagnostic procedures, assumption checking, and biological interpretation of our penguin models\n\n\nR Programming Data Science Statistical Computing Model Diagnostics Regression Analysis Palmer Penguins\n\nRead More →\n\n\n\nPalmer Penguins Data Analysis Series (Part 3): Advanced Models and Cross-Validation\n\n\nJanuary 03, 2025\n\n\nPart 3 of our 5-part series where we rigorously validate our models and introduce polynomial features and random forest competitors\n\n\nR Programming Data Science Statistical Computing Cross-Validation Machine Learning Palmer Penguins\n\nRead More →\n\n\n\nPalmer Penguins Data Analysis Series (Part 2): Multiple Regression and Species Effects\n\n\nJanuary 02, 2025\n\n\nPart 2 of our 5-part series exploring how multiple predictors and species information dramatically improve penguin body mass predictions\n\n\nR Programming Data Science Statistical Computing Multiple Regression Palmer Penguins\n\nRead More →\n\n\n\nPalmer Penguins Data Analysis Series (Part 1): Exploratory Data Analysis and Simple Regression\n\n\nJanuary 01, 2025\n\n\nPart 1 of a comprehensive 5-part series exploring Palmer penguin morphometrics through exploratory data analysis and simple regression modeling\n\n\nR Programming Data Science Statistical Computing Exploratory Data Analysis Palmer Penguins\n\nRead More →\n\n\n\nMaking optimal use of ChatGPT and other chatbots for data science\n\n\nNA\n\nRead More →\n\n\n\nCoding with Generative AI\n\n\nNA\n\n\nHow to effectively use AI tools like ChatGPT and GitHub Copilot for coding while maintaining good practices\n\n\nAI-Automation Programming-Development\n\nRead More →\n\n\n\ncoding with genAI\n\n\nNA\n\nRead More →\n\n\n\nMac Workflow for Tracking Daily Research Progress\n\n\nNA\n\nRead More →\n\n\n\nMac Workflow for Tracking Daily Research Progress\n\n\nNA\n\nRead More →\n\n\n\nResearch Compendia for Full Reproducibility in R: A zzrrtools, renv, draft: true and Docker Strategy\n\n\nNA\n\nRead More →\n\n\n\nA simple shiny app to explore Palmer Penguin data using ChatGPT to draft: true prototype.\n\n\nNA\n\nRead More →\n\n\n\nConverting R data.frames to pdf for better placement control in latex draft: true pdf report\n\n\nNA\n\nRead More →\n\n\n\nConverting R data.frames to pdf for better placement control in latex draft: true pdf report\n\n\nNA\n\nRead More →\n\n\n\n\n\n\n\n🔍 Filter by Category\n\n\nShow All\n\n\nAI\n\n\nAI-Automation\n\n\nautomation\n\n\nCross-Validation\n\n\nData Science\n\n\ndata-science\n\n\nExploratory Data Analysis\n\n\nMachine Learning\n\n\nModel Comparison\n\n\nModel Diagnostics\n\n\nMultiple Regression\n\n\nPalmer Penguins\n\n\nProgramming-Development\n\n\nR\n\n\nR Programming\n\n\nRandom Forest\n\n\nRegression Analysis\n\n\nStatistical Computing\n\n\n\n\n📊 Blog Stats\n\n\nTotal Posts: 15\n\n\nShowing: All"
   },
   {
     "objectID": "guides/fixing-common-r-errors.html",
@@ -1820,123 +1624,130 @@
     "text": "11 Resources\n\nR Packages book by Hadley Wickham\nWriting R Extensions manual\nCRAN Policy"
   },
   {
-    "objectID": "posts/install_arch_on_macbook/index (zzlenovo's conflicted copy 2025-02-20).html#connect-to-target-machine-with-ssh",
-    "href": "posts/install_arch_on_macbook/index (zzlenovo's conflicted copy 2025-02-20).html#connect-to-target-machine-with-ssh",
-    "title": "Install Arch Linux on a Macbook Air",
-    "section": "3.1 Connect to target machine with ssh",
-    "text": "3.1 Connect to target machine with ssh\nconfigure WIFI\n\nbash&gt; iwctl\n\niwd&gt; device list (assume device is wlan0)\nidw&gt; station wlan0 scan\nidw&gt; station wlan0 connect rgtnet2\npassphrase for rgtnet2\nidw&gt; exit\nstart ssh and determine target machine IP address\n\n*  bash&gt; systemctl enable sshd\n*  bash&gt; systemctl start sshd\n*  bash&gt; ip route | grep default\n\n(assume the local IP address is 10.0.1.176)\nSet a password for root user. You’ll need it to log in.\nbash&gt; passwd\n  (enter `z` password)\nNew password: z\nRetype new password: z\n\nNow switch over to the mac\n* zsh&gt;   ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@10.0.1.176\n* ssh&gt; root@10.0.1.176's password: \n* z\n\nssh returns prompt on arch target machine\n\nroot@archiso ~ &gt;"
-  },
-  {
-    "objectID": "posts/install_arch_on_macbook/index (zzlenovo's conflicted copy 2025-02-20).html#begin-install-process",
-    "href": "posts/install_arch_on_macbook/index (zzlenovo's conflicted copy 2025-02-20).html#begin-install-process",
-    "title": "Install Arch Linux on a Macbook Air",
-    "section": "3.2 Begin install process",
-    "text": "3.2 Begin install process\nFirst step:\n\npartition harddisk:\n\nbash&gt; cfdisk /dev/nvme0n1\nUse interface to create two partitions:\n\nEFI type of size 1gb\nroot of size entire rest of disk.\nwrite partition to disk\n\ncheck the partition:\n\nbash&gt; fdisk /dev/nvme0n1 -l\nFormat the partitions.\n\nEFI disk is fat32\nRoot is ext4\n\nbash&gt; mkfs.fat -F32 /dev/nvme0n1p1\nbash&gt; mkfs.ext4 /dev/nvme0n1p2\nset the keymap to mac us\n\nbash&gt; loadkeys mac-us\n\nSet system time and date\nbash&gt; timedatectl set-ntp true\n\n“The /mnt mount point in Linux is for mounting a storage device temporarily. As we only need to mount the partition for installing Arch Linux on it, the /mnt mount point is perfect.” The Arch Linux Handbook – Learn Arch Linux for Beginners\n\nbash&gt; mount /dev/nvme0n1p2 /mnt\nbash&gt; mount –mkdir /dev/efi_system_partition /mnt/boot\nFind best mirror:\n\nbash&gt; reflector –download-timeout 5 –country “United States” –age 12 –protocol https –sort rate –save /etc/pacman.d/mirrorlist\n\nbash&gt; pacstrap /mnt base base-devel linux linux-firmware sudo networkmanager\nbash&gt; genfstab -U /mnt &gt;&gt; /mnt/etc/fstab\nbash&gt; arch-chroot /mnt\nbash&gt; ln -sf /usr/share/zoneinfo/America/Los_Angeles /etc/localtime\nedit /etc/local.gen to set locale\nsearch for en_US and uncomment first row\nbash&gt; vim /etc/locale.gen\nbash&gt; locale.gen\nbash&gt; vim /etc/locale.conf\npacman -S networkmanager\nAvahi provides local hostname resolution using a “hostname.local” naming scheme. To enable it, install the nss-mdns package and start/enable avahi-daemon.service.\npacman -S nss-mdns\nsystemctl start avahi-daemon.service\nsystemctl enable NetworkManager (add root passwd)\npasswd\n\nuseradd -m -G wheel zenn\npasswd zenn\n\n4 for intel processors\npacman -S intel-ucode\n\npacman -S grub efibootmgr\n\nmkdir /boot/efi\nmount /dev/nvme0n1p1 /boot/efi\ngrub-install –target=x86_64-efi –bootloader-id=grub\ngrub-mkconfig -o /boot/grub/grub.cfg\n\npacman -S xorg-server\ncheck on what type of video card is in place on target\nlspci -v | grep -A1 -e VGA -e 3D\n\npacman -S xf86-video-intel\n\npacman -S gnome\n\npacman -S cinnamon\n\nsystemctl enable gdm\n\nexit\n\nroot@archiso ~ # umount -R /mnt\n\nPut the whole thing together for post disk partitioning …\nmkfs.fat -F32 /dev/nvme0n1p1\nmkfs.ext4 /dev/nvme0n1p2\nmount /dev/nvme0n1p2 /mnt\nreflector --download-timeout 5 --country \"United States\"  --age 12 --protocol https --sort rate --save /etc/pacman.d/mirrorlist\npacman -Sy\npacstrap /mnt base base-devel linux linux-firmware sudo networkmanager\ngenfstab -U /mnt &gt;&gt; /mnt/etc/fstab\narch-chroot /mnt\n\npasswd    \nuseradd -m -G wheel z\npasswd z\npacman -S vim\nvim /etc/sudoers\nuncomment # %wheel ALL=(ALL) ALL\nln -sf /usr/share/zoneinfo/America/Los\\_Angeles /etc/localtime\nvim /etc/locale.gen\n            uncomment en_US line\nlocale-gen\nvim /etc/locale.conf\n            LANG=en_US.UTF-8\nvim /etc/hostname\n            enter zz\npacman -S networkmanager\nsystemctl enable NetworkManager\npacman -S intel-ucode\npacman -S grub efibootmgr\nmkdir /boot/efi\nmount /dev/nvme0n1p1 /boot/efi\ngrub-install --target=x86_64-efi --bootloader-id=grub\ngrub-mkconfig -o /boot/grub/grub.cfg\npacman -S --noconfirm xorg-server\npacman -S --noconfirm xf86-video-intel\npacman -S --noconfirm gnome\npacman -S --noconfirm cinnamon\nsystemctl enable gdm\nexit\numount -R /mnt\n    \nThe final hardware related step is to add a second monitor, if available, via HDMI or “USB-C”.\nThats it. The base system is ready to go. Reboot and login with the admin username and password you provided earlier."
-  },
-  {
-    "objectID": "tutorials/git-setup-guide/index.html",
-    "href": "tutorials/git-setup-guide/index.html",
-    "title": "Setting up git for (solo) data science workflow",
+    "objectID": "test_minimal.html",
+    "href": "test_minimal.html",
+    "title": "Test Document",
     "section": "",
-    "text": "purrr"
+    "text": "This is a test document.\n\n\nCode\n1 + 1\n\n\n[1] 2"
   },
   {
-    "objectID": "tutorials/git-setup-guide/index.html#prerequisites",
-    "href": "tutorials/git-setup-guide/index.html#prerequisites",
-    "title": "Setting up git for (solo) data science workflow",
-    "section": "4.1 Prerequisites",
-    "text": "4.1 Prerequisites\nIn development"
-  },
-  {
-    "objectID": "tutorials/git-setup-guide/index.html#step-by-step-implementation",
-    "href": "tutorials/git-setup-guide/index.html#step-by-step-implementation",
-    "title": "Setting up git for (solo) data science workflow",
-    "section": "4.2 Step-by-Step Implementation",
-    "text": "4.2 Step-by-Step Implementation\nIn development"
-  },
-  {
-    "objectID": "tutorials/git-setup-guide/index.html#key-takeaways",
-    "href": "tutorials/git-setup-guide/index.html#key-takeaways",
-    "title": "Setting up git for (solo) data science workflow",
-    "section": "4.3 Key Takeaways",
-    "text": "4.3 Key Takeaways\nIn development"
-  },
-  {
-    "objectID": "tutorials/git-setup-guide/index.html#further-reading",
-    "href": "tutorials/git-setup-guide/index.html#further-reading",
-    "title": "Setting up git for (solo) data science workflow",
-    "section": "4.4 Further Reading",
-    "text": "4.4 Further Reading\nIn development"
-  },
-  {
-    "objectID": "posts/dockerize_compose/index (zzlenovo's conflicted copy 2025-02-20).html",
-    "href": "posts/dockerize_compose/index (zzlenovo's conflicted copy 2025-02-20).html",
-    "title": "A Concise Strategy to get your Shiny App Online, Securely and Continuously Updated.",
+    "objectID": "test_minimal.html#test",
+    "href": "test_minimal.html#test",
+    "title": "Test Document",
     "section": "",
-    "text": "Photo by Nathan Waters"
+    "text": "This is a test document.\n\n\nCode\n1 + 1\n\n\n[1] 2"
   },
   {
-    "objectID": "posts/dockerize_compose/index (zzlenovo's conflicted copy 2025-02-20).html#hosting",
-    "href": "posts/dockerize_compose/index (zzlenovo's conflicted copy 2025-02-20).html#hosting",
-    "title": "A Concise Strategy to get your Shiny App Online, Securely and Continuously Updated.",
-    "section": "2.1 Hosting",
-    "text": "2.1 Hosting\nHow to set up the hosting server? There are many ways to accomplish the hosting. Here we’ll describe a straightforward and efficient approach using mainstream cloud services and open source tools. In other words, we’ll describe how to ‘spin’ up a virtual server on Amazon Web Service EC2, and use Docker, R, Shiny, and Caddy to put in place a secure web app to share with our colleagues.\n\n\n\nData flow\n\n\nFigure 2 illustrates the tools we’ll use and the flow of program and configuration files. In order to host power1_app online we’ll need to complete the following tasks:\nHosting List\n\nGenerate a virtual server with a firewall on EC2.\nObtain a static IPv4 address (to identify the server online)\nObtain a custom domain name (a name to associate with static IP address) from a domain registration provider.\nInstall and configure a webserver ( a tool to interact with https protocol requests )\nObtain and install a TLS (transport layer security) security certificate (to allow encrypted communication between the server and other machines on the network).\nConfigure user authentication for the web site.\nconfigure a reverse proxy method (to translate https, port 443, requests to Shiny, port 3838 requests).\n\n\n\n“What Is An SSL/TLS Certificate?\nAn SSL/TLS certificate is a digital object that allows systems to verify the identity & subsequently establish an encrypted network connection to another system using the Secure Sockets Layer/Transport Layer Security (SSL/TLS) protocol. Certificates are used within a cryptographic system known as a public key infrastructure (PKI). PKI provides a way for one party to establish the identity of another party using certificates if they both trust a third-party - known as a certificate authority. SSL/TLS certificates thus act as digital identity cards to secure network communications, establish the identity of websites over the Internet as well as resources on private networks.”\n reference"
+    "objectID": "blog/coding-with-genai/index.html",
+    "href": "blog/coding-with-genai/index.html",
+    "title": "Coding with Generative AI",
+    "section": "",
+    "text": "View this post in multiple formats:\n\n\n\n  HTML    PDF    Word"
   },
   {
-    "objectID": "posts/dockerize_compose/index (zzlenovo's conflicted copy 2025-02-20).html#select-a-hosting-service",
-    "href": "posts/dockerize_compose/index (zzlenovo's conflicted copy 2025-02-20).html#select-a-hosting-service",
-    "title": "A Concise Strategy to get your Shiny App Online, Securely and Continuously Updated.",
-    "section": "2.2 Select a hosting service",
-    "text": "2.2 Select a hosting service\nThere are a number of cloud based server options we can choose from: Microsoft Azure, Oracle, Google Cloud, Amazon AWS EC2, Digital Ocean to name a few. Each has their own approach to setting up a custom virtual server. Several have free or low-cost service tiers available.\nIn this post we’ll describe the process using AWS EC2. Detailed instructions for setting up a server on EC2, both via the console and the command line interface are covered in earlier posts ( here ) and ( here ).\nStep 0. Create an account or sign in to the AWS EC2 dashboard.\nStep 1. Set up an working environment with AWS server. This entails:\n\ndefine an ssh key-pair.\nconfigure a firewall.\nobtain a static IP.\nobtain a domain name.\nselect an instance (AMI, type and disk size), generate and launch server.\n\nOnce the server is available, connect via ssh, and login,\nThe only software necessary to install is docker (assuming it wasn’t installed in the server setup process). Install docker with the following commands:\nsudo snap install docker.io\nOnce the host is set up and docker installed, we’ll have accomplished items 1, 2, and 3 from our hosting list above. i.e. a customized virtual server wtih a static IP address, with a unique domain name and firewall are in place."
+    "objectID": "blog/coding-with-genai/index.html#prerequisites",
+    "href": "blog/coding-with-genai/index.html#prerequisites",
+    "title": "Coding with Generative AI",
+    "section": "1.1 Prerequisites",
+    "text": "1.1 Prerequisites\nIn development"
   },
   {
-    "objectID": "posts/dockerize_compose/index (zzlenovo's conflicted copy 2025-02-20).html#docker",
-    "href": "posts/dockerize_compose/index (zzlenovo's conflicted copy 2025-02-20).html#docker",
-    "title": "A Concise Strategy to get your Shiny App Online, Securely and Continuously Updated.",
-    "section": "3.1 Docker",
-    "text": "3.1 Docker\n\n\n  Photo by Ian Taylor on Unsplash \nWe’ll use docker to access Shiny, and docker-compose to access Caddy, our webserver. The first file is the dockerfile. Here is our minimal dockerfile:\n\nshow the Dockerfile code\nFROM rocker/shiny:4.2.0\nRUN rm -rf /srv/shiny-server\nCOPY /power1_shiny/* /srv/shiny-server/\nUSER shiny\nCMD [\"/usr/bin/shiny-server\"]\n\nThis configuration file instructs Docker to build a container based on a Rocker/Shiny image (constructed as a ubuntu image with R and Shiny installed), then copy the power1_shiny/app.R code into the container and finally launch Shiny on (default) port 3838. We placed the power1_app/app.R code in the default location /srv/shiny-server we only need to start the server and it will find the shiny program.\nNote: We placed the power1_shiny/app.R code in the default location /srv/shiny-server so we only need to start the Shiny server and it will find the shiny program\nStart by building and pushing the image to the gitlab container registry.\n# login to gitlab\n\ncat gitlab_access_token | docker login \\\nregistry.gitlab.com -u rgt47 --password-stdin\n\ndocker build -t \\\nregistry.gitlab.com/rgt47/power1_app/power1_image:v1.0 \\\n        --platform linux/x86_64 .\ndocker push \\\nregistry.gitlab.com/rgt47/power1_app/power1_image:v1.0"
+    "objectID": "blog/coding-with-genai/index.html#step-by-step-implementation",
+    "href": "blog/coding-with-genai/index.html#step-by-step-implementation",
+    "title": "Coding with Generative AI",
+    "section": "1.2 Step-by-Step Implementation",
+    "text": "1.2 Step-by-Step Implementation\nIn development"
   },
   {
-    "objectID": "posts/dockerize_compose/index (zzlenovo's conflicted copy 2025-02-20).html#caddy",
-    "href": "posts/dockerize_compose/index (zzlenovo's conflicted copy 2025-02-20).html#caddy",
-    "title": "A Concise Strategy to get your Shiny App Online, Securely and Continuously Updated.",
-    "section": "3.2 Caddy",
-    "text": "3.2 Caddy\nA Caddy web server configuration file (default name Caddyfile)\nWe’ll use Caddy as our web server. Caddy is an open-source tool that has the very useful feature of automating the acquisition and installing of an SSL certificate. An SSL cert is required by most browsers to use the encrypted communication protocol https.\nWe use the caddy configuration file to specify three critical things.\n\nthe site domain name.\nthe ‘reverse proxy’ map that redirects requests to port 443 (ssl port) to port 3838 (Shiny port).\nadd login credentials for all users (e.g. bob/vanilla47):\n\nOur barebones Caddyfile looks like this:\n\nShow the Caddyfile code\n# use caddy auth tool to generate a password via the `bcrypt` algorithm.\n# &gt; caddy hash-password --plaintext hiccup\n\nrgtlab.org {\nbasicauth /power1/* {\n    Bob $2a$14$Zkx19XLiW6VYouLHR5NmfOFU0z2GTNmpkT/5qqR7hx4IjWJPDhjvG\n}\n    root * /srv\n    handle_path /power1/* {\n        reverse_proxy power1:3838\n    }\n    file_server\n}\n\nWe can accomplish what we need for items 4, 5, and 7 through the Caddyfile.\nNote:\n\nrgtlab.org is our domain name\nhandle_path maps all https requests to port 3838 where Shiny is listening.\n\nProviding our servers domain name, rgtlab.org is sufficient to initiate an exchange with the letsencrypt service to generates an SSL certificate."
+    "objectID": "blog/coding-with-genai/index.html#key-takeaways",
+    "href": "blog/coding-with-genai/index.html#key-takeaways",
+    "title": "Coding with Generative AI",
+    "section": "1.3 Key Takeaways",
+    "text": "1.3 Key Takeaways\nIn development"
   },
   {
-    "objectID": "posts/dockerize_compose/index (zzlenovo's conflicted copy 2025-02-20).html#docker-compose",
-    "href": "posts/dockerize_compose/index (zzlenovo's conflicted copy 2025-02-20).html#docker-compose",
-    "title": "A Concise Strategy to get your Shiny App Online, Securely and Continuously Updated.",
-    "section": "3.3 Docker Compose",
-    "text": "3.3 Docker Compose\nAnd a third file is a config file for Docker Compose. Docker Compose is a Docker module that provides a framework for running multi-container applications. This docker compose YAML file instructs Docker to containerize our Shiny app, pull a caddy webserver image from Docker Hub and create a local network for the two containers to communicate in.\nA Docker-compose configuration file (default name docker-compose.yml).\nThe docker-compose.yml file:\n\ndocker-compose.yml. Show the code\nversion: \"3.7\"\n\nservices:\n  power1:\n    image: registry.gitlab.com/rgt47/power1_app/power1_image:v1.0\n    restart: unless-stopped\n    expose:\n      - \"3838\"\n  caddy:\n    image: caddy:2.6.4-alpine\n    restart: always\n    ports:\n      - \"443:443\"\n    volumes:\n      - $PWD/Caddyfile:/etc/caddy/Caddyfile\n      - $PWD/site:/srv\n      - caddy_data:/data\n      - caddy_config:/config\n    depends_on:\n      - power1\n    environment:\n      - HOST=\"rgtlab.org\"\n      - EMAIL=\"rgthomas@ucsd.edu\"\nvolumes:\n  caddy_data:\n  caddy_config:"
+    "objectID": "blog/coding-with-genai/index.html#further-reading",
+    "href": "blog/coding-with-genai/index.html#further-reading",
+    "title": "Coding with Generative AI",
+    "section": "1.4 Further Reading",
+    "text": "1.4 Further Reading\nIn development"
   },
   {
-    "objectID": "posts/dockerize_compose/index (zzlenovo's conflicted copy 2025-02-20).html#landing-page",
-    "href": "posts/dockerize_compose/index (zzlenovo's conflicted copy 2025-02-20).html#landing-page",
-    "title": "A Concise Strategy to get your Shiny App Online, Securely and Continuously Updated.",
-    "section": "3.4 Landing Page",
-    "text": "3.4 Landing Page\nLastly, we need an html file, index.html in a subdirectory named site that provides the landing page for our server.\n\nindex.html. Show the code\n&lt;!DOCTYPE html&gt;\n&lt;html&gt;\n  &lt;head&gt;\n    &lt;meta charset=\"utf-8\"&gt;\n    &lt;meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\"&gt;\n    &lt;meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"&gt;\n    &lt;title&gt;Power Calculators&lt;/title&gt;\n    &lt;link rel=\"stylesheet\" href=\"https://unpkg.com/bulma@0.9.0/css/bulma.min.css\" /&gt;\n  &lt;/head&gt;\n  &lt;body&gt;\n    &lt;div id=\"app\"&gt;\n      &lt;section class=\"hero is-small\"&gt;\n        &lt;div class=\"hero-body\"&gt;\n          &lt;div class=\"container has-text-centered\"&gt;\n            &lt;h1 class=\"title\"&gt;RGT Lab Power Calculators&lt;/h1&gt;\n          &lt;/div&gt;\n        &lt;/div&gt;\n      &lt;/section&gt;\n            &lt;hr&gt;\n\n            &lt;div class=\"columns\"&gt;\n              &lt;div class=\"column is-4 is-offset-1\"&gt;\n      &lt;img src=\"https://github.com/rgt47/power0/blob/master/power1.png?raw=true\"\n        width=\"200\" height=\"250\"  ”float: left; padding: 3px 3px 0px 3px;” &gt;\n              &lt;/div&gt;\n              &lt;div class=\"column is-6\"&gt;\n                &lt;h1 class=\"title\"&gt; Power1 App &lt;/h1&gt;\n                &lt;p&gt; Power for two-sample t-test &lt;/p&gt;\n                &lt;br&gt;\n                &lt;a href=\"./rebecca/\" class=\"button is-info\"&gt;Go to app&lt;/a&gt;\n              &lt;/div&gt;\n            &lt;/div&gt;\n\n    &lt;/div&gt;\n  &lt;/body&gt;\n&lt;/html&gt;\n\nAt this point our power1_app repo looks like this:\n.\n├── Caddyfile\n├── Dockerfile\n├── docker-compose.yml\n└── site\n    └── index.html"
+    "objectID": "tutorials/docker-for-beginners/index.html",
+    "href": "tutorials/docker-for-beginners/index.html",
+    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
+    "section": "",
+    "text": "Photo by Nathan Waters on Unsplash"
   },
   {
-    "objectID": "posts/dockerize_compose/index (zzlenovo's conflicted copy 2025-02-20).html#tip-1.-docker-on-m1-macbook.",
-    "href": "posts/dockerize_compose/index (zzlenovo's conflicted copy 2025-02-20).html#tip-1.-docker-on-m1-macbook.",
-    "title": "A Concise Strategy to get your Shiny App Online, Securely and Continuously Updated.",
-    "section": "5.1 Tip 1. Docker on M1 macbook.",
-    "text": "5.1 Tip 1. Docker on M1 macbook.\nTo get docker functioning properly with rocker images on M1 Mac desktop use --platform option.\ndocker build -t power1_shiny --platform linux/x86_64 .\ndocker run -d -p 80:3838 --platform linux/x86_64 power1_shiny"
+    "objectID": "tutorials/docker-for-beginners/index.html#introduction",
+    "href": "tutorials/docker-for-beginners/index.html#introduction",
+    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
+    "section": "1 Introduction",
+    "text": "1 Introduction\nThis guide demonstrates how to deploy a Shiny application from your local workstation to a secure web environment. We’ll use a stack of open-source technologies including Linux, R, Shiny, Docker, and Caddy, deployed on AWS EC2. While we focus on AWS here, the principles apply to other cloud providers like Hetzner, which we’ll cover in future posts."
   },
   {
-    "objectID": "posts/dockerize_compose/index (zzlenovo's conflicted copy 2025-02-20).html#tip-2-add-user-to-docker-group-on-server.",
-    "href": "posts/dockerize_compose/index (zzlenovo's conflicted copy 2025-02-20).html#tip-2-add-user-to-docker-group-on-server.",
-    "title": "A Concise Strategy to get your Shiny App Online, Securely and Continuously Updated.",
-    "section": "5.2 Tip 2 add user to docker group on server.",
-    "text": "5.2 Tip 2 add user to docker group on server.\nAdd ubuntu to the docker group to allow docker to run without sudo.\nsudo usermod -aG docker ${USER}"
+    "objectID": "tutorials/docker-for-beginners/index.html#prerequisites",
+    "href": "tutorials/docker-for-beginners/index.html#prerequisites",
+    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
+    "section": "2 Prerequisites",
+    "text": "2 Prerequisites\nBefore beginning this tutorial, you’ll need:\n\nA working Shiny application on your local machine\nAn AWS account with permissions to create EC2 instances\nBasic familiarity with the Linux command line\nGit (optional, for version control)"
   },
   {
-    "objectID": "posts/dockerize_compose/index (zzlenovo's conflicted copy 2025-02-20).html#tip-3-ssh-config-file.",
-    "href": "posts/dockerize_compose/index (zzlenovo's conflicted copy 2025-02-20).html#tip-3-ssh-config-file.",
-    "title": "A Concise Strategy to get your Shiny App Online, Securely and Continuously Updated.",
-    "section": "5.3 Tip 3 ssh config file.",
-    "text": "5.3 Tip 3 ssh config file.\nFor convenience, construct a config file in ~/.ssh as:\n\n\n\nHost rgtlab.org\nHostName 13.57.139.31 # static IP\nUser ubuntu # default user on ubuntu server\nPort 22  # the default port ssh uses\nIdentityFile ~/.ssh/power1_app.pem\nthen you can ssh into the new server with\nsh&gt; ssh rgtlab.org"
+    "objectID": "tutorials/docker-for-beginners/index.html#the-example-application",
+    "href": "tutorials/docker-for-beginners/index.html#the-example-application",
+    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
+    "section": "3 The Example Application",
+    "text": "3 The Example Application\nLet’s start with a simple but practical example: hosting a shiny web application that provides a power calculator for two-sample t-tests. While straightforward, this application demonstrates all the key deployment concepts.\nHere is the code for the Shiny app (The app is intentionally minimal, using only base R functions, with a minimum of reactive widgets and layout commands.):\n\nPower Calculator Shiny App Code (power1_shiny/app.R)\nui &lt;- fluidPage(\n  titlePanel(\"Power Calculator for Two Group Parallel Designs\"),\n  sliderInput(\"N\", \"Total Sample Size:\", min = 0, max = 300, value = 100),\n  plotOutput(\"plot\"),\n  verbatimTextOutput(\"eff\"))\n\nserver &lt;- function(input, output, session) {\n  delta = seq(0, 1.5,.05)\n  pow = reactive(sapply(delta, function(x) power.t.test(input$N, d=x)$power ))\n  eff =  renderText(power.t.test(input$N, power=.8)$d)\n  output$plot &lt;- renderPlot({\n    plot(delta, pow(), cex=1.5, ylab=\"power\")\n    abline(h = .8,  col = \"red\", lwd =2.5, lty = 4)\n    abline(v = eff(), col = \"blue\",lwd =2.5, lty = 4)})\n  output$eff &lt;- renderText(\n    paste0(\"Std. effect detectable with power 80% = \", eff()) )\n}\nshinyApp(ui, server)\n\n\n\n\n\n\nShiny app interface"
+  },
+  {
+    "objectID": "tutorials/docker-for-beginners/index.html#step-by-step-implementation",
+    "href": "tutorials/docker-for-beginners/index.html#step-by-step-implementation",
+    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
+    "section": "4 Step-by-Step Implementation",
+    "text": "4 Step-by-Step Implementation\n\n4.1 Deployment Checklist\nAs an overview, to host our Shiny app securely online, we need to:\n\nObtain a static IP address\nRegister a domain name\nConfigure a firewall\nSet up the virtual server\nInstall and configure a web server\nImplement SSL encryption\nSet up user authentication\nConfigure reverse proxy routing\n\nWhile this might seem complex, we’ll break it down into manageable steps.\nDetailed instructions for setting up a virtual server (items 1 through 4 above) on EC2 both through the EC2 console and the command line interface can be found: here and here\n\n\n4.2 Step 1: Server Setup\nFirst, we’ll prepare our AWS EC2 environment: In the course of setting up your server, you’ll need to: 1. Create or access your AWS account 2. Generate SSH key-pair, named for example, power1_app.pem 3. Configure firewall settings, allowing SSH (port 22), HTTP (port 80) traffic and HTTPS (port 443) traffic. 4. Obtain static IP, e.g., 13.57.139.31 5. Register domain name, e.g. rgtlab.org 6. Launch Ubuntu instance (t2-micro is sufficient)\n\n\n4.3 Step 2: Installing Required Software\nconnect to your server via SSH:\nssh -i \"~/.ssh/power1_app.pem\"  ubuntu@rgtlab.org\nOn your server, install Docker and Caddy (a modern web server with automatic HTTPS) using the following commands.\nsudo apt update\nsudo apt install docker.io -y\nsudo apt install -y curl debian-keyring debian-archive-keyring apt-transport-https\ncurl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | \\\nsudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg\ncurl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | \\\nsudo tee /etc/apt/sources.list.d/caddy-stable.list\nsudo apt update\nsudo apt install caddy -y\n\n\n4.4 Step 3: Containerizing the Application\nCreate a Dockerfile in your app directory:\n\nDockerfile Configuration\nFROM rocker/shiny:4.2.0\nRUN rm -rf /srv/shiny-server\nCOPY /power1_shiny/* /srv/shiny-server/\nUSER shiny\nCMD [\"/usr/bin/shiny-server\"]\n\n\n\n4.5 Step 4: Configuring the Web Server\nCreate a Caddyfile:\n\nCaddy Server Configuration\nrgtlab.org {\n    basicauth * /power1_shiny/* {\n        bob $2a$14$pYWd5O7JqNeGLS4m4CKkzemM2pq5ezn9bcTDowofZTl5wRVl8NTJm\n    }\n    root * /var/www/html\n    handle_path /power1_shiny/* {\n            reverse_proxy 0.0.0.0:3838\n    }\n    file_server\n}\n\nCreate an index.html:\n\nLanding Page HTML\n&lt;!DOCTYPE html&gt;\n&lt;html&gt;\n  &lt;body&gt;\n    &lt;h1&gt;Power1 app&lt;/h1&gt;\n    &lt;ul&gt;\n      &lt;li&gt;&lt;a href=\"./power1_shiny/\"&gt;Power1 app&lt;/a&gt;&lt;/li&gt;\n    &lt;/ul&gt;\n  &lt;/body&gt;\n&lt;/html&gt;\n\n\n\n4.6 Step 5: Deployment\n\nCopy files to server:\n\nscp -r ~/prj/power1_app/ ubuntu@rgtlab.org:~\n\nBuild and run Docker container:\n\ndocker build -t power1_image .\ndocker run -d --name=power1_shiny -p 3838:3838 --restart=always power1_image\n\nConfigure Caddy:\n\nsudo cp ./Caddyfile /etc/caddy/\ncp ./index.html /var/www/html/\nsudo systemctl reload caddy\nYour app should now be available at https://rgtlab.org!"
+  },
+  {
+    "objectID": "tutorials/docker-for-beginners/index.html#advanced-tips",
+    "href": "tutorials/docker-for-beginners/index.html#advanced-tips",
+    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
+    "section": "5 Advanced Tips",
+    "text": "5 Advanced Tips\nFor easier SSH access, create a ~/.ssh/config file:\nHost rgtlab.org\nHostName 13.57.139.31\nStrictHostKeyChecking no\nUser ubuntu\nPort 22\nIdentityFile ~/.ssh/power1_app.pem\nThis enables simple SSH access:\nssh rgtlab.org"
+  },
+  {
+    "objectID": "tutorials/docker-for-beginners/index.html#key-takeaways",
+    "href": "tutorials/docker-for-beginners/index.html#key-takeaways",
+    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
+    "section": "6 Key Takeaways",
+    "text": "6 Key Takeaways\n\nDocker containers provide isolation and reproducibility for your Shiny applications\nCaddy web server automatically handles SSL certificates and security\nBasic authentication provides a simple access control mechanism\nAWS EC2 offers a reliable platform for hosting web applications\nThe entire deployment can be automated for continuous delivery workflows"
+  },
+  {
+    "objectID": "tutorials/docker-for-beginners/index.html#further-reading",
+    "href": "tutorials/docker-for-beginners/index.html#further-reading",
+    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
+    "section": "7 Further Reading",
+    "text": "7 Further Reading\n\nShiny Server documentation\nDocker documentation\nCaddy Web Server documentation\nAWS EC2 documentation"
+  },
+  {
+    "objectID": "tutorials/docker-for-beginners/index.html#step-by-step-implementation-1",
+    "href": "tutorials/docker-for-beginners/index.html#step-by-step-implementation-1",
+    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
+    "section": "8 Step-by-Step Implementation",
+    "text": "8 Step-by-Step Implementation\nIn development"
+  },
+  {
+    "objectID": "tutorials/docker-for-beginners/index.html#key-takeaways-1",
+    "href": "tutorials/docker-for-beginners/index.html#key-takeaways-1",
+    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
+    "section": "9 Key Takeaways",
+    "text": "9 Key Takeaways\nIn development"
+  },
+  {
+    "objectID": "tutorials/docker-for-beginners/index.html#further-reading-1",
+    "href": "tutorials/docker-for-beginners/index.html#further-reading-1",
+    "title": "Securely Deploying Your Shiny App Online: A Step-by-Step Guide",
+    "section": "10 Further Reading",
+    "text": "10 Further Reading\nIn development"
   },
   {
     "objectID": "posts/setupquarto/quarto-blog-template.html",
