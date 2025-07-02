@@ -68,6 +68,16 @@ generate_research_with_sidebar <- function() {
     "::: {.column-screen-inset}",
     "::: {.grid}",
     "",
+    "::: {.g-col-12 .g-col-md-9}",
+    "## 📚 Publications",
+    "",
+    "::: {.publications-content}",
+    "",
+    content[callout_end+1:length(content)],
+    "",
+    ":::",  # Close publications-content
+    ":::",  # Close g-col div
+    "",
     "::: {.g-col-12 .g-col-md-3}",
     "## 🔍 Advanced Filters",
     "",
