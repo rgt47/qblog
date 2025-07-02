@@ -97,13 +97,18 @@ generate_research_with_sidebar <- function() {
   )
   
   # Group tags by category
-  medical_tags <- analysis$tags[str_detect(analysis$tags, "Alzheimer|Clinical|Medical|Drug|Treatment|Biomarker")]
+  # Extract Biostatistics and R first (these are the key keywords)
+  biostat_tags <- analysis$tags[str_detect(analysis$tags, "^(Biostatistics|R)$")]
+  
+  medical_tags <- analysis$tags[str_detect(analysis$tags, "Alzheimer|Clinical|Medical|Drug|Treatment|Biomarker") & 
+                               !str_detect(analysis$tags, "^(Biostatistics|R)$")]
   military_tags <- analysis$tags[str_detect(analysis$tags, "Military|Veteran|Traumatic|TBI")]
   imaging_tags <- analysis$tags[str_detect(analysis$tags, "Imaging|PET|MRI|Neuroimaging")]
   covid_tags <- analysis$tags[str_detect(analysis$tags, "COVID|Sleep|Healthcare")]
-  other_tags <- setdiff(analysis$tags, c(medical_tags, military_tags, imaging_tags, covid_tags))
+  other_tags <- setdiff(analysis$tags, c(biostat_tags, medical_tags, military_tags, imaging_tags, covid_tags))
   
   tag_categories <- list(
+    "🔍 Key Research Areas" = biostat_tags,
     "Medical & Clinical" = medical_tags,
     "Military & Defense" = military_tags,
     "Neuroimaging & Technical" = imaging_tags,
@@ -122,6 +127,7 @@ generate_research_with_sidebar <- function() {
       
       for (tag in tag_categories[[category]]) {
         badge_color <- case_when(
+          str_detect(tag, "^(Biostatistics|R)$") ~ "dark",
           str_detect(tag, "Medical|Clinical|Alzheimer|Drug") ~ "success",
           str_detect(tag, "Military|Veteran|Traumatic") ~ "primary",
           str_detect(tag, "Imaging|PET|MRI") ~ "info",
