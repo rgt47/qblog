@@ -207,6 +207,14 @@ generate_research_page <- function() {
     ""
   )
   
+  # Add multi-column layout for years
+  content <- c(content, 
+    "::: {.g-col-12 .g-col-md-9}",
+    "",
+    "::: {.publications-content}",
+    ""
+  )
+  
   # Group by year
   years <- unique(pubs_clean$year_num)
   years <- sort(years, decreasing = TRUE)
@@ -262,6 +270,13 @@ generate_research_page <- function() {
       content <- c(content, ":::", ":::", "")
     }
   }
+  
+  # Close the column divs
+  content <- c(content,
+    ":::",  # Close publications-content
+    ":::",  # Close g-col div
+    ":::"   # Close grid
+  )
   
   # Add JavaScript for filtering
   js_code <- '
