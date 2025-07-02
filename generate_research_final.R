@@ -4,9 +4,9 @@
 library(dplyr)
 library(stringr)
 
-# Simple BibTeX parser
+# Enhanced BibTeX parser with keywords support
 parse_bibtex_basic <- function(file_path) {
-  cat("📖 Reading", file_path, "...\n")
+  cat("📖 Reading", file_path, "with keyword support...\n")
   lines <- readLines(file_path, warn = FALSE)
   
   # Find entry boundaries
@@ -19,6 +19,7 @@ parse_bibtex_basic <- function(file_path) {
     year = character(),
     journal = character(),
     doi = character(),
+    keywords = character(),
     stringsAsFactors = FALSE
   )
   
@@ -38,6 +39,7 @@ parse_bibtex_basic <- function(file_path) {
       journal <- extract_field(entry_text, "booktitle")
     }
     doi <- extract_field(entry_text, "doi")
+    keywords <- extract_field(entry_text, "keywords")
     
     publications <- rbind(publications, data.frame(
       title = title %||% "",
@@ -45,11 +47,12 @@ parse_bibtex_basic <- function(file_path) {
       year = year %||% "",
       journal = journal %||% "",
       doi = doi %||% "",
+      keywords = keywords %||% "",
       stringsAsFactors = FALSE
     ))
   }
   
-  cat("✅ Extracted", nrow(publications), "publications\n")
+  cat("✅ Extracted", nrow(publications), "publications with keyword support\n")
   return(publications)
 }
 
@@ -94,21 +97,44 @@ get_badge_color <- function(category) {
   )
 }
 
-# Extract specific topics
-get_topics <- function(title) {
-  title_lower <- tolower(title %||% "")
+# Extract specific topics (enhanced with keywords support)
+get_topics <- function(title, keywords = NULL) {
   topics <- c()
   
-  if (str_detect(title_lower, "alzheimer")) topics <- c(topics, "Alzheimer's disease")
-  if (str_detect(title_lower, "traumatic brain|tbi")) topics <- c(topics, "Traumatic brain injury")
-  if (str_detect(title_lower, "covid")) topics <- c(topics, "COVID-19")
-  if (str_detect(title_lower, "sleep|insomnia")) topics <- c(topics, "Sleep disorders")
-  if (str_detect(title_lower, "clinical trial|randomized")) topics <- c(topics, "Clinical trials")
-  if (str_detect(title_lower, "military|veteran")) topics <- c(topics, "Military health")
-  if (str_detect(title_lower, "imaging|pet|mri")) topics <- c(topics, "Neuroimaging")
-  if (str_detect(title_lower, "biomarker")) topics <- c(topics, "Biomarkers")
+  # First, use keywords if available
+  if (!is.na(keywords) && keywords != "") {
+    keyword_list <- str_split(keywords, ",")[[1]]
+    keyword_list <- str_trim(keyword_list)
+    topics <- c(topics, keyword_list)
+  }
   
-  return(topics)
+  # Then, add automatic topic detection from title as fallback
+  title_lower <- tolower(title %||% "")
+  
+  auto_topics <- list(
+    "Alzheimer's disease" = "alzheimer",
+    "Traumatic brain injury" = "traumatic brain|tbi",
+    "COVID-19" = "covid",
+    "Sleep disorders" = "sleep|insomnia",
+    "Clinical trials" = "clinical trial|randomized",
+    "Military health" = "military|veteran",
+    "Neuroimaging" = "imaging|pet|mri",
+    "Biomarkers" = "biomarker",
+    "Cognitive decline" = "cognitive|memory",
+    "Drug development" = "drug|therapy|treatment",
+    "Prevention trials" = "prevention|preventive",
+    "Epidemiology" = "epidemiology|population",
+    "Statistical methods" = "statistical|analysis|method",
+    "Longitudinal studies" = "longitudinal|follow.up"
+  )
+  
+  for (topic in names(auto_topics)) {
+    if (str_detect(title_lower, auto_topics[[topic]]) && !topic %in% topics) {
+      topics <- c(topics, topic)
+    }
+  }
+  
+  return(unique(topics))
 }
 
 # Format authors
@@ -148,7 +174,7 @@ generate_research_page <- function() {
       category = mapply(categorize_publication, title, journal, SIMPLIFY = TRUE),
       badge_color = sapply(category, get_badge_color),
       author_formatted = sapply(author, format_authors),
-      topics_list = sapply(title, get_topics, simplify = FALSE)
+      topics_list = mapply(get_topics, title, keywords, SIMPLIFY = FALSE)
     ) %>%
     filter(!is.na(year_num)) %>%
     arrange(desc(year_num), title)
