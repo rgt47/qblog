@@ -137,7 +137,7 @@ get_topics <- function(title, keywords = NULL) {
   return(unique(topics))
 }
 
-# Format authors
+# Format authors according to APA style (up to 20 authors)
 format_authors <- function(author_string) {
   if (is.na(author_string) || author_string == "") return("")
   
@@ -145,19 +145,49 @@ format_authors <- function(author_string) {
   authors <- str_split(author_string, " and ")[[1]]
   authors <- str_trim(authors)
   
-  # Highlight Ronald G. Thomas
-  authors <- sapply(authors, function(name) {
+  # Check if Ronald G. Thomas is in the first 20 authors
+  thomas_in_first_20 <- any(str_detect(authors[1:min(20, length(authors))], "Thomas, Ronald|Ronald.*Thomas"))
+  
+  # Determine how many authors to show based on APA guidelines
+  if (length(authors) <= 20) {
+    # Show all authors if 20 or fewer
+    authors_to_show <- authors
+    use_ellipsis <- FALSE
+  } else if (thomas_in_first_20) {
+    # If Thomas is in first 20, show first 19 + ellipsis + last author
+    authors_to_show <- c(authors[1:19], "...", authors[length(authors)])
+    use_ellipsis <- TRUE
+  } else {
+    # Thomas not in first 20, follow standard APA: first 19 + ellipsis + last
+    authors_to_show <- c(authors[1:19], "...", authors[length(authors)])
+    use_ellipsis <- TRUE
+  }
+  
+  # Highlight Ronald G. Thomas wherever he appears
+  authors_to_show <- sapply(authors_to_show, function(name) {
+    if (name == "...") return(name)
     if (str_detect(name, "Thomas, Ronald|Ronald.*Thomas")) {
       return(paste0("**", name, "**"))
     }
     return(name)
   })
   
-  # Limit authors
-  if (length(authors) > 3) {
-    return(paste0(paste(authors[1:3], collapse = ", "), ", et al."))
+  # Format according to APA style
+  if (length(authors_to_show) == 1) {
+    return(as.character(authors_to_show[1]))
+  } else if (length(authors_to_show) == 2) {
+    return(paste(authors_to_show, collapse = " & "))
   } else {
-    return(paste(authors, collapse = ", "))
+    # For 3+ authors, use commas and & before last author (unless ellipsis)
+    if (use_ellipsis) {
+      # When using ellipsis, don't use & before last author
+      return(paste(authors_to_show, collapse = ", "))
+    } else {
+      # Standard format: Author1, Author2, & Author3
+      last_author <- authors_to_show[length(authors_to_show)]
+      other_authors <- authors_to_show[1:(length(authors_to_show)-1)]
+      return(paste0(paste(other_authors, collapse = ", "), ", & ", last_author))
+    }
   }
 }
 
