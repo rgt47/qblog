@@ -312,24 +312,46 @@ window.Quarto = {
 <p>Welcome to my blog! Here you’ll find my latest thoughts on R programming, data science, statistical computing, and research workflows.</p>
 <p>Use the search box above to find specific topics, or click on category tags to filter posts by theme.</p>
 <script>
-// Fix for Quarto listing category filtering
+// Debug and fix Quarto listing category filtering
 document.addEventListener('DOMContentLoaded', function() {
-  // Fix sidebar categories that have plain text data-category attributes
-  const categoryEls = document.querySelectorAll('.quarto-listing-category .category[data-category]');
+  console.log('Debug: DOM loaded, looking for categories...');
   
-  categoryEls.forEach(categoryEl => {
-    const category = categoryEl.getAttribute('data-category');
-    if (category && category !== '') {
-      // Encode the category properly for Quarto's expected format
-      const encodedCategory = btoa(encodeURIComponent(category));
-      categoryEl.setAttribute('data-category', encodedCategory);
+  // Wait a bit for Quarto to finish setting up
+  setTimeout(() => {
+    const categoryEls = document.querySelectorAll('.quarto-listing-category .category[data-category]');
+    console.log('Found category elements:', categoryEls.length);
+    
+    categoryEls.forEach((categoryEl, index) => {
+      const category = categoryEl.getAttribute('data-category');
+      console.log(`Category ${index}:`, category);
       
-      // Set up click handler
-      categoryEl.onclick = () => {
-        window.quartoListingCategory(encodedCategory);
-      };
-    }
-  });
+      if (category && category !== '') {
+        // Try direct filtering without encoding first
+        categoryEl.onclick = () => {
+          console.log('Clicked category:', category);
+          
+          // Try to filter directly using the List.js functionality
+          const listingIds = Object.keys(window['quarto-listings'] || {});
+          console.log('Available listings:', listingIds);
+          
+          listingIds.forEach(listingId => {
+            const list = window['quarto-listings'][listingId];
+            if (list) {
+              console.log('Filtering list:', listingId, 'by category:', category);
+              list.filter(function (item) {
+                const itemValues = item.values();
+                console.log('Item categories:', itemValues.categories);
+                if (itemValues.categories) {
+                  return itemValues.categories.includes(category);
+                }
+                return false;
+              });
+            }
+          });
+        };
+      }
+    });
+  }, 1000);
 });
 </script>
 
