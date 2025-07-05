@@ -1,0 +1,30 @@
+FROM rocker/r-devel
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get clean
+RUN apt-get install terminator tree eza ssh zsh git fzf ripgrep vim curl \
+autojump  zsh-autosuggestions sudo pandoc -y
+RUN groupadd --system joe
+RUN useradd --system --gid joe -m joe
+RUN usermod -aG sudo joe
+RUN echo joe:z | chpasswd
+RUN chown joe:joe -R /home/joe
+RUN chown joe:joe -R /usr/local/lib/R/site-library
+RUN chsh -s $(which zsh) joe
+USER joe
+WORKDIR /home/joe
+COPY .vimrc .vimrc
+COPY .zshrc .zshrc
+RUN curl -fLo ~/.vim/autoload/plug.vim --create-dirs \
+    https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+# RUN mkdir -p /home/joe/peng1
+WORKDIR /home/joe/
+COPY renv.lock renv.lock
+RUN Rscript -e 'install.packages("renv")'
+RUN Rscript -e 'renv::restore()'
+# WORKDIR /home/joe/peng1
+# COPY .Rprofile .Rprofile
+# COPY renv/activate.R renv/activate.R
+# COPY renv/settings.json renv/settings.json
+COPY .renvignore .renvignore
+CMD ["/bin/zsh"]

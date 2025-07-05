@@ -1,0 +1,2671 @@
+#' PHB 228 Monte Carlo Simulation Dashboard
+#' 
+#' This Shiny application provides an interactive interface for comparing the 
+#' performance of different statistical tests through Monte Carlo simulations.
+#' It enables users to explore how data distributions, sample sizes, and effect 
+#' sizes influence the power and confidence interval properties of various tests.
+#'
+#' @section Features:
+#' \itemize{
+#'   \item Compare four different statistical tests: t-test, Wilcoxon, bootstrap, and permutation
+#'   \item Visualize power curves and p-value distributions
+#'   \item Analyze confidence interval coverage and width
+#'   \item Calculate minimum detectable effect sizes at different power thresholds
+#'   \item Support for multiple data distributions: normal, log-normal, uniform, gamma, and binary
+#' }
+#'
+#' @section App Structure:
+#' The application is organized into four main tabs:
+#' \describe{
+#'   \item{Single Test}{Runs simulations for a specific combination of parameters}
+#'   \item{CI Coverage}{Analyzes confidence interval properties}
+#'   \item{Power Curves}{Explores how power changes with effect size}
+#'   \item{About}{Provides information about the app and statistical concepts}
+#' }
+#'
+#' @section Technical Implementation:
+#' The app uses several key R packages:
+#' \itemize{
+#'   \item shiny, shinydashboard: Core UI framework #'   \item plotly, ggplot2: Data visualization #'   \item DT: Interactive data tables
+#'   \item shinyjs: JavaScript operations and full-screen functionality
+#'   \item shinycssloaders, waiter: Loading animations
+#' }
+#'
+#' @section Usage:
+#' 1. Choose the desired tab for the analysis you want to perform
+#' 2. Set the parameters (distribution, sample size, effect size, etc.)
+#' 3. Run the simulation using the action button
+#' 4. Explore the results through interactive visualizations
+#'
+#' @author R.G. Thomas
+#' @version 1.0
+#'
+#' @examples
+#' # Run the app
+#' shiny::runApp("shiny_app.R")
+#'
+ conflicts_prefer(dplyr::filter)
+# Load required libraries -------------------------------------------------
+library(pacman)
+p_load( naniar, DT, shiny,               ggplot2,             reshape2, DT, dplyr, shinythemes, shinydashboard, shinyWidgets, plotly, shinycssloaders, waiter, fresh, shinyjs)
+# Core Statistical Functions -----------------------------------------------
+#' Generate paired data samples from various distributions
+#'
+#' This function generates paired control and treatment samples from a specified 
+#' distribution with a defined effect size. It creates two samples: a control 
+#' group (x) and a treatment group (y), where the treatment group has a 
+#' specified effect size relative to the control.
+#'
+#' @param n Integer. Number of observations to generate for each group.
+#' @param distribution Character. Type of distribution to use:
+#'   \itemize{
+#'     \item "lognormal": Log-normal distribution (skewed right)
+#'     \item "normal": Normal distribution (symmetric)
+#'     \item "uniform": Uniform distribution (flat)
+#'     \item "gamma": Gamma distribution (skewed right)
+#'     \item "binary": Binary distribution (0/1 outcomes)
+#'   }
+#' @param effect_size Numeric. Size of the effect to introduce:
+#'   \itemize{
+#'     \item For lognormal: Added to meanlog parameter
+#'     \item For normal: Added to mean parameter
+#'     \item For uniform: Shifts the min and max bounds
+#'     \item For gamma: Multiplies the scale parameter
+#'     \item For binary: Changes the probability parameter
+#'   }
+#'
+#' @return A list containing:
+#'   \describe{
+#'     \item{x}{Numeric vector of control group values}
+#'     \item{y}{Numeric vector of treatment group values}
+#'     \item{true_diff}{The true difference in means between groups}
+#'   }
+#'
+#' @examples
+#' # Generate normal data with effect size of 0.5
+#' data <- generate_data(100, "normal", 0.5)
+#' 
+#' # Generate binary data with effect size of 0.2
+#' data <- generate_data(100, "binary", 0.2)
+#'
+#' @seealso \code{\link{generate_sample_data}}, \code{\link{compare_tests}}
+generate_data <- function(n, distribution, effect_size) {
+  # Log-normal distribution (control: meanlog=0, treatment: meanlog=effect_size)
+  if (distribution == "lognormal") {
+    x <- rlnorm(n, meanlog = 0, sdlog = 1)
+    y <- rlnorm(n, meanlog = effect_size, sdlog = 1)
+    # Calculate true difference in means (not in log-space)
+    # The mean of lognormal(meanlog, sdlog) is exp(meanlog + sdlog^2/2)
+    true_diff <- exp(effect_size + 0.5) - exp(0 + 0.5)
+  } 
+  # Normal distribution (control: mean=0, treatment: mean=effect_size)
+  else if (distribution == "normal") {
+    x <- rnorm(n, mean = 0, sd = 1)
+    y <- rnorm(n, mean = effect_size, sd = 1)
+    true_diff <- effect_size  # Simply the difference in means
+  } 
+  # Uniform distribution (control: [0,1], treatment: [effect_size, 1+effect_size])
+  else if (distribution == "uniform") {
+    x <- runif(n, min = 0, max = 1)
+    y <- runif(n, min = effect_size, max = 1 + effect_size)
+    # The mean of uniform(a,b) is (a+b)/2
+    true_diff <- effect_size + 0.5
+  } 
+  # Gamma distribution (control: scale=1, treatment: scale=1+effect_size)
+  else if (distribution == "gamma") {
+    shape <- 2  # Fixed shape parameter
+    x <- rgamma(n, shape = shape, scale = 1)
+    y <- rgamma(n, shape = shape, scale = 1 + effect_size)
+    # The mean of gamma(shape, scale) is shape*scale
+    true_diff <- shape * effect_size
+  } 
+  # Binary distribution (control: p=0.5, treatment: p=0.5+effect_size)
+  else if (distribution == "binary") {
+    p1 <- 0.5  # Base probability for control
+    # Bound the treatment probability to [0,1]
+    p2 <- min(max(p1 + effect_size, 0), 1)
+    x <- rbinom(n, size = 1, prob = p1)
+    y <- rbinom(n, size = 1, prob = p2)
+    true_diff <- p2 - p1  # Difference in probabilities
+  } 
+  # Error handling for invalid distribution
+  else {
+    stop("Invalid distribution specified. Use 'lognormal', 'normal', 'uniform', 'gamma', or 'binary'.")
+  }
+  
+  return(list(x = x, y = y, true_diff = true_diff))
+}
+
+#' Run a bootstrap hypothesis test for difference in means
+#'
+#' This function implements a bootstrap hypothesis test for the difference in means
+#' between two groups. It uses a two-sided approach, appropriate for testing 
+#' whether there is any difference between the groups (not just in a specific direction).
+#'
+#' @param x Numeric vector. Control group observations.
+#' @param y Numeric vector. Treatment group observations.
+#'
+#' @return Numeric. The p-value for the bootstrap test.
+#'
+#' @details
+#' The bootstrap test implemented here follows these steps:
+#' 1. Calculate the observed difference in means between groups
+#' 2. Center both samples around the overall mean (simulating the null hypothesis)
+#' 3. Resample with replacement from the null-centered data
+#' 4. Calculate the difference in means for each bootstrap sample
+#' 5. Compute the proportion of bootstrap differences that are as or more extreme
+#'    than the observed difference (two-tailed test)
+#'
+#' The test is non-parametric and does not require distributional assumptions.
+#'
+#' @seealso \code{\link{run_permutation_test}}, \code{\link{compare_tests}}
+#' 
+#' @examples
+#' # Generate sample data
+#' x <- rnorm(30, mean = 0, sd = 1)
+#' y <- rnorm(30, mean = 0.5, sd = 1)
+#' 
+#' # Run bootstrap test
+#' p_value <- run_bootstrap_test(x, y)
+run_bootstrap_test <- function(x, y) {
+  n_boot <- 1000  # Number of bootstrap samples
+  boot_diffs <- numeric(n_boot)  # Store differences for each sample
+  observed_diff <- mean(y) - mean(x)  # Observed difference in means
+  
+  # Get overall mean for the null hypothesis (no difference between groups)
+  overall_mean <- mean(c(x, y))
+  
+  # Center both samples to have the same mean (simulating null hypothesis)
+  # This step is crucial to make the test valid under the null
+  x_null <- x - mean(x) + overall_mean
+  y_null <- y - mean(y) + overall_mean
+  
+  # Generate bootstrap samples under the null hypothesis
+  for (b in 1:n_boot) {
+    # Resample with replacement under the null
+    x_boot <- sample(x_null, size = length(x), replace = TRUE)
+    y_boot <- sample(y_null, size = length(y), replace = TRUE)
+    
+    # Calculate test statistic under the null
+    boot_diff <- mean(y_boot) - mean(x_boot)
+    boot_diffs[b] <- boot_diff
+  }
+  
+  # Calculate bootstrap p-value (two-tailed)
+  # The p-value is the proportion of bootstrap samples with a difference
+  # as or more extreme than the observed difference
+  p_value <- mean(abs(boot_diffs) >= abs(observed_diff))
+  return(p_value)
+}
+
+#' Run a permutation test for difference in means
+#'
+#' This function implements a permutation test for the difference in means
+#' between two groups. It shuffles the group labels to test the null hypothesis
+#' that the two groups come from the same distribution.
+#'
+#' @param x Numeric vector. Control group observations.
+#' @param y Numeric vector. Treatment group observations.
+#'
+#' @return Numeric. The p-value for the permutation test.
+#'
+#' @details
+#' The permutation test implemented here follows these steps:
+#' 1. Calculate the observed difference in means between groups
+#' 2. Combine all observations into a single pool
+#' 3. Randomly reassign observations to the two groups (maintaining original sizes)
+#' 4. Calculate the difference in means for each permutation
+#' 5. Compute the proportion of permutation differences that are as or more extreme
+#'    than the observed difference (two-tailed test)
+#'
+#' The permutation test directly tests the null hypothesis by randomly
+#' reassigning observations to groups, effectively breaking any true relationship.
+#'
+#' @seealso \code{\link{run_bootstrap_test}}, \code{\link{compare_tests}}
+#' 
+#' @examples
+#' # Generate sample data
+#' x <- rnorm(30, mean = 0, sd = 1)
+#' y <- rnorm(30, mean = 0.5, sd = 1)
+#' 
+#' # Run permutation test
+#' p_value <- run_permutation_test(x, y)
+run_permutation_test <- function(x, y) {
+  n_perm <- 1000  # Number of permutations
+  perm_diffs <- numeric(n_perm)  # Store differences for each permutation
+  combined <- c(x, y)  # Combine all observations
+  observed_diff <- mean(y) - mean(x)  # Observed difference in means
+  
+  # Generate permutation samples
+  for (p in 1:n_perm) {
+    # Randomly shuffle combined data
+    shuffled <- sample(combined)
+    
+    # Assign first n_x observations to x group, remainder to y group
+    x_perm <- shuffled[1:length(x)]
+    y_perm <- shuffled[(length(x) + 1):length(combined)]
+    
+    # Calculate the difference for this permutation
+    perm_diffs[p] <- mean(y_perm) - mean(x_perm)
+  }
+  
+  # Calculate permutation p-value (two-tailed)
+  # The p-value is the proportion of permutations with a difference
+  # as or more extreme than the observed difference
+  p_value <- mean(abs(perm_diffs) >= abs(observed_diff))
+  return(p_value)
+}
+
+#' Compare statistical test power through Monte Carlo simulation
+#'
+#' This function performs a Monte Carlo simulation to compare the power of 
+#' four different statistical tests: t-test, Wilcoxon rank-sum test,
+#' bootstrap test, and permutation test. For each simulation, it generates
+#' data with a specified effect size and distribution, applies all four tests,
+#' and tracks their p-values.
+#'
+#' @param n_sim Integer. Number of simulations to run (default: 1000).
+#' @param sample_size Integer. Number of observations in each group (default: 30).
+#' @param distribution Character. Type of distribution to generate data from:
+#'   "lognormal", "normal", "uniform", "gamma", or "binary" (default: "lognormal").
+#' @param effect_size Numeric. Size of the effect to introduce (default: 0.5).
+#'
+#' @return A list containing:
+#'   \describe{
+#'     \item{power_t}{Power of the t-test (proportion of p < 0.05)}
+#'     \item{power_w}{Power of the Wilcoxon test}
+#'     \item{power_boot}{Power of the bootstrap test}
+#'     \item{power_perm}{Power of the permutation test}
+#'     \item{p_values_t}{Vector of t-test p-values from all simulations}
+#'     \item{p_values_w}{Vector of Wilcoxon test p-values}
+#'     \item{p_values_boot}{Vector of bootstrap test p-values}
+#'     \item{p_values_perm}{Vector of permutation test p-values}
+#'   }
+#'
+#' @details
+#' The power of a test is the probability of correctly rejecting the null
+#' hypothesis when it is false. This function estimates power by calculating
+#' the proportion of simulations where each test produces a p-value < 0.05.
+#'
+#' @seealso \code{\link{generate_data}}, \code{\link{run_bootstrap_test}}, 
+#'   \code{\link{run_permutation_test}}
+#'   
+#' @examples
+#' # Compare test power for normal data with effect size 0.5
+#' results <- compare_tests(n_sim = 100, sample_size = 30, 
+#'                          distribution = "normal", effect_size = 0.5)
+#' 
+#' # Print power results
+#' print(c(
+#'   "T-test:" = results$power_t,
+#'   "Wilcoxon:" = results$power_w,
+#'   "Bootstrap:" = results$power_boot,
+#'   "Permutation:" = results$power_perm
+#' ))
+compare_tests <- function(n_sim = 1000, sample_size = 30, distribution = "lognormal", 
+                         effect_size = 0.5) {
+  # Initialize storage for p-values from each test
+  p_values_t <- numeric(n_sim)     # T-test
+  p_values_w <- numeric(n_sim)     # Wilcoxon test
+  p_values_boot <- numeric(n_sim)  # Bootstrap test
+  p_values_perm <- numeric(n_sim)  # Permutation test
+  
+  # Run simulations
+  for (i in 1:n_sim) {
+    # Generate data based on specified distribution
+    data <- generate_data(sample_size, distribution, effect_size)
+    x <- data$x  # Control group
+    y <- data$y  # Treatment group
+    
+    # Apply parametric and non-parametric tests
+    p_values_t[i] <- t.test(x, y)$p.value            # T-test (parametric)
+    p_values_w[i] <- wilcox.test(x, y)$p.value       # Wilcoxon (non-parametric)
+    p_values_boot[i] <- run_bootstrap_test(x, y)     # Bootstrap (resampling)
+    p_values_perm[i] <- run_permutation_test(x, y)   # Permutation (randomization)
+  }
+  
+  # Calculate power (proportion of rejected null hypotheses at alpha = 0.05)
+  power_t <- mean(p_values_t < 0.05)
+  power_w <- mean(p_values_w < 0.05)
+  power_boot <- mean(p_values_boot < 0.05)
+  power_perm <- mean(p_values_perm < 0.05)
+  
+  # Return both power estimates and raw p-values for further analysis
+  return(list(
+    power_t = power_t, 
+    power_w = power_w,
+    power_boot = power_boot,
+    power_perm = power_perm,
+    p_values_t = p_values_t,
+    p_values_w = p_values_w,
+    p_values_boot = p_values_boot,
+    p_values_perm = p_values_perm
+  ))
+}
+
+#' Convert test data to a data frame for visualization
+#'
+#' This helper function creates a data frame from paired control and treatment
+#' samples, ready for plotting with ggplot2 or similar visualization tools.
+#'
+#' @param n Integer. Number of observations in each group (default: 100).
+#' @param distribution Character. Type of distribution to use (default: "lognormal").
+#' @param effect_size Numeric. Size of the effect to introduce (default: 0.5).
+#'
+#' @return A data frame with columns:
+#'   \describe{
+#'     \item{value}{Numeric values for all observations}
+#'     \item{group}{Factor indicating "Control" or "Treatment" group}
+#'   }
+#'
+#' @seealso \code{\link{generate_data}}
+#'
+#' @examples
+#' # Generate sample data for visualization
+#' samples <- generate_sample_data(100, "normal", 0.5)
+#' 
+#' # Now create a density plot
+#' library(ggplot2)
+#' ggplot(samples, aes(x = value, fill = group)) +
+#'   geom_density(alpha = 0.5)
+generate_sample_data <- function(n = 100, distribution = "lognormal", effect_size = 0.5) {
+  # Generate the paired data samples
+  data <- generate_data(n, distribution, effect_size)
+  
+  # Convert to a data frame format suitable for plotting
+  data.frame(
+    value = c(data$x, data$y),                     # Combine all values
+    group = rep(c("Control", "Treatment"), each = n)  # Add group labels
+  )
+}
+
+# UI Configuration and Styling -------------------------------------------------
+
+# Custom theme using fresh package - simplified version
+my_theme <- create_theme(
+  adminlte_color(light_blue = "#3c8dbc"),
+  adminlte_sidebar(
+    dark_bg = "#222d32",
+    dark_hover_bg = "#1e282c",
+    dark_color = "#b8c7ce"
+  )
+)
+
+# Distribution icons and colors
+dist_icons <- list(
+  "lognormal" = "chart-line",
+  "normal" = "bell",
+  "uniform" = "grip-lines",
+  "gamma" = "chart-area",
+  "binary" = "toggle-on"
+)
+
+dist_colors <- list(
+  "lognormal" = "#3c8dbc",
+  "normal" = "#00a65a",
+  "uniform" = "#f39c12",
+  "gamma" = "#605ca8",
+  "binary" = "#ff5252"
+)
+
+# Create a waiter loading screen with a spinner
+loading_screen <- waiter::spin_loaders(16, color = "#4B9CD3")
+
+# UI Definition --------------------------------------------------------------
+
+#' @section UI Components:
+#' The UI is organized into a dashboard with sidebar navigation and multiple panels.
+#' Each tab contains configuration options and visualization areas, with fullscreen
+#' toggle functionality for enhanced viewing.
+
+# UI for dashboard
+ui <- dashboardPage(
+  skin = "blue",
+  
+  # Dashboard header
+  dashboardHeader(
+    title = span(tagList(icon("chart-bar"), "PHB 228 Sims"), style = "font-size: 20px;"),
+    titleWidth = 250  # Reduced width for shorter title
+  ),
+  
+  # Dashboard sidebar
+  dashboardSidebar(
+    width = 350,
+    sidebarMenu(
+      id = "tabs",
+      menuItem("Single Test", tabName = "single_test", icon = icon("flask")),
+      menuItem("CI Coverage", tabName = "ci_coverage", icon = icon("percent")),
+      menuItem("Power Curves", tabName = "power_curves", icon = icon("chart-line")),
+      menuItem("About", tabName = "about", icon = icon("info-circle"))
+    ),
+    hr(),
+    div(
+      style = "padding: 15px; color: white;",
+      h4("Test Descriptions", style = "font-weight: bold; color: white;"),
+      div(
+        style = "background-color: #2c3b41; padding: 10px; border-radius: 5px; margin-bottom: 10px; color: white;",
+        strong("T-Test:"), "Parametric test assuming normality"
+      ),
+      div(
+        style = "background-color: #2c3b41; padding: 10px; border-radius: 5px; margin-bottom: 10px; color: white;",
+        strong("Wilcoxon:"), "Non-parametric rank-based test"
+      ),
+      div(
+        style = "background-color: #2c3b41; padding: 10px; border-radius: 5px; margin-bottom: 10px; color: white;",
+        strong("Bootstrap:"), "Resampling-based test (distribution-free)"
+      ),
+      div(
+        style = "background-color: #2c3b41; padding: 10px; border-radius: 5px; color: white;",
+        strong("Permutation:"), "Randomization-based test"
+      )
+    )
+  ),
+  
+  # Dashboard body
+  dashboardBody(
+    use_theme(my_theme),
+    use_waiter(),
+    shinyjs::useShinyjs(),
+    
+    # Add fullscreen toggle functionality with resizing
+    tags$script(HTML('
+      $(document).on("shiny:connected", function() {
+        // Add handler for resizing plots when in fullscreen mode
+        function resizePlot(boxElement, isFullscreen) {
+          setTimeout(function() {
+            var plotlyElements = boxElement.find(".plotly-graph-div, .js-plotly-plot");
+            if (plotlyElements.length > 0) {
+              plotlyElements.each(function() {
+                if (window.Plotly && this._fullLayout) {
+                  Plotly.Plots.resize(this);
+                  
+                  // Reinitialize plotly hover and click events
+                  if (this._fullLayout.hoverlayer) {
+                    this._fullLayout.hoverlayer.remove();
+                    this._fullLayout.hoverlayer = null;
+                  }
+                }
+              });
+            }
+            
+            // For static plots (ggplot2)
+            var ggplots = boxElement.find(".shiny-plot-output");
+            if (ggplots.length > 0) {
+              ggplots.each(function() {
+                if (isFullscreen) {
+                  $(this).css({
+                    "height": "85vh",
+                    "width": "100%"
+                  });
+                } else {
+                  $(this).css({
+                    "height": "",
+                    "width": ""
+                  });
+                }
+              });
+            }
+            
+            // Also trigger window resize event for any other responsive elements
+            $(window).trigger("resize");
+          }, 150);
+        }
+        
+        // Setup fullscreen toggle functionality
+        setTimeout(function() {
+          $(".box").each(function() {
+            var box = $(this);
+            var header = box.find(".box-header");
+            
+            // Add fullscreen button to each box
+            var button = $("<button>")
+              .addClass("btn btn-default btn-sm pull-right")
+              .css("margin-right", "5px")
+              .attr("data-toggle", "tooltip")
+              .attr("title", "Toggle Fullscreen")
+              .html("<i class=\'fa fa-expand\'></i>");
+            
+            // Insert button in the header
+            header.append(button);
+            
+            // Toggle fullscreen on click
+            button.on("click", function(e) {
+              e.preventDefault();
+              var isEnteringFullscreen = !box.hasClass("fullscreen-box");
+              box.toggleClass("fullscreen-box");
+              
+              // Update icon
+              var icon = $(this).find("i");
+              if (icon.hasClass("fa-expand")) {
+                icon.removeClass("fa-expand").addClass("fa-compress");
+              } else {
+                icon.removeClass("fa-compress").addClass("fa-expand");
+              }
+              
+              // Resize plots when toggling fullscreen
+              resizePlot(box, isEnteringFullscreen);
+            });
+          });
+        }, 1000); // Wait for boxes to be fully rendered
+        
+        // Also handle window resize events to ensure plots remain responsive
+        $(window).resize(function() {
+          $(".fullscreen-box").each(function() {
+            resizePlot($(this), true);
+          });
+        });
+      });
+    ')),
+    
+    # Custom CSS
+    tags$head(
+      tags$style(HTML("
+        .box {
+          border-top: 3px solid #4B9CD3;
+          box-shadow: 0 1px 3px rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.24);
+          transition: all 0.3s cubic-bezier(.25,.8,.25,1);
+        }
+        .box:hover {
+          box-shadow: 0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22);
+        }
+        
+        /* Fullscreen box style */
+        .fullscreen-box {
+          position: fixed !important;
+          top: 0 !important;
+          left: 0 !important;
+          width: 100% !important;
+          height: 100% !important;
+          z-index: 9999 !important;
+          margin: 0 !important;
+          max-height: none !important;
+          background: white !important;
+          display: flex !important;
+          flex-direction: column !important;
+        }
+        
+        .fullscreen-box .box-header {
+          flex: 0 0 auto !important;
+        }
+        
+        .fullscreen-box .box-body {
+          flex: 1 1 auto !important;
+          height: auto !important;
+          overflow: auto !important;
+          display: flex !important;
+          flex-direction: column !important;
+          padding: 15px !important;
+        }
+        
+        .fullscreen-box .plotly, 
+        .fullscreen-box .plot-container,
+        .fullscreen-box .svg-container,
+        .fullscreen-box .plotly-graph-div,
+        .fullscreen-box .shiny-plot-output,
+        .fullscreen-box .html-widget,
+        .fullscreen-box .html-widget-output {
+          flex: 1 1 auto !important;
+          height: auto !important;
+          min-height: 85vh !important;
+          width: 100% !important;
+        }
+        
+        /* Fix for ggplot outputs that get converted to plotly */
+        .fullscreen-box .ggplot {
+          height: 85vh !important;
+        }
+        .small-box {
+          border-radius: 5px;
+          position: relative;
+          display: block;
+          margin-bottom: 20px;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .bg-info { background-color: #4B9CD3 !important; color: white !important; }
+        .bg-success { background-color: #00a65a !important; color: white !important; }
+        .bg-warning { background-color: #f39c12 !important; color: white !important; }
+        .bg-primary { background-color: #605ca8 !important; color: white !important; }
+        
+        /* Improve inputs styling */
+        .selectize-input {
+          border-radius: 5px;
+          border: 1px solid #ddd;
+          box-shadow: none;
+        }
+        .selectize-input.focus {
+          border-color: #4B9CD3;
+          box-shadow: 0 0 0 0.2rem rgba(75, 156, 211, 0.25);
+        }
+        
+        /* Slider styling */
+        .irs-bar, .irs-bar-edge {
+          background: #4B9CD3;
+          border-color: #4B9CD3;
+        }
+        .irs-single, .irs-from, .irs-to {
+          background: #4B9CD3;
+        }
+        
+        /* Button styling */
+        .btn-primary {
+          background-color: #4B9CD3;
+          border-color: #3c8dbc;
+        }
+        .btn-primary:hover {
+          background-color: #3c8dbc;
+          border-color: #367fa9;
+        }
+        
+        /* Make plots and tables responsive */
+        .plot-container {
+          height: 100%;
+          width: 100%;
+        }
+        
+        /* Value boxes */
+        .info-box {
+          border-radius: 5px;
+          box-shadow: 0 1px 3px rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.24);
+        }
+        
+        /* Improve DT table styling */
+        .dataTables_wrapper {
+          padding: 10px;
+          font-size: 13px;
+        }
+        table.dataTable thead th {
+          background-color: #f4f6f9;
+        }
+        
+        /* Improved tooltips */
+        .tooltip-inner {
+          max-width: 250px;
+          padding: 8px 12px;
+          background-color: #333;
+          border-radius: 5px;
+        }
+      "))
+    ),
+    
+    tabItems(
+      # Tab 1: Single Test Configuration
+      tabItem(
+        tabName = "single_test",
+        fluidRow(
+          box(
+            width = 4,
+            solidHeader = TRUE,
+            title = "Test Configuration",
+            status = "primary",
+            
+            # Use improved widgets from shinyWidgets
+            pickerInput(
+              "distribution1", 
+              "Select Distribution:",
+              choices = c(
+                "Log-normal" = "lognormal",
+                "Normal" = "normal", 
+                "Uniform" = "uniform",
+                "Gamma" = "gamma",
+                "Binary" = "binary"
+              ),
+              options = list(
+                style = "btn-primary"
+              ),
+              choicesOpt = list(
+                icon = lapply(dist_icons, function(i) paste0("fa fa-", i))
+              )
+            ),
+            
+            sliderTextInput(
+              "sample_size1", 
+              "Sample Size:",
+              choices = c(5, 10, 20, 30, 50, 75, a100 = 100),
+              selected = 30,
+              grid = TRUE
+            ),
+            
+            sliderInput(
+              "effect_size1", 
+              "Effect Size:",
+              min = 0.1, max = 1.5, 
+              value = 0.5, step = 0.1,
+              animate = TRUE
+            ),
+            
+            sliderInput(
+              "n_sim1", 
+              "Number of Simulations:",
+              min = 100, max = 2000, 
+              value = 500, step = 100,
+              animate = TRUE
+            ),
+            
+            actionBttn(
+              "run1", 
+              "Run Simulation",
+              style = "gradient",
+              color = "primary",
+              icon = icon("play"),
+              block = TRUE
+            ),
+            
+            br()
+          ),
+          
+          # Results visualization area
+          column(
+            width = 8,
+            
+            # Power comparison graph
+            box(
+              width = NULL,
+              solidHeader = TRUE,
+              title = "Power Comparison",
+              status = "primary",
+              
+              withSpinner(
+                plotlyOutput("power_plot1", height = "300px"),
+                type = 8,
+                color = "#4B9CD3"
+              )
+            ),
+            
+            # P-value distribution and sample distribution
+            fluidRow(
+              column(
+                width = 6,
+                box(
+                  width = NULL,
+                  solidHeader = TRUE,
+                  title = "P-value Distributions",
+                  status = "info",
+                  
+                  withSpinner(
+                    plotlyOutput("pvalue_dist", height = "250px"),
+                    type = 8,
+                    color = "#00c0ef"
+                  )
+                )
+              ),
+              column(
+                width = 6,
+                box(
+                  width = NULL,
+                  solidHeader = TRUE,
+                  title = "Sample Distribution",
+                  status = "success",
+                  
+                  withSpinner(
+                    plotlyOutput("sample_dist", height = "250px"),
+                    type = 8,
+                    color = "#00a65a"
+                  )
+                )
+              )
+            ),
+            
+            # Results boxes removed for cleaner UI
+          )
+        )
+      ),
+      
+      # Tab 2: Confidence Interval Coverage
+      tabItem(
+        tabName = "ci_coverage",
+        fluidRow(
+          box(
+            width = 4,
+            solidHeader = TRUE,
+            title = "CI Analysis Configuration",
+            status = "primary",
+            
+            pickerInput(
+              "distribution2", 
+              "Select Distribution:",
+              choices = c(
+                "Log-normal" = "lognormal",
+                "Normal" = "normal", 
+                "Uniform" = "uniform",
+                "Gamma" = "gamma",
+                "Binary" = "binary"
+              ),
+              options = list(
+                style = "btn-primary"
+              ),
+              choicesOpt = list(
+                icon = lapply(dist_icons, function(i) paste0("fa fa-", i))
+              )
+            ),
+            
+            sliderTextInput(
+              "sample_size2", 
+              "Sample Size:",
+              choices = c(5, 10, 20, 30, 50, 75, 100),
+              selected = 30,
+              grid = TRUE
+            ),
+            
+            sliderInput(
+              "effect_size2", 
+              "Effect Size:",
+              min = 0, max = 1.5, 
+              value = 0.5, step = 0.1,
+              animate = TRUE
+            ),
+            
+            sliderInput(
+              "n_sim2", 
+              "Number of Simulations:",
+              min = 100, max = 1000, 
+              value = 300, step = 100,
+              animate = TRUE
+            ),
+            
+            prettyCheckbox(
+              "include_zero2", 
+              "Include Effect Size = 0",
+              value = FALSE,
+              icon = icon("check"),
+              status = "primary",
+              animation = "smooth"
+            ),
+            
+            pickerInput(
+              "confidence_level", 
+              "Confidence Level:",
+              choices = c("90%" = 0.9, "95%" = 0.95, "99%" = 0.99),
+              selected = "95%"
+            ),
+            
+            actionBttn(
+              "run2", 
+              "Run CI Coverage Analysis",
+              style = "gradient",
+              color = "primary",
+              icon = icon("play"),
+              block = TRUE
+            ),
+            
+            br()
+          ),
+          
+          # CI Coverage Results
+          column(
+            width = 8,
+            
+            # CI Coverage plot
+            box(
+              width = NULL,
+              solidHeader = TRUE,
+              title = "Confidence Interval Coverage",
+              status = "primary",
+              
+              withSpinner(
+                plotlyOutput("ci_coverage_plot", height = "300px"),
+                type = 8,
+                color = "#4B9CD3"
+              )
+            ),
+            
+            # CI Width plot
+            box(
+              width = NULL,
+              solidHeader = TRUE,
+              title = "CI Width Comparison",
+              status = "info",
+              
+              withSpinner(
+                plotlyOutput("ci_width_plot", height = "250px"),
+                type = 8,
+                color = "#00c0ef"
+              )
+            ),
+            
+            # Results boxes removed for cleaner UI
+          )
+        )
+      ),
+      
+      # Tab 3: Power Curves
+      tabItem(
+        tabName = "power_curves",
+        fluidRow(
+          box(
+            width = 4,
+            solidHeader = TRUE,
+            title = "Power Curves Configuration",
+            status = "primary",
+            
+            pickerInput(
+              "distribution3", 
+              "Select Distribution:",
+              choices = c(
+                "Log-normal" = "lognormal",
+                "Normal" = "normal", 
+                "Uniform" = "uniform",
+                "Gamma" = "gamma",
+                "Binary" = "binary"
+              ),
+              options = list(
+                style = "btn-primary"
+              ),
+              choicesOpt = list(
+                icon = lapply(dist_icons, function(i) paste0("fa fa-", i))
+              )
+            ),
+            
+            sliderTextInput(
+              "sample_size3", 
+              "Sample Size:",
+              choices = c(5, 10, 20, 30, 50, 75, 100),
+              selected = 30,
+              grid = TRUE
+            ),
+            
+            sliderInput(
+              "n_sim3", 
+              "Number of Simulations per Point:",
+              min = 100, max = 500, 
+              value = 200, step = 50,
+              animate = TRUE
+            ),
+            
+            sliderInput(
+              "effect_range", 
+              "Effect Size Range:",
+              min = 0, max = 2, 
+              value = c(0, 1.5), step = 0.1
+            ),
+            
+            sliderInput(
+              "effect_points", 
+              "Number of Effect Size Points:",
+              min = 3, max = 15, 
+              value = 8, step = 1
+            ),
+            
+            actionBttn(
+              "run3", 
+              "Generate Power Curves",
+              style = "gradient",
+              color = "primary",
+              icon = icon("play"),
+              block = TRUE
+            ),
+            
+            br()
+          ),
+          
+          # Power curves results
+          column(
+            width = 8,
+            
+            # Power curves plot
+            box(
+              width = NULL,
+              solidHeader = TRUE,
+              title = "Power Curves",
+              status = "primary",
+              
+              # Use plotlyOutput for interactive plotting
+              plotlyOutput("power_curves_plot", height = "350px")
+            ),
+            
+            # MDE results
+            box(
+              width = NULL,
+              solidHeader = TRUE,
+              title = "Minimum Detectable Effect Sizes",
+              status = "info",
+              
+              # Increased height for faceted plot
+              plotlyOutput("mde_plot", height = "350px")
+            ),
+            
+            # Results table in a box
+            box(
+              width = NULL,
+              solidHeader = TRUE,
+              title = "Power Curve Data",
+              status = "success",
+              
+              # Remove spinner to allow partial updates
+              DTOutput("power_curves_table")
+            )
+          )
+        )
+      ),
+      
+      # Tab 4: About
+      tabItem(
+        tabName = "about",
+        
+        fluidRow(
+          column(
+            width = 12,
+            
+            # App description
+            box(
+              width = NULL,
+              solidHeader = TRUE,
+              title = "PHB 228 Sims",
+              status = "primary",
+              
+              div(
+                style = "display: flex; align-items: center; margin-bottom: 20px;",
+                div(
+                  style = "margin-right: 20px;",
+                  icon("chart-bar", "fa-4x", style = "color: #4B9CD3;")
+                ),
+                div(
+                  h3("Overview", style = "margin-top: 0;"),
+                  p("This app allows users to compare the performance of four different statistical tests across various data distributions, sample sizes, and effect sizes. The interactive interface helps understand key concepts in hypothesis testing and confidence intervals.")
+                )
+              ),
+              
+              hr(),
+              
+              h4("Test Comparisons", icon("flask")),
+              div(
+                class = "row",
+                div(
+                  class = "col-md-3",
+                  div(
+                    style = "background-color: #f8f9fa; border-radius: 5px; padding: 15px; height: 200px; margin-bottom: 15px;",
+                    h5("T-Test", style = "color: #4B9CD3; border-bottom: 1px solid #ddd; padding-bottom: 10px;"),
+                    p("Parametric test assuming normality of the data. Most powerful when assumptions are met, but can be unreliable with skewed distributions.")
+                  )
+                ),
+                div(
+                  class = "col-md-3",
+                  div(
+                    style = "background-color: #f8f9fa; border-radius: 5px; padding: 15px; height: 200px; margin-bottom: 15px;",
+                    h5("Wilcoxon", style = "color: #4B9CD3; border-bottom: 1px solid #ddd; padding-bottom: 10px;"),
+                    p("Non-parametric rank-based test. More robust for skewed distributions, but may have less power than parametric tests when normality holds.")
+                  )
+                ),
+                div(
+                  class = "col-md-3",
+                  div(
+                    style = "background-color: #f8f9fa; border-radius: 5px; padding: 15px; height: 200px; margin-bottom: 15px;",
+                    h5("Bootstrap", style = "color: #4B9CD3; border-bottom: 1px solid #ddd; padding-bottom: 10px;"),
+                    p("Resampling-based test that doesn't assume a specific distribution. Works well with complex data structures.")
+                  )
+                ),
+                div(
+                  class = "col-md-3",
+                  div(
+                    style = "background-color: #f8f9fa; border-radius: 5px; padding: 15px; height: 200px; margin-bottom: 15px;",
+                    h5("Permutation", style = "color: #4B9CD3; border-bottom: 1px solid #ddd; padding-bottom: 10px;"),
+                    p("Randomization-based test that assesses the null hypothesis directly. Often provides similar results to bootstrap tests.")
+                  )
+                )
+              ),
+              
+              hr(),
+              
+              h4("Distributions", icon("chart-area")),
+              div(
+                class = "row",
+                div(
+                  class = "col-md-4",
+                  div(
+                    style = "background-color: #f8f9fa; border-radius: 5px; padding: 15px; height: 150px; margin-bottom: 15px; border-left: 5px solid #3c8dbc;",
+                    h5("Log-normal", style = "color: #333; border-bottom: 1px solid #ddd; padding-bottom: 5px;"),
+                    p("Right-skewed distribution commonly found in natural phenomena and financial data.")
+                  )
+                ),
+                div(
+                  class = "col-md-4",
+                  div(
+                    style = "background-color: #f8f9fa; border-radius: 5px; padding: 15px; height: 150px; margin-bottom: 15px; border-left: 5px solid #00a65a;",
+                    h5("Normal", style = "color: #333; border-bottom: 1px solid #ddd; padding-bottom: 5px;"),
+                    p("Symmetric bell-shaped distribution assumed in many statistical methods.")
+                  )
+                ),
+                div(
+                  class = "col-md-4",
+                  div(
+                    style = "background-color: #f8f9fa; border-radius: 5px; padding: 15px; height: 150px; margin-bottom: 15px; border-left: 5px solid #f39c12;",
+                    h5("Uniform", style = "color: #333; border-bottom: 1px solid #ddd; padding-bottom: 5px;"),
+                    p("Flat distribution with equal probability across its range.")
+                  )
+                )
+              ),
+              div(
+                class = "row",
+                div(
+                  class = "col-md-4",
+                  div(
+                    style = "background-color: #f8f9fa; border-radius: 5px; padding: 15px; height: 150px; margin-bottom: 15px; border-left: 5px solid #605ca8;",
+                    h5("Gamma", style = "color: #333; border-bottom: 1px solid #ddd; padding-bottom: 5px;"),
+                    p("Right-skewed distribution (different shape from log-normal).")
+                  )
+                ),
+                div(
+                  class = "col-md-4",
+                  div(
+                    style = "background-color: #f8f9fa; border-radius: 5px; padding: 15px; height: 150px; margin-bottom: 15px; border-left: 5px solid #ff5252;",
+                    h5("Binary", style = "color: #333; border-bottom: 1px solid #ddd; padding-bottom: 5px;"),
+                    p("Binary outcomes (0/1) with different probabilities.")
+                  )
+                )
+              ),
+              
+              hr(),
+              
+              h4("Performance Metrics", icon("tachometer-alt")),
+              div(
+                class = "row",
+                div(
+                  class = "col-md-4",
+                  div(
+                    style = "background-color: #f8f9fa; border-radius: 5px; padding: 15px; height: 150px; margin-bottom: 15px; border-left: 5px solid #3c8dbc;",
+                    h5("Power", style = "color: #333; border-bottom: 1px solid #ddd; padding-bottom: 5px;"),
+                    p("Probability of correctly rejecting the null hypothesis when it is false (1 - Type II error rate).")
+                  )
+                ),
+                div(
+                  class = "col-md-4",
+                  div(
+                    style = "background-color: #f8f9fa; border-radius: 5px; padding: 15px; height: 150px; margin-bottom: 15px; border-left: 5px solid #00a65a;",
+                    h5("Confidence Interval Coverage", style = "color: #333; border-bottom: 1px solid #ddd; padding-bottom: 5px;"),
+                    p("Proportion of confidence intervals that contain the true effect size.")
+                  )
+                ),
+                div(
+                  class = "col-md-4",
+                  div(
+                    style = "background-color: #f8f9fa; border-radius: 5px; padding: 15px; height: 150px; margin-bottom: 15px; border-left: 5px solid #f39c12;",
+                    h5("Power Curves", style = "color: #333; border-bottom: 1px solid #ddd; padding-bottom: 5px;"),
+                    p("How power changes as a function of effect size, showing sensitivity of each test.")
+                  )
+                )
+              ),
+              
+              hr(),
+              
+              div(
+                style = "background-color: #f8f9fa; border-radius: 5px; padding: 15px; margin-bottom: 15px;",
+                h4("Note on Simulation Times", icon("clock")),
+                p("Bootstrap and permutation tests are computationally intensive. Running a large number of simulations may take time, especially with large sample sizes.")
+              )
+            )
+          )
+        )
+      )
+    )
+  )
+)
+
+# Server Logic --------------------------------------------------------------
+
+#' @section Server Implementation:
+#' The server logic handles simulation execution, data processing, and visualization
+#' rendering. It uses reactive programming to manage state and update outputs
+#' based on user inputs. Key components include:
+#' \itemize{
+#'   \item Reactive values to track simulation state and results
+#'   \item Event observers to handle button clicks and input changes
+#'   \item Render functions for plots and tables
+#'   \item Progress indicators for long-running simulations
+#' }
+
+# Define server logic
+server <- function(input, output, session) {
+  # We'll use Shiny's withProgress for tracking progress in a non-blocking way
+  # Create a reactiveVal to track if progress is being shown
+  progress_visible <- reactiveVal(FALSE)
+  
+  # Reactive values to track if parameters have been changed since last run
+  params_changed1 <- reactiveVal(TRUE)  # Tab 1 (Single Test)
+  params_changed2 <- reactiveVal(TRUE)  # Tab 2 (CI Coverage)
+  params_changed3 <- reactiveVal(TRUE)  # Tab 3 (Power Curves)
+  
+  # Track changes in Tab 1 inputs - we no longer need this for the distribution visualization
+  # observeEvent(list(input$distribution1, input$sample_size1, input$effect_size1, input$n_sim1), {
+  #   params_changed1(TRUE)
+  # }, ignoreInit = TRUE)
+  
+  # Track changes in Tab 2 inputs
+  observeEvent(list(input$distribution2, input$sample_size2, input$effect_size2, 
+                   input$n_sim2, input$confidence_level, input$include_zero2), {
+    params_changed2(TRUE)
+  }, ignoreInit = TRUE)
+  
+  # Track changes in Tab 3 inputs
+  observeEvent(list(input$distribution3, input$sample_size3, input$n_sim3, 
+                   input$effect_range, input$effect_points), {
+    params_changed3(TRUE)
+  }, ignoreInit = TRUE)
+  
+  # Single Test Simulation Module (Tab 1) ---------------------------------------
+  # This section handles the simulation for comparing test power at a specific effect size
+  
+  # Store simulation results
+  single_results <- reactiveVal(NULL)
+  
+  observeEvent(input$run1, {
+    # Mark parameters as up-to-date
+    params_changed1(FALSE)
+    
+    # Get input values
+    n_sim <- input$n_sim1
+    sample_size <- input$sample_size1
+    distribution <- input$distribution1
+    effect_size <- input$effect_size1
+    
+    # Run simulations with progress indicator in corner
+    withProgress(
+      message = 'Running simulations',
+      style = 'notification', # This positions it in the bottom-right corner
+      detail = '0% complete',
+      value = 0,
+      {
+        set.seed(42)  # For reproducibility
+      
+        # Store results
+        p_values_t <- numeric(n_sim)
+        p_values_w <- numeric(n_sim)
+        p_values_boot <- numeric(n_sim)
+        p_values_perm <- numeric(n_sim)
+        
+        for (i in 1:n_sim) {
+          # Update progress every 5% of simulations
+          if (i %% max(1, floor(n_sim/20)) == 0) {
+            incProgress(
+              amount = 0.05,
+              detail = paste0(round(100 * i/n_sim), "% complete")
+            )
+          }
+          
+          # Generate data based on specified distribution
+          if (distribution == "lognormal") {
+            x <- rlnorm(sample_size, meanlog = 0, sdlog = 1)
+            y <- rlnorm(sample_size, meanlog = effect_size, sdlog = 1)
+          } else if (distribution == "normal") {
+            x <- rnorm(sample_size, mean = 0, sd = 1)
+            y <- rnorm(sample_size, mean = effect_size, sd = 1)
+          } else if (distribution == "uniform") {
+            x <- runif(sample_size, min = 0, max = 1)
+            y <- runif(sample_size, min = effect_size, max = 1 + effect_size)
+          } else if (distribution == "gamma") {
+            shape <- 2  # Shape parameter
+            x <- rgamma(sample_size, shape = shape, scale = 1)
+            y <- rgamma(sample_size, shape = shape, scale = 1 + effect_size)
+          } else if (distribution == "binary") {
+            p1 <- 0.5
+            p2 <- min(max(p1 + effect_size, 0), 1)
+            x <- rbinom(sample_size, size = 1, prob = p1)
+            y <- rbinom(sample_size, size = 1, prob = p2)
+          }
+          
+          # Apply t-test and Wilcoxon test
+          p_values_t[i] <- t.test(x, y)$p.value
+          p_values_w[i] <- wilcox.test(x, y)$p.value
+          
+          # Bootstrap test
+          n_boot <- 1000
+          boot_diffs <- numeric(n_boot)
+          observed_diff <- mean(y) - mean(x)
+          
+          # Get overall mean for the null hypothesis
+          overall_mean <- mean(c(x, y))
+          
+          # Center both samples
+          x_null <- x - mean(x) + overall_mean
+          y_null <- y - mean(y) + overall_mean
+          
+          for (b in 1:n_boot) {
+            # Resample with replacement under the null
+            x_boot <- sample(x_null, size = length(x), replace = TRUE)
+            y_boot <- sample(y_null, size = length(y), replace = TRUE)
+            
+            # Calculate test statistic
+            boot_diff <- mean(y_boot) - mean(x_boot)
+            boot_diffs[b] <- boot_diff
+          }
+          
+          # Calculate bootstrap p-value (two-tailed)
+          p_values_boot[i] <- mean(abs(boot_diffs) >= abs(observed_diff))
+          
+          # Permutation test
+          n_perm <- 1000
+          perm_diffs <- numeric(n_perm)
+          combined <- c(x, y)
+          
+          for (p in 1:n_perm) {
+            # Randomly shuffle combined data
+            shuffled <- sample(combined)
+            x_perm <- shuffled[1:length(x)]
+            y_perm <- shuffled[(length(x) + 1):length(combined)]
+            perm_diffs[p] <- mean(y_perm) - mean(x_perm)
+          }
+          
+          # Calculate permutation p-value (two-tailed)
+          p_values_perm[i] <- mean(abs(perm_diffs) >= abs(observed_diff))
+        }
+        
+        # Set progress to 100% at end
+        setProgress(1, detail = "100% complete")
+        
+        # Calculate power (proportion of rejected null hypotheses)
+        power_t <- mean(p_values_t < 0.05)
+        power_w <- mean(p_values_w < 0.05)
+        power_boot <- mean(p_values_boot < 0.05)
+        power_perm <- mean(p_values_perm < 0.05)
+        
+        # Create result list and update reactive
+        results <- list(
+          power_t = power_t, 
+          power_w = power_w,
+          power_boot = power_boot,
+          power_perm = power_perm,
+          p_values_t = p_values_t,
+          p_values_w = p_values_w,
+          p_values_boot = p_values_boot,
+          p_values_perm = p_values_perm
+        )
+        
+        # Update reactive value with results
+        single_results(results)
+      }
+    )
+  })
+  
+  # Power comparison plot with standard error bars
+  output$power_plot1 <- renderPlotly({
+    # Return empty plot if parameters have changed since last run
+    if (params_changed1()) {
+      return(plotly_empty(type = "scatter", mode="markers") %>%
+             layout(title = "Run simulation to see results",
+                    xaxis = list(title = ""),
+                    yaxis = list(title = "")))
+    }
+    
+    req(single_results())
+    results <- single_results()
+    
+    # Calculate standard errors for each power value
+    # SE for proportion = sqrt(p*(1-p)/n)
+    n_sim <- input$n_sim1  # Get the number of simulations
+    se_t <- sqrt(results$power_t * (1 - results$power_t) / n_sim)
+    se_w <- sqrt(results$power_w * (1 - results$power_w) / n_sim)
+    se_boot <- sqrt(results$power_boot * (1 - results$power_boot) / n_sim)
+    se_perm <- sqrt(results$power_perm * (1 - results$power_perm) / n_sim)
+    
+    power_df <- data.frame(
+      Test = c("T-Test", "Wilcoxon", "Bootstrap", "Permutation"),
+      Power = c(results$power_t, results$power_w, results$power_boot, results$power_perm),
+      SE = c(se_t, se_w, se_boot, se_perm)
+    )
+    
+    # Create plotly bar chart directly with error bars
+    plot_ly(power_df, x = ~Test, y = ~Power, type = "bar", 
+            error_y = list(array = ~SE, color = "#444444"),
+            color = ~Test, colors = c("blue", "green", "orange", "purple")) %>%
+      layout(
+        title = paste0("Power Comparison (", input$distribution1, " distribution)"),
+        yaxis = list(title = "Power (1 - β)", range = c(0, 1)),
+        xaxis = list(title = ""),
+        showlegend = FALSE,
+        hoverlabel = list(bgcolor = "white")
+      )
+  })
+  
+  # P-value distribution plot
+  output$pvalue_dist <- renderPlotly({
+    # Return empty plot if parameters have changed since last run
+    if (params_changed1()) {
+      return(plotly_empty(type = "scatter", mode="markers") %>%
+             layout(title = "Run simulation to see results",
+                    xaxis = list(title = ""),
+                    yaxis = list(title = "")))
+    }
+    
+    req(single_results())
+    results <- single_results()
+    
+    p_values <- data.frame(
+      p_value = c(results$p_values_t, results$p_values_w, 
+                 results$p_values_boot, results$p_values_perm),
+      Test = rep(c("T-Test", "Wilcoxon", "Bootstrap", "Permutation"), 
+                each = input$n_sim1)
+    )
+    
+    # Filter out non-finite values before plotting
+    p_values <- p_values[is.finite(p_values$p_value), ]
+    
+    # Limit p-values to the range [0, 0.5] for better visualization
+    p_values$p_value <- pmin(pmax(p_values$p_value, 0), 0.5)
+    
+    # Base ggplot
+    p <- ggplot(p_values, aes(x = p_value, fill = Test, color = Test)) +
+      geom_density(alpha = 0.5) +
+      theme_minimal() +
+      labs(title = "P-value Distributions",
+           x = "P-value", y = "Density") +
+      geom_vline(xintercept = 0.05, linetype = "dashed", color = "red") +
+      xlim(0, 0.5) +  # Focus on the significant region
+      scale_fill_manual(values = c(
+        "T-Test" = "blue", 
+        "Wilcoxon" = "green",
+        "Bootstrap" = "orange",
+        "Permutation" = "purple"
+      )) +
+      scale_color_manual(values = c(
+        "T-Test" = "blue", 
+        "Wilcoxon" = "green",
+        "Bootstrap" = "orange",
+        "Permutation" = "purple"
+      )) +
+      theme(
+        plot.title = element_text(face = "bold"),
+        legend.title = element_blank(),
+        legend.position = "bottom",
+        legend.box = "horizontal"
+      )
+    
+    # Convert to plotly
+    ggplotly(p) %>%
+      layout(hoverlabel = list(bgcolor = "white"),
+             legend = list(orientation = "h", y = -0.2))
+  })
+  
+  # Distribution visualization plot - theoretical densities rather than samples
+  output$sample_dist <- renderPlotly({
+    # Make sure we have valid inputs
+    req(input$distribution1, input$effect_size1)
+    
+    # Get current parameter values
+    distribution <- input$distribution1
+    effect_size <- input$effect_size1
+    
+    # Create a sequence of x values for plotting
+    if (distribution == "binary") {
+      # For binary, we'll create a different kind of plot
+      x_vals <- c(0, 1)
+      p1 <- 0.5  # Base probability
+      p2 <- min(max(p1 + effect_size, 0), 1)  # Treatment probability
+      
+      # Create data for bar plot
+      bar_data <- data.frame(
+        value = rep(x_vals, 2),
+        probability = c(1-p1, p1, 1-p2, p2),
+        group = rep(c("Control", "Treatment"), each = 2),
+        category = rep(c("0", "1"), 2)
+      )
+      
+      # Create bar plot for binary distribution
+      p <- ggplot(bar_data, aes(x = category, y = probability, fill = group)) +
+        geom_bar(stat = "identity", position = "dodge", alpha = 0.7) +
+        theme_minimal() +
+        labs(title = "Binary Probability Distribution",
+             subtitle = paste0("Effect Size: ", effect_size, " (Prob. diff.)"),
+             x = "Value", y = "Probability", fill = "Group") +
+        scale_fill_manual(values = c("Control" = "blue", "Treatment" = "orange")) +
+        theme(
+          plot.title = element_text(face = "bold"),
+          plot.subtitle = element_text(face = "italic"),
+          legend.title = element_blank(),
+          legend.position = "bottom"
+        )
+    } else {
+      # For continuous distributions, create smooth density plots
+      # Create a sequence of x values based on the distribution
+      if (distribution == "lognormal") {
+        x_range <- seq(0.01, 15, length.out = 500)
+      } else if (distribution == "normal") {
+        x_range <- seq(-4, 4 + effect_size, length.out = 500)
+      } else if (distribution == "uniform") {
+        x_range <- seq(0, 1 + effect_size + 0.2, length.out = 500)
+      } else if (distribution == "gamma") {
+        shape <- 2
+        x_range <- seq(0, 10 + effect_size * 3, length.out = 500)
+      }
+      
+      # Calculate density values for control group
+      if (distribution == "lognormal") {
+        density1 <- dlnorm(x_range, meanlog = 0, sdlog = 1)
+        density2 <- dlnorm(x_range, meanlog = effect_size, sdlog = 1)
+        subtitle <- paste0("Log-normal: Control μ=0, Treatment μ=", effect_size, " (log scale)")
+      } else if (distribution == "normal") {
+        density1 <- dnorm(x_range, mean = 0, sd = 1)
+        density2 <- dnorm(x_range, mean = effect_size, sd = 1)
+        subtitle <- paste0("Normal: Control μ=0, Treatment μ=", effect_size)
+      } else if (distribution == "uniform") {
+        density1 <- dunif(x_range, min = 0, max = 1)
+        density2 <- dunif(x_range, min = effect_size, max = 1 + effect_size)
+        subtitle <- paste0("Uniform: Control [0,1], Treatment [", effect_size, ",", 1+effect_size, "]")
+      } else if (distribution == "gamma") {
+        density1 <- dgamma(x_range, shape = shape, scale = 1)
+        density2 <- dgamma(x_range, shape = shape, scale = 1 + effect_size)
+        subtitle <- paste0("Gamma: Control scale=1, Treatment scale=", 1+effect_size)
+      }
+      
+      # Create data frame for plotting
+      density_data <- data.frame(
+        x = rep(x_range, 2),
+        density = c(density1, density2),
+        group = rep(c("Control", "Treatment"), each = length(x_range))
+      )
+      
+      # Create density plot
+      p <- ggplot(density_data, aes(x = x, y = density, color = group)) +
+        geom_line(linewidth = 1.2) +
+        theme_minimal() +
+        labs(title = paste0(tools::toTitleCase(distribution), " Distribution"),
+             subtitle = subtitle,
+             x = "Value", y = "Density", color = "Group") +
+        scale_color_manual(values = c("Control" = "blue", "Treatment" = "orange")) +
+        theme(
+          plot.title = element_text(face = "bold"),
+          plot.subtitle = element_text(face = "italic"),
+          legend.title = element_blank(),
+          legend.position = "bottom"
+        )
+    }
+    
+    # Convert to plotly
+    ggplotly(p) %>%
+      layout(hoverlabel = list(bgcolor = "white"),
+             legend = list(orientation = "h", y = -0.2))
+  })
+  
+  # Power results in value boxes - removed for cleaner UI
+  # output$power_results_boxes <- renderUI({
+  #   if (params_changed1()) {
+  #     return(NULL)  # Return nothing if parameters have changed
+  #   }
+  #   
+  #   req(single_results())
+  #   results <- single_results()
+  #   
+  #   fluidRow(
+  #     valueBox(
+  #       paste0(round(results$power_t * 100, 1), "%"),
+  #       "T-Test Power",
+  #       icon = icon("calculator"),
+  #       color = "blue"
+  #     ),
+  #     valueBox(
+  #       paste0(round(results$power_w * 100, 1), "%"),
+  #       "Wilcoxon Power",
+  #       icon = icon("sort"),
+  #       color = "green"
+  #     ),
+  #     valueBox(
+  #       paste0(round(results$power_boot * 100, 1), "%"),
+  #       "Bootstrap Power",
+  #       icon = icon("random"),
+  #       color = "orange"
+  #     ),
+  #     valueBox(
+  #       paste0(round(results$power_perm * 100, 1), "%"),
+  #       "Permutation Power",
+  #       icon = icon("retweet"),
+  #       color = "purple",
+  #       width = 3
+  #     )
+  #   )
+  # })
+  
+  # Confidence Interval Coverage Analysis Module (Tab 2) ---------------------------
+  # This section analyzes the coverage properties and widths of confidence intervals
+  # from different statistical methods
+  
+  # Reactive value for CI coverage results
+  ci_coverage_results <- reactiveVal(NULL)
+  
+  #' Calculate bootstrap confidence interval for difference in means
+  #'
+  #' This function calculates a confidence interval for the difference in means
+  #' between two groups using bootstrap resampling. It uses the percentile method
+  #' to determine the confidence interval bounds.
+  #'
+  #' @param x Numeric vector. Control group observations.
+  #' @param y Numeric vector. Treatment group observations.
+  #' @param conf_level Numeric. Confidence level as a proportion (e.g., 0.95 for 95% CI).
+  #'
+  #' @return Numeric vector of length 2 containing the lower and upper CI bounds.
+  #'
+  #' @details
+  #' The percentile bootstrap method:
+  #' 1. Resamples with replacement from each group separately
+  #' 2. Calculates the difference in means for each bootstrap sample
+  #' 3. Determines CI bounds using the appropriate percentiles of the bootstrap distribution
+  #'
+  #' Unlike the hypothesis test version, this CI method doesn't center the samples first.
+  #'
+  #' @seealso \code{\link{calculate_permutation_ci}}
+  calculate_bootstrap_ci <- function(x, y, conf_level) {
+    n_boot <- 1000  # Number of bootstrap samples
+    boot_diffs <- numeric(n_boot)  # Store differences
+    
+    # Generate bootstrap samples
+    for (b in 1:n_boot) {
+      # Resample with replacement from each group
+      x_boot <- sample(x, size = length(x), replace = TRUE)
+      y_boot <- sample(y, size = length(y), replace = TRUE)
+      
+      # Calculate difference for this bootstrap sample
+      boot_diffs[b] <- mean(y_boot) - mean(x_boot)
+    }
+    
+    # Calculate confidence interval using percentiles
+    # For a 95% CI, we use the 2.5th and 97.5th percentiles
+    c(
+      quantile(boot_diffs, (1 - conf_level) / 2),
+      quantile(boot_diffs, 1 - (1 - conf_level) / 2)
+    )
+  }
+  
+  #' Calculate permutation-based confidence interval for difference in means
+  #'
+  #' This function calculates a confidence interval for the difference in means
+  #' between two groups using permutation methods.
+  #'
+  #' @param x Numeric vector. Control group observations.
+  #' @param y Numeric vector. Treatment group observations.
+  #' @param conf_level Numeric. Confidence level as a proportion (e.g., 0.95 for 95% CI).
+  #'
+  #' @return Numeric vector of length 2 containing the lower and upper CI bounds.
+  #'
+  #' @details
+  #' This permutation CI method:
+  #' 1. Combines all observations into a single pool
+  #' 2. Randomly reassigns observations to groups multiple times
+  #' 3. Calculates the difference in means for each permutation
+  #' 4. Determines CI bounds using the appropriate percentiles of the permutation distribution
+  #'
+  #' Note: This approach differs from the permutation test by using percentiles 
+  #' rather than hypothesis testing logic.
+  #'
+  #' @seealso \code{\link{calculate_bootstrap_ci}}
+  calculate_permutation_ci <- function(x, y, conf_level) {
+    n_perm <- 1000  # Number of permutations
+    combined <- c(x, y)  # Combine all observations
+    perm_diffs <- numeric(n_perm)  # Store differences
+    
+    # Generate permutation samples
+    for (p in 1:n_perm) {
+      # Randomly assign observations to groups
+      indices <- sample(length(combined), size = length(x))
+      x_perm <- combined[indices]
+      y_perm <- combined[-indices]
+      
+      # Calculate difference for this permutation
+      perm_diffs[p] <- mean(y_perm) - mean(x_perm)
+    }
+    
+    # Calculate confidence interval using percentiles
+    c(
+      quantile(perm_diffs, (1 - conf_level) / 2),
+      quantile(perm_diffs, 1 - (1 - conf_level) / 2)
+    )
+  }
+  
+  #' Run confidence interval coverage analysis for a specific effect size
+  #'
+  #' This function analyzes the coverage properties of confidence intervals (CIs)
+  #' from four different statistical methods: t-test, Wilcoxon test, bootstrap,
+  #' and permutation. It simulates data with a known effect size, calculates CIs,
+  #' and tracks whether they contain the true parameter value.
+  #'
+  #' @param n_sim Integer. Number of simulations to run.
+  #' @param sample_size Integer. Number of observations in each group.
+  #' @param distribution Character. Type of distribution to generate data from.
+  #' @param effect_size Numeric. Size of the effect to introduce.
+  #' @param conf_level Numeric. Confidence level as a proportion (e.g., 0.95).
+  #' @param progress_callback Function. Optional callback to report progress.
+  #'
+  #' @return A list containing:
+  #'   \describe{
+  #'     \item{coverage_rates}{Numeric vector of coverage rates for each test}
+  #'     \item{avg_widths}{Numeric vector of average CI widths for each test}
+  #'     \item{ci_width}{List of vectors with individual CI widths for each simulation}
+  #'     \item{true_diff}{The true difference in means between groups}
+  #'   }
+  #'
+  #' @details
+  #' Coverage rate is the proportion of simulations where the CI contains the true
+  #' parameter value. A well-calibrated CI should have a coverage rate close to
+  #' the nominal confidence level. The function also tracks CI widths to evaluate 
+  #' the efficiency of different methods.
+  run_ci_coverage_for_effect <- function(n_sim, sample_size, distribution, effect_size, conf_level, progress_callback = NULL) {
+    # Initialize storage for results
+    ci_coverage <- list(
+      t = numeric(n_sim),        # T-test CI coverage
+      wilcox = numeric(n_sim),   # Wilcoxon CI coverage
+      boot = numeric(n_sim),     # Bootstrap CI coverage
+      perm = numeric(n_sim)      # Permutation CI coverage
+    )
+    
+    ci_width <- list(
+      t = numeric(n_sim),        # T-test CI widths
+      wilcox = numeric(n_sim),   # Wilcoxon CI widths
+      boot = numeric(n_sim),     # Bootstrap CI widths
+      perm = numeric(n_sim)      # Permutation CI widths
+    )
+    
+    # Run simulations
+    for (i in 1:n_sim) {
+      # Report progress if callback provided
+      if (!is.null(progress_callback)) {
+        progress_callback(i)
+      }
+      
+      # Generate data for this simulation
+      data <- generate_data(sample_size, distribution, effect_size)
+      x <- data$x                # Control group
+      y <- data$y                # Treatment group
+      true_diff <- data$true_diff  # True difference in means
+      
+      # 1. T-test confidence interval (parametric)
+      ci_t <- t.test(y, x, conf.level = conf_level, alternative = "two.sided")$conf.int
+      
+      # 2. Wilcoxon test confidence interval (non-parametric)
+      # Handle potential failures with tryCatch
+      w_result <- try(wilcox.test(y, x, conf.int = TRUE, conf.level = conf_level, 
+                                alternative = "two.sided"), silent = TRUE)
+      if (inherits(w_result, "try-error") || is.null(w_result$conf.int)) {
+        ci_wilcox <- c(NA, NA)  # Missing value if the test fails
+      } else {
+        ci_wilcox <- w_result$conf.int
+      }
+      
+      # 3. Bootstrap confidence interval (resampling)
+      ci_boot <- calculate_bootstrap_ci(x, y, conf_level)
+      
+      # 4. Permutation confidence interval (randomization)
+      ci_perm <- calculate_permutation_ci(x, y, conf_level)
+      
+      # Check if the true difference is contained in each CI
+      ci_coverage$t[i] <- (true_diff >= ci_t[1] & true_diff <= ci_t[2])
+      ci_coverage$wilcox[i] <- (true_diff >= ci_wilcox[1] & true_diff <= ci_wilcox[2])
+      ci_coverage$boot[i] <- (true_diff >= ci_boot[1] & true_diff <= ci_boot[2])
+      ci_coverage$perm[i] <- (true_diff >= ci_perm[1] & true_diff <= ci_perm[2])
+      
+      # Calculate and store CI widths
+      ci_width$t[i] <- ci_t[2] - ci_t[1]
+      ci_width$wilcox[i] <- ci_wilcox[2] - ci_wilcox[1]
+      ci_width$boot[i] <- ci_boot[2] - ci_boot[1]
+      ci_width$perm[i] <- ci_perm[2] - ci_perm[1]
+    }
+    
+    # Calculate overall coverage rates (proportion of CIs containing true value)
+    coverage_rates <- c(
+      mean(ci_coverage$t, na.rm = TRUE),
+      mean(ci_coverage$wilcox, na.rm = TRUE),
+      mean(ci_coverage$boot, na.rm = TRUE),
+      mean(ci_coverage$perm, na.rm = TRUE)
+    )
+    
+    # Calculate average CI widths (narrower CIs are more precise if coverage is adequate)
+    avg_widths <- c(
+      mean(ci_width$t, na.rm = TRUE),
+      mean(ci_width$wilcox, na.rm = TRUE),
+      mean(ci_width$boot, na.rm = TRUE),
+      mean(ci_width$perm, na.rm = TRUE)
+    )
+    
+    # Return comprehensive results
+    return(list(
+      coverage_rates = coverage_rates,  # Proportion of CIs containing true value
+      avg_widths = avg_widths,          # Average CI width for each method
+      ci_width = ci_width,              # Raw CI width data
+      true_diff = true_diff             # True effect size for reference
+    ))
+  }
+
+  # Run CI coverage analysis when button is clicked
+  observeEvent(input$run2, {
+    # Mark parameters as up-to-date
+    params_changed2(FALSE)
+    
+    # Get inputs
+    n_sim <- input$n_sim2
+    sample_size <- input$sample_size2
+    distribution <- input$distribution2
+    effect_size <- input$effect_size2
+    conf_level <- as.numeric(input$confidence_level)
+    include_zero <- input$include_zero2
+    
+    # Prepare progress tracking
+    total_steps <- n_sim * (1 + as.numeric(include_zero))
+    
+    # Run simulations with progress indicator
+    withProgress(
+      message = 'Running CI coverage analysis',
+      style = 'notification',
+      detail = '0% complete',
+      value = 0,
+      {
+        set.seed(42)  # For reproducibility
+        
+        # Run analysis for the specified effect size
+        progress_callback <- function(i) {
+          if (i %% max(1, floor(n_sim/20)) == 0) {
+            progress_fraction <- i/total_steps
+            incProgress(
+              amount = 0.05 / (1 + as.numeric(include_zero)),
+              detail = paste0(round(100 * progress_fraction), "% complete")
+            )
+          }
+        }
+        
+        results <- run_ci_coverage_for_effect(
+          n_sim, sample_size, distribution, effect_size, conf_level, progress_callback
+        )
+        
+        # If include_zero is checked, also run with effect_size = 0
+        if (include_zero) {
+          # Update progress message for second phase
+          setProgress(0.5, detail = "Running with zero effect...")
+          
+          # Create progress callback for second phase
+          zero_progress_callback <- function(i) {
+            if (i %% max(1, floor(n_sim/20)) == 0) {
+              progress_fraction <- (n_sim + i) / total_steps
+              incProgress(
+                amount = 0.05 / (1 + as.numeric(include_zero)),
+                detail = paste0(round(100 * progress_fraction), "% complete")
+              )
+            }
+          }
+          
+          # Run analysis for zero effect
+          zero_results <- run_ci_coverage_for_effect(
+            n_sim, sample_size, distribution, 0, conf_level, zero_progress_callback
+          )
+          
+          # Add zero effect results to the main results
+          results$zero_coverage_rates <- zero_results$coverage_rates
+          results$zero_true_diff <- zero_results$true_diff
+        }
+        
+        # Final progress update
+        setProgress(1, detail = "100% complete")
+        
+        # Store results in reactive value
+        ci_coverage_results(results)
+      }
+    )
+  })
+  
+  # Plot CI coverage
+  output$ci_coverage_plot <- renderPlotly({
+    # Return empty plot if parameters have changed since last run
+    if (params_changed2()) {
+      return(plotly_empty(type = "scatter", mode="markers") %>%
+             layout(title = "Run CI coverage analysis to see results",
+                    xaxis = list(title = ""),
+                    yaxis = list(title = "")))
+    }
+    
+    req(ci_coverage_results())
+    results <- ci_coverage_results()
+    
+    tests <- c("T-Test", "Wilcoxon", "Bootstrap", "Permutation")
+    
+          # Create data frame for plotting
+    if (input$include_zero2) {
+      coverage_df <- data.frame(
+        Test = rep(tests, 2),
+        Coverage = c(results$coverage_rates, results$zero_coverage_rates),
+        EffectSize = rep(c(paste0("Effect = ", input$effect_size2), "Effect = 0"), each = 4)
+      )
+      
+  # Base ggplot
+      p <- ggplot(coverage_df, aes(x = Test, y = Coverage, fill = EffectSize)) +
+        geom_bar(stat = "identity", position = "dodge", width = 0.7) +
+        theme_minimal() +
+        ylim(0, 1) +
+        geom_hline(yintercept = as.numeric(input$confidence_level), 
+                  linetype = "dashed", color = "red") +
+        labs(title = paste0("Confidence Interval Coverage (", input$confidence_level, " level)"),
+             subtitle = paste0("Distribution: ", input$distribution2, 
+                             ", Sample Size: ", input$sample_size2),
+             y = "Coverage Rate", x = "") +
+        theme(
+          plot.title = element_text(face = "bold"),
+          plot.subtitle = element_text(face = "italic"),
+          axis.title.y = element_text(face = "bold"),
+          legend.title = element_text(face = "bold"),
+          legend.position = "bottom"
+        ) +
+        scale_fill_manual(values = c(
+          "Effect = 0" = "orange",
+          "Effect = 0.1" = "blue",
+          "Effect = 0.2" = "blue",
+          "Effect = 0.3" = "blue",
+          "Effect = 0.4" = "blue",
+          "Effect = 0.5" = "blue",
+          "Effect = 0.6" = "blue",
+          "Effect = 0.7" = "blue",
+          "Effect = 0.8" = "blue",
+          "Effect = 0.9" = "blue",
+          "Effect = 1" = "blue",
+          "Effect = 1.1" = "blue",
+          "Effect = 1.2" = "blue",
+          "Effect = 1.3" = "blue",
+          "Effect = 1.4" = "blue",
+          "Effect = 1.5" = "blue"
+        ))
+    } else {
+      coverage_df <- data.frame(
+        Test = tests,
+        Coverage = results$coverage_rates
+      )
+      
+      # Base ggplot
+      p <- ggplot(coverage_df, aes(x = Test, y = Coverage, fill = Test)) +
+        geom_bar(stat = "identity", width = 0.7) +
+        theme_minimal() +
+        ylim(0, 1) +
+        geom_hline(yintercept = as.numeric(input$confidence_level), 
+                  linetype = "dashed", color = "red") +
+        labs(title = paste0("Confidence Interval Coverage (", input$confidence_level, " level)"),
+             subtitle = paste0("Distribution: ", input$distribution2, 
+                             ", Sample Size: ", input$sample_size2, 
+                             ", Effect Size: ", input$effect_size2),
+             y = "Coverage Rate", x = "") +
+        theme(
+          plot.title = element_text(face = "bold"),
+          plot.subtitle = element_text(face = "italic"),
+          axis.title.y = element_text(face = "bold"),
+          legend.position = "none"
+        ) +
+        scale_fill_manual(values = c(
+          "T-Test" = "blue", 
+          "Wilcoxon" = "green",
+          "Bootstrap" = "orange",
+          "Permutation" = "purple"
+        ))
+    }
+    
+    # Add annotation for confidence level line
+    p <- p + annotate(
+      "text",
+      x = 1,
+      y = as.numeric(input$confidence_level) + 0.05,
+      label = paste0("Nominal ", input$confidence_level, " level"),
+      hjust = 0,
+      color = "red",
+      size = 3.5
+    )
+    
+    # Convert to plotly
+    ggplotly(p) %>%
+      layout(hoverlabel = list(bgcolor = "white"),
+             legend = list(orientation = "h", y = -0.2))
+  })
+  
+  # Plot CI width comparison
+  output$ci_width_plot <- renderPlotly({
+    # Return empty plot if parameters have changed since last run
+    if (params_changed2()) {
+      return(plotly_empty(type = "scatter", mode="markers") %>%
+             layout(title = "Run CI coverage analysis to see results",
+                    xaxis = list(title = ""),
+                    yaxis = list(title = "")))
+    }
+    
+    req(ci_coverage_results())
+    results <- ci_coverage_results()
+    
+    # Convert CI width lists to data frame
+    ci_width_df <- data.frame(
+      Width = c(
+        results$ci_width$t, 
+        results$ci_width$wilcox,
+        results$ci_width$boot,
+        results$ci_width$perm
+      ),
+      Test = rep(c("T-Test", "Wilcoxon", "Bootstrap", "Permutation"), 
+                each = input$n_sim2)
+    )
+    
+    # Base ggplot
+    p <- ggplot(ci_width_df, aes(x = Test, y = Width, fill = Test)) +
+      geom_boxplot(alpha = 0.7) +
+      theme_minimal() +
+      labs(title = "Confidence Interval Width Comparison",
+           subtitle = paste0("Distribution: ", input$distribution2, 
+                           ", Sample Size: ", input$sample_size2),
+           y = "CI Width", x = "") +
+      theme(
+        plot.title = element_text(face = "bold"),
+        plot.subtitle = element_text(face = "italic"),
+        axis.title.y = element_text(face = "bold"),
+        legend.position = "none"
+      ) +
+      scale_fill_manual(values = c(
+        "T-Test" = "blue", 
+        "Wilcoxon" = "green",
+        "Bootstrap" = "orange",
+        "Permutation" = "purple"
+      ))
+    
+    # Convert to plotly
+    ggplotly(p) %>%
+      layout(hoverlabel = list(bgcolor = "white"))
+  })
+  
+# CI Coverage results in boxes - removed for cleaner UI
+# output$ci_results_boxes <- renderUI({
+#   # Return nothing if parameters have changed since last run
+#   if (params_changed2()) {
+#     return(NULL)
+#   }
+#   
+#   req(ci_coverage_results())
+#   results <- ci_coverage_results()
+#   
+#   # Create value boxes for results
+#   fluidRow(
+#     valueBox(
+#       paste0(round(results$coverage_rates[1] * 100, 1), "%"),
+#       "T-Test Coverage",
+#       icon = icon("calculator"),
+#       color = "blue"
+#     ),
+#     valueBox(
+#       paste0(round(results$coverage_rates[2] * 100, 1), "%"),
+#       "Wilcoxon Coverage",
+#       icon = icon("sort"),
+#       color = "green"
+#     ),
+#     valueBox(
+#       paste0(round(results$coverage_rates[3] * 100, 1), "%"),
+#       "Bootstrap Coverage",
+#       icon = icon("random"),
+#       color = "orange"
+#     ),
+#     valueBox(
+#       paste0(round(results$coverage_rates[4] * 100, 1), "%"),
+#       "Permutation Coverage",
+#       icon = icon("retweet"),
+#       color = "purple"
+#     )
+#   )
+# })
+  
+  # Power Curves Analysis Module (Tab 3) -----------------------------------------
+  # This section analyzes how statistical power changes with effect size and
+  # calculates minimum detectable effect sizes at different power thresholds
+  
+  #' Compute minimum detectable effect sizes for different power thresholds
+  #'
+  #' This function analyzes power curve data to find the minimum effect size needed
+  #' to achieve specified statistical power thresholds for different tests.
+  #'
+  #' @param power_curve_df Data frame. Contains effect sizes and corresponding power values
+  #'   for different statistical tests. Must have columns:
+  #'   - effect_size: Numeric values of tested effect sizes
+  #'   - power_t: T-test power at each effect size
+  #'   - power_w: Wilcoxon test power at each effect size
+  #'   - power_boot: Bootstrap test power at each effect size
+  #'   - power_perm: Permutation test power at each effect size
+  #'
+  #' @param power_thresholds Numeric vector. The power thresholds to calculate MDEs for
+  #'   (default: c(0.8, 0.85, 0.9)).
+  #'
+  #' @return A data frame with columns:
+  #'   \describe{
+  #'     \item{Test}{Character. Test name (T-Test, Wilcoxon, Bootstrap, or Permutation)}
+  #'     \item{MDE}{Numeric. Minimum detectable effect size for the given threshold}
+  #'     \item{PowerThreshold}{Factor. The power threshold (e.g., "Power = 0.8")}
+  #'   }
+  #'
+  #' @details
+  #' The function uses linear interpolation to determine where the power curve crosses
+  #' each threshold value. For each test and threshold, it finds the exact effect size
+  #' that would achieve the target power level. If the maximum power achieved by a test
+  #' is below the threshold, NA is returned for that combination.
+  #'
+  #' The minimum detectable effect size (MDE) is useful for:
+  #' - Comparing test sensitivity (lower MDE means more sensitive test)
+  #' - Sample size planning (knowing what effect size can be detected)
+  #' - Understanding the trade-off between sample size and detectable effects
+  #'
+  #' @examples
+  #' # Example with simulated power curve data
+  #' power_data <- data.frame(
+  #'   effect_size = seq(0, 1, by = 0.1),
+  #'   power_t = c(0.05, 0.1, 0.3, 0.5, 0.7, 0.83, 0.90, 0.94, 0.97, 0.99, 0.995),
+  #'   power_w = c(0.05, 0.08, 0.25, 0.45, 0.65, 0.79, 0.88, 0.93, 0.96, 0.98, 0.99),
+  #'   power_boot = c(0.05, 0.09, 0.28, 0.48, 0.68, 0.81, 0.89, 0.94, 0.97, 0.99, 0.995),
+  #'   power_perm = c(0.05, 0.09, 0.29, 0.49, 0.69, 0.82, 0.90, 0.95, 0.97, 0.99, 0.995)
+  #' )
+  #' 
+  #' # Calculate MDEs at different power thresholds
+  #' mde_results <- compute_mde(power_data, c(0.8, 0.9))
+  compute_mde <- function(power_curve_df, power_thresholds = c(0.8, 0.85, 0.9)) {
+    tests <- c("t", "w", "boot", "perm")   # Test abbreviations for column names
+    test_names <- c("T-Test", "Wilcoxon", "Bootstrap", "Permutation")  # Full test names
+    
+    # Initialize empty results dataframe
+    result_df <- data.frame()
+    
+    # Process each power threshold
+    for (p_threshold in power_thresholds) {
+      mde_values <- numeric(4)  # Store MDE values for each test
+      
+      # Process each test type
+      for (i in 1:4) {
+        # Get power values and effect sizes from the data
+        power_col <- paste0("power_", tests[i])  # Column name for this test
+        power_values <- power_curve_df[[power_col]]  # Power values for this test
+        effect_sizes <- power_curve_df$effect_size  # Effect size values
+        
+        # Check if the test ever reaches the power threshold
+        if (max(power_values, na.rm = TRUE) < p_threshold) {
+          mde_values[i] <- NA  # Power never reaches threshold
+        } else {
+          # Find where power crosses the threshold
+          for (j in 2:length(power_values)) {
+            if (power_values[j-1] < p_threshold && power_values[j] >= p_threshold) {
+              # Linear interpolation to find the exact effect size at the threshold
+              # Formula: x = x1 + (y - y1) * (x2 - x1) / (y2 - y1)
+              x1 <- effect_sizes[j-1]  # Effect size before crossing
+              x2 <- effect_sizes[j]    # Effect size after crossing
+              y1 <- power_values[j-1]  # Power before crossing
+              y2 <- power_values[j]    # Power after crossing
+              
+              # Calculate interpolated effect size at power threshold
+              mde_values[i] <- x1 + (p_threshold - y1) * (x2 - x1) / (y2 - y1)
+              break
+            }
+          }
+        }
+      }
+      
+      # Create data frame for this threshold and append to results
+      threshold_df <- data.frame(
+        Test = test_names,          # Test names
+        MDE = mde_values,           # Calculated MDE values
+        PowerThreshold = p_threshold # Current power threshold
+      )
+      
+      # Combine with previous results
+      result_df <- rbind(result_df, threshold_df)
+    }
+    
+    # Convert power threshold to factor with descriptive labels
+    # This makes it easier to work with in plotting and analysis
+    result_df$PowerThreshold <- factor(
+      result_df$PowerThreshold, 
+      levels = power_thresholds,
+      labels = paste0("Power = ", power_thresholds)
+    )
+    
+    return(result_df)
+  }
+  
+  # Reactive values for power curves results
+  power_curves_results <- reactiveVal(NULL)
+  
+  # Flag to indicate if simulation is in progress
+  simulation_running <- reactiveVal(FALSE)
+  
+  # Run power curves analysis when button is clicked
+  observeEvent(input$run3, {
+    # Mark parameters as up-to-date
+    params_changed3(FALSE)
+    
+    # Get input values
+    n_sim <- input$n_sim3
+    sample_size <- input$sample_size3
+    distribution <- input$distribution3
+    effect_min <- input$effect_range[1]
+    effect_max <- input$effect_range[2]
+    n_points <- input$effect_points
+    effect_sizes <- seq(from = effect_min, to = effect_max, length.out = n_points)
+    
+    # Set the simulation running flag
+    simulation_running(TRUE)
+    
+    # Simple progress tracking
+    withProgress(
+      message = 'Generating power curves',
+      style = 'notification',
+      detail = 'Starting simulations...',
+      value = 0,
+      {
+        # Initialize results dataframe
+        results_df <- data.frame(
+          effect_size = effect_sizes,
+          power_t = numeric(n_points),
+          power_w = numeric(n_points),
+          power_boot = numeric(n_points),
+          power_perm = numeric(n_points),
+          se_t = numeric(n_points),
+          se_w = numeric(n_points),
+          se_boot = numeric(n_points),
+          se_perm = numeric(n_points)
+        )
+        
+        # Process each effect size point
+        for (i in 1:n_points) {
+          # Update progress
+          setProgress(
+            value = (i-1)/n_points,
+            detail = paste("Effect size:", effect_sizes[i], "- Running simulations...")
+          )
+          
+          # Run simulation for this effect size
+          results <- compare_tests(
+            n_sim = n_sim,
+            sample_size = sample_size,
+            distribution = distribution,
+            effect_size = effect_sizes[i]
+          )
+          
+          # Store power results
+          results_df$power_t[i] <- results$power_t
+          results_df$power_w[i] <- results$power_w
+          results_df$power_boot[i] <- results$power_boot
+          results_df$power_perm[i] <- results$power_perm
+          
+          # Calculate and store standard errors
+          # SE for proportion = sqrt(p*(1-p)/n)
+          results_df$se_t[i] <- sqrt(results$power_t * (1 - results$power_t) / n_sim)
+          results_df$se_w[i] <- sqrt(results$power_w * (1 - results$power_w) / n_sim)
+          results_df$se_boot[i] <- sqrt(results$power_boot * (1 - results$power_boot) / n_sim)
+          results_df$se_perm[i] <- sqrt(results$power_perm * (1 - results$power_perm) / n_sim)
+          
+          # Report progress
+          setProgress(
+            value = i/n_points,
+            detail = paste0(round(100 * i/n_points), "% complete")
+          )
+        }
+        
+        # Store the final results
+        power_curves_results(results_df)
+        
+        # Set simulation complete
+        simulation_running(FALSE)
+      }
+    )
+  })
+  
+  
+  # Plotly for power curves - more interactive and fits in the box
+  output$power_curves_plot <- renderPlotly({
+    # If parameters have changed and we're not running a simulation, show message
+    if (params_changed3() && !simulation_running()) {
+      return(plotly_empty() %>%
+               add_annotations(x = 0.5, y = 0.5, text = "Run power curves analysis to see results", 
+                              showarrow = FALSE, font = list(size = 14)))
+    } else if (simulation_running()) {
+      # Show waiting message during simulation
+      return(plotly_empty() %>%
+               add_annotations(x = 0.5, y = 0.5, text = "Calculating power curves...\nPlease wait for completion.", 
+                              showarrow = FALSE, font = list(size = 14)))
+    } else {
+      # Show completed results
+      req(power_curves_results())
+      results_df <- power_curves_results()
+      
+      # Create a plotly plot directly - better for fitting in the frame
+      plot_ly(height = 350) %>%
+        # Add traces for each test type
+        add_trace(
+          data = results_df,
+          x = ~effect_size,
+          y = ~power_t,
+          type = "scatter",
+          mode = "lines+markers",
+          name = "T-Test",
+          line = list(color = "blue", width = 2),
+          marker = list(color = "blue", size = 6),
+          error_y = list(
+            type = "data",
+            array = ~se_t,
+            color = "blue",
+            thickness = 0.5,
+            width = 3
+          )
+        ) %>%
+        add_trace(
+          data = results_df,
+          x = ~effect_size,
+          y = ~power_w,
+          type = "scatter",
+          mode = "lines+markers",
+          name = "Wilcoxon",
+          line = list(color = "green", width = 2),
+          marker = list(color = "green", size = 6),
+          error_y = list(
+            type = "data",
+            array = ~se_w,
+            color = "green",
+            thickness = 0.5,
+            width = 3
+          )
+        ) %>%
+        add_trace(
+          data = results_df,
+          x = ~effect_size,
+          y = ~power_boot,
+          type = "scatter",
+          mode = "lines+markers",
+          name = "Bootstrap",
+          line = list(color = "orange", width = 2),
+          marker = list(color = "orange", size = 6),
+          error_y = list(
+            type = "data",
+            array = ~se_boot,
+            color = "orange",
+            thickness = 0.5,
+            width = 3
+          )
+        ) %>%
+        add_trace(
+          data = results_df,
+          x = ~effect_size,
+          y = ~power_perm,
+          type = "scatter",
+          mode = "lines+markers",
+          name = "Permutation",
+          line = list(color = "purple", width = 2),
+          marker = list(color = "purple", size = 6),
+          error_y = list(
+            type = "data",
+            array = ~se_perm,
+            color = "purple",
+            thickness = 0.5,
+            width = 3
+          )
+        ) %>%
+        # Add 0.8 power reference line
+        add_segments(
+          x = min(results_df$effect_size),
+          xend = max(results_df$effect_size),
+          y = 0.8,
+          yend = 0.8,
+          line = list(color = "gray", dash = "dash", width = 1),
+          showlegend = FALSE,
+          hoverinfo = "text",
+          text = "Power = 0.8"
+        ) %>%
+        # Set layout
+        layout(
+          title = list(
+            text = paste0("Power Curves<br><sup>Distribution: ", input$distribution3, 
+                        ", Sample Size: ", input$sample_size3, "</sup>"),
+            font = list(size = 14)
+          ),
+          xaxis = list(
+            title = "Effect Size",
+            zeroline = FALSE
+          ),
+          yaxis = list(
+            title = "Power (1 - β)",
+            range = c(0, 1)
+          ),
+          legend = list(
+            orientation = "h",
+            y = -0.2,
+            x = 0.5,
+            xanchor = "center"
+          ),
+          margin = list(l = 50, r = 50, t = 80, b = 80),
+          hoverlabel = list(
+            bgcolor = "white",
+            font = list(size = 12)
+          ),
+          hovermode = "closest"
+        )
+    }
+  })
+  
+  # Calculate and display minimum detectable effect size with facets and annotations
+  output$mde_plot <- renderPlotly({
+    # Return empty plot if parameters have changed and we're not running a simulation
+    if (params_changed3() && !simulation_running()) {
+      return(plotly_empty() %>%
+               add_annotations(x = 0.5, y = 0.5, text = "Run power curves analysis to see results", 
+                              showarrow = FALSE, font = list(size = 14)))
+    }
+    
+    # Use results if available, otherwise show waiting message
+    if (simulation_running()) {
+      return(plotly_empty() %>%
+               add_annotations(x = 0.5, y = 0.5, text = "Calculating power curve data...", 
+                              showarrow = FALSE, font = list(size = 14)))
+    } else {
+      req(power_curves_results())
+      results_df <- power_curves_results()
+      results_df <- results_df[complete.cases(results_df), ]
+    }
+    
+    # Compute MDE for each test at different power thresholds
+    mde_df <- compute_mde(results_df, power_thresholds = c(0.8, 0.85, 0.9))
+    
+    # Filter out NAs
+    mde_df <- mde_df[!is.na(mde_df$MDE), ]
+    
+    if(nrow(mde_df) > 0) {
+      # Generate subplots (one for each power threshold)
+      threshold_levels <- unique(mde_df$PowerThreshold)
+      
+      # Define colors for each test
+      test_colors <- c(
+        "T-Test" = "blue",
+        "Wilcoxon" = "green",
+        "Bootstrap" = "orange",
+        "Permutation" = "purple"
+      )
+      
+      # Create standard error data (for illustration, using 10% of MDE as SE)
+      # In a real application, you would calculate this from your data
+      # This is just a placeholder as we don't have actual SE data
+      mde_df$SE <- mde_df$MDE * 0.05
+      
+      # Create a plotly subplot with multiple plots
+      subplot_list <- list()
+      
+      for (i in 1:length(threshold_levels)) {
+        # Filter data for this threshold
+        threshold_data <- mde_df[mde_df$PowerThreshold == threshold_levels[i], ]
+        # Sort by MDE value (ascending)
+        threshold_data <- threshold_data[order(threshold_data$MDE), ]
+        
+        # Get clean power value for annotation (strip "Power = " prefix)
+        power_value <- as.character(threshold_levels[i])
+        power_value <- gsub("Power = ", "", power_value)
+        
+        # Create a bar plot for this threshold
+        p <- plot_ly(
+          data = threshold_data,
+          x = ~Test,
+          y = ~MDE,
+          type = "bar",
+          marker = list(
+            color = test_colors[threshold_data$Test],
+            line = list(color = "rgb(8,48,107)", width = 1.5)
+          ),
+          error_y = list(
+            type = "data",
+            array = ~SE,
+            color = "#444444",
+            thickness = 1.5,
+            width = 3
+          ),
+          showlegend = FALSE
+        ) %>%
+        add_text(
+          text = ~sprintf("%.2f", MDE),
+          textposition = "top center",
+          textfont = list(size = 12, color = "black")
+        ) %>%
+        layout(
+          title = list(
+            text = paste0("Power = ", power_value), 
+            font = list(size = 14, color = "#333333"),
+            x = 0.5
+          ),
+          xaxis = list(
+            title = "", 
+            categoryorder = "array",
+            categoryarray = threshold_data$Test,
+            tickfont = list(size = 11)
+          ),
+          yaxis = list(
+            title = if(i == 1) "Minimum Detectable Effect Size" else "", 
+            range = c(0, max(mde_df$MDE) * 1.3),
+            tickfont = list(size = 10)
+          ),
+          bargap = 0.3,
+          uniformtext = list(minsize = 10, mode = "hide")
+        )
+        
+        subplot_list[[i]] <- p
+      }
+      
+      # Combine into a subplot
+      subplot(subplot_list, nrows = 1, shareY = TRUE, titleX = TRUE) %>%
+        layout(
+          title = list(
+            text = "Minimum Detectable Effect Size by Power Threshold",
+            font = list(size = 16)
+          ),
+          margin = list(t = 80, b = 80, l = 60, r = 40),
+          annotations = list(
+            list(
+              x = 0.5,
+              y = -0.15,
+              text = "Lower values indicate greater test sensitivity",
+              showarrow = FALSE,
+              xref = "paper",
+              yref = "paper",
+              font = list(size = 12)
+            )
+          )
+        )
+    } else {
+      # If no tests reach the power thresholds, show message
+      return(plotly_empty() %>%
+               add_annotations(x = 0.5, y = 0.5, 
+                              text = "No tests reached the required power\nwithin the effect size range", 
+                              showarrow = FALSE, font = list(size = 14)))
+    }
+  })
+  
+  # Display power curves data table
+  output$power_curves_table <- renderDT({
+    # Return empty table if parameters have changed and we're not running a simulation
+    if (params_changed3() && !simulation_running()) {
+      return(datatable(data.frame("Message" = "Run power curves analysis to see results"),
+                      options = list(dom = 't'),
+                      rownames = FALSE,
+                      class = 'cell-border stripe hover'))
+    }
+    
+    # During simulation, show a waiting message
+    if (simulation_running()) {
+      return(datatable(data.frame("Message" = "Calculating power curves data..."),
+                      options = list(dom = 't'),
+                      rownames = FALSE,
+                      class = 'cell-border stripe hover'))
+    } else {
+      req(power_curves_results())
+      results_df <- power_curves_results()
+      # Remove rows with NA values for better display
+      results_df <- results_df[complete.cases(results_df), ]
+    }
+    
+    # Create a copy for display with column names that won't be converted to dots
+    results_display <- data.frame(
+      "Effect_Size" = signif(results_df$effect_size, 4),
+      "T_Test" = signif(results_df$power_t, 4),
+      "Wilcoxon" = signif(results_df$power_w, 4),
+      "Bootstrap" = signif(results_df$power_boot, 4),
+      "Permutation" = signif(results_df$power_perm, 4)
+    )
+    
+    # Rename columns to display nicely in the table
+    colnames(results_display) <- c("Effect Size", "T-Test", "Wilcoxon", "Bootstrap", "Permutation")
+    
+    datatable(
+      results_display,
+      options = list(
+        pageLength = 10,
+        dom = 'Bfrtip',
+        buttons = c('copy', 'csv', 'excel'),
+        scrollX = TRUE,
+        autoWidth = FALSE, # Prevent column width auto-adjustment
+        columnDefs = list(
+          list(className = 'dt-center', targets = "_all"),
+          list(width = '100px', targets = "_all") # Fixed width for all columns
+        ),
+        fixedHeader = TRUE,
+        headerCallback = JS("function(thead, data, start, end, display){
+          $(thead).find('th').css({'text-align': 'center', 'vertical-align': 'middle'});
+        }")
+      ),
+      caption = htmltools::tags$caption(
+        style = 'caption-side: top; text-align: center; font-size: 16px; font-weight: bold;',
+        if(simulation_running()) 'Partial Power Results (Updating Live)' else 'Power values at different effect sizes'
+      ),
+      rownames = FALSE,
+      class = 'cell-border stripe hover'
+    ) %>%
+    formatStyle(
+      'T-Test', # Use the display name that matches what's shown in the table
+      background = styleColorBar(c(0, 1), 'rgba(0, 0, 255, 0.4)'), # Lighter blue with transparency
+      color = 'black', # Ensure text is black
+      backgroundSize = '98% 88%',
+      backgroundRepeat = 'no-repeat',
+      backgroundPosition = 'center'
+    ) %>%
+    formatStyle(
+      'Wilcoxon',
+      background = styleColorBar(c(0, 1), 'rgba(0, 160, 0, 0.4)'), # Lighter green with transparency
+      color = 'black',
+      backgroundSize = '98% 88%',
+      backgroundRepeat = 'no-repeat',
+      backgroundPosition = 'center'
+    ) %>%
+    formatStyle(
+      'Bootstrap',
+      background = styleColorBar(c(0, 1), 'rgba(255, 165, 0, 0.4)'), # Lighter orange with transparency
+      color = 'black',
+      backgroundSize = '98% 88%',
+      backgroundRepeat = 'no-repeat',
+      backgroundPosition = 'center'
+    ) %>%
+    formatStyle(
+      'Permutation',
+      background = styleColorBar(c(0, 1), 'rgba(128, 0, 128, 0.4)'), # Lighter purple with transparency
+      color = 'black',
+      backgroundSize = '98% 88%',
+      backgroundRepeat = 'no-repeat',
+      backgroundPosition = 'center'
+    ) %>%
+    # Add styling to the Effect Size column
+    formatStyle(
+      'Effect Size',
+      fontWeight = 'bold'
+    )
+  })
+  
+  # Add observer to toggle between tabs when navigation menu is clicked
+  observe({
+    # Update active tab based on input$tabs
+    updateTabItems(session, "tabs", input$tabs)
+  })
+}
+
+# Application Launch ----------------------------------------------------------
+
+#' @section Application Launch:
+#' The application is started by calling the shinyApp function with the defined UI and server.
+#' This creates and launches the Shiny application with the specified configuration.
+
+# Run the application 
+shinyApp(ui = ui, server = server)
