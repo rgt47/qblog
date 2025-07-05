@@ -223,6 +223,38 @@ generate_research_page <- function() {
     "",
     sprintf("**%d total publications** spanning multiple research domains in biostatistics, clinical trials, and medical research.", nrow(pubs_clean)),
     "",
+    "<style>",
+    ".year-interval-buttons {",
+    "  display: flex;",
+    "  flex-wrap: wrap;",
+    "  gap: 0.3rem;",
+    "  margin-bottom: 0.5rem;",
+    "}",
+    "",
+    ".year-interval {",
+    "  font-size: 0.8rem;",
+    "  padding: 0.3rem 0.6rem;",
+    "  margin: 0.1rem;",
+    "}",
+    "",
+    ".year-interval.active {",
+    "  background-color: #0d6efd;",
+    "  border-color: #0d6efd;",
+    "  color: white;",
+    "}",
+    "",
+    ".year-interval:hover {",
+    "  background-color: #0b5ed7;",
+    "  border-color: #0a58ca;",
+    "  color: white;",
+    "}",
+    "",
+    ".selected-years {",
+    "  margin-top: 0.5rem;",
+    "  font-style: italic;",
+    "}",
+    "</style>",
+    "",
     "::: {.column-screen-inset}",
     "::: {.grid}",
     ""
@@ -366,11 +398,6 @@ document.addEventListener("DOMContentLoaded", function() {
     const clearBtn = document.getElementById("clear-filters");
     const papers = document.querySelectorAll(".paper-entry");
     
-    // Debug logging
-    console.log("Research page filtering initialized");
-    console.log("Found", tags.length, "clickable tags");
-    console.log("Found", papers.length, "papers");
-    console.log("Tags:", Array.from(tags).map(t => t.textContent.trim()));
     const yearIntervalButtons = document.querySelectorAll(".year-interval");
     const yearDisplay = document.getElementById("year-display");
     const filteredCount = document.getElementById("filtered-count");
@@ -379,7 +406,6 @@ document.addEventListener("DOMContentLoaded", function() {
     
     // Main filtering function
     function filterPapers() {
-        console.log("filterPapers called, activeFilters:", Array.from(activeFilters));
         let visibleCount = 0;
         const minYear = selectedYearRange.min;
         const maxYear = selectedYearRange.max;
@@ -478,22 +504,15 @@ document.addEventListener("DOMContentLoaded", function() {
             e.preventDefault();
             const tagText = this.textContent.trim();
             
-            console.log("Tag clicked:", tagText);
-            console.log("Current activeFilters:", Array.from(activeFilters));
-            
             if (activeFilters.has(tagText)) {
                 activeFilters.delete(tagText);
                 this.style.opacity = "1";
                 this.style.fontWeight = "normal";
-                console.log("Removed filter:", tagText);
             } else {
                 activeFilters.add(tagText);
                 this.style.opacity = "0.7";
                 this.style.fontWeight = "bold";
-                console.log("Added filter:", tagText);
             }
-            
-            console.log("New activeFilters:", Array.from(activeFilters));
             filterPapers();
         });
     });
