@@ -370,7 +370,44 @@ mv test_copy_files/ _archive/test_files/
 - `/_includes/after-body.html` - Comprehensive category encoding fix
 - `/blog/index.qmd` - Removed redundant JavaScript (handled globally now)
 
+#### 5. Research Page Tag Filtering Fix ✅
+**Issue**: Tag filtering on research page wasn't working despite multiple JavaScript implementations
+**Investigation**:
+- Research page had TWO conflicting JavaScript sections with duplicate `filterPapers()` functions
+- Multiple `document.addEventListener('DOMContentLoaded', ...)` handlers competing
+- Complex year filtering and tag filtering logic was tangled together
+- Category encoding fix from blog page was interfering with research page's custom system
+
+**Root Cause**: JavaScript conflicts and code duplication
+- First script: Simple tag filtering with basic `filterPapers()` function
+- Second script: Complex filtering with year ranges, counters, and year header hiding
+- Both scripts were trying to handle the same elements, causing race conditions
+- Research page uses custom HTML structure, not Quarto listings, so blog encoding fix didn't apply
+
+**Solution**: Complete JavaScript rewrite with clean, single implementation
+- **Removed**: Both conflicting script sections from `research/index.qmd`
+- **Replaced**: With single, robust filtering system that handles:
+  - Tag filtering with visual feedback (opacity + font weight changes)
+  - Year range filtering with dynamic header hiding/showing
+  - Paper counting and filter summary updates
+  - Clear filters and reset all functionality
+- **Improved**: Error handling and null checks for all DOM elements
+- **Isolated**: Category encoding fix to only run on pages with `.quarto-listing`
+
+**Result**: Research page tag filtering now works reliably
+- Top badge filters (Medical/Clinical, Military/Defense, etc.) work ✅
+- Sidebar topic tags work ✅  
+- Year interval buttons work ✅
+- Filter counters update correctly ✅
+- Clear and reset buttons work ✅
+- No JavaScript console errors ✅
+- Blog page category filtering unaffected ✅
+
+**Files Modified**:
+- `/research/index.qmd` - Replaced conflicting JavaScript with clean implementation
+- `/_includes/after-body.html` - Limited category encoding fix to Quarto listing pages only
+
 ---
 
 *Document updated: 2025-07-05*
-*Claude Code Session: Repository cleanup, file archival, and blog category filtering fix*
+*Claude Code Session: Repository cleanup, file archival, blog category filtering fix, and research page tag filtering fix*
