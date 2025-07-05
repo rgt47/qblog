@@ -1805,24 +1805,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Check if PDF exists first
-    console.log('Checking for PDF at:', pdfPath);
     fetch(pdfPath, { method: 'HEAD' })
       .then(function(response) {
-        console.log('PDF check response:', response.status, response.ok);
         if (response.ok) {
           // PDF exists, show download button
-          console.log('PDF exists, showing download button');
           showDownloadButton(pdfPath);
-        } else {
-          // PDF doesn't exist, generate it on-demand
-          console.log('PDF does not exist, generating on-demand');
-          generateAndOpenPDF(currentPath, pdfPath);
         }
+        // If PDF doesn't exist, don't show any button
       })
       .catch(function(error) {
-        // Error checking PDF, generate on-demand
-        console.log('Error checking PDF:', error);
-        generateAndOpenPDF(currentPath, pdfPath);
+        // Error checking PDF, don't show any button
       });
   }
 });
@@ -1873,173 +1865,7 @@ function showDownloadButton(pdfPath) {
   }
 }
 
-function generateAndOpenPDF(htmlPath, pdfPath) {
-  var qmdPath;
-  if (htmlPath.endsWith('/')) {
-    // Handle /posts/name/ format  
-    qmdPath = htmlPath.replace('/posts/', 'posts/') + 'index.qmd';
-  } else {
-    // Handle /posts/name/index.html format
-    qmdPath = htmlPath.replace('/posts/', 'posts/').replace('/index.html', '/index.qmd').replace('.html', '.qmd');
-  }
 
-  var generateBtn = document.createElement('div');
-  generateBtn.className = 'pdf-download-button';
-  generateBtn.innerHTML =
-    '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
-    '  <div class="me-3">' +
-    '    <i class="bi bi-file-pdf" style="font-size: 1.5rem;"></i>' +
-    '  </div>' +
-    '  <div class="flex-grow-1">' +
-    '    <strong>Generate PDF Version</strong><br>' +
-    '    <span class="small text-muted">Click to generate and open a PDF version of this article.</span>' +
-    '  </div>' +
-    '  <div>' +
-    '    <button class="btn btn-primary btn-sm" onclick="generatePDFAndOpen(\'' + qmdPath + '\', \'' + pdfPath + '\', this)">' +
-    '      <i class="bi bi-file-pdf me-1"></i>Generate PDF' +
-    '    </button>' +
-    '  </div>' +
-    '</div>';
-
-  // Find where to insert the button (right after the title block)
-  var titleBlock = document.querySelector('.quarto-title-meta');
-  if (titleBlock) {
-    titleBlock.after(generateBtn);
-  }
-}
-
-function showGenerateButton(htmlPath) {
-  var qmdPath;
-  if (htmlPath.endsWith('/')) {
-    // Handle /posts/name/ format  
-    qmdPath = htmlPath.replace('/posts/', 'posts/') + 'index.qmd';
-  } else {
-    // Handle /posts/name/index.html format
-    qmdPath = htmlPath.replace('/posts/', 'posts/').replace('/index.html', '/index.qmd').replace('.html', '.qmd');
-  }
-
-  var generateBtn = document.createElement('div');
-  generateBtn.className = 'pdf-download-button';
-  generateBtn.innerHTML =
-    '<div class="alert alert-info d-flex align-items-center p-3" role="alert">' +
-    '  <div class="me-3">' +
-    '    <i class="bi bi-file-pdf" style="font-size: 1.5rem;"></i>' +
-    '  </div>' +
-    '  <div class="flex-grow-1">' +
-    '    <strong>PDF Version Available</strong><br>' +
-    '    <span class="small text-muted">This article can be generated as a PDF for offline reading or printing.</span>' +
-    '  </div>' +
-    '  <div>' +
-    '    <button class="btn btn-outline-primary btn-sm" onclick="copyGenerateCommand(\'' + qmdPath + '\', this)">' +
-    '      <i class="bi bi-clipboard me-1"></i>Copy Command' +
-    '    </button>' +
-    '  </div>' +
-    '</div>' +
-    '<div class="collapse mt-2" id="generateInstructions">' +
-    '  <div class="card card-body bg-light">' +
-    '    <small>' +
-    '      <strong>To generate PDF:</strong> Run this command in your terminal:<br>' +
-    '      <code class="user-select-all" id="generateCommand">./generate_pdf.sh ' + qmdPath + '</code>' +
-    '    </small>' +
-    '  </div>' +
-    '</div>';
-
-  // Find where to insert the button (right after the title block)
-  var titleBlock = document.querySelector('.quarto-title-meta');
-  if (titleBlock) {
-    titleBlock.after(generateBtn);
-  }
-}
-
-function generatePDFAndOpen(qmdPath, pdfPath, btnElement) {
-  console.log('Generating PDF for:', qmdPath);
-  
-  // Update button to show loading state
-  var originalHtml = btnElement.innerHTML;
-  btnElement.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Generating...';
-  btnElement.disabled = true;
-  
-  // Make request to generate PDF
-  fetch('/generate-pdf', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ qmdPath: qmdPath })
-  })
-  .then(function(response) {
-    if (response.ok) {
-      console.log('PDF generation initiated');
-      // Wait a moment then try to open the PDF
-      setTimeout(function() {
-        window.open(pdfPath, '_blank');
-        // Reset button
-        btnElement.innerHTML = '<i class="bi bi-check me-1"></i>Opened!';
-        btnElement.classList.remove('btn-primary');
-        btnElement.classList.add('btn-success');
-        setTimeout(function() {
-          btnElement.innerHTML = originalHtml;
-          btnElement.classList.remove('btn-success');
-          btnElement.classList.add('btn-primary');
-          btnElement.disabled = false;
-        }, 2000);
-      }, 3000); // Wait 3 seconds for generation
-    } else {
-      throw new Error('PDF generation failed');
-    }
-  })
-  .catch(function(error) {
-    console.log('PDF generation error:', error);
-    // Fallback: just render the page to PDF using browser
-    window.print();
-    // Reset button
-    btnElement.innerHTML = originalHtml;
-    btnElement.disabled = false;
-  });
-}
-
-function copyGenerateCommand(qmdPath, btnElement) {
-  var command = './generate_pdf.sh ' + qmdPath;
-  console.log('Attempting to copy command:', command);
-  
-  // Try to copy to clipboard
-  if (navigator.clipboard && window.isSecureContext) {
-    console.log('Using navigator.clipboard');
-    navigator.clipboard.writeText(command).then(function() {
-      console.log('Command copied successfully');
-      showCopyFeedback('Command copied to clipboard!', btnElement);
-    }, function(error) {
-      console.log('Clipboard copy failed:', error);
-      showGenerateInstructions();
-    });
-  } else {
-    // Fallback: show instructions
-    console.log('Clipboard not available, showing instructions');
-    showGenerateInstructions();
-  }
-}
-
-function showCopyFeedback(message, btnElement) {
-  // Show brief success message
-  var originalHtml = btnElement.innerHTML;
-  btnElement.innerHTML = '<i class="bi bi-check me-1"></i>Copied!';
-  btnElement.classList.remove('btn-outline-primary');
-  btnElement.classList.add('btn-success');
-  
-  setTimeout(function() {
-    btnElement.innerHTML = originalHtml;
-    btnElement.classList.remove('btn-success');
-    btnElement.classList.add('btn-outline-primary');
-  }, 2000);
-}
-
-function showGenerateInstructions() {
-  // Toggle instructions visibility
-  var instructions = document.getElementById('generateInstructions');
-  if (instructions) {
-    instructions.classList.toggle('show');
-  }
-}
 </script>
 
 <style>
