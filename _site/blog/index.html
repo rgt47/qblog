@@ -314,21 +314,22 @@ window.Quarto = {
 <script>
 // Fix for Quarto listing category filtering
 document.addEventListener('DOMContentLoaded', function() {
-  // Override the quartoListingCategory function to handle both encoded and plain text
-  window.quartoListingCategory = (category) => {
-    let decodedCategory;
-    try {
-      // Try to decode as base64 first (for sidebar categories)
-      decodedCategory = decodeURIComponent(atob(category));
-    } catch (e) {
-      // If that fails, assume it's already plain text (for post tag categories)
-      decodedCategory = category;
+  // Fix sidebar categories that have plain text data-category attributes
+  const categoryEls = document.querySelectorAll('.quarto-listing-category .category[data-category]');
+  
+  categoryEls.forEach(categoryEl => {
+    const category = categoryEl.getAttribute('data-category');
+    if (category && category !== '') {
+      // Encode the category properly for Quarto's expected format
+      const encodedCategory = btoa(encodeURIComponent(category));
+      categoryEl.setAttribute('data-category', encodedCategory);
+      
+      // Set up click handler
+      categoryEl.onclick = () => {
+        window.quartoListingCategory(encodedCategory);
+      };
     }
-    
-    // Call the functions directly without checking categoriesLoaded
-    activateCategory(decodedCategory);
-    setCategoryHash(decodedCategory);
-  };
+  });
 });
 </script>
 
