@@ -339,7 +339,26 @@ mv test_copy_files/ _archive/test_files/
 3. Evaluate if any archived files can be permanently deleted after review period
 4. Consider adding .gitignore patterns to prevent future accumulation of non-essential files
 
+#### 4. Blog Category Tag Filtering Fix ✅
+**Issue**: Category tags displayed with individual blog posts were not clickable for filtering
+**Investigation**: 
+- Explored Quarto documentation to check for built-in solutions
+- Found that Quarto only provides clickable filtering through sidebar categories, not inline post tags
+- Confirmed that custom JavaScript is the standard approach for this functionality
+
+**Root Cause**: JavaScript conditional check `if (window.categoriesLoaded)` was preventing execution
+- Functions `activateCategory()` and `setCategoryHash()` exist in Quarto's listing library
+- Conditional was failing because script executed before `categoriesLoaded` was set to true
+- Post tags already had proper `onclick` handlers but weren't working due to this blocking condition
+
+**Solution**: Removed the conditional check to call filtering functions directly
+- Modified `blog/index.qmd` to call `activateCategory()` and `setCategoryHash()` without conditional
+- Category tags in individual posts now filter listings just like sidebar categories
+
+**Files Modified**:
+- `/blog/index.qmd` - Fixed JavaScript conditional blocking category filtering
+
 ---
 
 *Document updated: 2025-07-05*
-*Claude Code Session: Repository cleanup and file archival*
+*Claude Code Session: Repository cleanup, file archival, and blog category filtering fix*
