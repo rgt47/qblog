@@ -311,41 +311,6 @@ window.Quarto = {
 
 <p>Welcome to my blog! Here you’ll find my latest thoughts on R programming, data science, statistical computing, and research workflows.</p>
 <p>Use the search box above to find specific topics, or click on category tags to filter posts by theme.</p>
-<script>
-// Fix category encoding immediately to prevent Quarto errors
-(function() {
-  // Run as early as possible
-  function fixCategoryEncoding() {
-    const categoryEls = document.querySelectorAll('.quarto-listing-category .category[data-category]');
-    
-    categoryEls.forEach((categoryEl) => {
-      const category = categoryEl.getAttribute('data-category');
-      
-      if (category && category !== '') {
-        // Check if it's already base64 encoded
-        try {
-          decodeURIComponent(atob(category));
-          // Already encoded, leave it alone
-        } catch (e) {
-          // Not encoded, fix it
-          const encodedCategory = btoa(encodeURIComponent(category));
-          categoryEl.setAttribute('data-category', encodedCategory);
-        }
-      }
-    });
-  }
-  
-  // Try to fix before Quarto initializes
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', fixCategoryEncoding);
-  } else {
-    fixCategoryEncoding();
-  }
-  
-  // Also try again after a very short delay in case elements are added dynamically
-  setTimeout(fixCategoryEncoding, 100);
-})();
-</script>
 
 
 
@@ -1009,6 +974,86 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     </div>
   </div>
 </footer>
+<!-- Fix for Quarto category encoding issue -->
+<script>
+// Debug and fix category encoding
+(function() {
+  function fixAllCategoryEncoding() {
+    console.log('=== Debugging Category Encoding ===');
+    
+    // Fix sidebar category data-category attributes
+    const categoryEls = document.querySelectorAll('.quarto-listing-category .category[data-category]');
+    console.log('Found sidebar categories:', categoryEls.length);
+    
+    categoryEls.forEach((categoryEl, index) => {
+      const category = categoryEl.getAttribute('data-category');
+      console.log(`Sidebar category ${index}:`, category);
+      
+      if (category && category !== '') {
+        // More robust check: if it contains only base64 characters and proper length
+        const isBase64 = /^[A-Za-z0-9+/]*={0,2}$/.test(category) && category.length % 4 === 0;
+        
+        if (isBase64) {
+          try {
+            const decoded = decodeURIComponent(atob(category));
+            console.log(`  Already encoded, decoded value:`, decoded);
+            // Verify it decoded to something reasonable (no control characters)
+            if (decoded.match(/^[A-Za-z0-9\s\-,]+$/)) {
+              console.log(`  Valid encoding, keeping as-is`);
+            } else {
+              console.log(`  Invalid encoding, re-encoding original text`);
+              const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+              categoryEl.setAttribute('data-category', encodedCategory);
+            }
+          } catch (e) {
+            console.log(`  Base64 decode failed, re-encoding original text`);
+            const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+            categoryEl.setAttribute('data-category', encodedCategory);
+          }
+        } else {
+          // Not base64, encode it
+          const encodedCategory = btoa(encodeURIComponent(category));
+          console.log(`  Encoding "${category}" to:`, encodedCategory);
+          categoryEl.setAttribute('data-category', encodedCategory);
+        }
+      }
+    });
+    
+    // Fix listing item data-categories attributes  
+    const listingItems = document.querySelectorAll('[data-categories]');
+    console.log('Found listing items:', listingItems.length);
+    
+    listingItems.forEach((item, index) => {
+      const categories = item.getAttribute('data-categories');
+      console.log(`Item ${index} categories:`, categories);
+      
+      if (categories && categories !== '') {
+        // Check if it's already base64 encoded
+        try {
+          const decoded = decodeURIComponent(atob(categories));
+          console.log(`  Already encoded, decoded value:`, decoded);
+        } catch (e) {
+          // Not encoded, fix it
+          const encodedCategories = btoa(encodeURIComponent(categories));
+          console.log(`  Encoding "${categories}" to:`, encodedCategories);
+          item.setAttribute('data-categories', encodedCategories);
+        }
+      }
+    });
+    
+    console.log('=== Category Encoding Complete ===');
+  }
+  
+  // Run immediately
+  fixAllCategoryEncoding();
+  
+  // Also run when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fixAllCategoryEncoding);
+  }
+})();
+</script>
+
 <!-- PDF view/download button for blog posts -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
