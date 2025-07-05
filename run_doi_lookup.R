@@ -171,8 +171,9 @@ process_bibtex_dois <- function(bibtex_file, max_entries = 50) {
   cat("💾 Backup saved as:", backup_file, "\n")
 }
 
-# Run the script - start with 30 entries to test
-cat("🎯 Starting with recent publications (30 entries)\n")
-cat("   This will take about 2-3 minutes with API rate limiting\n\n")
+# Run the script for ALL publications
+cat("🎯 Processing ALL publications in the BibTeX file\n")
+cat("   This will take about 15-20 minutes with API rate limiting\n")
+cat("   Progress will be shown for every publication\n\n")
 
-process_bibtex_dois("rgthomas_pubs_2025.bib", max_entries = 30)
+process_bibtex_dois("rgthomas_pubs_2025.bib", max_entries = 999)
