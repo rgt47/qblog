@@ -854,13 +854,105 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     </div>
   </div>
 </footer>
+<!-- Fix for Quarto category encoding issue -->
+<script>
+// Fix category encoding for Quarto listing functionality
+(function() {
+  function fixAllCategoryEncoding() {
+    // Only run on pages that have Quarto listings
+    if (!document.querySelector('.quarto-listing')) {
+      return;
+    }
+    
+    // Fix sidebar category data-category attributes
+    const categoryEls = document.querySelectorAll('.quarto-listing-category .category[data-category]');
+    
+    categoryEls.forEach((categoryEl) => {
+      const category = categoryEl.getAttribute('data-category');
+      
+      if (category && category !== '') {
+        // Check if it contains only base64 characters and proper length
+        const isBase64 = /^[A-Za-z0-9+/]*={0,2}$/.test(category) && category.length % 4 === 0;
+        
+        if (isBase64) {
+          try {
+            const decoded = decodeURIComponent(atob(category));
+            // Verify it decoded to something reasonable (no control characters)
+            if (!decoded.match(/^[A-Za-z0-9\s\-,]+$/)) {
+              // Invalid encoding, re-encode from original text
+              const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+              categoryEl.setAttribute('data-category', encodedCategory);
+            }
+          } catch (e) {
+            // Base64 decode failed, re-encode from original text
+            const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+            categoryEl.setAttribute('data-category', encodedCategory);
+          }
+        } else {
+          // Not base64, encode it
+          const encodedCategory = btoa(encodeURIComponent(category));
+          categoryEl.setAttribute('data-category', encodedCategory);
+        }
+      }
+    });
+    
+    // Fix listing item data-categories attributes  
+    const listingItems = document.querySelectorAll('[data-categories]');
+    
+    listingItems.forEach((item) => {
+      const categories = item.getAttribute('data-categories');
+      
+      if (categories && categories !== '') {
+        // Check if it's already base64 encoded
+        try {
+          decodeURIComponent(atob(categories));
+          // Already encoded and valid
+        } catch (e) {
+          // Not encoded, fix it
+          const encodedCategories = btoa(encodeURIComponent(categories));
+          item.setAttribute('data-categories', encodedCategories);
+        }
+      }
+    });
+    
+    // Fix post-specific category tag click handlers
+    const postCategoryTags = document.querySelectorAll('.listing-category[onclick]');
+    
+    postCategoryTags.forEach((tag) => {
+      const categoryText = tag.textContent.trim();
+      
+      // Replace the onclick handler to use encoded category
+      tag.onclick = () => {
+        const encodedCategory = btoa(encodeURIComponent(categoryText));
+        window.quartoListingCategory(encodedCategory);
+        return false;
+      };
+    });
+  }
+  
+  // Run immediately
+  fixAllCategoryEncoding();
+  
+  // Also run when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fixAllCategoryEncoding);
+  }
+})();
+</script>
+
 <!-- PDF view/download button for blog posts -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   // Only add the button on post pages
   if (window.location.pathname.includes('/posts/') && !window.location.pathname.endsWith('/posts/') && !window.location.pathname.endsWith('/posts/index.html')) {
     var currentPath = window.location.pathname;
-    var pdfPath = currentPath.replace('.html', '.pdf');
+    // Handle both /posts/name/ and /posts/name/index.html formats
+    var pdfPath;
+    if (currentPath.endsWith('/')) {
+      pdfPath = currentPath + 'index.pdf';
+    } else {
+      pdfPath = currentPath.replace('.html', '.pdf');
+    }
 
     // Check if PDF exists first
     fetch(pdfPath, { method: 'HEAD' })
@@ -868,14 +960,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (response.ok) {
           // PDF exists, show download button
           showDownloadButton(pdfPath);
-        } else {
-          // PDF doesn't exist, show link to generate
-          showGenerateButton(currentPath);
         }
+        // If PDF doesn't exist, don't show any button
       })
-      .catch(function() {
-        // Error checking PDF, show generate button
-        showGenerateButton(currentPath);
+      .catch(function(error) {
+        // Error checking PDF, don't show any button
       });
   }
 });
@@ -926,80 +1015,7 @@ function showDownloadButton(pdfPath) {
   }
 }
 
-function showGenerateButton(htmlPath) {
-  var qmdPath = htmlPath.replace('/posts/', 'posts/').replace('/index.html', '/index.qmd').replace('.html', '.qmd');
 
-  var generateBtn = document.createElement('div');
-  generateBtn.className = 'pdf-download-button';
-  generateBtn.innerHTML =
-    '<div class="alert alert-info d-flex align-items-center p-3" role="alert">' +
-    '  <div class="me-3">' +
-    '    <i class="bi bi-file-pdf" style="font-size: 1.5rem;"></i>' +
-    '  </div>' +
-    '  <div class="flex-grow-1">' +
-    '    <strong>PDF Version Available</strong><br>' +
-    '    <span class="small text-muted">This article can be generated as a PDF for offline reading or printing.</span>' +
-    '  </div>' +
-    '  <div>' +
-    '    <button class="btn btn-outline-primary btn-sm" onclick="copyGenerateCommand(\'' + qmdPath + '\')">' +
-    '      <i class="bi bi-clipboard me-1"></i>Copy Command' +
-    '    </button>' +
-    '  </div>' +
-    '</div>' +
-    '<div class="collapse mt-2" id="generateInstructions">' +
-    '  <div class="card card-body bg-light">' +
-    '    <small>' +
-    '      <strong>To generate PDF:</strong> Run this command in your terminal:<br>' +
-    '      <code class="user-select-all" id="generateCommand">./generate_pdf.sh ' + qmdPath + '</code>' +
-    '    </small>' +
-    '  </div>' +
-    '</div>';
-
-  // Find where to insert the button (right after the title block)
-  var titleBlock = document.querySelector('.quarto-title-meta');
-  if (titleBlock) {
-    titleBlock.after(generateBtn);
-  }
-}
-
-function copyGenerateCommand(qmdPath) {
-  var command = './generate_pdf.sh ' + qmdPath;
-  
-  // Try to copy to clipboard
-  if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard.writeText(command).then(function() {
-      showCopyFeedback('Command copied to clipboard!');
-    }, function() {
-      showGenerateInstructions();
-    });
-  } else {
-    // Fallback: show instructions
-    showGenerateInstructions();
-  }
-}
-
-function showCopyFeedback(message) {
-  // Show brief success message
-  var btn = event.target.closest('button');
-  var originalHtml = btn.innerHTML;
-  btn.innerHTML = '<i class="bi bi-check me-1"></i>Copied!';
-  btn.classList.remove('btn-outline-primary');
-  btn.classList.add('btn-success');
-  
-  setTimeout(function() {
-    btn.innerHTML = originalHtml;
-    btn.classList.remove('btn-success');
-    btn.classList.add('btn-outline-primary');
-  }, 2000);
-}
-
-function showGenerateInstructions() {
-  // Toggle instructions visibility
-  var instructions = document.getElementById('generateInstructions');
-  if (instructions) {
-    instructions.classList.toggle('show');
-  }
-}
 </script>
 
 <style>

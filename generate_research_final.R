@@ -331,7 +331,7 @@ generate_research_page <- function() {
     ""
   )
   
-  # Add the sidebar
+  # Add the sidebar (still inside the grid)
   content <- c(content,
     "::: {.g-col-12 .g-col-md-3}",
     "## 🔍 Advanced Filters",
@@ -386,171 +386,59 @@ generate_research_page <- function() {
     ":::"   # Close column-screen-inset
   )
   
-  # Add enhanced JavaScript for filtering
+  # Add simple JavaScript for filtering
   js_code <- '
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-    let activeFilters = new Set();
-    let selectedYearRange = { min: 1983, max: 2024 };
+    console.log("Research page JavaScript loaded");
     
-    // Get all the elements we need
+    let activeFilters = new Set();
     const tags = document.querySelectorAll(".tag-clickable, .tag-filter");
-    const clearBtn = document.getElementById("clear-filters");
     const papers = document.querySelectorAll(".paper-entry");
     
-    const yearIntervalButtons = document.querySelectorAll(".year-interval");
-    const yearDisplay = document.getElementById("year-display");
-    const filteredCount = document.getElementById("filtered-count");
-    const activeFilterCount = document.getElementById("active-filter-count");
-    const resetAllBtn = document.getElementById("reset-all-filters");
+    console.log("Found " + tags.length + " tags and " + papers.length + " papers");
     
-    // Main filtering function
     function filterPapers() {
-        let visibleCount = 0;
-        const minYear = selectedYearRange.min;
-        const maxYear = selectedYearRange.max;
-        const visibleYears = new Set();
+        console.log("Filtering papers, active filters: " + activeFilters.size);
         
-        papers.forEach(paper => {
-            let visible = true;
-            
-            // Find the year for this paper by looking at previous H3 elements
-            let paperYear = null;
-            let currentElement = paper.previousElementSibling;
-            while (currentElement) {
-                if (currentElement.tagName === "H3") {
-                    const yearMatch = currentElement.textContent.match(/\\d{4}/);
-                    if (yearMatch) {
-                        paperYear = parseInt(yearMatch[0]);
-                        break;
-                    }
-                }
-                currentElement = currentElement.previousElementSibling;
-            }
-            
-            // Check year filter
-            if (paperYear && (paperYear < minYear || paperYear > maxYear)) {
-                visible = false;
-            }
-            
-            // Check tag filters
-            if (visible && activeFilters.size > 0) {
+        if (activeFilters.size === 0) {
+            papers.forEach(paper => paper.style.display = "block");
+        } else {
+            papers.forEach(paper => {
                 const paperTags = paper.getAttribute("data-tags");
                 if (paperTags) {
                     const tags = paperTags.split(",").map(tag => tag.trim());
                     const hasMatch = tags.some(tag => activeFilters.has(tag));
-                    if (!hasMatch) visible = false;
+                    paper.style.display = hasMatch ? "block" : "none";
+                } else {
+                    paper.style.display = "none";
                 }
-            }
-            
-            // Show/hide paper and track visible years
-            if (visible) {
-                paper.style.display = "block";
-                visibleCount++;
-                if (paperYear) visibleYears.add(paperYear);
-            } else {
-                paper.style.display = "none";
-            }
-        });
-        
-        // Hide/show year headers based on visible papers
-        document.querySelectorAll("h3").forEach(header => {
-            const yearMatch = header.textContent.match(/\\d{4}/);
-            if (yearMatch) {
-                const year = parseInt(yearMatch[0]);
-                header.style.display = visibleYears.has(year) ? "block" : "none";
-            }
-        });
-        
-        // Update counters
-        if (filteredCount) filteredCount.textContent = visibleCount;
-        if (activeFilterCount) activeFilterCount.textContent = activeFilters.size;
-        
-        // Update clear button
-        if (clearBtn) {
-            if (activeFilters.size > 0) {
-                clearBtn.style.display = "inline-block";
-                clearBtn.textContent = `Clear Filters (${activeFilters.size})`;
-            } else {
-                clearBtn.style.display = "none";
-            }
+            });
         }
     }
     
-    // Year interval button handlers
-    yearIntervalButtons.forEach(button => {
-        button.addEventListener("click", function() {
-            yearIntervalButtons.forEach(btn => btn.classList.remove("active"));
-            this.classList.add("active");
-            
-            const years = this.getAttribute("data-years");
-            if (years === "all") {
-                selectedYearRange = { min: 1983, max: 2024 };
-                if (yearDisplay) yearDisplay.textContent = "All Years (1983-2024)";
-            } else {
-                const [minYear, maxYear] = years.split("-").map(y => parseInt(y));
-                selectedYearRange = { min: minYear, max: maxYear };
-                if (yearDisplay) yearDisplay.textContent = years;
-            }
-            
-            filterPapers();
-        });
-    });
-    
-    // Tag click handlers
+    // Add click handlers to all tags
     tags.forEach(tag => {
         tag.style.cursor = "pointer";
         tag.addEventListener("click", function(e) {
             e.preventDefault();
             const tagText = this.textContent.trim();
             
+            console.log("Tag clicked: " + tagText);
+            
             if (activeFilters.has(tagText)) {
                 activeFilters.delete(tagText);
                 this.style.opacity = "1";
-                this.style.fontWeight = "normal";
             } else {
                 activeFilters.add(tagText);
                 this.style.opacity = "0.7";
-                this.style.fontWeight = "bold";
             }
+            
             filterPapers();
         });
     });
     
-    // Clear filters button
-    if (clearBtn) {
-        clearBtn.addEventListener("click", function() {
-            activeFilters.clear();
-            tags.forEach(tag => {
-                tag.style.opacity = "1";
-                tag.style.fontWeight = "normal";
-            });
-            filterPapers();
-        });
-    }
-    
-    // Reset all filters button
-    if (resetAllBtn) {
-        resetAllBtn.addEventListener("click", function() {
-            // Clear tag filters
-            activeFilters.clear();
-            tags.forEach(tag => {
-                tag.style.opacity = "1";
-                tag.style.fontWeight = "normal";
-            });
-            
-            // Reset year filter
-            yearIntervalButtons.forEach(btn => btn.classList.remove("active"));
-            const allYearsBtn = document.querySelector("[data-years=\\"all\\"]");
-            if (allYearsBtn) allYearsBtn.classList.add("active");
-            selectedYearRange = { min: 1983, max: 2024 };
-            if (yearDisplay) yearDisplay.textContent = "All Years (1983-2024)";
-            
-            filterPapers();
-        });
-    }
-    
-    // Initialize the page
+    // Initialize
     filterPapers();
 });
 </script>'
