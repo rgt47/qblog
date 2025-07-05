@@ -312,47 +312,39 @@ window.Quarto = {
 <p>Welcome to my blog! Here you’ll find my latest thoughts on R programming, data science, statistical computing, and research workflows.</p>
 <p>Use the search box above to find specific topics, or click on category tags to filter posts by theme.</p>
 <script>
-// Debug and fix Quarto listing category filtering
-document.addEventListener('DOMContentLoaded', function() {
-  console.log('Debug: DOM loaded, looking for categories...');
-  
-  // Wait a bit for Quarto to finish setting up
-  setTimeout(() => {
+// Fix category encoding immediately to prevent Quarto errors
+(function() {
+  // Run as early as possible
+  function fixCategoryEncoding() {
     const categoryEls = document.querySelectorAll('.quarto-listing-category .category[data-category]');
-    console.log('Found category elements:', categoryEls.length);
     
-    categoryEls.forEach((categoryEl, index) => {
+    categoryEls.forEach((categoryEl) => {
       const category = categoryEl.getAttribute('data-category');
-      console.log(`Category ${index}:`, category);
       
       if (category && category !== '') {
-        // Try direct filtering without encoding first
-        categoryEl.onclick = () => {
-          console.log('Clicked category:', category);
-          
-          // Try to filter directly using the List.js functionality
-          const listingIds = Object.keys(window['quarto-listings'] || {});
-          console.log('Available listings:', listingIds);
-          
-          listingIds.forEach(listingId => {
-            const list = window['quarto-listings'][listingId];
-            if (list) {
-              console.log('Filtering list:', listingId, 'by category:', category);
-              list.filter(function (item) {
-                const itemValues = item.values();
-                console.log('Item categories:', itemValues.categories);
-                if (itemValues.categories) {
-                  return itemValues.categories.includes(category);
-                }
-                return false;
-              });
-            }
-          });
-        };
+        // Check if it's already base64 encoded
+        try {
+          decodeURIComponent(atob(category));
+          // Already encoded, leave it alone
+        } catch (e) {
+          // Not encoded, fix it
+          const encodedCategory = btoa(encodeURIComponent(category));
+          categoryEl.setAttribute('data-category', encodedCategory);
+        }
       }
     });
-  }, 1000);
-});
+  }
+  
+  // Try to fix before Quarto initializes
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fixCategoryEncoding);
+  } else {
+    fixCategoryEncoding();
+  }
+  
+  // Also try again after a very short delay in case elements are added dynamically
+  setTimeout(fixCategoryEncoding, 100);
+})();
 </script>
 
 
