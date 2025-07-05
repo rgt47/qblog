@@ -194,7 +194,7 @@ format_authors <- function(author_string) {
 # Main generation function
 generate_research_page <- function() {
   # Parse publications
-  pubs <- parse_bibtex_basic("rgthomas_cv_merged_dedup.bib")
+  pubs <- parse_bibtex_basic("rgthomas_pubs_2025.bib")
   
   # Filter and process
   pubs_clean <- pubs %>%
