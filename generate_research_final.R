@@ -211,7 +211,7 @@ generate_research_page <- function() {
   
   cat("📝 Processed", nrow(pubs_clean), "publications for display\n")
   
-  # Start building content
+  # Start building content with simple structure and search box
   content <- c(
     "---",
     "title: \"Research\"",
@@ -223,50 +223,19 @@ generate_research_page <- function() {
     "",
     sprintf("**%d total publications** spanning multiple research domains in biostatistics, clinical trials, and medical research.", nrow(pubs_clean)),
     "",
-    "<style>",
-    ".year-interval-buttons {",
-    "  display: flex;",
-    "  flex-wrap: wrap;",
-    "  gap: 0.3rem;",
-    "  margin-bottom: 0.5rem;",
-    "}",
+    "Use the search box below to filter publications by title, author, journal, or research topic.",
     "",
-    ".year-interval {",
-    "  font-size: 0.8rem;",
-    "  padding: 0.3rem 0.6rem;",
-    "  margin: 0.1rem;",
-    "}",
+    '<div class="input-group mb-3">',
+    '  <span class="input-group-text"><i class="bi bi-search"></i></span>',
+    '  <input type="text" class="form-control" id="publication-search" placeholder="Search publications...">',
+    '</div>',
     "",
-    ".year-interval.active {",
-    "  background-color: #0d6efd;",
-    "  border-color: #0d6efd;",
-    "  color: white;",
-    "}",
-    "",
-    ".year-interval:hover {",
-    "  background-color: #0b5ed7;",
-    "  border-color: #0a58ca;",
-    "  color: white;",
-    "}",
-    "",
-    ".selected-years {",
-    "  margin-top: 0.5rem;",
-    "  font-style: italic;",
-    "}",
-    "</style>",
-    "",
-    "::: {.column-screen-inset}",
-    "::: {.grid}",
+    '<div id="publication-results">',
     ""
   )
   
-  # Add multi-column layout for years
-  content <- c(content, 
-    "::: {.g-col-12 .g-col-md-9}",
-    "",
-    "::: {.publications-content}",
-    ""
-  )
+  # Add publications content section
+  content <- c(content, "")
   
   # Group by year
   years <- unique(pubs_clean$year_num)
@@ -279,12 +248,12 @@ generate_research_page <- function() {
     for (i in 1:nrow(year_pubs)) {
       pub <- year_pubs[i, ]
       
-      # Create tags for filtering
-      all_tags <- c(pub$category, unlist(pub$topics_list))
-      tag_string <- paste(all_tags, collapse = ",")
+      # Create searchable topics
+      all_topics <- c(pub$category, unlist(pub$topics_list))
+      topics_text <- paste(all_topics, collapse = " • ")
       
-      # Paper entry
-      content <- c(content, paste0('::: {.paper-entry data-tags="', tag_string, '"}'))
+      # Simple paper entry
+      content <- c(content, '<div class="publication-entry">')
       
       # Citation
       citation_parts <- c()
@@ -300,148 +269,71 @@ generate_research_page <- function() {
       
       content <- c(content, paste(citation_parts, collapse = ", "), "")
       
-      # Badges
-      badges <- paste0("[", pub$category, "]{.badge .badge-", pub$badge_color, " .tag-clickable}")
-      
-      if (length(unlist(pub$topics_list)) > 0) {
-        topic_badges <- sapply(unlist(pub$topics_list), function(topic) {
-          paste0("[", topic, "]{.badge .badge-", pub$badge_color, " .tag-clickable}")
-        })
-        badges <- c(badges, topic_badges)
+      # Topics (no longer clickable, just for display)
+      if (topics_text != "") {
+        content <- c(content, paste0("**Topics:** ", topics_text), "")
       }
       
-      content <- c(content, paste(badges, collapse = " "), "")
-      
       # Links
-      content <- c(content, "::: {.paper-links}")
       if (!is.na(pub$doi) && pub$doi != "") {
         doi_url <- if (str_starts(pub$doi, "http")) pub$doi else paste0("https://doi.org/", pub$doi)
         content <- c(content, paste0("[🔗 Article](", doi_url, ") • [📄 PDF](", doi_url, ")"))
       } else {
         content <- c(content, "🔗 Article")
       }
-      content <- c(content, ":::", ":::", "")
+      content <- c(content, "</div>", "")
     }
   }
   
-  # Close the main content column
-  content <- c(content,
-    ":::",  # Close publications-content
-    ":::",  # Close g-col-12 g-col-md-9
-    ""
-  )
+  # Close the results div
+  content <- c(content, "</div>")  # Close publication-results
   
-  # Add the sidebar (still inside the grid)
-  content <- c(content,
-    "::: {.g-col-12 .g-col-md-3}",
-    "## 🔍 Advanced Filters",
-    "",
-    "### 🏷️ Quick Topic Filters",
-    "",
-    "**Click any badge to filter publications by research area:**",
-    "",
-    "[Medical/Clinical]{.badge .badge-success .tag-filter}",
-    "[Military/Defense]{.badge .badge-primary .tag-filter}",
-    "[Neuroimaging/Technical]{.badge .badge-info .tag-filter}",
-    "[COVID/Healthcare]{.badge .badge-warning .tag-filter}",
-    "[General Research]{.badge .badge-secondary .tag-filter}",
-    "",
-    '<button id="clear-filters" class="btn btn-sm btn-outline-secondary mt-2">Clear All Filters</button>',
-    "",
-    "### 📅 Publication Year",
-    "",
-    "::: {.year-filter-container}",
-    '<div class="year-intervals">',
-    '<div class="year-interval-buttons">',
-    '<button class="btn btn-sm btn-outline-primary year-interval active" data-years="all">All Years</button>',
-    '<button class="btn btn-sm btn-outline-primary year-interval" data-years="2020-2024">2020-2024</button>',
-    '<button class="btn btn-sm btn-outline-primary year-interval" data-years="2015-2019">2015-2019</button>',
-    '<button class="btn btn-sm btn-outline-primary year-interval" data-years="2010-2014">2010-2014</button>',
-    '<button class="btn btn-sm btn-outline-primary year-interval" data-years="2005-2009">2005-2009</button>',
-    '<button class="btn btn-sm btn-outline-primary year-interval" data-years="2000-2004">2000-2004</button>',
-    '<button class="btn btn-sm btn-outline-primary year-interval" data-years="1995-1999">1995-1999</button>',
-    '<button class="btn btn-sm btn-outline-primary year-interval" data-years="1990-1994">1990-1994</button>',
-    '<button class="btn btn-sm btn-outline-primary year-interval" data-years="1983-1989">1983-1989</button>',
-    '</div>',
-    '<div class="selected-years">',
-    '<small class="text-muted">Selected: <span id="year-display">All Years (1983-2024)</span></small>',
-    '</div>',
-    '</div>',
-    ":::",
-    "",
-    "### 📊 Filter Summary",
-    "",
-    "::: {.filter-summary}",
-    '<div id="filter-stats">',
-    '<div class="total-pubs">Total: <span id="total-count">321</span> publications</div>',
-    '<div class="filtered-pubs">Showing: <span id="filtered-count">All</span></div>',
-    '<div class="active-filters">Active filters: <span id="active-filter-count">0</span></div>',
-    '</div>',
-    "",
-    '<button id="reset-all-filters" class="btn btn-sm btn-danger mt-2 w-100">Reset All Filters</button>',
-    ":::",
-    ":::",  # Close g-col-12 g-col-md-3
-    "",
-    ":::",  # Close grid  
-    ":::"   # Close column-screen-inset
-  )
-  
-  # Add simple JavaScript for filtering
+  # Add simple text search JavaScript
   js_code <- '
+```{=html}
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-    console.log("Research page JavaScript loaded");
+    const searchInput = document.getElementById("publication-search");
+    const publicationEntries = document.querySelectorAll(".publication-entry");
     
-    let activeFilters = new Set();
-    const tags = document.querySelectorAll(".tag-clickable, .tag-filter");
-    const papers = document.querySelectorAll(".paper-entry");
-    
-    console.log("Found " + tags.length + " tags and " + papers.length + " papers");
-    
-    function filterPapers() {
-        console.log("Filtering papers, active filters: " + activeFilters.size);
+    function filterPublications() {
+        const searchTerm = searchInput.value.toLowerCase();
+        let visibleCount = 0;
         
-        if (activeFilters.size === 0) {
-            papers.forEach(paper => paper.style.display = "block");
-        } else {
-            papers.forEach(paper => {
-                const paperTags = paper.getAttribute("data-tags");
-                if (paperTags) {
-                    const tags = paperTags.split(",").map(tag => tag.trim());
-                    const hasMatch = tags.some(tag => activeFilters.has(tag));
-                    paper.style.display = hasMatch ? "block" : "none";
-                } else {
-                    paper.style.display = "none";
-                }
-            });
-        }
-    }
-    
-    // Add click handlers to all tags
-    tags.forEach(tag => {
-        tag.style.cursor = "pointer";
-        tag.addEventListener("click", function(e) {
-            e.preventDefault();
-            const tagText = this.textContent.trim();
-            
-            console.log("Tag clicked: " + tagText);
-            
-            if (activeFilters.has(tagText)) {
-                activeFilters.delete(tagText);
-                this.style.opacity = "1";
+        publicationEntries.forEach(entry => {
+            const text = entry.textContent.toLowerCase();
+            if (text.includes(searchTerm)) {
+                entry.style.display = "block";
+                visibleCount++;
             } else {
-                activeFilters.add(tagText);
-                this.style.opacity = "0.7";
+                entry.style.display = "none";
+            }
+        });
+        
+        // Update year headings visibility
+        const yearHeadings = document.querySelectorAll("h3");
+        yearHeadings.forEach(heading => {
+            const nextElements = [];
+            let nextElement = heading.nextElementSibling;
+            
+            // Collect all publication entries under this heading
+            while (nextElement && !nextElement.matches("h3")) {
+                if (nextElement.classList.contains("publication-entry")) {
+                    nextElements.push(nextElement);
+                }
+                nextElement = nextElement.nextElementSibling;
             }
             
-            filterPapers();
+            // Show/hide heading based on visible publications
+            const hasVisiblePubs = nextElements.some(el => el.style.display !== "none");
+            heading.style.display = hasVisiblePubs ? "block" : "none";
         });
-    });
+    }
     
-    // Initialize
-    filterPapers();
+    searchInput.addEventListener("input", filterPublications);
 });
-</script>'
+</script>
+```'
   
   content <- c(content, js_code)
   
