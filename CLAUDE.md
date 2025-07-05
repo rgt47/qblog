@@ -238,5 +238,108 @@ BLOG_POST_TEMPLATE.qmd
 
 ---
 
-*Document updated: 2025-07-04*
-*Claude Code Session: Blog template enhancement and image integration*
+## Session: 2025-07-05
+
+### Context
+Repository cleanup session focusing on archiving non-essential files to improve project organization and reduce clutter.
+
+### Tasks Completed
+
+#### 1. Repository Analysis ✅
+**Issue**: Repository contained numerous non-essential files affecting organization and storage
+**Analysis Results**:
+- Identified large binary file (Cursor-darwin-arm64.dmg - 154MB)
+- Found 47 .bak files scattered throughout project
+- Located backup .bib files with redundant content
+- Discovered LaTeX intermediate files (.aux, .log, .toc)
+- Found temporary files (.tmp) and test files
+
+#### 2. Archive Directory Setup ✅
+**Solution**: Created organized archive structure to preserve files while cleaning main repository
+- Created `_archive/` directory in project root
+- Established subdirectories for different file types:
+  - `bak_files/` - All .bak backup files
+  - `latex_files/` - LaTeX intermediate files
+  - `tmp_files/` - Temporary files
+  - `test_files/` - Test and development files
+
+#### 3. File Archival Process ✅
+**Files Moved to Archive**:
+- **Cursor-darwin-arm64.dmg** (154MB installer) → `_archive/`
+- **47 .bak files** → `_archive/bak_files/`
+- **2 backup .bib files** → `_archive/`
+- **LaTeX intermediate files** (.aux, .log, .toc) → `_archive/latex_files/`
+- **4 .tmp files** → `_archive/tmp_files/`
+- **Test files** (test.Rmd, test_copy.qmd, test_minimal.qmd, test_copy_files/) → `_archive/test_files/`
+
+### Key Insights
+
+1. **Archive vs Delete**: Preserving files in organized archive maintains project history while improving active workspace
+2. **Storage Impact**: Removed ~154MB from active workspace while preserving all data
+3. **Organization Benefits**: Cleaner file structure improves navigation and reduces cognitive overhead
+4. **Preservation Strategy**: Systematic archival allows future recovery if needed
+
+### Project Status
+
+#### Completed Features ✅
+- Repository cleanup and organization
+- Comprehensive file archival system
+- Preserved project history and backup files
+- Improved workspace cleanliness
+
+#### Archive Structure
+```
+_archive/
+├── Cursor-darwin-arm64.dmg        # Large installer file
+├── rgthomas_cv_merged_dedup_backup.bib
+├── rgthomas_cv_merged_dedup_with_keywords_backup_pre_filter.bib
+├── bak_files/                     # 47 backup files
+│   ├── index.qmd.bak (multiple)
+│   ├── ptab*.tex.bak
+│   ├── app*.bak
+│   └── various other .bak files
+├── latex_files/                   # LaTeX intermediate files
+│   ├── index.aux, index.log, index.toc
+│   └── other LaTeX artifacts
+├── tmp_files/                     # Temporary files
+│   ├── sdout.tmp, sdout2.tmp
+│   └── other .tmp files
+└── test_files/                    # Test and development files
+    ├── test.Rmd
+    ├── test_copy.qmd
+    ├── test_minimal.qmd
+    └── test_copy_files/
+```
+
+### Commands Used
+```bash
+# Create archive directory
+mkdir -p /Users/zenn/Dropbox/prj/qblog/_archive
+
+# Find and move .bak files
+find /Users/zenn/Dropbox/prj/qblog -name "*.bak" -type f -exec mv {} /Users/zenn/Dropbox/prj/qblog/_archive/bak_files/ \;
+
+# Move backup .bib files
+mv rgthomas_cv_merged_dedup_*backup*.bib _archive/
+
+# Move LaTeX intermediate files
+find /Users/zenn/Dropbox/prj/qblog -name "*.aux" -o -name "*.log" -o -name "*.toc" | grep -v _archive | xargs -I {} mv {} /Users/zenn/Dropbox/prj/qblog/_archive/latex_files/
+
+# Move .tmp files
+find /Users/zenn/Dropbox/prj/qblog -name "*.tmp" -type f | grep -v _archive | xargs -I {} mv {} /Users/zenn/Dropbox/prj/qblog/_archive/tmp_files/
+
+# Move test files
+mv test*.{Rmd,qmd} _archive/test_files/
+mv test_copy_files/ _archive/test_files/
+```
+
+### Next Steps (if needed)
+1. Consider implementing automated archival scripts for future cleanup
+2. Add archive maintenance guidelines to project documentation
+3. Evaluate if any archived files can be permanently deleted after review period
+4. Consider adding .gitignore patterns to prevent future accumulation of non-essential files
+
+---
+
+*Document updated: 2025-07-05*
+*Claude Code Session: Repository cleanup and file archival*
