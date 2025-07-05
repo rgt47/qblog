@@ -277,9 +277,7 @@ generate_research_page <- function() {
       # Links
       if (!is.na(pub$doi) && pub$doi != "") {
         doi_url <- if (str_starts(pub$doi, "http")) pub$doi else paste0("https://doi.org/", pub$doi)
-        content <- c(content, paste0("[🔗 Article](", doi_url, ") • [📄 PDF](", doi_url, ")"))
-      } else {
-        content <- c(content, "🔗 Article")
+        content <- c(content, paste0("[🔗 Article](", doi_url, "){target=\"_blank\"}"))
       }
       content <- c(content, "</div>", "")
     }
