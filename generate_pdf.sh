@@ -1,87 +1,47 @@
 #!/bin/bash
 
-# This script renders individual blog posts as both HTML and PDF
-# Usage: ./generate_pdf.sh [path/to/post.qmd] [--no-open]
-# Example: ./generate_pdf.sh posts/dockerize_simple/index.qmd
-# Example: ./generate_pdf.sh posts/dockerize_simple/index.qmd --no-open
-# If no argument is provided, it will generate a PDF for the most recently modified post
-# Use --no-open flag to skip the interactive "open PDF" prompt
+# Script to generate PDF from Quarto document
+# Usage: ./generate_pdf.sh path/to/file.qmd
 
-# Check if an argument was provided
 if [ $# -eq 0 ]; then
-  echo "No post specified. Finding the most recently modified post..."
-  POST_PATH=$(find posts -name "index.qmd" -type f -print0 | xargs -0 ls -t | head -1)
-  if [ -z "$POST_PATH" ]; then
-    echo "Error: Could not find any posts."
+    echo "Usage: $0 <path-to-qmd-file>"
+    echo "Example: $0 posts/palmer_penguins_part1/index.qmd"
     exit 1
-  fi
-  echo "Found most recent post: $POST_PATH"
-else
-  POST_PATH=$1
 fi
 
-# Check if the file exists
-if [ ! -f "$POST_PATH" ]; then
-  echo "Error: File $POST_PATH not found."
-  exit 1
+QMD_FILE="$1"
+
+if [ ! -f "$QMD_FILE" ]; then
+    echo "Error: File $QMD_FILE does not exist"
+    exit 1
 fi
 
-echo "Generating PDF for $POST_PATH..."
+echo "Generating PDF for: $QMD_FILE"
 
-# Check if the post already has PDF format defined
-if grep -q "format:.*pdf:" "$POST_PATH"; then
-  echo "This post already has PDF format settings. Rendering with existing settings..."
-  # Just render with the existing settings
-  quarto render "$POST_PATH" --to pdf
-else
-  echo "Adding PDF format settings for this render..."
-  # Create a temporary YAML file with PDF format settings
-  TMP_YAML=$(mktemp)
-  cat > $TMP_YAML << EOF
-format:
-  pdf:
-    documentclass: article
-    papersize: letter
-    colorlinks: true
-    number-sections: true
-    toc: true
-    include-in-header:
-      text: |
-        \usepackage{fancyhdr}
-        \pagestyle{fancy}
-        \fancyhead[L]{Thomas Lab}
-        \fancyhead[R]{\thepage}
-        \fancyfoot[C]{Generated on $(date '+%Y-%m-%d')}
-EOF
+# First render HTML to generate any plots/figures
+echo "Step 1: Rendering HTML to generate figures..."
+quarto render "$QMD_FILE" --to html --quiet
 
-  # Run quarto render with the additional metadata
-  quarto render "$POST_PATH" --to pdf --metadata-file $TMP_YAML
+# Then render PDF using a simpler format
+echo "Step 2: Rendering PDF..."
+quarto render "$QMD_FILE" --to pdf \
+  --pdf-engine=pdflatex \
+  --quiet \
+  --metadata documentclass=article \
+  --metadata geometry="margin=1in" \
+  --metadata fontsize=11pt
 
-  # Clean up
-  rm $TMP_YAML
-fi
-
-# Get the output pdf path
-# Quarto puts PDFs in the _site directory
-POST_REL_PATH=$(echo "$POST_PATH" | sed 's|^posts/||')
-PDF_PATH="_site/posts/${POST_REL_PATH%.qmd}.pdf"
-
-# Check if PDF was generated
-if [ -f "$PDF_PATH" ]; then
-  echo "Success! PDF generated at: $PDF_PATH"
-
-  # Display file size
-  PDF_SIZE=$(du -h "$PDF_PATH" | cut -f1)
-  echo "PDF size: $PDF_SIZE"
-
-  # If we're on macOS, offer to open the PDF (unless --no-open flag is used)
-  if [[ "$OSTYPE" == "darwin"* ]] && [[ "$*" != *"--no-open"* ]]; then
-    echo "Would you like to open the PDF? (y/n)"
-    read -r OPEN_PDF
-    if [[ "$OPEN_PDF" =~ ^[Yy]$ ]]; then
-      open "$PDF_PATH"
+if [ $? -eq 0 ]; then
+    PDF_FILE="${QMD_FILE%.qmd}.pdf"
+    echo "✅ PDF generated successfully: $PDF_FILE"
+    
+    # Copy to _site if it exists
+    SITE_DIR="_site/$(dirname "$QMD_FILE")"
+    if [ -d "$SITE_DIR" ]; then
+        cp "$PDF_FILE" "$SITE_DIR/"
+        echo "✅ PDF copied to: $SITE_DIR/$(basename "$PDF_FILE")"
     fi
-  fi
 else
-  echo "Error: PDF generation failed. Please check the console output for errors."
+    echo "❌ PDF generation failed"
+    exit 1
 fi
