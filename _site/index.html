@@ -724,44 +724,36 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 </footer>
 <!-- Fix for Quarto category encoding issue -->
 <script>
-// Debug and fix category encoding
+// Fix category encoding for Quarto listing functionality
 (function() {
   function fixAllCategoryEncoding() {
-    console.log('=== Debugging Category Encoding ===');
-    
     // Fix sidebar category data-category attributes
     const categoryEls = document.querySelectorAll('.quarto-listing-category .category[data-category]');
-    console.log('Found sidebar categories:', categoryEls.length);
     
-    categoryEls.forEach((categoryEl, index) => {
+    categoryEls.forEach((categoryEl) => {
       const category = categoryEl.getAttribute('data-category');
-      console.log(`Sidebar category ${index}:`, category);
       
       if (category && category !== '') {
-        // More robust check: if it contains only base64 characters and proper length
+        // Check if it contains only base64 characters and proper length
         const isBase64 = /^[A-Za-z0-9+/]*={0,2}$/.test(category) && category.length % 4 === 0;
         
         if (isBase64) {
           try {
             const decoded = decodeURIComponent(atob(category));
-            console.log(`  Already encoded, decoded value:`, decoded);
             // Verify it decoded to something reasonable (no control characters)
-            if (decoded.match(/^[A-Za-z0-9\s\-,]+$/)) {
-              console.log(`  Valid encoding, keeping as-is`);
-            } else {
-              console.log(`  Invalid encoding, re-encoding original text`);
+            if (!decoded.match(/^[A-Za-z0-9\s\-,]+$/)) {
+              // Invalid encoding, re-encode from original text
               const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
               categoryEl.setAttribute('data-category', encodedCategory);
             }
           } catch (e) {
-            console.log(`  Base64 decode failed, re-encoding original text`);
+            // Base64 decode failed, re-encode from original text
             const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
             categoryEl.setAttribute('data-category', encodedCategory);
           }
         } else {
           // Not base64, encode it
           const encodedCategory = btoa(encodeURIComponent(category));
-          console.log(`  Encoding "${category}" to:`, encodedCategory);
           categoryEl.setAttribute('data-category', encodedCategory);
         }
       }
@@ -769,27 +761,36 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     
     // Fix listing item data-categories attributes  
     const listingItems = document.querySelectorAll('[data-categories]');
-    console.log('Found listing items:', listingItems.length);
     
-    listingItems.forEach((item, index) => {
+    listingItems.forEach((item) => {
       const categories = item.getAttribute('data-categories');
-      console.log(`Item ${index} categories:`, categories);
       
       if (categories && categories !== '') {
         // Check if it's already base64 encoded
         try {
-          const decoded = decodeURIComponent(atob(categories));
-          console.log(`  Already encoded, decoded value:`, decoded);
+          decodeURIComponent(atob(categories));
+          // Already encoded and valid
         } catch (e) {
           // Not encoded, fix it
           const encodedCategories = btoa(encodeURIComponent(categories));
-          console.log(`  Encoding "${categories}" to:`, encodedCategories);
           item.setAttribute('data-categories', encodedCategories);
         }
       }
     });
     
-    console.log('=== Category Encoding Complete ===');
+    // Fix post-specific category tag click handlers
+    const postCategoryTags = document.querySelectorAll('.listing-category[onclick]');
+    
+    postCategoryTags.forEach((tag) => {
+      const categoryText = tag.textContent.trim();
+      
+      // Replace the onclick handler to use encoded category
+      tag.onclick = () => {
+        const encodedCategory = btoa(encodeURIComponent(categoryText));
+        window.quartoListingCategory(encodedCategory);
+        return false;
+      };
+    });
   }
   
   // Run immediately
@@ -811,18 +812,23 @@ document.addEventListener('DOMContentLoaded', function() {
     var pdfPath = currentPath.replace('.html', '.pdf');
 
     // Check if PDF exists first
+    console.log('Checking for PDF at:', pdfPath);
     fetch(pdfPath, { method: 'HEAD' })
       .then(function(response) {
+        console.log('PDF check response:', response.status, response.ok);
         if (response.ok) {
           // PDF exists, show download button
+          console.log('PDF exists, showing download button');
           showDownloadButton(pdfPath);
         } else {
           // PDF doesn't exist, show link to generate
+          console.log('PDF does not exist, showing generate button');
           showGenerateButton(currentPath);
         }
       })
-      .catch(function() {
+      .catch(function(error) {
         // Error checking PDF, show generate button
+        console.log('Error checking PDF:', error);
         showGenerateButton(currentPath);
       });
   }
@@ -912,16 +918,21 @@ function showGenerateButton(htmlPath) {
 
 function copyGenerateCommand(qmdPath) {
   var command = './generate_pdf.sh ' + qmdPath;
+  console.log('Attempting to copy command:', command);
   
   // Try to copy to clipboard
   if (navigator.clipboard && window.isSecureContext) {
+    console.log('Using navigator.clipboard');
     navigator.clipboard.writeText(command).then(function() {
+      console.log('Command copied successfully');
       showCopyFeedback('Command copied to clipboard!');
-    }, function() {
+    }, function(error) {
+      console.log('Clipboard copy failed:', error);
       showGenerateInstructions();
     });
   } else {
     // Fallback: show instructions
+    console.log('Clipboard not available, showing instructions');
     showGenerateInstructions();
   }
 }

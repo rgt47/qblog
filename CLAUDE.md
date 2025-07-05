@@ -346,17 +346,29 @@ mv test_copy_files/ _archive/test_files/
 - Found that Quarto only provides clickable filtering through sidebar categories, not inline post tags
 - Confirmed that custom JavaScript is the standard approach for this functionality
 
-**Root Cause**: JavaScript conditional check `if (window.categoriesLoaded)` was preventing execution
-- Functions `activateCategory()` and `setCategoryHash()` exist in Quarto's listing library
-- Conditional was failing because script executed before `categoriesLoaded` was set to true
-- Post tags already had proper `onclick` handlers but weren't working due to this blocking condition
+**Root Cause**: Base64 encoding mismatch in Quarto's listing system
+- Quarto's filtering functions expect base64-encoded category data
+- Sidebar categories had plain text `data-category` attributes (e.g., "Data Science")
+- Listing items had plain text `data-categories` attributes (e.g., "R Programming,Data Science,...")
+- Post-specific tags passed plain text to `quartoListingCategory()` function
+- This caused "String contains an invalid character" JavaScript errors
 
-**Solution**: Removed the conditional check to call filtering functions directly
-- Modified `blog/index.qmd` to call `activateCategory()` and `setCategoryHash()` without conditional
-- Category tags in individual posts now filter listings just like sidebar categories
+**Solution**: Comprehensive category encoding fix in `_includes/after-body.html`
+- **Sidebar categories**: Detect and encode plain text `data-category` attributes to base64
+- **Listing items**: Detect and encode plain text `data-categories` attributes to base64  
+- **Post tags**: Replace `onclick` handlers to encode category names before filtering
+- **Robust detection**: Prevent double-encoding with proper base64 validation
+- **Error handling**: Re-encode from element text content if corruption detected
+
+**Result**: Both sidebar categories AND post-specific category tags now work for filtering
+- Sidebar categories filter posts when clicked ✅
+- Individual post category tags filter posts when clicked ✅
+- Search filter widget continues to work ✅
+- No JavaScript console errors ✅
 
 **Files Modified**:
-- `/blog/index.qmd` - Fixed JavaScript conditional blocking category filtering
+- `/_includes/after-body.html` - Comprehensive category encoding fix
+- `/blog/index.qmd` - Removed redundant JavaScript (handled globally now)
 
 ---
 
