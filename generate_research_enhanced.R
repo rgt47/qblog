@@ -87,6 +87,7 @@ generate_enhanced_research_page <- function() {
     "title: \"Research\"",
     "subtitle: \"Publications, projects, and academic contributions\"", 
     "page-layout: full",
+    "number-sections: false",
     "---",
     "",
     "## Publications & Research",
@@ -112,6 +113,7 @@ generate_enhanced_research_page <- function() {
     "",
     "Use the search box below to filter publications by title, author, journal, topic, or year.",
     "",
+    '```{=html}',
     '<div class="row mb-4">',
     '  <div class="col-md-8">',
     '    <div class="input-group">',
@@ -135,8 +137,8 @@ generate_enhanced_research_page <- function() {
     '    </select>',
     '  </div>',
     '</div>',
-    "",
     '<div id="publication-results">',
+    '```',
     ""
   )
   
@@ -165,7 +167,12 @@ generate_enhanced_research_page <- function() {
           pub <- year_pubs[i, ]
           
           # Create enhanced publication entry
-          content <- c(content, paste0('<div class="publication-card" data-category="', category, '" data-year="', year, '">'))
+          content <- c(content, 
+            '```{=html}',
+            paste0('<div class="publication-card" data-category="', category, '" data-year="', year, '">'),
+            '```',
+            ""
+          )
           
           # Title as header
           content <- c(content, paste0("#### ", pub$title))
@@ -206,7 +213,13 @@ generate_enhanced_research_page <- function() {
             content <- c(content, paste("**Links**:", paste(links, collapse = " • ")), "")
           }
           
-          content <- c(content, "</div>", "")
+          content <- c(content, 
+            "",
+            '```{=html}',
+            "</div>",
+            '```',
+            ""
+          )
         }
       }
     }
@@ -215,7 +228,11 @@ generate_enhanced_research_page <- function() {
   }
   
   # Close the results div
-  content <- c(content, "</div>")
+  content <- c(content, 
+    '```{=html}',
+    "</div>",
+    '```'
+  )
   
   # Add enhanced JavaScript for search and filtering
   js_code <- '
