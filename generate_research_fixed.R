@@ -212,43 +212,39 @@ generate_fixed_research_page <- function() {
       for (i in 1:nrow(year_pubs)) {
         pub <- year_pubs[i, ]
         
-        # Start publication card
-        content <- c(content, 
-          '```{=html}',
-          paste0('<div class="publication-card" data-category="', pub$category, '" data-year="', year, '">'),
-          '```'
-        )
+        # Build complete publication card content
+        card_content <- c()
         
         # Title as header
-        content <- c(content, paste0("#### ", pub$title))
+        card_content <- c(card_content, paste0("<h4>", pub$title, "</h4>"))
         
         # Authors and journal
         citation_parts <- c()
         if (pub$author_formatted != "") citation_parts <- c(citation_parts, pub$author_formatted)
         if (!is.na(pub$journal) && pub$journal != "") {
-          citation_parts <- c(citation_parts, paste0("*", pub$journal, "*"))
+          citation_parts <- c(citation_parts, paste0("<em>", pub$journal, "</em>"))
         }
         citation_parts <- c(citation_parts, paste0("(", pub$year, ")"))
         
-        content <- c(content, paste(citation_parts, collapse = " | "), "")
+        card_content <- c(card_content, paste("<p>", paste(citation_parts, collapse = " | "), "</p>"))
         
         # Summary
-        content <- c(content, paste0("**Summary**: ", pub$summary), "")
+        card_content <- c(card_content, paste0("<p><strong>Summary</strong>: ", pub$summary, "</p>"))
         
         # Topics/Keywords
         all_topics <- c(unlist(pub$topics_list))
         if (length(all_topics) > 0) {
           topic_badges <- sapply(all_topics, function(topic) {
-            paste0("`", topic, "`")
+            paste0("<code>", topic, "</code>")
           })
-          content <- c(content, paste("**Topics**:", paste(topic_badges, collapse = " ")), "")
+          card_content <- c(card_content, paste0("<p><strong>Topics</strong>: ", paste(topic_badges, collapse = " "), "</p>"))
         }
         
         # Links
         links <- c()
         if (!is.na(pub$doi) && pub$doi != "") {
           doi_url <- if (str_starts(pub$doi, "http")) pub$doi else paste0("https://doi.org/", pub$doi)
-          links <- c(links, paste0("[📄 Article](", doi_url, "){target=\"_blank\"}"))
+          links <- c(links, paste0('<a href="', doi_url, '" target="_blank">📄 Article</a>'))
         }
         
         # Check for pre-print availability with improved matching
@@ -256,18 +252,19 @@ generate_fixed_research_page <- function() {
         if (!is.null(preprint_info)) {
           preprint_matches <- preprint_matches + 1
           source_label <- ifelse(str_detect(preprint_info$source, 'publisher'), 'Open Access PDF', 'Pre-print PDF')
-          links <- c(links, paste0('[📋 ', source_label, '](', preprint_info$url, '){target="_blank"}'))
+          links <- c(links, paste0('<a href="', preprint_info$url, '" target="_blank">📋 ', source_label, '</a>'))
           cat("  ✅ Matched preprint for:", str_trunc(pub$title, 50), "\n")
         }
         
         if (length(links) > 0) {
-          content <- c(content, paste("**Links**:", paste(links, collapse = " • ")), "")
+          card_content <- c(card_content, paste0("<p><strong>Links</strong>: ", paste(links, collapse = " • "), "</p>"))
         }
         
-        # Close publication card
+        # Create complete publication card as single HTML block
         content <- c(content, 
-          "",
           '```{=html}',
+          paste0('<div class="publication-card" data-category="', pub$category, '" data-year="', year, '">'),
+          card_content,
           "</div>",
           '```',
           ""
