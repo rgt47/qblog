@@ -239,16 +239,25 @@ generate_enhanced_research_page <- function() {
 ```{=html}
 <style>
 .publication-card {
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
+  border-left: 4px solid #3498db;
+  border-radius: 0 8px 8px 0;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
   background: #f8f9fa;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+}
+
+.publication-card:hover {
+  border-left-color: #2980b9;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  transform: translateX(2px);
 }
 
 .publication-card h4 {
   color: #2c3e50;
   margin-bottom: 0.8rem;
+  margin-top: 0;
 }
 
 .publication-card code {
@@ -259,6 +268,16 @@ generate_enhanced_research_page <- function() {
 
 #category-filter, #publication-search {
   border-radius: 6px;
+}
+
+/* Remove all section numbering */
+.header-section-number {
+  display: none !important;
+}
+
+/* Ensure clean category headers without numbers */
+h2::before, h3::before, h4::before {
+  content: none !important;
 }
 </style>
 
