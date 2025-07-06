@@ -409,5 +409,145 @@ mv test_copy_files/ _archive/test_files/
 
 ---
 
-*Document updated: 2025-07-05*
-*Claude Code Session: Repository cleanup, file archival, blog category filtering fix, and research page tag filtering fix*
+## Session: 2025-07-06
+
+### Context
+Continued from previous session. Initial focus was on fixing visual design issues with the research page, then expanded to address blog navigation, white papers functionality, and implementing a systematic content classification system.
+
+### Tasks Completed
+
+#### 1. Research Page Visual Design Fixes ✅
+**Issue**: Research page had section numbering (1.1, 1.2, etc.) and inconsistent publication highlighting
+**Solutions Applied**:
+- **Removed Category Grouping**: Changed from category-based organization to chronological year-based layout
+- **Fixed Publication Card Structure**: Converted broken markdown/HTML blocks to unified HTML blocks for consistent rendering
+- **Simplified CSS**: Implemented reliable highlighting with direct `.publication-card` selector
+- **Enhanced Structure**: Each publication as complete HTML block with proper `<h4>`, `<p>`, `<em>`, `<code>`, `<a>` tags
+
+**Files Modified**:
+- `/generate_research_fixed.R` - Major restructuring for unified HTML blocks
+- `/research/index.qmd` - Generated with clean chronological layout and consistent highlighting
+
+#### 2. Home Page Navigation Fix ✅
+**Issue**: Blog link on home page pointed to `/posts/` instead of main blog tab `/blog/`
+**Solution**: Updated home page navigation link to correct destination
+
+**Files Modified**:
+- `/index.qmd` - Changed blog link from `/posts/` to `/blog/`
+
+#### 3. White Papers Page JavaScript Enhancement ✅
+**Issue**: White papers page lacked interactive filtering functionality
+**Solution**: Implemented comprehensive filtering system similar to blog page
+- **Search Box**: Filter by title, topic, or keyword
+- **Category Dropdown**: Filter by research area (Research Methodology, Statistical Computing, Data Science, Technical Infrastructure)
+- **Structured Data**: Added `.paper-section` and `.paper-item` classes with `data-category` attributes
+- **Professional JavaScript**: Real-time filtering with section-level hiding/showing
+
+**Files Modified**:
+- `/white-papers/index.qmd` - Added interactive filtering with Bootstrap components and JavaScript
+
+#### 4. Metadata-Based Content Classification System ✅
+**Issue**: Manual content curation between blogs and white papers was inconsistent and unmaintainable
+**Solution**: Implemented comprehensive metadata-based classification system (Option A)
+
+**YAML Front Matter Classification**:
+```yaml
+---
+title: "Post Title"
+date: "2025-01-01"
+document-type: "blog"        # or "white-paper"
+categories: [Category1, Category2]
+description: "Brief description"
+---
+```
+
+**Automatic Page Filtering**: Both blog and white papers pages now use Quarto listing with metadata filters:
+```yaml
+listing:
+  contents: "../posts/*/index.qmd"
+  include:
+    document-type: "blog"    # or "white-paper"
+```
+
+**Batch Metadata Application**:
+- **Blog Posts**: Palmer Penguins series (5), Git setup, Vim configs, ChatGPT tutorials, Neovim setup, etc.
+- **White Papers**: Research workflows, Docker guides, EDC systems, server configurations, backup systems
+
+**Files Modified**:
+- `/posts/palmer_penguins_part*/index.qmd` (5 files) - Added `document-type: "blog"`
+- `/posts/research_management/index.qmd` - Added `document-type: "white-paper"` with comprehensive metadata
+- `/posts/rct_validation_lang/index.qmd` - Added white paper metadata
+- `/posts/develop_r_package/index.qmd` - Added white paper metadata  
+- `/posts/minimalist_edc_app/index.qmd` - Added white paper metadata
+- `/posts/setupgit/index.qmd` - Added `document-type: "blog"`
+- Multiple additional posts via batch script
+- `/blog/index.qmd` - Updated to use metadata filtering instead of hard-coded Palmer Penguins filter
+- `/white-papers/index.qmd` - Replaced manual curation with automatic metadata-based listing
+
+**Supporting Files Created**:
+- `/add_metadata.sh` - Batch script for adding metadata to existing posts
+- `/METADATA_SYSTEM.md` - Documentation for the new classification system
+
+### Key Insights
+
+1. **HTML Block Structure**: Mixing markdown and HTML in separate blocks causes inconsistent rendering in Quarto. Single unified HTML blocks provide reliable results.
+
+2. **Metadata-Driven Architecture**: Using YAML front matter for content classification creates a maintainable, scalable system that eliminates manual curation overhead.
+
+3. **Systematic Content Organization**: Clear criteria for blog vs white paper classification (tutorials/explorations vs frameworks/specifications) provides sustainable content management.
+
+4. **Quarto Listing Power**: Quarto's built-in listing features with metadata filtering provide professional search and categorization without custom JavaScript.
+
+### Project Status
+
+#### Completed Features ✅
+- Professional research page with 321 publications, 263 DOI links, 54 pre-print PDFs
+- Chronological publication organization with consistent left-border highlighting
+- Metadata-based content classification system
+- Interactive white papers page with search and filtering
+- Automatic blog and white paper organization via Quarto listings
+- Fixed navigation and consistent site-wide functionality
+
+#### Content Classification System
+```
+Posts Classification:
+├── Blog Posts (document-type: "blog")
+│   ├── Palmer Penguins Series (5 parts)
+│   ├── Setup Guides (Git, Vim, Neovim, etc.)
+│   ├── Tutorials (ChatGPT, Shiny, R techniques)
+│   └── Exploratory Content
+├── White Papers (document-type: "white-paper")
+│   ├── Research Methodology Frameworks
+│   ├── Technical Architecture Guides
+│   ├── Infrastructure Implementation Specs
+│   └── Comprehensive Development Workflows
+└── Unclassified Posts (need metadata addition)
+```
+
+#### Website Architecture
+```
+qblog/
+├── blog/ (metadata: document-type="blog")
+├── white-papers/ (metadata: document-type="white-paper")  
+├── research/ (321 publications, chronological)
+├── posts/ (source content with classification metadata)
+└── automated systems for content organization
+```
+
+### Technical Stack Updates
+- **Content Management**: YAML metadata-driven classification
+- **Search & Filtering**: Quarto native listings with category filtering
+- **Visual Design**: Consistent publication cards with unified HTML blocks
+- **Navigation**: Fixed site-wide linking and professional layouts
+- **Automation**: Batch scripts for metadata management
+
+### Next Steps (if needed)
+1. Add metadata to remaining unclassified posts in `/posts/` directory
+2. Consider expanding document types (e.g., `tutorial`, `reference`)
+3. Implement automated metadata validation
+4. Add content analytics tracking for classification effectiveness
+
+---
+
+*Document updated: 2025-07-06*
+*Claude Code Session: Research page fixes, metadata-based content classification system, and interactive white papers functionality*
