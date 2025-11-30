@@ -983,5 +983,155 @@ Visual Enhancement:
 
 ---
 
-*Document updated: 2025-08-25*
-*Claude Code Session: Palmer Penguins series modernization, visual enhancement, and 2025 blog standards implementation*
+## Session: 2025-11-30
+
+### Context
+Video production session for Palmer Penguins Part 1, focusing on creating a 3-minute educational YouTube video with polish effects, CLI workflow options, and AI avatar integration.
+
+### Tasks Completed
+
+#### 1. Video Production Guide Polish Enhancements ✅
+**Added professional polish techniques to both video guides:**
+- **Dissolve transitions**: 0.3-0.5 second transitions between slides
+- **Ken Burns effect**: Subtle 5% zoom on analysis images
+- **Lower third overlay**: Name/affiliation on title slide (5-8 sec)
+- **Fade in/out**: 1-second video fades, 0.5-second audio fades
+- **Background music**: Intro/outro only (cognitive load research supports no music during statistical explanations)
+
+**Files Modified:**
+- `Palmer_Penguins_Video_3min_Guide.md` - Added Section 5: Adding Polish Effects
+- `Palmer_Penguins_Video_Production_Complete_Guide.md` - Added Section 6.5: Polish Effects
+
+#### 2. AI Avatar Hybrid Approach ✅
+**Added Method C: AI Avatar for Intro/Outro**
+- Avatar speaks intro (Slide 1) and outro (Slide 8)
+- Pure voiceover for statistical content (Slides 2-7)
+- Background music only during avatar segments
+- Platform recommendations: HeyGen, Synthesia, Vidnoz, D-ID
+
+**Timeline Structure:**
+```
++--------+------------------------------------------+--------+
+| INTRO  |         SLIDES 2-7 (VOICEOVER)          | OUTRO  |
+| Avatar |    No music - pure narration focus       | Avatar |
+| +Music |                                          | +Music |
++--------+------------------------------------------+--------+
+```
+
+#### 3. CLI-Based Workflow ✅
+**Added comprehensive CLI alternative to GUI tools:**
+
+**Tools:**
+- `sox`: Audio normalization, noise reduction, fades
+- `ffmpeg`: Video assembly, transitions, Ken Burns, lower thirds, music mixing
+- `whisper`: Caption generation (already CLI)
+- `convert`: Thumbnail creation (already CLI)
+
+**Key Commands Added:**
+```bash
+# Audio processing with sox
+sox slide1_raw.wav slide1_clean.wav noisered noise.prof 0.21
+sox slide1_clean.wav slide1_final.wav gain -n -1 fade t 0.3 0 0.3
+
+# Video assembly with ffmpeg
+ffmpeg -f concat -i slides.txt -vf "scale=1920:1080,format=yuv420p" \
+  -c:v libx264 -r 30 slides_only.mp4
+
+# Add fades
+ffmpeg -i video.mp4 -vf "fade=t=in:st=0:d=1,fade=t=out:st=169:d=1" output.mp4
+
+# Ken Burns effect
+ffmpeg -loop 1 -i slide.png -t 20 \
+  -vf "zoompan=z='min(zoom+0.0002,1.05)':d=600:s=1920x1080:fps=30" output.mp4
+
+# Lower third
+ffmpeg -i video.mp4 -vf "drawtext=text='Name':fontsize=28:fontcolor=white:x=80:y=h-80:enable='lt(t,8)':box=1:boxcolor=black@0.6" output.mp4
+```
+
+**Complete build script**: `build_video.sh` added to both guides
+
+#### 4. CLI vs GUI Decision Guide ✅
+**When to use CLI:**
+- Batch processing multiple videos
+- Reproducible, scripted workflow
+- CI/CD pipeline integration
+- Consistent settings across series
+
+**When to use GUI:**
+- Fine-tuning individual clip timing
+- Complex multi-track editing
+- Visual preview needed
+- One-off adjustments
+
+**CLI Compromises documented:**
+- No real-time preview
+- Must calculate timing manually
+- Limited transition options
+- Same Ken Burns effect per image (hard to customize focal point)
+
+#### 5. PDF Generation ✅
+**Rendered both guides to PDF:**
+- `Palmer_Penguins_Video_3min_Guide.pdf` (97 KB)
+- `Palmer_Penguins_Video_Production_Complete_Guide.pdf` (129 KB)
+
+Command: `pandoc file.md -o file.pdf --pdf-engine=xelatex -V geometry:margin=1in`
+
+#### 6. D-ID Avatar Exploration ✅
+**User exploring D-ID for AI avatar with custom audio:**
+- Can upload own voice recording instead of text-to-speech
+- Can upload custom anime avatar image via "Create with a photo"
+- Requirements: front-facing image, clear visible mouth, neutral expression
+
+### Key Insights
+
+1. **Cognitive Load Research**: Background music during statistical explanations hurts learning retention. StatQuest and 3Blue1Brown use no music during content. Intro/outro music only is the recommended approach.
+
+2. **CLI Workflow Viability**: Most video production tasks can be done via ffmpeg/sox, enabling reproducible builds and batch processing. Main trade-off is lack of real-time preview.
+
+3. **AI Avatar Flexibility**: D-ID allows uploading custom images (including anime) and custom audio recordings, enabling personalized avatars that speak in user's own voice.
+
+4. **Hybrid Production**: Recommended workflow combines GUI for recording (Audacity - better monitoring) with CLI for processing (sox/ffmpeg - consistent quality, reproducible).
+
+### Project Status
+
+#### Video Production Guides
+```
+Palmer Penguins Video Guides:
+├── Palmer_Penguins_Video_3min_Guide.md (updated)
+│   ├── Method A: Audio-only narration
+│   ├── Method B: PiP with OBS
+│   ├── Method C: AI Avatar hybrid (NEW)
+│   ├── Section 5: Polish Effects (NEW)
+│   └── CLI-Based Workflow (NEW)
+│
+├── Palmer_Penguins_Video_Production_Complete_Guide.md (updated)
+│   ├── Section 5.5: AI Avatar Option (NEW)
+│   ├── Section 6.5: Polish Effects (NEW)
+│   └── Section 14: CLI-Based Workflow (NEW)
+│
+└── PDF exports generated
+```
+
+#### Production Time Estimates
+| Method | Time |
+|--------|------|
+| Audio-only | 4-5 hours |
+| Webcam PiP | 5-6 hours |
+| AI Avatar hybrid | 5-6 hours |
+
+### Technical Stack Updates
+- **Audio Processing**: sox for normalization, noise reduction, fades
+- **Video Assembly**: ffmpeg for concatenation, effects, mixing
+- **AI Avatars**: D-ID with custom audio upload and anime image support
+- **PDF Generation**: pandoc with XeLaTeX engine
+
+### Files Modified
+- `/posts/palmer_penguins_part1/Palmer_Penguins_Video_3min_Guide.md`
+- `/posts/palmer_penguins_part1/Palmer_Penguins_Video_Production_Complete_Guide.md`
+- `/posts/palmer_penguins_part1/Palmer_Penguins_Video_3min_Guide.pdf` (generated)
+- `/posts/palmer_penguins_part1/Palmer_Penguins_Video_Production_Complete_Guide.pdf` (generated)
+
+---
+
+*Document updated: 2025-11-30*
+*Claude Code Session: Video production polish, CLI workflow, AI avatar integration*
