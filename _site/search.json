@@ -2602,5 +2602,320 @@
     "title": "Setting Up a Minimal Quarto Blog: A Learning Journey",
     "section": "8.2 Opportunities for Improvement",
     "text": "8.2 Opportunities for Improvement\nIf I had more time, here’s what I’d add:\n\nCustom styling - Override theme CSS for lab branding\nCategories and tags - Better post organization and discovery\nSearch functionality - Built-in search for larger blogs\nRSS feed - Auto-generated feed for subscribers\nAbout page - Team bios and lab information\nSocial sharing - Make posts easy to share on Twitter/LinkedIn"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html",
+    "href": "posts/ls_since_utility/index.html",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "",
+    "text": "Finding files within specific time windows is a common task in research computing. Whether you’re auditing a research project, discovering recent changes, or managing data across timeframes, traditional Unix tools like find and ls require complex syntax and date format conversions.\nls_since.sh solves this problem with an intuitive, feature-rich utility that combines the power of Unix tools with thoughtful interface design. This post documents the utility’s architecture, features, and practical use cases—demonstrating why well-designed command-line tools can significantly improve productivity.\n\n\n\nProblem Space: Why date-based file filtering matters\nCore Features: The complete feature set explained\nTechnical Architecture: How the utility works internally\nPractical Examples: Real-world use cases and code recipes\nIntegration Patterns: Combining with other tools like fzf\nPerformance: Scalability and optimization considerations"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#what-this-post-covers",
+    "href": "posts/ls_since_utility/index.html#what-this-post-covers",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "",
+    "text": "Problem Space: Why date-based file filtering matters\nCore Features: The complete feature set explained\nTechnical Architecture: How the utility works internally\nPractical Examples: Real-world use cases and code recipes\nIntegration Patterns: Combining with other tools like fzf\nPerformance: Scalability and optimization considerations"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#why-date-based-file-filtering-matters",
+    "href": "posts/ls_since_utility/index.html#why-date-based-file-filtering-matters",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "2.1 Why Date-Based File Filtering Matters",
+    "text": "2.1 Why Date-Based File Filtering Matters\nResearch workflows generate thousands of files. Organizing and discovering them by creation or modification date is essential for:\n\nResearch Project Auditing\n\nFinding all files generated during a specific analysis phase\n\nVersion Control Workflows\n\nLocating uncommitted changes within a date range\n\nData Management\n\nIdentifying stale or recent files for archival or backup\n\nCollaboration Tracking\n\nDiscovering contributions from team members during specific periods\n\nLog Analysis\n\nFinding application-generated artifacts within time windows"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#limitations-of-standard-tools",
+    "href": "posts/ls_since_utility/index.html#limitations-of-standard-tools",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "2.2 Limitations of Standard Tools",
+    "text": "2.2 Limitations of Standard Tools\nStandard Unix utilities have significant limitations for this task:\n\n\n\n\n\n\n\n\nTool\nStrength\nLimitation\n\n\n\n\nfind -newermt\nPowerful filtering\nComplex date format requirements\n\n\nls -lt\nSimple output\nSorts all files, doesn’t filter by date range\n\n\nstat\nDetailed information\nRequires per-file examination\n\n\nDate comparisons\nFlexible\nError-prone and platform-specific"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#the-three-stage-filtering-pipeline",
+    "href": "posts/ls_since_utility/index.html#the-three-stage-filtering-pipeline",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "3.1 The Three-Stage Filtering Pipeline",
+    "text": "3.1 The Three-Stage Filtering Pipeline\nls_since.sh implements a streamlined filtering architecture:\nFind Phase → Timestamp Comparison → Output Formatting\n\n3.1.1 Stage 1: Find Phase\n\nRecursively discovers files in directory hierarchy\nFilters by file extension (configurable or all files)\nExcludes .git directories automatically (saves 30-40% processing time)\nReturns canonical file paths for processing\n\n\n\n3.1.2 Stage 2: Timestamp Comparison\nThe utility supports three orthogonal timestamp sources:\n\nbirth (default): File creation/copy time\nmtime: Last modification time\natime: Last access time\n\nDates are converted to Unix epoch timestamps for efficient integer comparisons:\n# Input: 01nov2025 → Internal: YYYY-MM-DD → Unix timestamp\nTARGET_TIMESTAMP=$(date -j -f \"%Y-%m-%d\" \"$TARGET_DATE\" \"+%s\")\n\n\n3.1.3 Stage 3: Output Formatting\nFour output modes for different use cases:\n\nNormal: TIMESTAMP - filepath for human readability\nCount: Total file count for statistics\nPaths-only: Raw file paths for piping\nfzf: Interactive selection interface"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#date-input-format",
+    "href": "posts/ls_since_utility/index.html#date-input-format",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "3.2 Date Input Format",
+    "text": "3.2 Date Input Format\nThe utility standardizes on DDmmmYYYY format with lowercase months:\n01nov2025    # November 1, 2025\n15dec2024    # December 15, 2024\n28feb2025    # February 28, 2025\nThis approach: - Eliminates ambiguity (01/02/2025 is ambiguous; 01feb2025 is not) - Works consistently across locales - Avoids numeric month errors"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#extension-filtering",
+    "href": "posts/ls_since_utility/index.html#extension-filtering",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "3.3 Extension Filtering",
+    "text": "3.3 Extension Filtering\nDefault file types optimized for research computing:\nEXTENSIONS=(\"md\" \"Rmd\" \"qmd\" \"sh\" \"pdf\" \"R\")\nSupports three filtering modes:\n\nDefault extensions: Works without flags\nCustom extensions: -t sh,py,txt or -t json,yaml\nAll files: -t all for any file type"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#basic-syntax",
+    "href": "posts/ls_since_utility/index.html#basic-syntax",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "4.1 Basic Syntax",
+    "text": "4.1 Basic Syntax\nls_since.sh [OPTIONS] [directory] [date]"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#essential-options",
+    "href": "posts/ls_since_utility/index.html#essential-options",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "4.2 Essential Options",
+    "text": "4.2 Essential Options\n# Filtering\n-t, --type STR           File extensions (comma-separated or 'all')\n-s, --start DATE         Start date in DDmmmYYYY format\n-e, --end DATE           End date (optional, creates date range)\n-T, --timestamp TYPE     Type: birth, mtime, atime\n\n# Output\n-c, --count              Count files instead of listing\n-p, --paths-only         Output paths only (no headers)\n--fzf                    Pipe to fzf for interactive selection\n\n# Utilities\n-C, --calendar           Show ASCII calendars as reference\n--no-color               Suppress green highlighting\n-h, --help               Display help and examples"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#positional-arguments",
+    "href": "posts/ls_since_utility/index.html#positional-arguments",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "4.3 Positional Arguments",
+    "text": "4.3 Positional Arguments\n\nNo arguments: Interactive mode (prompts for everything)\nOne argument: Treated as date\nTwo arguments: Directory and date"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#example-1-interactive-mode-with-defaults",
+    "href": "posts/ls_since_utility/index.html#example-1-interactive-mode-with-defaults",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "5.1 Example 1: Interactive Mode with Defaults",
+    "text": "5.1 Example 1: Interactive Mode with Defaults\n# Start interactive mode with 8-day window\nls_since.sh\n\n# Prompts for:\n# - Start date (default: 8 days ago)\n# - End date (default: today)\n# - File extensions (default: md,Rmd,qmd,sh,pdf,R)\nPerfect for exploring recent changes without command syntax."
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#example-2-research-project-auditing",
+    "href": "posts/ls_since_utility/index.html#example-2-research-project-auditing",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "5.2 Example 2: Research Project Auditing",
+    "text": "5.2 Example 2: Research Project Auditing\n# Find all R analysis files from November 2025\nls_since.sh -s 01nov2025 -e 30nov2025 -t R,Rmd ~/research/analysis\n\n# Output: R files with timestamps\n# 2025-11-15 10:23:45 - ~/research/analysis/main_analysis.R\n# 2025-11-12 14:12:33 - ~/research/analysis/utils.R"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#example-3-track-recent-modifications",
+    "href": "posts/ls_since_utility/index.html#example-3-track-recent-modifications",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "5.3 Example 3: Track Recent Modifications",
+    "text": "5.3 Example 3: Track Recent Modifications\n# Find markdown docs modified in the last 2 weeks\nls_since.sh -T mtime -s 18nov2025 -t md ~/docs\n\n# Captures the last editing session for each file"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#example-4-interactive-file-selection",
+    "href": "posts/ls_since_utility/index.html#example-4-interactive-file-selection",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "5.4 Example 4: Interactive File Selection",
+    "text": "5.4 Example 4: Interactive File Selection\n# Browse and select shell scripts using fzf\nls_since.sh --fzf -t sh 01jan2025\n\n# Opens fzf interface for interactive selection\n# Selected file can be piped to other commands"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#example-5-pipeline-integration",
+    "href": "posts/ls_since_utility/index.html#example-5-pipeline-integration",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "5.5 Example 5: Pipeline Integration",
+    "text": "5.5 Example 5: Pipeline Integration\n# Edit recently modified scripts in vim\nls_since.sh -p -T mtime -s 01nov2025 -t sh | xargs vim\n\n# Opens all recently modified shell scripts in vim editor"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#example-6-file-count-statistics",
+    "href": "posts/ls_since_utility/index.html#example-6-file-count-statistics",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "5.6 Example 6: File Count Statistics",
+    "text": "5.6 Example 6: File Count Statistics\n# Count all files generated in December 2024\nls_since.sh -c -s 01dec2024 -e 31dec2024 -t all\n\n# Output:\n# Total files found: 347"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#example-7-access-time-analysis",
+    "href": "posts/ls_since_utility/index.html#example-7-access-time-analysis",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "5.7 Example 7: Access Time Analysis",
+    "text": "5.7 Example 7: Access Time Analysis\n# Find frequently accessed log files\nls_since.sh -T atime -s 15nov2025 ~/logs\n\n# Shows files accessed in the last 17 days"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#flow",
+    "href": "posts/ls_since_utility/index.html#flow",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "6.1 Flow",
+    "text": "6.1 Flow\n\nCalculate defaults: 8 days ago to today\nDisplay calendar reference (if -C flag used)\nPrompt for start date: Press Enter for default or type date\nPrompt for end date: Optional, press Enter for today\nSelect extensions: Choose defaults or customize\nDisplay selected dates: Confirm before processing\nExecute search: Begin file discovery"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#visual-calendar-reference",
+    "href": "posts/ls_since_utility/index.html#visual-calendar-reference",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "6.2 Visual Calendar Reference",
+    "text": "6.2 Visual Calendar Reference\nREFERENCE CALENDARS:\n\nPrevious Month:\n    November 2025\nSu Mo Tu We Th Fr Sa\n                   1\n 2  3  4  5  6  7  8\n 9 10 11 12 13 14 15\n16 17 18 19 20 21 22\n23 24 25 26 27 28 29\n30\n\nCurrent Month:\n    December 2025\nSu Mo Tu We Th Fr Sa\n    1  2  3  4  5  6\n 7  8  9 10 11 12 13\n14 15 16 17 18 19 20\n21 22 23 24 25 26 27\n28 29 30 31\nSelected dates highlighted in green for visual confirmation."
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#platform-compatibility",
+    "href": "posts/ls_since_utility/index.html#platform-compatibility",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "7.1 Platform Compatibility",
+    "text": "7.1 Platform Compatibility\nThe utility seamlessly handles platform differences:\nmacOS-specific stat syntax:\nstat -f %B \"$file\"  # Birth time\nstat -f %m \"$file\"  # Modification time\nstat -f %a \"$file\"  # Access time\nLinux-specific stat syntax:\nstat -c %W \"$file\"  # Birth time (with fallback to mtime)\nstat -c %Y \"$file\"  # Modification time\nstat -c %X \"$file\"  # Access time\nAutomatic detection via [[ \"$OSTYPE\" == \"darwin\"* ]]"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#fzf-integration-architecture",
+    "href": "posts/ls_since_utility/index.html#fzf-integration-architecture",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "7.2 fzf Integration Architecture",
+    "text": "7.2 fzf Integration Architecture\nWhen --fzf flag is used, the utility implements silent output collection:\n\nCreate temporary file at startup\nRedirect file paths to temp file (not stdout)\nSuppress headers/footers in fzf mode\nPipe temp file to fzf at completion\nClean up temporary file after selection\n\nThis ensures: - No duplicate output (files not listed then piped) - Clean terminal for fzf UI - Proper file path transmission to fzf"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#temporary-file-management",
+    "href": "posts/ls_since_utility/index.html#temporary-file-management",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "7.3 Temporary File Management",
+    "text": "7.3 Temporary File Management\nThe utility uses secure temporary files for: - File path collection (fzf mode) - File count tracking (prevents subshell variable loss) - Extension filtering\nAll temporary files are cleaned up with rm -f at completion."
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#error-handling",
+    "href": "posts/ls_since_utility/index.html#error-handling",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "7.4 Error Handling",
+    "text": "7.4 Error Handling\nComprehensive validation for: - Missing or invalid directories - Invalid date formats with descriptive messages - Missing dependencies (fzf validation on --fzf) - Invalid timestamp types - Subshell context preservation"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#benchmark-results",
+    "href": "posts/ls_since_utility/index.html#benchmark-results",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "8.1 Benchmark Results",
+    "text": "8.1 Benchmark Results\nOn typical research project directories (10,000 files):\n\n\n\nScenario\nTime\nNotes\n\n\n\n\nSmall range (1-day)\n~200ms\nMinimal filtering\n\n\nMedium range (30-day)\n~200ms\nStandard use case\n\n\nLarge range (1-year)\n~250ms\nFull year search\n\n\nStartup overhead\n~10ms\nNegligible\n\n\n\nResults consistent across macOS and Linux with SSD storage."
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#time-complexity",
+    "href": "posts/ls_since_utility/index.html#time-complexity",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "8.2 Time Complexity",
+    "text": "8.2 Time Complexity\n\nOverall: O(n) where n = number of files in tree\nPer-file: O(1) timestamp comparison\nSingle pass through directory hierarchy\nConstant-time integer comparisons"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#space-complexity",
+    "href": "posts/ls_since_utility/index.html#space-complexity",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "8.3 Space Complexity",
+    "text": "8.3 Space Complexity\n\nOutput: O(m) where m = number of matching files\nfzf mode: Requires temporary file storage\nNormal mode: Streaming output (minimal memory)"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#optimization-tips",
+    "href": "posts/ls_since_utility/index.html#optimization-tips",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "8.4 Optimization Tips",
+    "text": "8.4 Optimization Tips\n\nUse specific dates: Narrow ranges reduce file checks\nFilter by extension: Fewer files to examine with -t flag\nAutomatic .git exclusion: Saves 30-40% processing time\nUse mtime on Linux: Faster than birth time (no fallback needed)"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#vs.-find--newermt",
+    "href": "posts/ls_since_utility/index.html#vs.-find--newermt",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "9.1 vs. find -newermt",
+    "text": "9.1 vs. find -newermt\nAdvantages of ls_since.sh: - Simpler syntax (no date format conversion required) - Multiple timestamp type support - Interactive mode with defaults - Integrated calendar reference - fzf integration built-in\nAdvantages of find: - Available on all systems - Minimal dependencies - More extensive filtering options"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#vs.-ls--lt",
+    "href": "posts/ls_since_utility/index.html#vs.-ls--lt",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "9.2 vs. ls -lt",
+    "text": "9.2 vs. ls -lt\nAdvantages of ls_since.sh: - Date range filtering - Recursive directory traversal - Extensible filtering options - fzf integration\nAdvantages of ls: - No dependencies - Simpler for interactive use"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#vs.-locatemlocate",
+    "href": "posts/ls_since_utility/index.html#vs.-locatemlocate",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "9.3 vs. locate/mlocate",
+    "text": "9.3 vs. locate/mlocate\nAdvantages of ls_since.sh: - Real-time results (no database needed) - Date range filtering - Timestamp type selection\nAdvantages of locate: - Faster for very large filesystems - Pre-built database"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#pattern-1-monthly-audit-reports",
+    "href": "posts/ls_since_utility/index.html#pattern-1-monthly-audit-reports",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "10.1 Pattern 1: Monthly Audit Reports",
+    "text": "10.1 Pattern 1: Monthly Audit Reports\n# Generate audit for each month\nfor month in {01..12}; do\n  count=$(ls_since.sh -c -s ${month}jan2025 \\\n          -e 31${month}2025 -t all 2&gt;/dev/null | \\\n          tail -1 | awk '{print $NF}')\n  echo \"Month $month: $count files\"\ndone"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#pattern-2-recent-work-summary",
+    "href": "posts/ls_since_utility/index.html#pattern-2-recent-work-summary",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "10.2 Pattern 2: Recent Work Summary",
+    "text": "10.2 Pattern 2: Recent Work Summary\n# Show recent modifications by file type\necho \"=== Shell Scripts ===\"\nls_since.sh -s 01nov2025 -t sh | head -5\n\necho \"=== Documentation ===\"\nls_since.sh -s 01nov2025 -t md,Rmd | head -5\n\necho \"=== Analysis ===\"\nls_since.sh -s 01nov2025 -t R,Rmd,qmd | head -5"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#pattern-3-git-aware-file-discovery",
+    "href": "posts/ls_since_utility/index.html#pattern-3-git-aware-file-discovery",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "10.3 Pattern 3: Git-aware File Discovery",
+    "text": "10.3 Pattern 3: Git-aware File Discovery\n# Find unstaged files modified after date\ngit ls-files -m | while read file; do\n  ls_since.sh -p -s 01nov2025 | grep -q \"$file\" && echo \"$file\"\ndone"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#pattern-4-backup-selection",
+    "href": "posts/ls_since_utility/index.html#pattern-4-backup-selection",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "10.4 Pattern 4: Backup Selection",
+    "text": "10.4 Pattern 4: Backup Selection\n# Backup files modified in last week\nls_since.sh -p -T mtime -s 25nov2025 -t all | \\\n  tar -czf backup_nov25.tar.gz -T -"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#pattern-5-code-review-workflow",
+    "href": "posts/ls_since_utility/index.html#pattern-5-code-review-workflow",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "10.5 Pattern 5: Code Review Workflow",
+    "text": "10.5 Pattern 5: Code Review Workflow\n# Review recent changes in specific file type\nls_since.sh --fzf -t R -s 01nov2025 | \\\n  xargs git diff HEAD~1..HEAD --"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#installation",
+    "href": "posts/ls_since_utility/index.html#installation",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "11.1 Installation",
+    "text": "11.1 Installation\nCopy ls_since.sh to your bin directory:\n# Copy to personal bin\ncp ls_since.sh ~/bin/\nchmod +x ~/bin/ls_since.sh\n\n# Or add to project\ncp ls_since.sh ./scripts/"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#first-use-interactive-mode",
+    "href": "posts/ls_since_utility/index.html#first-use-interactive-mode",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "11.2 First Use: Interactive Mode",
+    "text": "11.2 First Use: Interactive Mode\n# Start with no arguments for guided experience\nls_since.sh\n\n# Prompts you through:\n# 1. Start date selection (with default)\n# 2. End date selection (with default)\n# 3. File type selection (with defaults)\n# 4. Displays calendars for reference"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#common-commands-cheat-sheet",
+    "href": "posts/ls_since_utility/index.html#common-commands-cheat-sheet",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "11.3 Common Commands Cheat Sheet",
+    "text": "11.3 Common Commands Cheat Sheet\n# List all default types since 8 days ago\nls_since.sh\n\n# List shell scripts from November\nls_since.sh -s 01nov2025 -e 30nov2025 -t sh\n\n# Count files in last 2 weeks\nls_since.sh -c -s 18nov2025\n\n# Interactive file selection\nls_since.sh --fzf -t R,Rmd 01jan2025\n\n# Pipe to editor\nls_since.sh -p -T mtime -s 01nov2025 -t md | xargs vim\n\n# Display help\nls_since.sh -h"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#calendar-dates-not-highlighted-in-green",
+    "href": "posts/ls_since_utility/index.html#calendar-dates-not-highlighted-in-green",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "12.1 Calendar dates not highlighted in green",
+    "text": "12.1 Calendar dates not highlighted in green\nCause: Terminal doesn’t support ANSI color codes\nSolution: Use --no-color flag to suppress coloring\nls_since.sh -C --no-color -s 01nov2025"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#birth-time-unavailable-on-linux",
+    "href": "posts/ls_since_utility/index.html#birth-time-unavailable-on-linux",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "12.2 Birth time unavailable on Linux",
+    "text": "12.2 Birth time unavailable on Linux\nCause: Linux filesystems may not store birth time\nSolution: Use modification time instead\nls_since.sh -T mtime -s 01nov2025"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#fzf-not-found-error",
+    "href": "posts/ls_since_utility/index.html#fzf-not-found-error",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "12.3 fzf not found error",
+    "text": "12.3 fzf not found error\nCause: fzf not installed\nSolution: Install with appropriate package manager\n# macOS\nbrew install fzf\n\n# Ubuntu/Debian\nsudo apt-get install fzf\n\n# Then use\nls_since.sh --fzf -t sh 01jan2025"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#no-files-found-in-date-range",
+    "href": "posts/ls_since_utility/index.html#no-files-found-in-date-range",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "12.4 No files found in date range",
+    "text": "12.4 No files found in date range\nCause: Files don’t exist in range or extension doesn’t match\nSolution: Check date format and try broader type\n# Try all file types\nls_since.sh -t all -s 01nov2025 -e 30nov2025\n\n# Check file dates\nls_since.sh -p -s 01jan2024 -t all | head"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#related-utilities",
+    "href": "posts/ls_since_utility/index.html#related-utilities",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "14.1 Related Utilities",
+    "text": "14.1 Related Utilities\n\nfind command: man find for advanced filtering\nstat command: man stat for detailed file information\nfzf: junegunn/fzf for interactive selection\nQuarto: For research computing workflows"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#best-practices",
+    "href": "posts/ls_since_utility/index.html#best-practices",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "14.2 Best Practices",
+    "text": "14.2 Best Practices\n\nUse interactive mode for first-time exploration\nVerify date ranges with calendar reference (-C flag)\nTest pipelines before integrating into scripts\nCombine with other tools for powerful workflows\nVerify output before destructive operations"
+  },
+  {
+    "objectID": "posts/ls_since_utility/index.html#about-this-post",
+    "href": "posts/ls_since_utility/index.html#about-this-post",
+    "title": "ls_since.sh: Advanced File Date Filtering for Research Computing",
+    "section": "14.3 About This Post",
+    "text": "14.3 About This Post\nThis blog post was generated from a comprehensive white paper documenting the ls_since.sh utility. The white paper provides deeper technical details, implementation patterns, and advanced use cases beyond what’s covered here.\nFor the complete reference documentation, see the white paper at /Users/zenn/Dropbox/bin/date_filtering.md.\nDate published: December 2, 2025 Last updated: December 2, 2025"
   }
 ]
