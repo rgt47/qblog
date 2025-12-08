@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.25">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Your Name">
+<meta name="dcterms.date" content="2025-01-03">
+<meta name="description" content="Part 3 of our 5-part series where we rigorously validate our models and introduce polynomial features and random forest competitors">
+
+<title>Palmer Penguins Data Analysis Series (Part 3): Advanced Models and Cross-Validation – Thomas Lab</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-7b89279ff1a6dce999919e0e67d4d9ec.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-cba6959027663c8af85f024d0b434422.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": true,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "keyboard-shortcut": [
+    "?",
+    "/"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&amp;family=Open+Sans:ital,wght@0,400;0,600;1,400&amp;family=Fira+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<script src="https://kit.fontawesome.com/0fba9333d8.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+
+<!-- Custom meta tags for social sharing -->
+<meta property="og:site_name" content="Thomas Lab">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@rgt47">
+
+<!-- Add responsive features -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<!-- Add analytics if needed -->
+<!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXX');
+</script> -->
+
+<!-- Add custom javascript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Remove code tools button completely
+  const codeButton = document.querySelector('.code-tools-button');
+  if (codeButton) {
+    codeButton.remove();
+  }
+  
+  // Add any custom JavaScript functionality here
+  
+  // Example: Add smooth scrolling
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      
+      document.querySelector(this.getAttribute('href')).scrollIntoView({
+        behavior: 'smooth'
+      });
+    });
+  });
+  
+  // Make sidebar category items clickable (but not TOC items)
+  const categoryLinks = {
+    'Programming & Development': '/posts/?category=Programming+%26+Development',
+    'Data Analysis & Visualization': '/posts/?category=Data+Analysis+%26+Visualization',
+    'Deployment & Operations': '/posts/?category=Deployment+%26+Operations',
+    'Development Environment': '/posts/?category=Development+Environment',
+    'Shiny Applications': '/posts/?category=Shiny+Applications',
+    'AI & Automation': '/posts/?category=AI+%26+Automation',
+    'System Administration': '/posts/?category=System+Administration'
+  };
+  
+  // Only target sidebar items that are not in the TOC
+  document.querySelectorAll('.sidebar-item-section .sidebar-item-text').forEach(item => {
+    // Skip if this is inside the TOC
+    if (item.closest('#TOC')) return;
+    
+    const text = item.textContent.trim();
+    if (categoryLinks[text]) {
+      item.addEventListener('click', function() {
+        window.location.href = categoryLinks[text];
+      });
+    }
+  });
+});
+</script>
+
+
+<meta property="og:title" content="Palmer Penguins Data Analysis Series (Part 3): Advanced Models and Cross-Validation – Thomas Lab">
+<meta property="og:description" content="Part 3 of our 5-part series where we rigorously validate our models and introduce polynomial features and random forest competitors">
+<meta property="og:image" content="https://focusonr.org/images/posts/penguin-hero.jpg">
+<meta property="og:site_name" content="Thomas Lab">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a href="../../index.html" class="navbar-brand navbar-brand-logo">
+    </a>
+    <a class="navbar-brand" href="../../index.html">
+    <span class="navbar-title">Thomas Lab</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../about/index.html"> 
+<span class="menu-text">About</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../blog/index.html"> 
+<span class="menu-text">Blog</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../white-papers/index.html"> 
+<span class="menu-text">White Papers</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../research/index.html"> 
+<span class="menu-text">Research</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../teaching/index.html"> 
+<span class="menu-text">Teaching</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../misc/index.html"> 
+<span class="menu-text">Misc</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47"> <i class="bi bi-twitter" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a></li>
+  <li><a href="#setup-and-model-recap" id="toc-setup-and-model-recap" class="nav-link" data-scroll-target="#setup-and-model-recap"><span class="header-section-number">2</span> Setup and Model Recap</a></li>
+  <li><a href="#cross-validation-framework" id="toc-cross-validation-framework" class="nav-link" data-scroll-target="#cross-validation-framework"><span class="header-section-number">3</span> Cross-Validation Framework</a>
+  <ul class="collapse">
+  <li><a href="#setting-up-cross-validation" id="toc-setting-up-cross-validation" class="nav-link" data-scroll-target="#setting-up-cross-validation"><span class="header-section-number">3.1</span> Setting Up Cross-Validation</a></li>
+  <li><a href="#cross-validating-our-existing-models" id="toc-cross-validating-our-existing-models" class="nav-link" data-scroll-target="#cross-validating-our-existing-models"><span class="header-section-number">3.2</span> Cross-Validating Our Existing Models</a></li>
+  </ul></li>
+  <li><a href="#polynomial-features" id="toc-polynomial-features" class="nav-link" data-scroll-target="#polynomial-features"><span class="header-section-number">4</span> Polynomial Features</a></li>
+  <li><a href="#random-forest-comparison" id="toc-random-forest-comparison" class="nav-link" data-scroll-target="#random-forest-comparison"><span class="header-section-number">5</span> Random Forest Comparison</a></li>
+  <li><a href="#model-performance-summary" id="toc-model-performance-summary" class="nav-link" data-scroll-target="#model-performance-summary"><span class="header-section-number">6</span> Model Performance Summary</a></li>
+  <li><a href="#practical-applications" id="toc-practical-applications" class="nav-link" data-scroll-target="#practical-applications"><span class="header-section-number">7</span> Practical Applications</a></li>
+  <li><a href="#model-limitations-and-assumptions" id="toc-model-limitations-and-assumptions" class="nav-link" data-scroll-target="#model-limitations-and-assumptions"><span class="header-section-number">8</span> Model Limitations and Assumptions</a></li>
+  <li><a href="#looking-ahead-to-part-4" id="toc-looking-ahead-to-part-4" class="nav-link" data-scroll-target="#looking-ahead-to-part-4"><span class="header-section-number">9</span> Looking Ahead to Part 4</a></li>
+  <li><a href="#reproducibility-information" id="toc-reproducibility-information" class="nav-link" data-scroll-target="#reproducibility-information"><span class="header-section-number">10</span> Reproducibility Information</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content column-page-right" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Palmer Penguins Data Analysis Series (Part 3): Advanced Models and Cross-Validation</h1>
+<p class="subtitle lead">Testing model robustness and exploring the machine learning frontier</p>
+  <div class="quarto-categories">
+    <div class="quarto-category">R Programming</div>
+    <div class="quarto-category">Data Science</div>
+    <div class="quarto-category">Statistical Computing</div>
+    <div class="quarto-category">Cross-Validation</div>
+    <div class="quarto-category">Machine Learning</div>
+    <div class="quarto-category">Palmer Penguins</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    Part 3 of our 5-part series where we rigorously validate our models and introduce polynomial features and random forest competitors
+  </div>
+</div>
+
+
+<div class="quarto-title-meta column-page-right">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Your Name </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">January 3, 2025</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="../../images/posts/penguins-26046_1280.jpg" class="img-fluid figure-img"></p>
+<figcaption>A tech-savvy penguin with a laptop, diving deep into advanced modeling techniques and cross-validation!</figcaption>
+</figure>
+</div>
+<p><em>Photo: African penguins at Boulders Beach, South Africa. Licensed under <a href="https://creativecommons.org/licenses/by/2.0/">CC BY 2.0</a> via <a href="https://commons.wikimedia.org/wiki/File:Boulders_Beach_penguins_(46475505885).jpg">Wikimedia Commons</a></em></p>
+<div class="callout callout-style-simple callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>🐧 Palmer Penguins Data Analysis Series
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>This is <strong>Part 3</strong> of a 5-part series exploring penguin morphometrics:</p>
+<ol type="1">
+<li><a href="../palmer_penguins_part1/">Part 1: EDA and Simple Regression</a></li>
+<li><a href="../palmer_penguins_part2/">Part 2: Multiple Regression and Species Effects</a></li>
+<li><strong>Part 3: Advanced Models and Cross-Validation</strong> (This post)</li>
+<li><a href="../palmer_penguins_part4/">Part 4: Model Diagnostics and Interpretation</a></li>
+<li><a href="../palmer_penguins_part5/">Part 5: Random Forest vs Linear Models</a></li>
+</ol>
+</div>
+</div>
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>Welcome to the third installment of our Palmer penguins adventure! In <a href="../palmer_penguins_part2/">Part 2</a>, we achieved remarkable results, boosting our R² from 76% to 86% by incorporating species information. But as any responsible data scientist knows, impressive performance on training data is only the beginning of the story.</p>
+<p>The critical question remains: <strong>How well will our models perform on new, unseen penguin data?</strong> This is where rigorous validation techniques become essential. Today, we’ll put our models through their paces using cross-validation, explore whether non-linear relationships can improve our predictions, and introduce our first machine learning competitor.</p>
+<p>In this post, we’ll explore:</p>
+<ul>
+<li>Cross-validation techniques for robust model evaluation</li>
+<li>Polynomial features to capture non-linear relationships<br>
+</li>
+<li>Random forest models as a machine learning baseline</li>
+<li>Systematic model comparison with proper uncertainty quantification</li>
+<li>The bias-variance tradeoff in action</li>
+</ul>
+<p>By the end of this post, you’ll have confidence in your model’s generalizability and understand when additional complexity helps versus hurts predictive performance.</p>
+</section>
+<section id="setup-and-model-recap" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Setup and Model Recap</h1>
+<p>Let’s reload our work and establish our baseline models:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(palmerpenguins)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(broom)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Conditional loading of car package</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">requireNamespace</span>(<span class="st">"car"</span>, <span class="at">quietly =</span> <span class="cn">TRUE</span>)) {</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(car)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"⚠️ Package 'car' not available. Install with: install.packages('car')</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(randomForest)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(caret)</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(knitr)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(patchwork)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Set theme and colors</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="fu">theme_set</span>(<span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">12</span>))</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>penguin_colors <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Adelie"</span> <span class="ot">=</span> <span class="st">"#FF6B6B"</span>, <span class="st">"Chinstrap"</span> <span class="ot">=</span> <span class="st">"#4ECDC4"</span>, <span class="st">"Gentoo"</span> <span class="ot">=</span> <span class="st">"#45B7D1"</span>)</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Load clean data</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(penguins)</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>penguins_clean <span class="ot">&lt;-</span> penguins <span class="sc">%&gt;%</span> <span class="fu">drop_na</span>()</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Recreate our key models from previous parts</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>simple_model <span class="ot">&lt;-</span> <span class="fu">lm</span>(body_mass_g <span class="sc">~</span> flipper_length_mm, <span class="at">data =</span> penguins_clean)</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>multiple_model <span class="ot">&lt;-</span> <span class="fu">lm</span>(body_mass_g <span class="sc">~</span> bill_length_mm <span class="sc">+</span> bill_depth_mm <span class="sc">+</span> flipper_length_mm, </span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>                     <span class="at">data =</span> penguins_clean)</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>species_model <span class="ot">&lt;-</span> <span class="fu">lm</span>(body_mass_g <span class="sc">~</span> bill_length_mm <span class="sc">+</span> bill_depth_mm <span class="sc">+</span> </span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>                    flipper_length_mm <span class="sc">+</span> species, <span class="at">data =</span> penguins_clean)</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"📋 Baseline Model Performance (Training Data):</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>📋 Baseline Model Performance (Training Data):</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"===============================================</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>===============================================</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"Simple model R²: %.3f</span><span class="sc">\n</span><span class="st">"</span>, <span class="fu">glance</span>(simple_model)<span class="sc">$</span>r.squared))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple model R²: 0.762</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"Multiple model R²: %.3f</span><span class="sc">\n</span><span class="st">"</span>, <span class="fu">glance</span>(multiple_model)<span class="sc">$</span>r.squared))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Multiple model R²: 0.764</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"Species model R²: %.3f</span><span class="sc">\n</span><span class="st">"</span>, <span class="fu">glance</span>(species_model)<span class="sc">$</span>r.squared))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Species model R²: 0.849</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"Sample size: %d penguins</span><span class="sc">\n</span><span class="st">"</span>, <span class="fu">nrow</span>(penguins_clean)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Sample size: 333 penguins</code></pre>
+</div>
+</div>
+<p><img src="../../images/posts/penguins-7553626_1280.jpg" class="img-fluid" style="width:45.0%" alt="Group of penguins arranged in orderly rows representing cross-validation folds"> <em>“We need to test our models properly - let’s organize into validation groups!”</em></p>
+</section>
+<section id="cross-validation-framework" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Cross-Validation Framework</h1>
+<p>Training performance can be misleading due to overfitting. Let’s implement k-fold cross-validation to get robust performance estimates:</p>
+<section id="setting-up-cross-validation" class="level2" data-number="3.1">
+<h2 data-number="3.1" class="anchored" data-anchor-id="setting-up-cross-validation"><span class="header-section-number">3.1</span> Setting Up Cross-Validation</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">42</span>)  <span class="co"># For reproducible results</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Set up 10-fold cross-validation</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>train_control <span class="ot">&lt;-</span> <span class="fu">trainControl</span>(</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">"cv"</span>,</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">number =</span> <span class="dv">10</span>,</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">savePredictions =</span> <span class="st">"final"</span>,</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">verboseIter =</span> <span class="cn">FALSE</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"🔄 Cross-Validation Setup:</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>🔄 Cross-Validation Setup:</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"==========================</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>==========================</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Method: 10-fold cross-validation</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Method: 10-fold cross-validation</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Folds: 10</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Folds: 10</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Seed: 42 (for reproducibility)</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Seed: 42 (for reproducibility)</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Predictions saved: Yes</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Predictions saved: Yes</code></pre>
+</div>
+</div>
+</section>
+<section id="cross-validating-our-existing-models" class="level2" data-number="3.2">
+<h2 data-number="3.2" class="anchored" data-anchor-id="cross-validating-our-existing-models"><span class="header-section-number">3.2</span> Cross-Validating Our Existing Models</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Cross-validate all three models from Parts 1-2</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>cv_simple <span class="ot">&lt;-</span> <span class="fu">train</span>(body_mass_g <span class="sc">~</span> flipper_length_mm, <span class="at">data =</span> penguins_clean, <span class="at">method =</span> <span class="st">"lm"</span>, <span class="at">trControl =</span> train_control)</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>cv_multiple <span class="ot">&lt;-</span> <span class="fu">train</span>(body_mass_g <span class="sc">~</span> bill_length_mm <span class="sc">+</span> bill_depth_mm <span class="sc">+</span> flipper_length_mm, <span class="at">data =</span> penguins_clean, <span class="at">method =</span> <span class="st">"lm"</span>, <span class="at">trControl =</span> train_control)</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>cv_species <span class="ot">&lt;-</span> <span class="fu">train</span>(body_mass_g <span class="sc">~</span> bill_length_mm <span class="sc">+</span> bill_depth_mm <span class="sc">+</span> flipper_length_mm <span class="sc">+</span> species, <span class="at">data =</span> penguins_clean, <span class="at">method =</span> <span class="st">"lm"</span>, <span class="at">trControl =</span> train_control)</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Cross-validation results with confidence intervals</span></span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Cross-Validation Results (Mean ± 95% CI):</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Cross-Validation Results (Mean ± 95% CI):</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"==========================================</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>==========================================</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"Simple: RMSE %.1f ± %.1f, R² %.3f [%.3f-%.3f]</span><span class="sc">\n</span><span class="st">"</span>,</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>            cv_simple<span class="sc">$</span>results<span class="sc">$</span>RMSE, <span class="fl">1.96</span><span class="sc">*</span><span class="fu">sd</span>(cv_simple<span class="sc">$</span>resample<span class="sc">$</span>RMSE),</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>            cv_simple<span class="sc">$</span>results<span class="sc">$</span>Rsquared, </span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>            <span class="fu">quantile</span>(cv_simple<span class="sc">$</span>resample<span class="sc">$</span>Rsquared, <span class="fl">0.025</span>),</span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>            <span class="fu">quantile</span>(cv_simple<span class="sc">$</span>resample<span class="sc">$</span>Rsquared, <span class="fl">0.975</span>)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple: RMSE 390.9 ± 105.8, R² 0.775 [0.734-0.839]</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"Species: RMSE %.1f ± %.1f, R² %.3f [%.3f-%.3f]</span><span class="sc">\n</span><span class="st">"</span>,</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>            cv_species<span class="sc">$</span>results<span class="sc">$</span>RMSE, <span class="fl">1.96</span><span class="sc">*</span><span class="fu">sd</span>(cv_species<span class="sc">$</span>resample<span class="sc">$</span>RMSE),</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>            cv_species<span class="sc">$</span>results<span class="sc">$</span>Rsquared,</span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>            <span class="fu">quantile</span>(cv_species<span class="sc">$</span>resample<span class="sc">$</span>Rsquared, <span class="fl">0.025</span>),</span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>            <span class="fu">quantile</span>(cv_species<span class="sc">$</span>resample<span class="sc">$</span>Rsquared, <span class="fl">0.975</span>)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Species: RMSE 315.7 ± 63.0, R² 0.856 [0.830-0.889]</code></pre>
+</div>
+</div>
+<p>Our cross-validation reveals that the species model from Part 2 maintains excellent performance on unseen data, with minimal overfitting.</p>
+<p><img src="../../images/posts/penguins-cinema-4d-4030946_1280.jpg" class="img-fluid" style="width:40.0%" alt="Penguin scientists studying curved mathematical relationships on a whiteboard"> <em>“What if the relationships aren’t perfectly straight lines?”</em></p>
+</section>
+</section>
+<section id="polynomial-features" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Polynomial Features</h1>
+<p>Let’s test whether non-linear relationships improve predictions:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Test polynomial features</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>poly_model <span class="ot">&lt;-</span> <span class="fu">lm</span>(body_mass_g <span class="sc">~</span> <span class="fu">poly</span>(flipper_length_mm, <span class="dv">2</span>) <span class="sc">+</span> <span class="fu">poly</span>(bill_length_mm, <span class="dv">2</span>) <span class="sc">+</span> </span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>                 <span class="fu">poly</span>(bill_depth_mm, <span class="dv">2</span>) <span class="sc">+</span> species, <span class="at">data =</span> penguins_clean)</span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>cv_poly <span class="ot">&lt;-</span> <span class="fu">train</span>(body_mass_g <span class="sc">~</span> <span class="fu">poly</span>(flipper_length_mm, <span class="dv">2</span>) <span class="sc">+</span> <span class="fu">poly</span>(bill_length_mm, <span class="dv">2</span>) <span class="sc">+</span> </span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>                 <span class="fu">poly</span>(bill_depth_mm, <span class="dv">2</span>) <span class="sc">+</span> species, <span class="at">data =</span> penguins_clean, </span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>                 <span class="at">method =</span> <span class="st">"lm"</span>, <span class="at">trControl =</span> train_control)</span>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Polynomial vs Linear Comparison:</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Polynomial vs Linear Comparison:</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"Linear Species: RMSE %.1f, R² %.3f</span><span class="sc">\n</span><span class="st">"</span>, cv_species<span class="sc">$</span>results<span class="sc">$</span>RMSE, cv_species<span class="sc">$</span>results<span class="sc">$</span>Rsquared))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Linear Species: RMSE 315.7, R² 0.856</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"Polynomial:     RMSE %.1f, R² %.3f</span><span class="sc">\n</span><span class="st">"</span>, cv_poly<span class="sc">$</span>results<span class="sc">$</span>RMSE, cv_poly<span class="sc">$</span>results<span class="sc">$</span>Rsquared))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Polynomial:     RMSE 310.3, R² 0.858</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"Improvement:    %.1f grams (%.1f%%)</span><span class="sc">\n</span><span class="st">"</span>, </span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>            cv_species<span class="sc">$</span>results<span class="sc">$</span>RMSE <span class="sc">-</span> cv_poly<span class="sc">$</span>results<span class="sc">$</span>RMSE,</span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>            <span class="dv">100</span> <span class="sc">*</span> (cv_species<span class="sc">$</span>results<span class="sc">$</span>RMSE <span class="sc">-</span> cv_poly<span class="sc">$</span>results<span class="sc">$</span>RMSE) <span class="sc">/</span> cv_species<span class="sc">$</span>results<span class="sc">$</span>RMSE))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Improvement:    5.4 grams (1.7%)</code></pre>
+</div>
+</div>
+<p>Polynomial features provide minimal improvement, suggesting linear relationships adequately capture the biological patterns.</p>
+</section>
+<section id="random-forest-comparison" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Random Forest Comparison</h1>
+<p>Let’s test machine learning against our linear models:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>cv_rf <span class="ot">&lt;-</span> <span class="fu">train</span>(body_mass_g <span class="sc">~</span> bill_length_mm <span class="sc">+</span> bill_depth_mm <span class="sc">+</span> flipper_length_mm <span class="sc">+</span> species <span class="sc">+</span> sex <span class="sc">+</span> island,</span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>               <span class="at">data =</span> penguins_clean, <span class="at">method =</span> <span class="st">"rf"</span>, <span class="at">trControl =</span> train_control, <span class="at">ntree =</span> <span class="dv">500</span>)</span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a>rf_importance <span class="ot">&lt;-</span> <span class="fu">varImp</span>(cv_rf)<span class="sc">$</span>importance</span>
+<span id="cb41-6"><a href="#cb41-6" aria-hidden="true" tabindex="-1"></a>top_vars <span class="ot">&lt;-</span> <span class="fu">rownames</span>(rf_importance)[<span class="fu">order</span>(rf_importance<span class="sc">$</span>Overall, <span class="at">decreasing =</span> <span class="cn">TRUE</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>]]</span>
+<span id="cb41-7"><a href="#cb41-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb41-8"><a href="#cb41-8" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Random Forest vs Linear Models:</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Random Forest vs Linear Models:</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"Random Forest: RMSE %.1f, R² %.3f</span><span class="sc">\n</span><span class="st">"</span>, <span class="fu">min</span>(cv_rf<span class="sc">$</span>results<span class="sc">$</span>RMSE), <span class="fu">max</span>(cv_rf<span class="sc">$</span>results<span class="sc">$</span>Rsquared)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Random Forest: RMSE 296.4, R² 0.871</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"Linear Species: RMSE %.1f, R² %.3f</span><span class="sc">\n</span><span class="st">"</span>, cv_species<span class="sc">$</span>results<span class="sc">$</span>RMSE, cv_species<span class="sc">$</span>results<span class="sc">$</span>Rsquared))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Linear Species: RMSE 315.7, R² 0.856</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"</span><span class="sc">\n</span><span class="st">Top predictors:"</span>, <span class="fu">paste</span>(top_vars, <span class="at">collapse =</span> <span class="st">", "</span>), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Top predictors: flipper_length_mm, speciesGentoo, bill_depth_mm </code></pre>
+</div>
+</div>
+<p><img src="../../images/posts/penguin-gentoo-penguin-7073394_1280.jpg" class="img-fluid" style="width:45.0%" alt="Group of penguins presenting cross-validation results on a large screen"> <em>“Time to reveal our model competition results!”</em></p>
+</section>
+<section id="model-performance-summary" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Model Performance Summary</h1>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb49"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Final model comparison with confidence intervals</span></span>
+<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a>models <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb49-3"><a href="#cb49-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">Model =</span> <span class="fu">c</span>(<span class="st">"Simple"</span>, <span class="st">"Species"</span>, <span class="st">"Polynomial"</span>, <span class="st">"Random Forest"</span>),</span>
+<span id="cb49-4"><a href="#cb49-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">RMSE =</span> <span class="fu">c</span>(cv_simple<span class="sc">$</span>results<span class="sc">$</span>RMSE, cv_species<span class="sc">$</span>results<span class="sc">$</span>RMSE, cv_poly<span class="sc">$</span>results<span class="sc">$</span>RMSE, <span class="fu">min</span>(cv_rf<span class="sc">$</span>results<span class="sc">$</span>RMSE)),</span>
+<span id="cb49-5"><a href="#cb49-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">R_squared =</span> <span class="fu">c</span>(cv_simple<span class="sc">$</span>results<span class="sc">$</span>Rsquared, cv_species<span class="sc">$</span>results<span class="sc">$</span>Rsquared, cv_poly<span class="sc">$</span>results<span class="sc">$</span>Rsquared, <span class="fu">max</span>(cv_rf<span class="sc">$</span>results<span class="sc">$</span>Rsquared))</span>
+<span id="cb49-6"><a href="#cb49-6" aria-hidden="true" tabindex="-1"></a>) <span class="sc">%&gt;%</span> <span class="fu">arrange</span>(RMSE)</span>
+<span id="cb49-7"><a href="#cb49-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb49-8"><a href="#cb49-8" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Cross-Validation Performance Ranking:</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Cross-Validation Performance Ranking:</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"====================================</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>====================================</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb53"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(models)) {</span>
+<span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"%d. %s: RMSE %.1f g, R² %.3f</span><span class="sc">\n</span><span class="st">"</span>, i, models<span class="sc">$</span>Model[i], models<span class="sc">$</span>RMSE[i], models<span class="sc">$</span>R_squared[i]))</span>
+<span id="cb53-3"><a href="#cb53-3" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>1. Random Forest: RMSE 296.4 g, R² 0.871
+2. Polynomial: RMSE 310.3 g, R² 0.858
+3. Species: RMSE 315.7 g, R² 0.856
+4. Simple: RMSE 390.9 g, R² 0.775</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb55"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"</span><span class="sc">\n</span><span class="st">Key Finding: Linear species model provides optimal balance of performance and interpretability.</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Key Finding: Linear species model provides optimal balance of performance and interpretability.</code></pre>
+</div>
+</div>
+</section>
+<section id="practical-applications" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Practical Applications</h1>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb57"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Real-world validation scenarios</span></span>
+<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a>new_penguins <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb57-3"><a href="#cb57-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">species =</span> <span class="fu">c</span>(<span class="st">"Adelie"</span>, <span class="st">"Chinstrap"</span>, <span class="st">"Gentoo"</span>),</span>
+<span id="cb57-4"><a href="#cb57-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">flipper_length_mm =</span> <span class="fu">c</span>(<span class="dv">190</span>, <span class="dv">195</span>, <span class="dv">220</span>),</span>
+<span id="cb57-5"><a href="#cb57-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">bill_length_mm =</span> <span class="fu">c</span>(<span class="dv">39</span>, <span class="dv">48</span>, <span class="dv">47</span>),</span>
+<span id="cb57-6"><a href="#cb57-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">bill_depth_mm =</span> <span class="fu">c</span>(<span class="dv">18</span>, <span class="dv">17</span>, <span class="dv">15</span>)</span>
+<span id="cb57-7"><a href="#cb57-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb57-8"><a href="#cb57-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-9"><a href="#cb57-9" aria-hidden="true" tabindex="-1"></a>predictions <span class="ot">&lt;-</span> <span class="fu">predict</span>(species_model, <span class="at">newdata =</span> new_penguins, <span class="at">interval =</span> <span class="st">"prediction"</span>, <span class="at">level =</span> <span class="fl">0.95</span>)</span>
+<span id="cb57-10"><a href="#cb57-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-11"><a href="#cb57-11" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Field Prediction Examples (95% PI):</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Field Prediction Examples (95% PI):</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb59"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(new_penguins)) {</span>
+<span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"%s: %.0f g [%.0f-%.0f]</span><span class="sc">\n</span><span class="st">"</span>, new_penguins<span class="sc">$</span>species[i], predictions[i,<span class="dv">1</span>], predictions[i,<span class="dv">2</span>], predictions[i,<span class="dv">3</span>]))</span>
+<span id="cb59-3"><a href="#cb59-3" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Adelie: 3662 g [3040-4283]
+Chinstrap: 3482 g [2856-4108]
+Gentoo: 5126 g [4504-5748]</code></pre>
+</div>
+</div>
+</section>
+<section id="model-limitations-and-assumptions" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Model Limitations and Assumptions</h1>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb61"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Cross-Validation Limitations:</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Cross-Validation Limitations:</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb63"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"============================</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>============================</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb65"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"• Sample size: Limited to"</span>, <span class="fu">nrow</span>(penguins_clean), <span class="st">"penguins (2007-2009)</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>• Sample size: Limited to 333 penguins (2007-2009)</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb67"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"• Geographic scope: Palmer Station region only</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>• Geographic scope: Palmer Station region only</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb69"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"• Temporal constraints: Three-year observation window</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>• Temporal constraints: Three-year observation window</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb71"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb71-1"><a href="#cb71-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"• Species balance: Unequal representation across species</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>• Species balance: Unequal representation across species</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb73"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb73-1"><a href="#cb73-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"• Measurement precision: Field measurement uncertainties</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>• Measurement precision: Field measurement uncertainties</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb75"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb75-1"><a href="#cb75-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"• Model assumptions: Linearity within species groups</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>• Model assumptions: Linearity within species groups</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb77"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb77-1"><a href="#cb77-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Check generalization uncertainty</span></span>
+<span id="cb77-2"><a href="#cb77-2" aria-hidden="true" tabindex="-1"></a>fold_range <span class="ot">&lt;-</span> <span class="fu">range</span>(<span class="fu">c</span>(cv_species<span class="sc">$</span>resample<span class="sc">$</span>Rsquared))</span>
+<span id="cb77-3"><a href="#cb77-3" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"</span><span class="sc">\n</span><span class="st">Generalization uncertainty: R² varies from %.3f to %.3f across folds</span><span class="sc">\n</span><span class="st">"</span>, fold_range[<span class="dv">1</span>], fold_range[<span class="dv">2</span>]))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Generalization uncertainty: R² varies from 0.830 to 0.891 across folds</code></pre>
+</div>
+</div>
+<p>Our rigorous cross-validation confirms that linear models with species information achieve excellent predictive performance (R² ≈ 0.86) while maintaining interpretability. Polynomial features and random forests offer minimal improvements, suggesting biological relationships are well-captured by linear terms within species.</p>
+</section>
+<section id="looking-ahead-to-part-4" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> Looking Ahead to Part 4</h1>
+<p>While our models show excellent cross-validation performance, we must verify they meet statistical assumptions:</p>
+<ul>
+<li>Do residuals show normal distribution and constant variance?</li>
+<li>Are there influential observations affecting our conclusions?</li>
+<li>How robust are our results to outliers and leverage points?</li>
+<li>What do diagnostic plots reveal about model adequacy?</li>
+</ul>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>🎯 Preview of Part 4
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Next, we’ll conduct comprehensive model diagnostics including residual analysis, influence diagnostics, and assumption testing to ensure our conclusions are statistically sound.</p>
+</div>
+</div>
+</section>
+<section id="reproducibility-information" class="level1" data-number="10">
+<h1 data-number="10"><span class="header-section-number">10</span> Reproducibility Information</h1>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code>R version 4.5.2 (2025-10-31)
+Platform: aarch64-apple-darwin20
+Running under: macOS Sequoia 15.6.1
+
+Matrix products: default
+BLAS:   /System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libBLAS.dylib 
+LAPACK: /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.1
+
+locale:
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+time zone: America/Los_Angeles
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+ [1] patchwork_1.3.2      knitr_1.50           caret_7.0-1         
+ [4] lattice_0.22-7       randomForest_4.7-1.2 car_3.1-3           
+ [7] carData_3.0-5        broom_1.0.10         lubridate_1.9.4     
+[10] forcats_1.0.0        stringr_1.6.0        dplyr_1.1.4         
+[13] purrr_1.2.0          readr_2.1.5          tidyr_1.3.1         
+[16] tibble_3.3.0         ggplot2_4.0.1        tidyverse_2.0.0     
+[19] palmerpenguins_0.1.1
+
+loaded via a namespace (and not attached):
+ [1] tidyselect_1.2.1     timeDate_4041.110    farver_2.1.2        
+ [4] S7_0.2.1             fastmap_1.2.0        pROC_1.18.5         
+ [7] digest_0.6.39        rpart_4.1.24         timechange_0.3.0    
+[10] lifecycle_1.0.4      survival_3.8-3       magrittr_2.0.4      
+[13] compiler_4.5.2       rlang_1.1.6          tools_4.5.2         
+[16] yaml_2.3.11          data.table_1.17.8    htmlwidgets_1.6.4   
+[19] plyr_1.8.9           RColorBrewer_1.1-3   abind_1.4-8         
+[22] withr_3.0.2          nnet_7.3-20          grid_4.5.2          
+[25] stats4_4.5.2         future_1.67.0        globals_0.18.0      
+[28] scales_1.4.0         iterators_1.0.14     MASS_7.3-65         
+[31] cli_3.6.5            rmarkdown_2.30       generics_0.1.4      
+[34] future.apply_1.20.0  reshape2_1.4.4       tzdb_0.5.0          
+[37] splines_4.5.2        parallel_4.5.2       vctrs_0.6.5         
+[40] hardhat_1.4.1        Matrix_1.7-4         jsonlite_2.0.0      
+[43] hms_1.1.3            Formula_1.2-5        listenv_0.9.1       
+[46] foreach_1.5.2        gower_1.0.2          recipes_1.3.1       
+[49] glue_1.8.0           parallelly_1.45.1    codetools_0.2-20    
+[52] stringi_1.8.7        gtable_0.3.6         pillar_1.11.1       
+[55] htmltools_0.5.9      ipred_0.9-15         lava_1.8.1          
+[58] R6_2.6.1             evaluate_1.0.5       backports_1.5.0     
+[61] class_7.3-23         Rcpp_1.1.0           nlme_3.1-168        
+[64] prodlim_2025.04.28   xfun_0.54            pkgconfig_2.0.3     
+[67] ModelMetrics_1.2.2.2</code></pre>
+</div>
+</div>
+<hr>
+<div class="callout callout-style-simple callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>🐧 Continue Your Journey
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Ready to ensure your model meets all assumptions? Head to <a href="../palmer_penguins_part4/">Part 4: Model Diagnostics and Interpretation</a> where we’ll thoroughly validate our model assumptions!</p>
+<p><strong>Full Series Navigation:</strong> 1. <a href="../palmer_penguins_part1/">Part 1: EDA and Simple Regression</a> ✅ 2. <a href="../palmer_penguins_part2/">Part 2: Multiple Regression and Species Effects</a> ✅ 3. <strong>Part 3: Advanced Models and Cross-Validation</strong> (This post) ✅ 4. <a href="../palmer_penguins_part4/">Part 4: Model Diagnostics and Interpretation</a> 5. <a href="../palmer_penguins_part5/">Part 5: Random Forest vs Linear Models</a></p>
+</div>
+</div>
+<p><em>Have questions about cross-validation or model selection? Feel free to reach out on <a href="https://twitter.com/yourhandle">Twitter</a> or <a href="https://linkedin.com/in/yourprofile">LinkedIn</a>. You can also find the complete code for this series on <a href="https://github.com/yourusername/palmer-penguins-series">GitHub</a>.</em></p>
+<p><strong>About the Author:</strong> [Your name] is a [your role] specializing in statistical ecology and machine learning. This series demonstrates best practices for model validation and selection in biological research.</p>
+
+
+</section>
+
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" id="quarto-reuse"><h2 class="anchored quarto-appendix-heading">Reuse</h2><div class="quarto-appendix-contents"><div><a rel="license" href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></div></div></section><section class="quarto-appendix-contents" id="quarto-citation"><h2 class="anchored quarto-appendix-heading">Citation</h2><div><div class="quarto-appendix-secondary-label">BibTeX citation:</div><pre class="sourceCode code-with-copy quarto-appendix-bibtex"><code class="sourceCode bibtex">@online{(ryy)_glenn_thomas2025,
+  author = {(Ryy) Glenn Thomas, Ronald and Name, Your},
+  title = {Palmer {Penguins} {Data} {Analysis} {Series} {(Part} 3):
+    {Advanced} {Models} and {Cross-Validation}},
+  date = {2025-01-03},
+  url = {https://focusonr.org/posts/palmerpenguinspart3/},
+  langid = {en}
+}
+</code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre><div class="quarto-appendix-secondary-label">For attribution, please cite this work as:</div><div id="ref-(ryy)_glenn_thomas2025" class="csl-entry quarto-appendix-citeas" role="listitem">
+(Ryy) Glenn Thomas, Ronald, and Your Name. 2025. <span>“Palmer Penguins
+Data Analysis Series (Part 3): Advanced Models and
+Cross-Validation.”</span> January 3, 2025. <a href="https://focusonr.org/posts/palmerpenguinspart3/">https://focusonr.org/posts/palmerpenguinspart3/</a>.
+</div></div></section></div></main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/focusonr\.org");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="rgt47/qblog" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Copyright 2023-2025, Ronald G. Thomas</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47">
+      <i class="bi bi-github" role="img">
+</i> 
+    </a>
+  </li>  
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47">
+      <i class="bi bi-twitter" role="img">
+</i> 
+    </a>
+  </li>  
+</ul>
+    </div>
+  </div>
+</footer>
+<!-- Fix for Quarto category encoding issue -->
+<script>
+// Fix category encoding for Quarto listing functionality
+(function() {
+  function fixAllCategoryEncoding() {
+    // Only run on pages that have Quarto listings
+    if (!document.querySelector('.quarto-listing')) {
+      return;
+    }
+    
+    // Fix sidebar category data-category attributes
+    const categoryEls = document.querySelectorAll('.quarto-listing-category .category[data-category]');
+    
+    categoryEls.forEach((categoryEl) => {
+      const category = categoryEl.getAttribute('data-category');
+      
+      if (category && category !== '') {
+        // Check if it contains only base64 characters and proper length
+        const isBase64 = /^[A-Za-z0-9+/]*={0,2}$/.test(category) && category.length % 4 === 0;
+        
+        if (isBase64) {
+          try {
+            const decoded = decodeURIComponent(atob(category));
+            // Verify it decoded to something reasonable (no control characters)
+            if (!decoded.match(/^[A-Za-z0-9\s\-,]+$/)) {
+              // Invalid encoding, re-encode from original text
+              const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+              categoryEl.setAttribute('data-category', encodedCategory);
+            }
+          } catch (e) {
+            // Base64 decode failed, re-encode from original text
+            const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+            categoryEl.setAttribute('data-category', encodedCategory);
+          }
+        } else {
+          // Not base64, encode it
+          const encodedCategory = btoa(encodeURIComponent(category));
+          categoryEl.setAttribute('data-category', encodedCategory);
+        }
+      }
+    });
+    
+    // Fix listing item data-categories attributes  
+    const listingItems = document.querySelectorAll('[data-categories]');
+    
+    listingItems.forEach((item) => {
+      const categories = item.getAttribute('data-categories');
+      
+      if (categories && categories !== '') {
+        // Check if it's already base64 encoded
+        try {
+          decodeURIComponent(atob(categories));
+          // Already encoded and valid
+        } catch (e) {
+          // Not encoded, fix it
+          const encodedCategories = btoa(encodeURIComponent(categories));
+          item.setAttribute('data-categories', encodedCategories);
+        }
+      }
+    });
+    
+    // Fix post-specific category tag click handlers
+    const postCategoryTags = document.querySelectorAll('.listing-category[onclick]');
+    
+    postCategoryTags.forEach((tag) => {
+      const categoryText = tag.textContent.trim();
+      
+      // Replace the onclick handler to use encoded category
+      tag.onclick = () => {
+        const encodedCategory = btoa(encodeURIComponent(categoryText));
+        window.quartoListingCategory(encodedCategory);
+        return false;
+      };
+    });
+  }
+  
+  // Run immediately
+  fixAllCategoryEncoding();
+  
+  // Also run when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fixAllCategoryEncoding);
+  }
+})();
+</script>
+
+<!-- PDF view/download button for blog posts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Only add the button on post pages
+  if (window.location.pathname.includes('/posts/') && !window.location.pathname.endsWith('/posts/') && !window.location.pathname.endsWith('/posts/index.html')) {
+    var currentPath = window.location.pathname;
+    // Handle both /posts/name/ and /posts/name/index.html formats
+    var pdfPath;
+    if (currentPath.endsWith('/')) {
+      pdfPath = currentPath + 'index.pdf';
+    } else {
+      pdfPath = currentPath.replace('.html', '.pdf');
+    }
+
+    // Check if PDF exists first
+    fetch(pdfPath, { method: 'HEAD' })
+      .then(function(response) {
+        if (response.ok) {
+          // PDF exists, show download button
+          showDownloadButton(pdfPath);
+        }
+        // If PDF doesn't exist, don't show any button
+      })
+      .catch(function(error) {
+        // Error checking PDF, don't show any button
+      });
+  }
+});
+
+function showDownloadButton(pdfPath) {
+  var downloadBtn = document.createElement('div');
+  downloadBtn.className = 'pdf-download-button';
+
+  // Get file size if possible
+  fetch(pdfPath, { method: 'HEAD' })
+    .then(function(response) {
+      var size = response.headers.get('Content-Length');
+      var sizeText = '';
+
+      if (size) {
+        // Convert to MB or KB
+        var sizeInMB = size / (1024 * 1024);
+        if (sizeInMB >= 1) {
+          sizeText = ' (' + sizeInMB.toFixed(1) + ' MB)';
+        } else {
+          sizeText = ' (' + (size / 1024).toFixed(0) + ' KB)';
+        }
+      }
+
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' + sizeText +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    })
+    .catch(function() {
+      // Basic fallback if we can't get file size
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    });
+
+  // Find where to insert the button (right after the title block)
+  var titleBlock = document.querySelector('.quarto-title-meta');
+  if (titleBlock) {
+    titleBlock.after(downloadBtn);
+  }
+}
+
+
+</script>
+
+<style>
+.pdf-download-button {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+</style>
+
+
+
+
+</body></html>

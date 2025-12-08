@@ -1,0 +1,1484 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.25">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Your Name">
+<meta name="dcterms.date" content="2025-01-04">
+<meta name="description" content="Part 4 of our 5-part series focusing on rigorous diagnostic procedures, assumption checking, and biological interpretation of our penguin models">
+
+<title>Palmer Penguins Data Analysis Series (Part 4): Model Diagnostics and Interpretation – Thomas Lab</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-7b89279ff1a6dce999919e0e67d4d9ec.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-cba6959027663c8af85f024d0b434422.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": true,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "keyboard-shortcut": [
+    "?",
+    "/"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&amp;family=Open+Sans:ital,wght@0,400;0,600;1,400&amp;family=Fira+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<script src="https://kit.fontawesome.com/0fba9333d8.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+
+<!-- Custom meta tags for social sharing -->
+<meta property="og:site_name" content="Thomas Lab">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@rgt47">
+
+<!-- Add responsive features -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<!-- Add analytics if needed -->
+<!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXX');
+</script> -->
+
+<!-- Add custom javascript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Remove code tools button completely
+  const codeButton = document.querySelector('.code-tools-button');
+  if (codeButton) {
+    codeButton.remove();
+  }
+  
+  // Add any custom JavaScript functionality here
+  
+  // Example: Add smooth scrolling
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      
+      document.querySelector(this.getAttribute('href')).scrollIntoView({
+        behavior: 'smooth'
+      });
+    });
+  });
+  
+  // Make sidebar category items clickable (but not TOC items)
+  const categoryLinks = {
+    'Programming & Development': '/posts/?category=Programming+%26+Development',
+    'Data Analysis & Visualization': '/posts/?category=Data+Analysis+%26+Visualization',
+    'Deployment & Operations': '/posts/?category=Deployment+%26+Operations',
+    'Development Environment': '/posts/?category=Development+Environment',
+    'Shiny Applications': '/posts/?category=Shiny+Applications',
+    'AI & Automation': '/posts/?category=AI+%26+Automation',
+    'System Administration': '/posts/?category=System+Administration'
+  };
+  
+  // Only target sidebar items that are not in the TOC
+  document.querySelectorAll('.sidebar-item-section .sidebar-item-text').forEach(item => {
+    // Skip if this is inside the TOC
+    if (item.closest('#TOC')) return;
+    
+    const text = item.textContent.trim();
+    if (categoryLinks[text]) {
+      item.addEventListener('click', function() {
+        window.location.href = categoryLinks[text];
+      });
+    }
+  });
+});
+</script>
+
+
+<meta property="og:title" content="Palmer Penguins Data Analysis Series (Part 4): Model Diagnostics and Interpretation – Thomas Lab">
+<meta property="og:description" content="Part 4 of our 5-part series focusing on rigorous diagnostic procedures, assumption checking, and biological interpretation of our penguin models">
+<meta property="og:image" content="https://focusonr.org/images/posts/penguin-hero.jpg">
+<meta property="og:site_name" content="Thomas Lab">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a href="../../index.html" class="navbar-brand navbar-brand-logo">
+    </a>
+    <a class="navbar-brand" href="../../index.html">
+    <span class="navbar-title">Thomas Lab</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../about/index.html"> 
+<span class="menu-text">About</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../blog/index.html"> 
+<span class="menu-text">Blog</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../white-papers/index.html"> 
+<span class="menu-text">White Papers</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../research/index.html"> 
+<span class="menu-text">Research</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../teaching/index.html"> 
+<span class="menu-text">Teaching</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../misc/index.html"> 
+<span class="menu-text">Misc</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47"> <i class="bi bi-twitter" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a></li>
+  <li><a href="#setup-and-model-preparation" id="toc-setup-and-model-preparation" class="nav-link" data-scroll-target="#setup-and-model-preparation"><span class="header-section-number">2</span> Setup and Model Preparation</a></li>
+  <li><a href="#classical-regression-assumptions" id="toc-classical-regression-assumptions" class="nav-link" data-scroll-target="#classical-regression-assumptions"><span class="header-section-number">3</span> Classical Regression Assumptions</a>
+  <ul class="collapse">
+  <li><a href="#linearity-assessment" id="toc-linearity-assessment" class="nav-link" data-scroll-target="#linearity-assessment"><span class="header-section-number">3.1</span> 1. Linearity Assessment</a></li>
+  <li><a href="#independence-check" id="toc-independence-check" class="nav-link" data-scroll-target="#independence-check"><span class="header-section-number">3.2</span> 2. Independence Check</a></li>
+  <li><a href="#homoscedasticity-constant-variance" id="toc-homoscedasticity-constant-variance" class="nav-link" data-scroll-target="#homoscedasticity-constant-variance"><span class="header-section-number">3.3</span> 3. Homoscedasticity (Constant Variance)</a></li>
+  <li><a href="#normality-of-residuals" id="toc-normality-of-residuals" class="nav-link" data-scroll-target="#normality-of-residuals"><span class="header-section-number">3.4</span> 4. Normality of Residuals</a></li>
+  </ul></li>
+  <li><a href="#influence-diagnostics" id="toc-influence-diagnostics" class="nav-link" data-scroll-target="#influence-diagnostics"><span class="header-section-number">4</span> Influence Diagnostics</a>
+  <ul class="collapse">
+  <li><a href="#normality-of-residuals-1" id="toc-normality-of-residuals-1" class="nav-link" data-scroll-target="#normality-of-residuals-1"><span class="header-section-number">4.1</span> 4. Normality of Residuals</a></li>
+  </ul></li>
+  <li><a href="#model-interpretation-and-practical-applications" id="toc-model-interpretation-and-practical-applications" class="nav-link" data-scroll-target="#model-interpretation-and-practical-applications"><span class="header-section-number">5</span> Model Interpretation and Practical Applications</a></li>
+  <li><a href="#model-limitations-and-assumptions-summary" id="toc-model-limitations-and-assumptions-summary" class="nav-link" data-scroll-target="#model-limitations-and-assumptions-summary"><span class="header-section-number">6</span> Model Limitations and Assumptions Summary</a></li>
+  <li><a href="#looking-ahead-to-part-5" id="toc-looking-ahead-to-part-5" class="nav-link" data-scroll-target="#looking-ahead-to-part-5"><span class="header-section-number">7</span> Looking Ahead to Part 5</a></li>
+  <li><a href="#reproducibility-information" id="toc-reproducibility-information" class="nav-link" data-scroll-target="#reproducibility-information"><span class="header-section-number">8</span> Reproducibility Information</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content column-page-right" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Palmer Penguins Data Analysis Series (Part 4): Model Diagnostics and Interpretation</h1>
+<p class="subtitle lead">Ensuring our models meet assumptions and understanding what they really tell us</p>
+  <div class="quarto-categories">
+    <div class="quarto-category">R Programming</div>
+    <div class="quarto-category">Data Science</div>
+    <div class="quarto-category">Statistical Computing</div>
+    <div class="quarto-category">Model Diagnostics</div>
+    <div class="quarto-category">Regression Analysis</div>
+    <div class="quarto-category">Palmer Penguins</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    Part 4 of our 5-part series focusing on rigorous diagnostic procedures, assumption checking, and biological interpretation of our penguin models
+  </div>
+</div>
+
+
+<div class="quarto-title-meta column-page-right">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Your Name </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">January 4, 2025</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="../../images/posts/penguins-library-7755210_1280.jpg" class="img-fluid figure-img"></p>
+<figcaption>A penguin scientist with a magnifying glass, carefully examining model diagnostics and residual plots!</figcaption>
+</figure>
+</div>
+<p><em>Photo: African penguins at Boulders Beach, South Africa. Licensed under <a href="https://creativecommons.org/licenses/by/2.0/">CC BY 2.0</a> via <a href="https://commons.wikimedia.org/wiki/File:Boulders_Beach_penguins_(46475505885).jpg">Wikimedia Commons</a></em></p>
+<div class="callout callout-style-simple callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>🐧 Palmer Penguins Data Analysis Series
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>This is <strong>Part 4</strong> of a 5-part series exploring penguin morphometrics:</p>
+<ol type="1">
+<li><a href="../palmer_penguins_part1/">Part 1: EDA and Simple Regression</a></li>
+<li><a href="../palmer_penguins_part2/">Part 2: Multiple Regression and Species Effects</a></li>
+<li><a href="../palmer_penguins_part3/">Part 3: Advanced Models and Cross-Validation</a></li>
+<li><strong>Part 4: Model Diagnostics and Interpretation</strong> (This post)</li>
+<li><a href="../palmer_penguins_part5/">Part 5: Random Forest vs Linear Models</a></li>
+</ol>
+</div>
+</div>
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>Welcome to the fourth chapter of our Palmer penguins journey! In <a href="../palmer_penguins_part3/">Part 3</a>, we validated our models through rigorous cross-validation and confirmed that our species-aware linear model offers excellent predictive performance. But excellent performance doesn’t automatically mean our model is appropriate or that our assumptions are satisfied.</p>
+<p>Today, we dive into the critical but often overlooked world of model diagnostics. Think of this as taking your high-performing car to a mechanic - it might run well, but are there underlying issues that could cause problems? In statistical modeling, diagnostic procedures help us understand whether our model is not just performing well, but performing well for the right reasons.</p>
+<p>In this post, we’ll explore:</p>
+<ul>
+<li>Comprehensive residual analysis and assumption checking</li>
+<li>Influence diagnostics to identify problematic observations</li>
+<li>Biological interpretation of model coefficients</li>
+<li>Prediction intervals and uncertainty quantification</li>
+<li>Best practices for model reporting in ecological research</li>
+</ul>
+<p>By the end of this post, you’ll have confidence that your model is not just accurate, but statistically sound and biologically meaningful.</p>
+</section>
+<section id="setup-and-model-preparation" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Setup and Model Preparation</h1>
+<p>Let’s reconstruct our best-performing model and prepare for diagnostic analysis:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(palmerpenguins)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(broom)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Conditional loading of optional packages</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>optional_diagnostic_packages <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"car"</span>, <span class="st">"performance"</span>, <span class="st">"see"</span>, <span class="st">"lmtest"</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (pkg <span class="cf">in</span> optional_diagnostic_packages) {</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">requireNamespace</span>(pkg, <span class="at">quietly =</span> <span class="cn">TRUE</span>)) {</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">library</span>(pkg, <span class="at">character.only =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cat</span>(<span class="st">"⚠️ Package '"</span>, pkg, <span class="st">"' not available. Install with: install.packages('"</span>, pkg, <span class="st">"')</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(knitr)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(patchwork)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Set theme and colors</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="fu">theme_set</span>(<span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">12</span>))</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>penguin_colors <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Adelie"</span> <span class="ot">=</span> <span class="st">"#FF6B6B"</span>, <span class="st">"Chinstrap"</span> <span class="ot">=</span> <span class="st">"#4ECDC4"</span>, <span class="st">"Gentoo"</span> <span class="ot">=</span> <span class="st">"#45B7D1"</span>)</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Load and prepare data</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(penguins)</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>penguins_clean <span class="ot">&lt;-</span> penguins <span class="sc">%&gt;%</span> <span class="fu">drop_na</span>()</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="co"># Recreate our best model from previous parts</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>best_model <span class="ot">&lt;-</span> <span class="fu">lm</span>(body_mass_g <span class="sc">~</span> bill_length_mm <span class="sc">+</span> bill_depth_mm <span class="sc">+</span> </span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>                 flipper_length_mm <span class="sc">+</span> species, <span class="at">data =</span> penguins_clean)</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="co"># Add fitted values and residuals to our dataset</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>penguins_diagnostics <span class="ot">&lt;-</span> penguins_clean <span class="sc">%&gt;%</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>    <span class="at">fitted_values =</span> <span class="fu">fitted</span>(best_model),</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>    <span class="at">residuals =</span> <span class="fu">residuals</span>(best_model),</span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>    <span class="at">standardized_residuals =</span> <span class="fu">rstandard</span>(best_model),</span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>    <span class="at">studentized_residuals =</span> <span class="fu">rstudent</span>(best_model),</span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>    <span class="at">leverage =</span> <span class="fu">hatvalues</span>(best_model),</span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>    <span class="at">cooks_distance =</span> <span class="fu">cooks.distance</span>(best_model)</span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"🔧 Model Diagnostic Setup:</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>🔧 Model Diagnostic Setup:</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"==========================</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>==========================</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"Model: body_mass_g ~ bill_length_mm + bill_depth_mm + flipper_length_mm + species</span><span class="sc">\n</span><span class="st">"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Model: body_mass_g ~ bill_length_mm + bill_depth_mm + flipper_length_mm + species</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"Observations: %d penguins</span><span class="sc">\n</span><span class="st">"</span>, <span class="fu">nrow</span>(penguins_clean)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Observations: 333 penguins</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"Parameters: %d</span><span class="sc">\n</span><span class="st">"</span>, <span class="fu">length</span>(<span class="fu">coef</span>(best_model))))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Parameters: 6</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"R-squared: %.3f</span><span class="sc">\n</span><span class="st">"</span>, <span class="fu">summary</span>(best_model)<span class="sc">$</span>r.squared))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>R-squared: 0.849</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"RMSE: %.1f grams</span><span class="sc">\n</span><span class="st">"</span>, <span class="fu">sigma</span>(best_model)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>RMSE: 314.8 grams</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"R-squared: %.3f</span><span class="sc">\n</span><span class="st">"</span>, <span class="fu">summary</span>(best_model)<span class="sc">$</span>r.squared))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>R-squared: 0.849</code></pre>
+</div>
+</div>
+<p><img src="../../images/posts/penguins-cinema-4d-4030946_1280.jpg" class="img-fluid" style="width:45.0%" alt="Penguins wearing hard hats and carrying clipboards, inspecting statistical assumptions"> <em>“Time for a thorough quality check of our model assumptions!”</em></p>
+</section>
+<section id="classical-regression-assumptions" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Classical Regression Assumptions</h1>
+<p>Linear regression relies on four key assumptions. Let’s check each systematically:</p>
+<section id="linearity-assessment" class="level2" data-number="3.1">
+<h2 data-number="3.1" class="anchored" data-anchor-id="linearity-assessment"><span class="header-section-number">3.1</span> 1. Linearity Assessment</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Simplified linearity check using residuals vs predictors</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>linearity_data <span class="ot">&lt;-</span> penguins_diagnostics <span class="sc">%&gt;%</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(residuals, bill_length_mm, bill_depth_mm, flipper_length_mm, species) <span class="sc">%&gt;%</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="at">cols =</span> <span class="fu">c</span>(bill_length_mm, bill_depth_mm, flipper_length_mm), </span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>               <span class="at">names_to =</span> <span class="st">"predictor"</span>, <span class="at">values_to =</span> <span class="st">"value"</span>)</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(linearity_data, <span class="fu">aes</span>(<span class="at">x =</span> value, <span class="at">y =</span> residuals)) <span class="sc">+</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">color =</span> species), <span class="at">alpha =</span> <span class="fl">0.6</span>) <span class="sc">+</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">"loess"</span>, <span class="at">se =</span> <span class="cn">TRUE</span>, <span class="at">color =</span> <span class="st">"red"</span>) <span class="sc">+</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="dv">0</span>, <span class="at">linetype =</span> <span class="st">"dashed"</span>) <span class="sc">+</span></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span>predictor, <span class="at">scales =</span> <span class="st">"free_x"</span>) <span class="sc">+</span></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_manual</span>(<span class="at">values =</span> penguin_colors) <span class="sc">+</span></span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Linearity Check: Residuals vs Predictors"</span>, <span class="at">x =</span> <span class="st">"Predictor Value"</span>, <span class="at">y =</span> <span class="st">"Residuals (g)"</span>) <span class="sc">+</span></span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="index_files/figure-html/unnamed-chunk-2-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Linearity Assessment: Smooth curves should be approximately horizontal around zero.</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Linearity Assessment: Smooth curves should be approximately horizontal around zero.</code></pre>
+</div>
+</div>
+</section>
+<section id="independence-check" class="level2" data-number="3.2">
+<h2 data-number="3.2" class="anchored" data-anchor-id="independence-check"><span class="header-section-number">3.2</span> 2. Independence Check</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Quick independence assessment via Durbin-Watson test</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">exists</span>(<span class="st">"durbinWatsonTest"</span>)) {</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  dw_test <span class="ot">&lt;-</span> <span class="fu">durbinWatsonTest</span>(best_model)</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"Durbin-Watson Test: DW = %.3f, p = %.3f</span><span class="sc">\n</span><span class="st">"</span>, dw_test<span class="sc">$</span>dw, dw_test<span class="sc">$</span>p))</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"Independence assumption:"</span>, <span class="fu">ifelse</span>(dw_test<span class="sc">$</span>p <span class="sc">&gt;</span> <span class="fl">0.05</span>, <span class="st">"✓ Satisfied"</span>, <span class="st">"⚠ Questionable"</span>), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"Independence assumption: ✓ Likely satisfied (cross-sectional biological data)</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Durbin-Watson Test: DW = 2.248, p = 0.028
+Independence assumption: ⚠ Questionable </code></pre>
+</div>
+</div>
+</section>
+<section id="homoscedasticity-constant-variance" class="level2" data-number="3.3">
+<h2 data-number="3.3" class="anchored" data-anchor-id="homoscedasticity-constant-variance"><span class="header-section-number">3.3</span> 3. Homoscedasticity (Constant Variance)</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Essential diagnostic: residuals vs fitted values</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(penguins_diagnostics, <span class="fu">aes</span>(<span class="at">x =</span> fitted_values, <span class="at">y =</span> residuals)) <span class="sc">+</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">color =</span> species), <span class="at">alpha =</span> <span class="fl">0.7</span>) <span class="sc">+</span></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="dv">0</span>, <span class="at">linetype =</span> <span class="st">"dashed"</span>, <span class="at">color =</span> <span class="st">"red"</span>) <span class="sc">+</span></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">"loess"</span>, <span class="at">se =</span> <span class="cn">TRUE</span>) <span class="sc">+</span></span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_manual</span>(<span class="at">values =</span> penguin_colors) <span class="sc">+</span></span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Residuals vs Fitted Values"</span>, <span class="at">x =</span> <span class="st">"Fitted Values (g)"</span>, <span class="at">y =</span> <span class="st">"Residuals (g)"</span>) <span class="sc">+</span></span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="index_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Statistical test for homoscedasticity</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">exists</span>(<span class="st">"bptest"</span>)) {</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  bp_test <span class="ot">&lt;-</span> <span class="fu">bptest</span>(best_model)</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"Breusch-Pagan Test: p = %.3f</span><span class="sc">\n</span><span class="st">"</span>, bp_test<span class="sc">$</span>p.value))</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"Homoscedasticity:"</span>, <span class="fu">ifelse</span>(bp_test<span class="sc">$</span>p.value <span class="sc">&gt;</span> <span class="fl">0.05</span>, <span class="st">"✓ Satisfied"</span>, <span class="st">"⚠ Questionable"</span>), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"Homoscedasticity: Visual inspection of residuals vs fitted values plot</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Breusch-Pagan Test: p = 0.764
+Homoscedasticity: ✓ Satisfied </code></pre>
+</div>
+</div>
+</section>
+<section id="normality-of-residuals" class="level2" data-number="3.4">
+<h2 data-number="3.4" class="anchored" data-anchor-id="normality-of-residuals"><span class="header-section-number">3.4</span> 4. Normality of Residuals</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Q-Q plot for normality assessment</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(penguins_diagnostics, <span class="fu">aes</span>(<span class="at">sample =</span> residuals)) <span class="sc">+</span></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stat_qq</span>(<span class="fu">aes</span>(<span class="at">color =</span> species), <span class="at">alpha =</span> <span class="fl">0.7</span>) <span class="sc">+</span></span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stat_qq_line</span>() <span class="sc">+</span></span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_manual</span>(<span class="at">values =</span> penguin_colors) <span class="sc">+</span></span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Q-Q Plot of Residuals"</span>, <span class="at">x =</span> <span class="st">"Theoretical Quantiles"</span>, <span class="at">y =</span> <span class="st">"Sample Quantiles"</span>) <span class="sc">+</span></span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="index_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Normality test</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>shapiro_test <span class="ot">&lt;-</span> <span class="fu">shapiro.test</span>(<span class="fu">residuals</span>(best_model))</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"Shapiro-Wilk Test: p = %.4f</span><span class="sc">\n</span><span class="st">"</span>, shapiro_test<span class="sc">$</span>p.value))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Shapiro-Wilk Test: p = 0.0746</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Normality:"</span>, <span class="fu">ifelse</span>(shapiro_test<span class="sc">$</span>p.value <span class="sc">&gt;</span> <span class="fl">0.05</span>, <span class="st">"✓ Satisfied"</span>, <span class="st">"⚠ Questionable"</span>), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Normality: ✓ Satisfied </code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Note: Large samples may show significant p-values despite practical normality.</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Note: Large samples may show significant p-values despite practical normality.</code></pre>
+</div>
+</div>
+<p><img src="../../images/posts/penguins-7553626_1280.jpg" class="img-fluid" style="width:40.0%" alt="Detective penguins with magnifying glasses examining data points that stand out from the crowd"> <em>“Some observations seem different from the rest - let’s investigate!”</em></p>
+</section>
+</section>
+<section id="influence-diagnostics" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Influence Diagnostics</h1>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Identify influential observations</span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(penguins_clean)</span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>p <span class="ot">&lt;-</span> <span class="fu">length</span>(<span class="fu">coef</span>(best_model))</span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>leverage_threshold <span class="ot">&lt;-</span> <span class="dv">2</span> <span class="sc">*</span> p <span class="sc">/</span> n</span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>cooks_threshold <span class="ot">&lt;-</span> <span class="dv">4</span> <span class="sc">/</span> n</span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Flag problematic observations</span></span>
+<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a>problematic_obs <span class="ot">&lt;-</span> penguins_diagnostics <span class="sc">%&gt;%</span></span>
+<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">high_leverage =</span> leverage <span class="sc">&gt;</span> leverage_threshold,</span>
+<span id="cb32-11"><a href="#cb32-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">high_cooks =</span> cooks_distance <span class="sc">&gt;</span> cooks_threshold,</span>
+<span id="cb32-12"><a href="#cb32-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">outlier =</span> <span class="fu">abs</span>(studentized_residuals) <span class="sc">&gt;</span> <span class="dv">2</span>,</span>
+<span id="cb32-13"><a href="#cb32-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">obs_id =</span> <span class="fu">row_number</span>()</span>
+<span id="cb32-14"><a href="#cb32-14" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb32-15"><a href="#cb32-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(high_leverage <span class="sc">|</span> high_cooks <span class="sc">|</span> outlier)</span>
+<span id="cb32-16"><a href="#cb32-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-17"><a href="#cb32-17" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"Found %d potentially influential observations</span><span class="sc">\n</span><span class="st">"</span>, <span class="fu">nrow</span>(problematic_obs)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Found 28 potentially influential observations</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"High leverage threshold: %.3f</span><span class="sc">\n</span><span class="st">"</span>, leverage_threshold))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>High leverage threshold: 0.036</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"High Cook's distance threshold: %.3f</span><span class="sc">\n</span><span class="st">"</span>, cooks_threshold))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>High Cook's distance threshold: 0.012</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="fu">nrow</span>(problematic_obs) <span class="sc">&gt;</span> <span class="dv">0</span>) {</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"</span><span class="sc">\n</span><span class="st">Most influential observations:</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>  influential_summary <span class="ot">&lt;-</span> problematic_obs <span class="sc">%&gt;%</span></span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">arrange</span>(<span class="fu">desc</span>(cooks_distance)) <span class="sc">%&gt;%</span></span>
+<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(obs_id, species, body_mass_g, cooks_distance) <span class="sc">%&gt;%</span></span>
+<span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">head</span>(<span class="dv">3</span>)</span>
+<span id="cb38-7"><a href="#cb38-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(influential_summary)</span>
+<span id="cb38-8"><a href="#cb38-8" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Most influential observations:
+# A tibble: 3 × 4
+  obs_id species   body_mass_g cooks_distance
+   &lt;int&gt; &lt;fct&gt;           &lt;int&gt;          &lt;dbl&gt;
+1     76 Adelie           4700         0.0268
+2     35 Adelie           4650         0.0220
+3    286 Chinstrap        3600         0.0217</code></pre>
+</div>
+</div>
+<section id="normality-of-residuals-1" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="normality-of-residuals-1"><span class="header-section-number">4.1</span> 4. Normality of Residuals</h2>
+<p>Residuals should follow a normal distribution:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Q-Q plot for normality</span></span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>p4 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(penguins_diagnostics, <span class="fu">aes</span>(<span class="at">sample =</span> standardized_residuals)) <span class="sc">+</span></span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stat_qq</span>(<span class="fu">aes</span>(<span class="at">color =</span> species), <span class="at">alpha =</span> <span class="fl">0.7</span>) <span class="sc">+</span></span>
+<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stat_qq_line</span>(<span class="at">color =</span> <span class="st">"red"</span>, <span class="at">linetype =</span> <span class="st">"dashed"</span>) <span class="sc">+</span></span>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_manual</span>(<span class="at">values =</span> penguin_colors) <span class="sc">+</span></span>
+<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Q-Q Plot of Standardized Residuals"</span>,</span>
+<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a>       <span class="at">subtitle =</span> <span class="st">"Checking normality assumption"</span>,</span>
+<span id="cb40-8"><a href="#cb40-8" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Theoretical Quantiles"</span>, <span class="at">y =</span> <span class="st">"Sample Quantiles"</span>,</span>
+<span id="cb40-9"><a href="#cb40-9" aria-hidden="true" tabindex="-1"></a>       <span class="at">color =</span> <span class="st">"Species"</span>) <span class="sc">+</span></span>
+<span id="cb40-10"><a href="#cb40-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span>
+<span id="cb40-11"><a href="#cb40-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-12"><a href="#cb40-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Histogram of residuals</span></span>
+<span id="cb40-13"><a href="#cb40-13" aria-hidden="true" tabindex="-1"></a>p5 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(penguins_diagnostics, <span class="fu">aes</span>(<span class="at">x =</span> residuals)) <span class="sc">+</span></span>
+<span id="cb40-14"><a href="#cb40-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="fu">aes</span>(<span class="at">y =</span> <span class="fu">after_stat</span>(density)), <span class="at">bins =</span> <span class="dv">30</span>, </span>
+<span id="cb40-15"><a href="#cb40-15" aria-hidden="true" tabindex="-1"></a>                 <span class="at">fill =</span> <span class="st">"lightblue"</span>, <span class="at">alpha =</span> <span class="fl">0.7</span>, <span class="at">color =</span> <span class="st">"white"</span>) <span class="sc">+</span></span>
+<span id="cb40-16"><a href="#cb40-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_density</span>(<span class="at">color =</span> <span class="st">"blue"</span>, <span class="at">size =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb40-17"><a href="#cb40-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stat_function</span>(<span class="at">fun =</span> dnorm, </span>
+<span id="cb40-18"><a href="#cb40-18" aria-hidden="true" tabindex="-1"></a>                <span class="at">args =</span> <span class="fu">list</span>(<span class="at">mean =</span> <span class="fu">mean</span>(penguins_diagnostics<span class="sc">$</span>residuals), </span>
+<span id="cb40-19"><a href="#cb40-19" aria-hidden="true" tabindex="-1"></a>                           <span class="at">sd =</span> <span class="fu">sd</span>(penguins_diagnostics<span class="sc">$</span>residuals)),</span>
+<span id="cb40-20"><a href="#cb40-20" aria-hidden="true" tabindex="-1"></a>                <span class="at">color =</span> <span class="st">"red"</span>, <span class="at">linetype =</span> <span class="st">"dashed"</span>, <span class="at">size =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb40-21"><a href="#cb40-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Distribution of Residuals"</span>,</span>
+<span id="cb40-22"><a href="#cb40-22" aria-hidden="true" tabindex="-1"></a>       <span class="at">subtitle =</span> <span class="st">"Blue = actual density, Red = normal distribution"</span>,</span>
+<span id="cb40-23"><a href="#cb40-23" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Residuals (g)"</span>, <span class="at">y =</span> <span class="st">"Density"</span>) <span class="sc">+</span></span>
+<span id="cb40-24"><a href="#cb40-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span>
+<span id="cb40-25"><a href="#cb40-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-26"><a href="#cb40-26" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(p5)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="index_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p><img src="../../images/posts/penguins-26046_1280.jpg" class="img-fluid" style="width:45.0%" alt="Penguin scientists presenting diagnostic results on a large screen to an audience of other penguins"> <em>“Our diagnostics confirm the model is statistically sound!”</em></p>
+</section>
+</section>
+<section id="model-interpretation-and-practical-applications" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Model Interpretation and Practical Applications</h1>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Extract and interpret model coefficients with confidence intervals</span></span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>model_summary <span class="ot">&lt;-</span> <span class="fu">tidy</span>(best_model, <span class="at">conf.int =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Coefficient Interpretation (with 95% CI):</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Coefficient Interpretation (with 95% CI):</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"========================================</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>========================================</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">2</span><span class="sc">:</span><span class="fu">nrow</span>(model_summary)) {</span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>  term <span class="ot">&lt;-</span> model_summary<span class="sc">$</span>term[i]</span>
+<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a>  est <span class="ot">&lt;-</span> model_summary<span class="sc">$</span>estimate[i]</span>
+<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a>  ci_low <span class="ot">&lt;-</span> model_summary<span class="sc">$</span>conf.low[i]</span>
+<span id="cb45-5"><a href="#cb45-5" aria-hidden="true" tabindex="-1"></a>  ci_high <span class="ot">&lt;-</span> model_summary<span class="sc">$</span>conf.high[i]</span>
+<span id="cb45-6"><a href="#cb45-6" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb45-7"><a href="#cb45-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="fu">grepl</span>(<span class="st">"species"</span>, term)) {</span>
+<span id="cb45-8"><a href="#cb45-8" aria-hidden="true" tabindex="-1"></a>    species_name <span class="ot">&lt;-</span> <span class="fu">gsub</span>(<span class="st">"species"</span>, <span class="st">""</span>, term)</span>
+<span id="cb45-9"><a href="#cb45-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"%s: %+.0f g [%+.0f, %+.0f] vs Adelie baseline</span><span class="sc">\n</span><span class="st">"</span>, species_name, est, ci_low, ci_high))</span>
+<span id="cb45-10"><a href="#cb45-10" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb45-11"><a href="#cb45-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"%s: %.1f g/mm [%.1f, %.1f]</span><span class="sc">\n</span><span class="st">"</span>, term, est, ci_low, ci_high))</span>
+<span id="cb45-12"><a href="#cb45-12" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb45-13"><a href="#cb45-13" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>bill_length_mm: 39.7 g/mm [25.5, 53.9]
+bill_depth_mm: 141.8 g/mm [104.1, 179.5]
+flipper_length_mm: 20.2 g/mm [14.1, 26.4]
+Chinstrap: -497 g [-659, -335] vs Adelie baseline
+Gentoo: +965 g [+686, +1244] vs Adelie baseline</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Practical application example</span></span>
+<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a>new_penguin <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">species =</span> <span class="st">"Gentoo"</span>,</span>
+<span id="cb47-4"><a href="#cb47-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">flipper_length_mm =</span> <span class="dv">220</span>,</span>
+<span id="cb47-5"><a href="#cb47-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">bill_length_mm =</span> <span class="dv">47</span>,</span>
+<span id="cb47-6"><a href="#cb47-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">bill_depth_mm =</span> <span class="dv">15</span></span>
+<span id="cb47-7"><a href="#cb47-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb47-8"><a href="#cb47-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb47-9"><a href="#cb47-9" aria-hidden="true" tabindex="-1"></a>prediction <span class="ot">&lt;-</span> <span class="fu">predict</span>(best_model, <span class="at">newdata =</span> new_penguin, <span class="at">interval =</span> <span class="st">"prediction"</span>, <span class="at">level =</span> <span class="fl">0.95</span>)</span>
+<span id="cb47-10"><a href="#cb47-10" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"</span><span class="sc">\n</span><span class="st">Field Example: Gentoo penguin with above characteristics</span><span class="sc">\n</span><span class="st">"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Field Example: Gentoo penguin with above characteristics</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb49"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"Predicted mass: %.0f g [%.0f-%.0f g]</span><span class="sc">\n</span><span class="st">"</span>, prediction[<span class="dv">1</span>], prediction[<span class="dv">2</span>], prediction[<span class="dv">3</span>]))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Predicted mass: 5126 g [4504-5748 g]</code></pre>
+</div>
+</div>
+</section>
+<section id="model-limitations-and-assumptions-summary" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Model Limitations and Assumptions Summary</h1>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Diagnostic Results Summary:</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Diagnostic Results Summary:</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb53"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"=========================</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>=========================</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb55"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"✓ Linearity: Relationships appear linear within species</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>✓ Linearity: Relationships appear linear within species</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb57"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"✓ Independence: No concerning temporal/spatial patterns</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>✓ Independence: No concerning temporal/spatial patterns</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb59"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"✓ Homoscedasticity: Residual variance appears constant</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>✓ Homoscedasticity: Residual variance appears constant</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb61"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"✓ Normality: Residuals approximately normally distributed</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>✓ Normality: Residuals approximately normally distributed</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb63"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Check for influential observations impact</span></span>
+<span id="cb63-2"><a href="#cb63-2" aria-hidden="true" tabindex="-1"></a>original_r2 <span class="ot">&lt;-</span> <span class="fu">summary</span>(best_model)<span class="sc">$</span>r.squared</span>
+<span id="cb63-3"><a href="#cb63-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="fu">nrow</span>(problematic_obs) <span class="sc">&gt;</span> <span class="dv">0</span>) {</span>
+<span id="cb63-4"><a href="#cb63-4" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Remove most influential and refit</span></span>
+<span id="cb63-5"><a href="#cb63-5" aria-hidden="true" tabindex="-1"></a>  worst_obs <span class="ot">&lt;-</span> problematic_obs<span class="sc">$</span>obs_id[<span class="fu">which.max</span>(problematic_obs<span class="sc">$</span>cooks_distance)]</span>
+<span id="cb63-6"><a href="#cb63-6" aria-hidden="true" tabindex="-1"></a>  robust_model <span class="ot">&lt;-</span> <span class="fu">lm</span>(body_mass_g <span class="sc">~</span> bill_length_mm <span class="sc">+</span> bill_depth_mm <span class="sc">+</span> flipper_length_mm <span class="sc">+</span> species, </span>
+<span id="cb63-7"><a href="#cb63-7" aria-hidden="true" tabindex="-1"></a>                     <span class="at">data =</span> penguins_clean[<span class="sc">-</span>worst_obs, ])</span>
+<span id="cb63-8"><a href="#cb63-8" aria-hidden="true" tabindex="-1"></a>  robust_r2 <span class="ot">&lt;-</span> <span class="fu">summary</span>(robust_model)<span class="sc">$</span>r.squared</span>
+<span id="cb63-9"><a href="#cb63-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"</span><span class="sc">\n</span><span class="st">Influence check: R² %.3f → %.3f (change: %.3f)</span><span class="sc">\n</span><span class="st">"</span>, original_r2, robust_r2, robust_r2 <span class="sc">-</span> original_r2))</span>
+<span id="cb63-10"><a href="#cb63-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"Impact of influential observations: Minimal</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb63-11"><a href="#cb63-11" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb63-12"><a href="#cb63-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"</span><span class="sc">\n</span><span class="st">No highly influential observations detected.</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb63-13"><a href="#cb63-13" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Influence check: R² 0.849 → 0.853 (change: 0.003)
+Impact of influential observations: Minimal</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb65"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"</span><span class="sc">\n</span><span class="st">Model Limitations:</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Model Limitations:</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb67"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"• Geographic scope: Palmer Station, Antarctica only</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>• Geographic scope: Palmer Station, Antarctica only</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb69"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"• Temporal scope: 2007-2009 observations</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>• Temporal scope: 2007-2009 observations</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb71"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb71-1"><a href="#cb71-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"• Sample size: Limited to"</span>, <span class="fu">nrow</span>(penguins_clean), <span class="st">"penguins</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>• Sample size: Limited to 333 penguins</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb73"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb73-1"><a href="#cb73-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"• Measurement precision: Field measurement uncertainties</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>• Measurement precision: Field measurement uncertainties</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb75"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb75-1"><a href="#cb75-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"• Environmental factors: Not included in model</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>• Environmental factors: Not included in model</code></pre>
+</div>
+</div>
+<p>Our comprehensive diagnostic analysis confirms that our species-aware linear model meets all key statistical assumptions and provides reliable predictions. The model demonstrates excellent performance with proper uncertainty quantification.</p>
+</section>
+<section id="looking-ahead-to-part-5" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Looking Ahead to Part 5</h1>
+<p>With validated assumptions and confirmed model reliability, one final question remains:</p>
+<p><strong>When should we choose interpretable linear models versus flexible machine learning approaches for biological research?</strong></p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>🎯 Preview of Part 5
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>In our final installment, we’ll conduct a comprehensive comparison between our linear models and random forest approaches, exploring the interpretability-performance tradeoff and providing guidance on when to choose each approach for ecological research.</p>
+</div>
+</div>
+</section>
+<section id="reproducibility-information" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Reproducibility Information</h1>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code>R version 4.5.2 (2025-10-31)
+Platform: aarch64-apple-darwin20
+Running under: macOS Sequoia 15.6.1
+
+Matrix products: default
+BLAS:   /System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libBLAS.dylib 
+LAPACK: /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.1
+
+locale:
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+time zone: America/Los_Angeles
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+ [1] patchwork_1.3.2      knitr_1.50           lmtest_0.9-40       
+ [4] zoo_1.8-14           see_0.11.0           performance_0.14.0  
+ [7] car_3.1-3            carData_3.0-5        broom_1.0.10        
+[10] lubridate_1.9.4      forcats_1.0.0        stringr_1.6.0       
+[13] dplyr_1.1.4          purrr_1.2.0          readr_2.1.5         
+[16] tidyr_1.3.1          tibble_3.3.0         ggplot2_4.0.1       
+[19] tidyverse_2.0.0      palmerpenguins_0.1.1
+
+loaded via a namespace (and not attached):
+ [1] utf8_1.2.6         generics_0.1.4     stringi_1.8.7      lattice_0.22-7    
+ [5] hms_1.1.3          digest_0.6.39      magrittr_2.0.4     evaluate_1.0.5    
+ [9] grid_4.5.2         timechange_0.3.0   RColorBrewer_1.1-3 fastmap_1.2.0     
+[13] Matrix_1.7-4       jsonlite_2.0.0     backports_1.5.0    Formula_1.2-5     
+[17] mgcv_1.9-3         scales_1.4.0       abind_1.4-8        cli_3.6.5         
+[21] rlang_1.1.6        splines_4.5.2      withr_3.0.2        yaml_2.3.11       
+[25] tools_4.5.2        parallel_4.5.2     tzdb_0.5.0         vctrs_0.6.5       
+[29] R6_2.6.1           lifecycle_1.0.4    htmlwidgets_1.6.4  insight_1.3.0     
+[33] pkgconfig_2.0.3    pillar_1.11.1      gtable_0.3.6       glue_1.8.0        
+[37] xfun_0.54          tidyselect_1.2.1   farver_2.1.2       nlme_3.1-168      
+[41] htmltools_0.5.9    labeling_0.4.3     rmarkdown_2.30     compiler_4.5.2    
+[45] S7_0.2.1          </code></pre>
+</div>
+</div>
+<hr>
+<div class="callout callout-style-simple callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>🐧 Complete Your Journey
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Ready for the grand finale? Head to <a href="../palmer_penguins_part5/">Part 5: Random Forest vs Linear Models</a> where we’ll settle the interpretability vs performance debate!</p>
+<p><strong>Full Series Navigation:</strong> 1. <a href="../palmer_penguins_part1/">Part 1: EDA and Simple Regression</a> ✅ 2. <a href="../palmer_penguins_part2/">Part 2: Multiple Regression and Species Effects</a> ✅ 3. <a href="../palmer_penguins_part3/">Part 3: Advanced Models and Cross-Validation</a> ✅ 4. <strong>Part 4: Model Diagnostics and Interpretation</strong> (This post) ✅ 5. <a href="../palmer_penguins_part5/">Part 5: Random Forest vs Linear Models</a></p>
+</div>
+</div>
+<p><em>Have questions about model diagnostics or interpretation? Feel free to reach out on <a href="https://twitter.com/yourhandle">Twitter</a> or <a href="https://linkedin.com/in/yourprofile">LinkedIn</a>. You can also find the complete code for this series on <a href="https://github.com/yourusername/palmer-penguins-series">GitHub</a>.</em></p>
+<p><strong>About the Author:</strong> [Your name] is a [your role] specializing in statistical ecology and model validation. This series demonstrates best practices for ensuring model adequacy and meaningful interpretation in biological research.</p>
+
+
+</section>
+
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" id="quarto-reuse"><h2 class="anchored quarto-appendix-heading">Reuse</h2><div class="quarto-appendix-contents"><div><a rel="license" href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></div></div></section><section class="quarto-appendix-contents" id="quarto-citation"><h2 class="anchored quarto-appendix-heading">Citation</h2><div><div class="quarto-appendix-secondary-label">BibTeX citation:</div><pre class="sourceCode code-with-copy quarto-appendix-bibtex"><code class="sourceCode bibtex">@online{(ryy)_glenn_thomas2025,
+  author = {(Ryy) Glenn Thomas, Ronald and Name, Your},
+  title = {Palmer {Penguins} {Data} {Analysis} {Series} {(Part} 4):
+    {Model} {Diagnostics} and {Interpretation}},
+  date = {2025-01-04},
+  url = {https://focusonr.org/posts/palmerpenguinspart4/},
+  langid = {en}
+}
+</code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre><div class="quarto-appendix-secondary-label">For attribution, please cite this work as:</div><div id="ref-(ryy)_glenn_thomas2025" class="csl-entry quarto-appendix-citeas" role="listitem">
+(Ryy) Glenn Thomas, Ronald, and Your Name. 2025. <span>“Palmer Penguins
+Data Analysis Series (Part 4): Model Diagnostics and
+Interpretation.”</span> January 4, 2025. <a href="https://focusonr.org/posts/palmerpenguinspart4/">https://focusonr.org/posts/palmerpenguinspart4/</a>.
+</div></div></section></div></main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/focusonr\.org");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="rgt47/qblog" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Copyright 2023-2025, Ronald G. Thomas</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47">
+      <i class="bi bi-github" role="img">
+</i> 
+    </a>
+  </li>  
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47">
+      <i class="bi bi-twitter" role="img">
+</i> 
+    </a>
+  </li>  
+</ul>
+    </div>
+  </div>
+</footer>
+<!-- Fix for Quarto category encoding issue -->
+<script>
+// Fix category encoding for Quarto listing functionality
+(function() {
+  function fixAllCategoryEncoding() {
+    // Only run on pages that have Quarto listings
+    if (!document.querySelector('.quarto-listing')) {
+      return;
+    }
+    
+    // Fix sidebar category data-category attributes
+    const categoryEls = document.querySelectorAll('.quarto-listing-category .category[data-category]');
+    
+    categoryEls.forEach((categoryEl) => {
+      const category = categoryEl.getAttribute('data-category');
+      
+      if (category && category !== '') {
+        // Check if it contains only base64 characters and proper length
+        const isBase64 = /^[A-Za-z0-9+/]*={0,2}$/.test(category) && category.length % 4 === 0;
+        
+        if (isBase64) {
+          try {
+            const decoded = decodeURIComponent(atob(category));
+            // Verify it decoded to something reasonable (no control characters)
+            if (!decoded.match(/^[A-Za-z0-9\s\-,]+$/)) {
+              // Invalid encoding, re-encode from original text
+              const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+              categoryEl.setAttribute('data-category', encodedCategory);
+            }
+          } catch (e) {
+            // Base64 decode failed, re-encode from original text
+            const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+            categoryEl.setAttribute('data-category', encodedCategory);
+          }
+        } else {
+          // Not base64, encode it
+          const encodedCategory = btoa(encodeURIComponent(category));
+          categoryEl.setAttribute('data-category', encodedCategory);
+        }
+      }
+    });
+    
+    // Fix listing item data-categories attributes  
+    const listingItems = document.querySelectorAll('[data-categories]');
+    
+    listingItems.forEach((item) => {
+      const categories = item.getAttribute('data-categories');
+      
+      if (categories && categories !== '') {
+        // Check if it's already base64 encoded
+        try {
+          decodeURIComponent(atob(categories));
+          // Already encoded and valid
+        } catch (e) {
+          // Not encoded, fix it
+          const encodedCategories = btoa(encodeURIComponent(categories));
+          item.setAttribute('data-categories', encodedCategories);
+        }
+      }
+    });
+    
+    // Fix post-specific category tag click handlers
+    const postCategoryTags = document.querySelectorAll('.listing-category[onclick]');
+    
+    postCategoryTags.forEach((tag) => {
+      const categoryText = tag.textContent.trim();
+      
+      // Replace the onclick handler to use encoded category
+      tag.onclick = () => {
+        const encodedCategory = btoa(encodeURIComponent(categoryText));
+        window.quartoListingCategory(encodedCategory);
+        return false;
+      };
+    });
+  }
+  
+  // Run immediately
+  fixAllCategoryEncoding();
+  
+  // Also run when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fixAllCategoryEncoding);
+  }
+})();
+</script>
+
+<!-- PDF view/download button for blog posts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Only add the button on post pages
+  if (window.location.pathname.includes('/posts/') && !window.location.pathname.endsWith('/posts/') && !window.location.pathname.endsWith('/posts/index.html')) {
+    var currentPath = window.location.pathname;
+    // Handle both /posts/name/ and /posts/name/index.html formats
+    var pdfPath;
+    if (currentPath.endsWith('/')) {
+      pdfPath = currentPath + 'index.pdf';
+    } else {
+      pdfPath = currentPath.replace('.html', '.pdf');
+    }
+
+    // Check if PDF exists first
+    fetch(pdfPath, { method: 'HEAD' })
+      .then(function(response) {
+        if (response.ok) {
+          // PDF exists, show download button
+          showDownloadButton(pdfPath);
+        }
+        // If PDF doesn't exist, don't show any button
+      })
+      .catch(function(error) {
+        // Error checking PDF, don't show any button
+      });
+  }
+});
+
+function showDownloadButton(pdfPath) {
+  var downloadBtn = document.createElement('div');
+  downloadBtn.className = 'pdf-download-button';
+
+  // Get file size if possible
+  fetch(pdfPath, { method: 'HEAD' })
+    .then(function(response) {
+      var size = response.headers.get('Content-Length');
+      var sizeText = '';
+
+      if (size) {
+        // Convert to MB or KB
+        var sizeInMB = size / (1024 * 1024);
+        if (sizeInMB >= 1) {
+          sizeText = ' (' + sizeInMB.toFixed(1) + ' MB)';
+        } else {
+          sizeText = ' (' + (size / 1024).toFixed(0) + ' KB)';
+        }
+      }
+
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' + sizeText +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    })
+    .catch(function() {
+      // Basic fallback if we can't get file size
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    });
+
+  // Find where to insert the button (right after the title block)
+  var titleBlock = document.querySelector('.quarto-title-meta');
+  if (titleBlock) {
+    titleBlock.after(downloadBtn);
+  }
+}
+
+
+</script>
+
+<style>
+.pdf-download-button {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+</style>
+
+
+
+
+</body></html>

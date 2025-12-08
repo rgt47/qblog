@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.25">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Research Computing Team">
+<meta name="dcterms.date" content="2025-12-08">
+
+<title>Achieving Full Reproducibility in R: A Docker and renv Strategy – Thomas Lab</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../../">
+<script src="../../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../../site_libs/quarto-html/quarto-syntax-highlighting-7b89279ff1a6dce999919e0e67d4d9ec.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../../site_libs/bootstrap/bootstrap-cba6959027663c8af85f024d0b434422.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": true,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "keyboard-shortcut": [
+    "?",
+    "/"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&amp;family=Open+Sans:ital,wght@0,400;0,600;1,400&amp;family=Fira+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<script src="https://kit.fontawesome.com/0fba9333d8.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+
+<!-- Custom meta tags for social sharing -->
+<meta property="og:site_name" content="Thomas Lab">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@rgt47">
+
+<!-- Add responsive features -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<!-- Add analytics if needed -->
+<!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXX');
+</script> -->
+
+<!-- Add custom javascript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Remove code tools button completely
+  const codeButton = document.querySelector('.code-tools-button');
+  if (codeButton) {
+    codeButton.remove();
+  }
+  
+  // Add any custom JavaScript functionality here
+  
+  // Example: Add smooth scrolling
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      
+      document.querySelector(this.getAttribute('href')).scrollIntoView({
+        behavior: 'smooth'
+      });
+    });
+  });
+  
+  // Make sidebar category items clickable (but not TOC items)
+  const categoryLinks = {
+    'Programming & Development': '/posts/?category=Programming+%26+Development',
+    'Data Analysis & Visualization': '/posts/?category=Data+Analysis+%26+Visualization',
+    'Deployment & Operations': '/posts/?category=Deployment+%26+Operations',
+    'Development Environment': '/posts/?category=Development+Environment',
+    'Shiny Applications': '/posts/?category=Shiny+Applications',
+    'AI & Automation': '/posts/?category=AI+%26+Automation',
+    'System Administration': '/posts/?category=System+Administration'
+  };
+  
+  // Only target sidebar items that are not in the TOC
+  document.querySelectorAll('.sidebar-item-section .sidebar-item-text').forEach(item => {
+    // Skip if this is inside the TOC
+    if (item.closest('#TOC')) return;
+    
+    const text = item.textContent.trim();
+    if (categoryLinks[text]) {
+      item.addEventListener('click', function() {
+        window.location.href = categoryLinks[text];
+      });
+    }
+  });
+});
+</script>
+
+
+<meta property="og:title" content="Achieving Full Reproducibility in R: A Docker and renv Strategy – Thomas Lab">
+<meta property="og:description" content="This white paper presents a comprehensive approach to achieving reproducibility in R workflows by combining two powerful tools: renv for R package management and Docker for containerizing the computing environment. Together, these tools ensure that an R workflow runs identically across different systems with the same packages, R version, and system libraries as the original setup. The paper includes a practical case study demonstrating collaborative development using this approach.">
+<meta property="og:site_name" content="Thomas Lab">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a href="../../../index.html" class="navbar-brand navbar-brand-logo">
+    </a>
+    <a class="navbar-brand" href="../../../index.html">
+    <span class="navbar-title">Thomas Lab</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../about/index.html"> 
+<span class="menu-text">About</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../blog/index.html"> 
+<span class="menu-text">Blog</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../white-papers/index.html"> 
+<span class="menu-text">White Papers</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../research/index.html"> 
+<span class="menu-text">Research</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../teaching/index.html"> 
+<span class="menu-text">Teaching</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../misc/index.html"> 
+<span class="menu-text">Misc</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47"> <i class="bi bi-twitter" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#executive-summary" id="toc-executive-summary" class="nav-link active" data-scroll-target="#executive-summary"><span class="header-section-number">1</span> Executive Summary</a></li>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link" data-scroll-target="#introduction"><span class="header-section-number">2</span> Introduction</a>
+  <ul class="collapse">
+  <li><a href="#the-challenge-of-reproducibility-in-r" id="toc-the-challenge-of-reproducibility-in-r" class="nav-link" data-scroll-target="#the-challenge-of-reproducibility-in-r"><span class="header-section-number">2.1</span> The Challenge of Reproducibility in R</a></li>
+  <li><a href="#a-two-level-solution" id="toc-a-two-level-solution" class="nav-link" data-scroll-target="#a-two-level-solution"><span class="header-section-number">2.2</span> A Two-Level Solution</a></li>
+  </ul></li>
+  <li><a href="#renv-package-level-reproducibility" id="toc-renv-package-level-reproducibility" class="nav-link" data-scroll-target="#renv-package-level-reproducibility"><span class="header-section-number">3</span> renv: Package-Level Reproducibility</a>
+  <ul class="collapse">
+  <li><a href="#what-is-renv" id="toc-what-is-renv" class="nav-link" data-scroll-target="#what-is-renv"><span class="header-section-number">3.1</span> What is renv?</a></li>
+  <li><a href="#key-features-of-renv" id="toc-key-features-of-renv" class="nav-link" data-scroll-target="#key-features-of-renv"><span class="header-section-number">3.2</span> Key Features of renv</a></li>
+  <li><a href="#basic-renv-workflow" id="toc-basic-renv-workflow" class="nav-link" data-scroll-target="#basic-renv-workflow"><span class="header-section-number">3.3</span> Basic renv Workflow</a></li>
+  </ul></li>
+  <li><a href="#docker-system-level-reproducibility" id="toc-docker-system-level-reproducibility" class="nav-link" data-scroll-target="#docker-system-level-reproducibility"><span class="header-section-number">4</span> Docker: System-Level Reproducibility</a>
+  <ul class="collapse">
+  <li><a href="#what-is-docker" id="toc-what-is-docker" class="nav-link" data-scroll-target="#what-is-docker"><span class="header-section-number">4.1</span> What is Docker?</a></li>
+  <li><a href="#dockers-role-in-reproducibility" id="toc-dockers-role-in-reproducibility" class="nav-link" data-scroll-target="#dockers-role-in-reproducibility"><span class="header-section-number">4.2</span> Docker’s Role in Reproducibility</a></li>
+  <li><a href="#docker-components-for-r-workflows" id="toc-docker-components-for-r-workflows" class="nav-link" data-scroll-target="#docker-components-for-r-workflows"><span class="header-section-number">4.3</span> Docker Components for R Workflows</a></li>
+  </ul></li>
+  <li><a href="#combining-renv-and-docker-a-comprehensive-approach" id="toc-combining-renv-and-docker-a-comprehensive-approach" class="nav-link" data-scroll-target="#combining-renv-and-docker-a-comprehensive-approach"><span class="header-section-number">5</span> Combining renv and Docker: A Comprehensive Approach</a>
+  <ul class="collapse">
+  <li><a href="#why-use-both" id="toc-why-use-both" class="nav-link" data-scroll-target="#why-use-both"><span class="header-section-number">5.1</span> Why Use Both?</a></li>
+  <li><a href="#integration-strategy" id="toc-integration-strategy" class="nav-link" data-scroll-target="#integration-strategy"><span class="header-section-number">5.2</span> Integration Strategy</a></li>
+  </ul></li>
+  <li><a href="#practical-example-collaborative-r-markdown-development" id="toc-practical-example-collaborative-r-markdown-development" class="nav-link" data-scroll-target="#practical-example-collaborative-r-markdown-development"><span class="header-section-number">6</span> Practical Example: Collaborative R Markdown Development</a>
+  <ul class="collapse">
+  <li><a href="#project-scenario" id="toc-project-scenario" class="nav-link" data-scroll-target="#project-scenario"><span class="header-section-number">6.1</span> Project Scenario</a></li>
+  <li><a href="#step-by-step-implementation" id="toc-step-by-step-implementation" class="nav-link" data-scroll-target="#step-by-step-implementation"><span class="header-section-number">6.2</span> Step-by-Step Implementation</a></li>
+  </ul></li>
+  <li><a href="#flipper-length-vs.-bill-length" id="toc-flipper-length-vs.-bill-length" class="nav-link" data-scroll-target="#flipper-length-vs.-bill-length"><span class="header-section-number">7</span> Flipper Length vs.&nbsp;Bill Length</a></li>
+  <li><a href="#flipper-length-vs.-bill-length-1" id="toc-flipper-length-vs.-bill-length-1" class="nav-link" data-scroll-target="#flipper-length-vs.-bill-length-1"><span class="header-section-number">8</span> Flipper Length vs.&nbsp;Bill Length</a></li>
+  <li><a href="#body-mass-vs.-bill-length" id="toc-body-mass-vs.-bill-length" class="nav-link" data-scroll-target="#body-mass-vs.-bill-length"><span class="header-section-number">9</span> Body Mass vs.&nbsp;Bill Length</a>
+  <ul class="collapse">
+  <li><a href="#key-benefits-demonstrated-in-this-example" id="toc-key-benefits-demonstrated-in-this-example" class="nav-link" data-scroll-target="#key-benefits-demonstrated-in-this-example"><span class="header-section-number">9.1</span> Key Benefits Demonstrated in This Example</a></li>
+  </ul></li>
+  <li><a href="#best-practices-and-considerations" id="toc-best-practices-and-considerations" class="nav-link" data-scroll-target="#best-practices-and-considerations"><span class="header-section-number">10</span> Best Practices and Considerations</a>
+  <ul class="collapse">
+  <li><a href="#when-to-use-this-approach" id="toc-when-to-use-this-approach" class="nav-link" data-scroll-target="#when-to-use-this-approach"><span class="header-section-number">10.1</span> When to Use This Approach</a></li>
+  <li><a href="#tips-for-efficient-implementation" id="toc-tips-for-efficient-implementation" class="nav-link" data-scroll-target="#tips-for-efficient-implementation"><span class="header-section-number">10.2</span> Tips for Efficient Implementation</a></li>
+  <li><a href="#potential-challenges" id="toc-potential-challenges" class="nav-link" data-scroll-target="#potential-challenges"><span class="header-section-number">10.3</span> Potential Challenges</a></li>
+  </ul></li>
+  <li><a href="#conclusion" id="toc-conclusion" class="nav-link" data-scroll-target="#conclusion"><span class="header-section-number">11</span> Conclusion</a></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references"><span class="header-section-number">12</span> References</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content column-page-right" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Achieving Full Reproducibility in R: A Docker and renv Strategy</h1>
+</div>
+
+
+
+<div class="quarto-title-meta column-page-right">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Research Computing Team </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">December 8, 2025</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+<div>
+  <div class="abstract">
+    <div class="block-title">Abstract</div>
+    <p>This white paper presents a comprehensive approach to achieving reproducibility in R workflows by combining two powerful tools: renv for R package management and Docker for containerizing the computing environment. Together, these tools ensure that an R workflow runs identically across different systems with the same packages, R version, and system libraries as the original setup. The paper includes a practical case study demonstrating collaborative development using this approach.</p>
+  </div>
+</div>
+
+
+</header>
+
+
+<section id="executive-summary" class="level2" data-number="1">
+<h2 data-number="1" class="anchored" data-anchor-id="executive-summary"><span class="header-section-number">1</span> Executive Summary</h2>
+<p>Reproducibility stands as a cornerstone of professional data analysis, yet in practice, achieving it consistently with R workflows remains challenging. R projects frequently break when transferred between computers due to mismatched R versions or package dependencies, leaving developers in what is colloquially known as “dependency hell.” This white paper presents a comprehensive approach to solving this problem by combining two powerful tools: <strong>renv</strong> for R package management and <strong>Docker</strong> for containerizing the computing environment. Together, these tools ensure that an R workflow runs identically across different systems with the same packages, R version, and system libraries as the original setup.</p>
+</section>
+<section id="introduction" class="level2" data-number="2">
+<h2 data-number="2" class="anchored" data-anchor-id="introduction"><span class="header-section-number">2</span> Introduction</h2>
+<section id="the-challenge-of-reproducibility-in-r" class="level3" data-number="2.1">
+<h3 data-number="2.1" class="anchored" data-anchor-id="the-challenge-of-reproducibility-in-r"><span class="header-section-number">2.1</span> The Challenge of Reproducibility in R</h3>
+<p>R has become a standard tool for data science and statistical analysis across numerous disciplines. However, as R projects grow in complexity, they often develop intricate webs of dependencies that can make sharing and reproducing analyses difficult. Some common challenges include:</p>
+<ul>
+<li>Different R versions across machines</li>
+<li>Incompatible package versions</li>
+<li>Missing system-level dependencies</li>
+<li>Operating system differences</li>
+<li>Conflicts with other installed packages</li>
+</ul>
+<p>These challenges often manifest as the frustrating “it works on my machine” problem, where analysis code runs perfectly for the original author but fails when others attempt to use it. This undermines the scientific and collaborative potential of R-based analyses.</p>
+</section>
+<section id="a-two-level-solution" class="level3" data-number="2.2">
+<h3 data-number="2.2" class="anchored" data-anchor-id="a-two-level-solution"><span class="header-section-number">2.2</span> A Two-Level Solution</h3>
+<p>To address these challenges comprehensively, we need to tackle reproducibility at two distinct levels:</p>
+<ol type="1">
+<li><strong>Package-level reproducibility</strong>: Ensuring exact package versions and dependencies are maintained</li>
+<li><strong>System-level reproducibility</strong>: Guaranteeing consistent R versions, operating system, and system libraries</li>
+</ol>
+<p>The strategy presented in this white paper leverages <strong>renv</strong> for package-level consistency and <strong>Docker</strong> for system-level consistency. When combined, they provide a robust framework for end-to-end reproducible R workflows.</p>
+</section>
+</section>
+<section id="renv-package-level-reproducibility" class="level2" data-number="3">
+<h2 data-number="3" class="anchored" data-anchor-id="renv-package-level-reproducibility"><span class="header-section-number">3</span> renv: Package-Level Reproducibility</h2>
+<section id="what-is-renv" class="level3" data-number="3.1">
+<h3 data-number="3.1" class="anchored" data-anchor-id="what-is-renv"><span class="header-section-number">3.1</span> What is renv?</h3>
+<p><strong>renv</strong> (Reproducible Environment) is an R package designed to create isolated, project-specific library environments. Instead of relying on a shared system-wide R library that might change over time, renv gives each project its own separate collection of packages with specific versions.</p>
+</section>
+<section id="key-features-of-renv" class="level3" data-number="3.2">
+<h3 data-number="3.2" class="anchored" data-anchor-id="key-features-of-renv"><span class="header-section-number">3.2</span> Key Features of renv</h3>
+<ul>
+<li><p><strong>Isolated project library</strong>: renv creates a project-specific library (typically in <code>renv/library</code>) containing only the packages used by that project. This isolation ensures that updates or changes to packages in one project won’t affect others.</p></li>
+<li><p><strong>Lockfile for dependencies</strong>: When you finish installing or updating packages, <code>renv::snapshot()</code> produces a <code>renv.lock</code> file - a JSON document listing each package and its exact version and source. This lockfile is designed to be committed to version control and shared with collaborators.</p></li>
+<li><p><strong>Environment restoration</strong>: On a new machine (or when reproducing past results), <code>renv::restore()</code> installs the exact versions of packages specified in the lockfile. This creates an R package environment identical to the one that created the lockfile, provided the same R version is available.</p></li>
+</ul>
+</section>
+<section id="basic-renv-workflow" class="level3" data-number="3.3">
+<h3 data-number="3.3" class="anchored" data-anchor-id="basic-renv-workflow"><span class="header-section-number">3.3</span> Basic renv Workflow</h3>
+<p>The typical workflow with renv involves:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># One-time installation of renv</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">"renv"</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Initialize renv for the project</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>renv<span class="sc">::</span><span class="fu">init</span>()  <span class="co"># Creates renv infrastructure</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Install project-specific packages</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># ...</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Save the package state to renv.lock</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>renv<span class="sc">::</span><span class="fu">snapshot</span>()</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Later or on another system...</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>renv<span class="sc">::</span><span class="fu">restore</span>()  <span class="co"># Restore packages from renv.lock</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>While renv effectively handles package dependencies, it does not address differences in R versions or system libraries. This limitation is where Docker becomes essential.</p>
+</section>
+</section>
+<section id="docker-system-level-reproducibility" class="level2" data-number="4">
+<h2 data-number="4" class="anchored" data-anchor-id="docker-system-level-reproducibility"><span class="header-section-number">4</span> Docker: System-Level Reproducibility</h2>
+<section id="what-is-docker" class="level3" data-number="4.1">
+<h3 data-number="4.1" class="anchored" data-anchor-id="what-is-docker"><span class="header-section-number">4.1</span> What is Docker?</h3>
+<p>Docker is a platform that allows you to package software into standardized units called containers. A Docker container is like a lightweight virtual machine that includes everything needed to run an application: the code, runtime, system tools, libraries, and settings.</p>
+</section>
+<section id="dockers-role-in-reproducibility" class="level3" data-number="4.2">
+<h3 data-number="4.2" class="anchored" data-anchor-id="dockers-role-in-reproducibility"><span class="header-section-number">4.2</span> Docker’s Role in Reproducibility</h3>
+<p>While renv handles R packages, Docker ensures consistency for:</p>
+<ul>
+<li><strong>Operating system</strong>: The specific Linux distribution or OS version</li>
+<li><strong>R interpreter</strong>: The exact R version</li>
+<li><strong>System libraries</strong>: Required C/C++ libraries and other dependencies</li>
+<li><strong>Computational environment</strong>: Memory limits, CPU configuration, etc.</li>
+</ul>
+<p>By running an R Markdown project in Docker, you eliminate differences in OS or R installation as potential sources of irreproducibility. Any machine running Docker will execute the container in an identical environment.</p>
+</section>
+<section id="docker-components-for-r-workflows" class="level3" data-number="4.3">
+<h3 data-number="4.3" class="anchored" data-anchor-id="docker-components-for-r-workflows"><span class="header-section-number">4.3</span> Docker Components for R Workflows</h3>
+<p>For R-based projects, a typical Docker approach involves:</p>
+<ol type="1">
+<li><strong>Base image</strong>: Starting from a pre-configured R image (e.g., from the Rocker project)</li>
+<li><strong>Dependencies</strong>: Adding system and R package dependencies</li>
+<li><strong>Configuration</strong>: Setting working directories and environment variables</li>
+<li><strong>Content</strong>: Adding project files</li>
+<li><strong>Execution</strong>: Defining how the project should run</li>
+</ol>
+<p>A simple Dockerfile for an R Markdown project might look like:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode dockerfile code-with-copy"><code class="sourceCode dockerfile"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Use R 4.1.0 on Linux as base image</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">FROM</span> rocker/r-ver:4.1.0</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Set the working directory inside the container</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">WORKDIR</span> /workspace</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Install renv and restore dependencies</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">RUN</span> <span class="ex">R</span> <span class="at">-e</span> <span class="st">"install.packages('renv', repos='https://cloud.r-project.org')"</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Copy renv lockfile and infrastructure</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="kw">COPY</span> renv.lock renv/activate.R /workspace/</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Restore the R package environment</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="kw">RUN</span> <span class="ex">R</span> <span class="at">-e</span> <span class="st">"renv::restore()"</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Default command when container runs</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="kw">CMD</span> [<span class="st">"/bin/bash"</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>This Dockerfile creates a consistent environment with a specific R version and packages, regardless of the host system.</p>
+</section>
+</section>
+<section id="combining-renv-and-docker-a-comprehensive-approach" class="level2" data-number="5">
+<h2 data-number="5" class="anchored" data-anchor-id="combining-renv-and-docker-a-comprehensive-approach"><span class="header-section-number">5</span> Combining renv and Docker: A Comprehensive Approach</h2>
+<section id="why-use-both" class="level3" data-number="5.1">
+<h3 data-number="5.1" class="anchored" data-anchor-id="why-use-both"><span class="header-section-number">5.1</span> Why Use Both?</h3>
+<p>Using renv or Docker alone improves reproducibility, but combining them provides the most comprehensive solution:</p>
+<ul>
+<li><strong>Docker</strong> guarantees the OS and R version</li>
+<li><strong>renv</strong> guarantees the R packages and their versions</li>
+<li><strong>Together</strong> they achieve end-to-end reproducibility from operating system to package dependencies</li>
+</ul>
+<p>This combined approach creates a fully portable analytical environment that can be shared and will produce identical results across different computers.</p>
+</section>
+<section id="integration-strategy" class="level3" data-number="5.2">
+<h3 data-number="5.2" class="anchored" data-anchor-id="integration-strategy"><span class="header-section-number">5.2</span> Integration Strategy</h3>
+<p>The recommended workflow integrates renv and Docker in the following manner:</p>
+<ol type="1">
+<li><strong>Develop locally with renv</strong>: Create your R project with renv to manage package dependencies.</li>
+<li><strong>Snapshot dependencies</strong>: Use <code>renv::snapshot()</code> to create a lockfile.</li>
+<li><strong>Containerize with Docker</strong>: Create a Dockerfile that uses a specific R version and incorporates the renv lockfile.</li>
+<li><strong>Share both</strong>: Distribute both the code (with lockfile) and the Docker configuration.</li>
+<li><strong>Execute consistently</strong>: Run analyses in the Docker container for guaranteed reproducibility.</li>
+</ol>
+<p>This strategy ensures that your R Markdown documents and analyses will run identically for anyone who has access to your Docker container, regardless of their local setup.</p>
+</section>
+</section>
+<section id="practical-example-collaborative-r-markdown-development" class="level2" data-number="6">
+<h2 data-number="6" class="anchored" data-anchor-id="practical-example-collaborative-r-markdown-development"><span class="header-section-number">6</span> Practical Example: Collaborative R Markdown Development</h2>
+<p>The following case study demonstrates how two developers can collaborate on an R Markdown project using renv and Docker to ensure reproducibility.</p>
+<section id="project-scenario" class="level3" data-number="6.1">
+<h3 data-number="6.1" class="anchored" data-anchor-id="project-scenario"><span class="header-section-number">6.1</span> Project Scenario</h3>
+<p>Two data scientists are collaborating on an analysis of the Palmer Penguins dataset. Developer 1 will set up the initial project structure and create a basic analysis. Developer 2 will extend the analysis with additional visualizations. They’ll use GitHub for version control and DockerHub to share the containerized environment.</p>
+</section>
+<section id="step-by-step-implementation" class="level3" data-number="6.2">
+<h3 data-number="6.2" class="anchored" data-anchor-id="step-by-step-implementation"><span class="header-section-number">6.2</span> Step-by-Step Implementation</h3>
+<section id="developer-1-project-setup-and-initial-analysis" class="level4" data-number="6.2.1">
+<h4 data-number="6.2.1" class="anchored" data-anchor-id="developer-1-project-setup-and-initial-analysis"><span class="header-section-number">6.2.1</span> Developer 1: Project Setup and Initial Analysis</h4>
+<p><strong>Step 1: Create and Initialize the GitHub Repository</strong></p>
+<p>Developer 1 creates a new GitHub repository called “penguins-analysis” and clones it locally:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone https://github.com/username/penguins-analysis.git</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> penguins-analysis</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>Step 2: Initialize renv for Dependency Management</strong></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">"renv"</span>)  <span class="co"># If not already installed</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>renv<span class="sc">::</span><span class="fu">init</span>()  <span class="co"># Initialize renv for the project</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>This creates the necessary renv infrastructure, including an initial <code>renv.lock</code> file.</p>
+<p><strong>Step 3: Install Required R Packages</strong></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">"ggplot2"</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">"palmerpenguins"</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>renv<span class="sc">::</span><span class="fu">snapshot</span>()  <span class="co"># Save package versions to renv.lock</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>Step 4: Create Initial R Markdown Analysis</strong></p>
+<p>Developer 1 creates a file named <code>peng1.Rmd</code> with the following content:</p>
+<div class="code-with-filename">
+<div class="code-with-filename-file">
+<pre><strong>peng1.Rmd</strong></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6" data-filename="peng1.Rmd"><pre class="sourceCode r code-overflow-wrap code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="sc">---</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>title<span class="sc">:</span> <span class="st">"Palmer Penguins Analysis"</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>author<span class="sc">:</span> <span class="st">"Developer 1"</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>date<span class="sc">:</span> <span class="st">"`r Sys.Date()`"</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>output<span class="sc">:</span> html_document</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="sc">---</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="st">```</span><span class="at">r</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="at">#| label: setup</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="at">#| include: false</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="at">library(ggplot2)</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="at">library(palmerpenguins)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+</section>
+</section>
+<section id="flipper-length-vs.-bill-length" class="level2" data-number="7">
+<h2 data-number="7" class="anchored" data-anchor-id="flipper-length-vs.-bill-length"><span class="header-section-number">7</span> Flipper Length vs.&nbsp;Bill Length</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: flipper-bill-plot</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(penguins, <span class="fu">aes</span>(<span class="at">x =</span> flipper_length_mm, <span class="at">y =</span> bill_length_mm)) <span class="sc">+</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span> </span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span> </span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggtitle</span>(<span class="st">"Flipper Length vs. Bill Length"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<pre><code>
+**Step 5: Create a Dockerfile**
+
+Developer 1 creates a Dockerfile that deliberately excludes the R Markdown file to ensure that Developer 2's local files are used when running the container:
+
+```{.dockerfile filename="Dockerfile"}
+# Use R 4.1.0 as base image
+FROM rocker/r-ver:4.1.0
+
+# Set the working directory inside the container
+WORKDIR /workspace
+
+# Install renv and restore dependencies
+RUN R -e "install.packages('renv', repos='https://cloud.r-project.org')"
+
+# Copy only the renv.lock and renv infrastructure
+COPY renv.lock renv/activate.R /workspace/
+
+# Restore the R package environment
+RUN R -e "renv::restore()"
+
+CMD ["/bin/bash"]</code></pre>
+<p><strong>Step 6: Build and Push the Docker Image</strong></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> build <span class="at">-t</span> username/penguins-analysis:v1 .</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> login</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> push username/penguins-analysis:v1</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>Step 7: Commit and Push to GitHub</strong></p>
+<p>Developer 1 commits the project files (excluding the R Markdown document from the Docker image):</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> add .</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">"Initial renv setup and Docker environment (without Rmd)"</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> push origin main</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>Step 8: Communicate with Developer 2</strong></p>
+<p>Developer 1 provides these instructions to Developer 2:</p>
+<ol type="1">
+<li>Clone the GitHub repository</li>
+<li>Pull the prebuilt Docker image from DockerHub</li>
+<li>Run the container interactively, mounting the local repository</li>
+<li>Extend the analysis in the peng1.Rmd file</li>
+<li>Push changes back to GitHub</li>
+</ol>
+<section id="developer-2-extending-the-analysis" class="level4" data-number="7.0.1">
+<h4 data-number="7.0.1" class="anchored" data-anchor-id="developer-2-extending-the-analysis"><span class="header-section-number">7.0.1</span> Developer 2: Extending the Analysis</h4>
+<p><strong>Step 1: Clone the Repository and Pull the Docker Image</strong></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone https://github.com/username/penguins-analysis.git</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> penguins-analysis</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> pull username/penguins-analysis:v1</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>Step 2: Run Docker Interactively</strong></p>
+<p>Developer 2 runs the container with the local repository mounted:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> run <span class="at">--rm</span> <span class="at">-it</span> <span class="at">-v</span> <span class="st">"</span><span class="va">$(</span><span class="bu">pwd</span><span class="va">)</span><span class="st">:/workspace"</span> <span class="at">-w</span> /workspace username/penguins-analysis:v1 /bin/bash</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>This approach: - Uses the renv-restored environment from the container - Allows Developer 2 to access and modify files directly from their local machine</p>
+<p><strong>Step 3: Extend the Analysis</strong></p>
+<p>Developer 2 modifies <code>peng1.Rmd</code> to add a second plot for body mass vs.&nbsp;bill length:</p>
+<div class="code-with-filename">
+<div class="code-with-filename-file">
+<pre><strong>peng1.Rmd (modified)</strong></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13" data-filename="peng1.Rmd (modified)"><pre class="sourceCode r code-overflow-wrap code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="sc">---</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>title<span class="sc">:</span> <span class="st">"Palmer Penguins Analysis"</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>author<span class="sc">:</span> <span class="st">"Developer 2"</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>date<span class="sc">:</span> <span class="st">"`r Sys.Date()`"</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>output<span class="sc">:</span> html_document</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="sc">---</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="st">```</span><span class="at">r</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a><span class="at">#| label: setup</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="at">#| include: false</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a><span class="at">library(ggplot2)</span></span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a><span class="at">library(palmerpenguins)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+</section>
+<section id="flipper-length-vs.-bill-length-1" class="level2" data-number="8">
+<h2 data-number="8" class="anchored" data-anchor-id="flipper-length-vs.-bill-length-1"><span class="header-section-number">8</span> Flipper Length vs.&nbsp;Bill Length</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: flipper-bill-plot</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(penguins, <span class="fu">aes</span>(<span class="at">x =</span> flipper_length_mm, <span class="at">y =</span> bill_length_mm)) <span class="sc">+</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span> </span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span> </span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggtitle</span>(<span class="st">"Flipper Length vs. Bill Length"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="body-mass-vs.-bill-length" class="level2" data-number="9">
+<h2 data-number="9" class="anchored" data-anchor-id="body-mass-vs.-bill-length"><span class="header-section-number">9</span> Body Mass vs.&nbsp;Bill Length</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: mass-bill-plot</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(penguins, <span class="fu">aes</span>(<span class="at">x =</span> body_mass_g, <span class="at">y =</span> bill_length_mm)) <span class="sc">+</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span> </span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span> </span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggtitle</span>(<span class="st">"Body Mass vs. Bill Length"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<pre><code>
+**Step 4: Commit and Push Changes Back to GitHub**
+
+```bash
+git add peng1.Rmd
+git commit -m "Added second plot: Body Mass vs. Bill Length"
+git push origin main</code></pre>
+<section id="key-benefits-demonstrated-in-this-example" class="level3" data-number="9.1">
+<h3 data-number="9.1" class="anchored" data-anchor-id="key-benefits-demonstrated-in-this-example"><span class="header-section-number">9.1</span> Key Benefits Demonstrated in This Example</h3>
+<p>This collaborative workflow demonstrates several advantages of the renv + Docker approach:</p>
+<ol type="1">
+<li><strong>Dependency consistency</strong>: Both developers work with identical R package versions thanks to renv.</li>
+<li><strong>Environment consistency</strong>: The Docker container ensures the same R version and system libraries.</li>
+<li><strong>Separation of concerns</strong>: The R Markdown document remains outside the Docker image, allowing for easier collaboration.</li>
+<li><strong>Workflow flexibility</strong>: Developer 2 can work in the container while editing files locally.</li>
+<li><strong>Full reproducibility</strong>: The entire analysis environment is captured and shareable.</li>
+</ol>
+</section>
+</section>
+<section id="best-practices-and-considerations" class="level2" data-number="10">
+<h2 data-number="10" class="anchored" data-anchor-id="best-practices-and-considerations"><span class="header-section-number">10</span> Best Practices and Considerations</h2>
+<section id="when-to-use-this-approach" class="level3" data-number="10.1">
+<h3 data-number="10.1" class="anchored" data-anchor-id="when-to-use-this-approach"><span class="header-section-number">10.1</span> When to Use This Approach</h3>
+<p>The renv + Docker approach is particularly valuable for:</p>
+<ul>
+<li><strong>Long-term research projects</strong> where reproducibility over time is crucial</li>
+<li><strong>Collaborative analyses</strong> with multiple contributors on different systems</li>
+<li><strong>Production analytical pipelines</strong> that need to run consistently</li>
+<li><strong>Academic publications</strong> where methods must be reproducible</li>
+<li><strong>Teaching and education</strong> to ensure consistent student experiences</li>
+</ul>
+</section>
+<section id="tips-for-efficient-implementation" class="level3" data-number="10.2">
+<h3 data-number="10.2" class="anchored" data-anchor-id="tips-for-efficient-implementation"><span class="header-section-number">10.2</span> Tips for Efficient Implementation</h3>
+<ol type="1">
+<li><strong>Keep Docker images minimal</strong>: Include only what’s necessary for reproducibility.</li>
+<li><strong>Use specific version tags</strong>: For both R packages and Docker base images, specify exact versions.</li>
+<li><strong>Document system requirements</strong>: Include notes on RAM and storage requirements.</li>
+<li><strong>Leverage bind mounts</strong>: Mount local directories to containers for easier development.</li>
+<li><strong>Consider computational requirements</strong>: Particularly for resource-intensive analyses.</li>
+</ol>
+</section>
+<section id="potential-challenges" class="level3" data-number="10.3">
+<h3 data-number="10.3" class="anchored" data-anchor-id="potential-challenges"><span class="header-section-number">10.3</span> Potential Challenges</h3>
+<p>Some challenges to be aware of:</p>
+<ul>
+<li><strong>Docker image size</strong>: Images with many packages can become large</li>
+<li><strong>Learning curve</strong>: Both Docker and renv require some initial learning</li>
+<li><strong>System-specific features</strong>: Some analyses may rely on hardware features</li>
+<li><strong>Performance considerations</strong>: Containers may have different performance characteristics</li>
+</ul>
+</section>
+</section>
+<section id="conclusion" class="level2" data-number="11">
+<h2 data-number="11" class="anchored" data-anchor-id="conclusion"><span class="header-section-number">11</span> Conclusion</h2>
+<p>Achieving full reproducibility in R requires addressing both package dependencies and system-level consistency. By combining renv for R package management and Docker for environment containerization, data scientists and researchers can create truly portable and reproducible workflows.</p>
+<p>This approach ensures that the common frustration of “it works on my machine” becomes a thing of the past. Instead, R Markdown projects become easy to share and fully reproducible. A collaborator or reviewer can launch the Docker container and get identical results, without worrying about package versions or system setup.</p>
+<p>The case study presented demonstrates how two developers can effectively collaborate on an analysis while maintaining reproducibility throughout the project lifecycle. This strategy represents a best practice for long-term reproducibility in R, meeting the high standards required for professional data science and research documentation.</p>
+<p>By adopting this two-tool approach, the R community can make significant strides toward the goal of fully reproducible research and analysis.</p>
+</section>
+<section id="references" class="level2" data-number="12">
+<h2 data-number="12" class="anchored" data-anchor-id="references"><span class="header-section-number">12</span> References</h2>
+<ol type="1">
+<li>Thomas, R.G. “Docker and renv strategy.”</li>
+<li>“Palmer Penguins Analysis.” Developer 2.</li>
+<li>The Rocker Project. https://www.rocker-project.org/</li>
+<li>renv documentation. https://rstudio.github.io/renv/</li>
+</ol>
+
+
+</section>
+
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" id="quarto-reuse"><h2 class="anchored quarto-appendix-heading">Reuse</h2><div class="quarto-appendix-contents"><div><a rel="license" href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></div></div></section><section class="quarto-appendix-contents" id="quarto-citation"><h2 class="anchored quarto-appendix-heading">Citation</h2><div><div class="quarto-appendix-secondary-label">BibTeX citation:</div><pre class="sourceCode code-with-copy quarto-appendix-bibtex"><code class="sourceCode bibtex">@online{(ryy)_glenn_thomas2025,
+  author = {(Ryy) Glenn Thomas, Ronald and Computing Team, Research},
+  title = {Achieving {Full} {Reproducibility} in {R:} {A} {Docker} and
+    Renv {Strategy}},
+  date = {2025-12-08},
+  url = {https://focusonr.org/posts/shareRcodeviadockerp25/analysis/claude_synth.html},
+  langid = {en},
+  abstract = {This white paper presents a comprehensive approach to
+    achieving reproducibility in R workflows by combining two powerful
+    tools: renv for R package management and Docker for containerizing
+    the computing environment. Together, these tools ensure that an R
+    workflow runs identically across different systems with the same
+    packages, R version, and system libraries as the original setup. The
+    paper includes a practical case study demonstrating collaborative
+    development using this approach.}
+}
+</code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre><div class="quarto-appendix-secondary-label">For attribution, please cite this work as:</div><div id="ref-(ryy)_glenn_thomas2025" class="csl-entry quarto-appendix-citeas" role="listitem">
+(Ryy) Glenn Thomas, Ronald, and Research Computing Team. 2025.
+<span>“Achieving Full Reproducibility in R: A Docker and Renv
+Strategy.”</span> December 8, 2025. <a href="https://focusonr.org/posts/shareRcodeviadockerp25/analysis/claude_synth.html">https://focusonr.org/posts/shareRcodeviadockerp25/analysis/claude_synth.html</a>.
+</div></div></section></div></main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/focusonr\.org");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="rgt47/qblog" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Copyright 2023-2025, Ronald G. Thomas</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47">
+      <i class="bi bi-github" role="img">
+</i> 
+    </a>
+  </li>  
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47">
+      <i class="bi bi-twitter" role="img">
+</i> 
+    </a>
+  </li>  
+</ul>
+    </div>
+  </div>
+</footer>
+<!-- Fix for Quarto category encoding issue -->
+<script>
+// Fix category encoding for Quarto listing functionality
+(function() {
+  function fixAllCategoryEncoding() {
+    // Only run on pages that have Quarto listings
+    if (!document.querySelector('.quarto-listing')) {
+      return;
+    }
+    
+    // Fix sidebar category data-category attributes
+    const categoryEls = document.querySelectorAll('.quarto-listing-category .category[data-category]');
+    
+    categoryEls.forEach((categoryEl) => {
+      const category = categoryEl.getAttribute('data-category');
+      
+      if (category && category !== '') {
+        // Check if it contains only base64 characters and proper length
+        const isBase64 = /^[A-Za-z0-9+/]*={0,2}$/.test(category) && category.length % 4 === 0;
+        
+        if (isBase64) {
+          try {
+            const decoded = decodeURIComponent(atob(category));
+            // Verify it decoded to something reasonable (no control characters)
+            if (!decoded.match(/^[A-Za-z0-9\s\-,]+$/)) {
+              // Invalid encoding, re-encode from original text
+              const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+              categoryEl.setAttribute('data-category', encodedCategory);
+            }
+          } catch (e) {
+            // Base64 decode failed, re-encode from original text
+            const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+            categoryEl.setAttribute('data-category', encodedCategory);
+          }
+        } else {
+          // Not base64, encode it
+          const encodedCategory = btoa(encodeURIComponent(category));
+          categoryEl.setAttribute('data-category', encodedCategory);
+        }
+      }
+    });
+    
+    // Fix listing item data-categories attributes  
+    const listingItems = document.querySelectorAll('[data-categories]');
+    
+    listingItems.forEach((item) => {
+      const categories = item.getAttribute('data-categories');
+      
+      if (categories && categories !== '') {
+        // Check if it's already base64 encoded
+        try {
+          decodeURIComponent(atob(categories));
+          // Already encoded and valid
+        } catch (e) {
+          // Not encoded, fix it
+          const encodedCategories = btoa(encodeURIComponent(categories));
+          item.setAttribute('data-categories', encodedCategories);
+        }
+      }
+    });
+    
+    // Fix post-specific category tag click handlers
+    const postCategoryTags = document.querySelectorAll('.listing-category[onclick]');
+    
+    postCategoryTags.forEach((tag) => {
+      const categoryText = tag.textContent.trim();
+      
+      // Replace the onclick handler to use encoded category
+      tag.onclick = () => {
+        const encodedCategory = btoa(encodeURIComponent(categoryText));
+        window.quartoListingCategory(encodedCategory);
+        return false;
+      };
+    });
+  }
+  
+  // Run immediately
+  fixAllCategoryEncoding();
+  
+  // Also run when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fixAllCategoryEncoding);
+  }
+})();
+</script>
+
+<!-- PDF view/download button for blog posts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Only add the button on post pages
+  if (window.location.pathname.includes('/posts/') && !window.location.pathname.endsWith('/posts/') && !window.location.pathname.endsWith('/posts/index.html')) {
+    var currentPath = window.location.pathname;
+    // Handle both /posts/name/ and /posts/name/index.html formats
+    var pdfPath;
+    if (currentPath.endsWith('/')) {
+      pdfPath = currentPath + 'index.pdf';
+    } else {
+      pdfPath = currentPath.replace('.html', '.pdf');
+    }
+
+    // Check if PDF exists first
+    fetch(pdfPath, { method: 'HEAD' })
+      .then(function(response) {
+        if (response.ok) {
+          // PDF exists, show download button
+          showDownloadButton(pdfPath);
+        }
+        // If PDF doesn't exist, don't show any button
+      })
+      .catch(function(error) {
+        // Error checking PDF, don't show any button
+      });
+  }
+});
+
+function showDownloadButton(pdfPath) {
+  var downloadBtn = document.createElement('div');
+  downloadBtn.className = 'pdf-download-button';
+
+  // Get file size if possible
+  fetch(pdfPath, { method: 'HEAD' })
+    .then(function(response) {
+      var size = response.headers.get('Content-Length');
+      var sizeText = '';
+
+      if (size) {
+        // Convert to MB or KB
+        var sizeInMB = size / (1024 * 1024);
+        if (sizeInMB >= 1) {
+          sizeText = ' (' + sizeInMB.toFixed(1) + ' MB)';
+        } else {
+          sizeText = ' (' + (size / 1024).toFixed(0) + ' KB)';
+        }
+      }
+
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' + sizeText +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    })
+    .catch(function() {
+      // Basic fallback if we can't get file size
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    });
+
+  // Find where to insert the button (right after the title block)
+  var titleBlock = document.querySelector('.quarto-title-meta');
+  if (titleBlock) {
+    titleBlock.after(downloadBtn);
+  }
+}
+
+
+</script>
+
+<style>
+.pdf-download-button {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+</style>
+
+
+
+
+</body></html>
