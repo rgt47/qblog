@@ -1,0 +1,389 @@
+---
+title: "Combining Observable JS and Shiny in One Quarto Document"
+subtitle: "A Hard-Won Guide for Statisticians"
+author: "Ronald G. Thomas"
+date: "2025-12-01"
+categories: [Quarto, Observable JS, Shiny, Interactive Visualization, R Programming]
+description: "I didn't really know much about combining Observable JS and Shiny until I tried to create a side-by-side comparison. What should have taken 30 minutes took several hours of debugging. Here's what I learned."
+image: "../../images/posts/penguin-hero.jpg"
+document-type: "blog"
+draft: true
+execute:
+  echo: true
+  warning: false
+  message: false
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: false
+    code-tools: false
+    resources:
+      - data/raw_data/palmer-penguins.csv
+---
+
+![Penguins make great companions for learning new technologies](../../images/posts/penguins-library-7755210_1280.jpg){.img-fluid}
+
+*Combining two reactive frameworks in one document: harder than it looks!*
+
+# Introduction
+
+I didn't really know much about combining Observable JS and Shiny in Quarto until I tried to create a side-by-side comparison. Like many statisticians, I thought: "Quarto supports both—how hard can it be?"
+
+**Very hard, as it turns out.**
+
+This post documents our journey creating a side-by-side comparison of Observable JS and Shiny. What should have taken 30 minutes took several hours of debugging. We're sharing our experience so you don't have to suffer the same fate.
+
+## Motivations
+
+**Why explore this combination?**
+
+- Wanted to compare client-side (OJS) vs server-side (Shiny) reactive frameworks
+- Needed to demonstrate both technologies to colleagues in a single document
+- Curious whether Quarto's multi-language support extends to mixing reactive systems
+- Couldn't find good documentation on combining these two approaches
+
+## Objectives
+
+**What I wanted to accomplish:**
+
+1. Create identical interactive visualizations using both Observable JS and Shiny
+2. Display them side-by-side in a single Quarto document
+3. Document the gotchas and workarounds for others
+4. Understand the fundamental differences between client-side and server-side reactivity
+
+**Disclaimer:** I'm documenting my learning process here. If you spot errors or have better approaches, please let me know!
+
+# Live Demo: Side-by-Side Comparison
+
+Below are two identical visualizations—one built with Observable JS (client-side) and one with Shiny (server-side). Both filter the Palmer Penguins dataset by bill length and display a histogram of body mass.
+
+::: {.grid}
+
+::: {.g-col-6}
+### Observable JS
+
+```{ojs}
+//| echo: true
+
+// 1. CREATE INPUT: Range slider for filtering
+//    - viewof creates two-way binding between UI and variable
+viewof bill_min_ojs = Inputs.range(
+  [32, 50],
+  {value: 35, step: 1, label: "Min bill length (mm):"}
+)
+
+// 2. LOAD DATA: Fetch from public URL
+//    - FileAttachment doesn't work in Shiny docs!
+penguins_raw = {
+  const response = await fetch("https://raw.githubusercontent.com/allisonhorst/palmerpenguins/main/inst/extdata/penguins.csv");
+  const text = await response.text();
+  return d3.csvParse(text, d3.autoType);
+}
+
+// Filter out rows with missing values
+data_ojs = penguins_raw.filter(d => d.bill_length_mm != null && d.body_mass_g != null)
+
+// 3. FILTER DATA: Reactively updates when slider changes
+filtered_ojs = data_ojs.filter(d => d.bill_length_mm > bill_min_ojs)
+
+// 4. PLOT: Histogram colored by species
+Plot.plot({
+  height: 250,
+  marks: [
+    Plot.rectY(
+      filtered_ojs,
+      Plot.binX({y: "count"}, {x: "body_mass_g", fill: "species"})
+    ),
+    Plot.ruleY([0])
+  ]
+})
+```
+
+**Count:** ${filtered_ojs.length} penguins
+
+:::
+
+::: {.g-col-6}
+### Shiny
+
+```{r}
+#| echo: true
+#| eval: false
+
+# 1. CREATE INPUT: Slider for filtering
+sliderInput(
+  inputId = "bill_min_shiny",
+  label = "Min bill length (mm):",
+  min = 32, max = 50, value = 35, step = 1
+)
+
+# 2. OUTPUT PLACEHOLDER: Where plot will render
+plotOutput("hist_shiny", height = "250px")
+
+# 3. OUTPUT PLACEHOLDER: Where count will render
+textOutput("count_shiny")
+```
+
+```{r}
+#| echo: true
+#| eval: false
+#| context: server
+
+# Load libraries
+library(ggplot2)
+library(dplyr)
+
+# LOAD DATA: Read CSV once when app starts
+data_shiny <- read.csv("data/raw_data/palmer-penguins.csv")
+
+# FILTER DATA: reactive() updates when input changes
+filtered_shiny <- reactive({
+  data_shiny |>
+    filter(bill_length_mm > input$bill_min_shiny) |>
+    filter(!is.na(body_mass_g), !is.na(species))
+})
+
+# RENDER PLOT: Creates histogram
+output$hist_shiny <- renderPlot({
+  ggplot(filtered_shiny(), aes(x = body_mass_g, fill = species)) +
+    geom_histogram(bins = 20) +
+    theme_minimal() +
+    labs(x = "Body Mass (g)", y = "Count")
+})
+
+# RENDER TEXT: Shows count
+output$count_shiny <- renderText({
+  paste("Count:", nrow(filtered_shiny()), "penguins")
+})
+```
+
+:::
+
+:::
+
+---
+
+# Key Syntax Differences
+
+| Aspect | Observable JS | Shiny |
+|--------|---------------|-------|
+| Input creation | `viewof x = Inputs.range()` | `sliderInput("x", ...)` |
+| Access input value | Use `x` directly | `input$x` |
+| Data loading | `fetch()` or `FileAttachment()` | `read.csv()` |
+| Reactive filtering | Just assign: `filtered = data.filter()` | Wrap in `reactive({})` |
+| Create plot | `Plot.plot({...})` | `renderPlot({ggplot(...)})` |
+| Reactivity | Automatic (implicit) | Explicit wrappers required |
+
+---
+
+# The Challenges We Faced
+
+Getting this working was surprisingly difficult. Here's what we learned:
+
+## Challenge 1: FileAttachment Doesn't Work
+
+Our first attempt used Observable's standard data loading:
+
+```javascript
+// THIS DOESN'T WORK IN SHINY DOCUMENTS!
+data = FileAttachment("palmer-penguins.csv").csv({typed: true})
+```
+
+**Result**: `OJS Error: Unable to load file`
+
+**Why**: When you add `server: shiny`, the document runs as a Shiny app. The Shiny server doesn't know about Observable's file attachment system.
+
+::: {.callout-warning}
+## Gotcha #1
+`FileAttachment()` does NOT work in Shiny documents. This is the biggest "gotcha" when combining OJS and Shiny.
+:::
+
+## Challenge 2: ojs_define() Fails Too
+
+The Quarto docs mention `ojs_define()` for passing data from R to OJS:
+
+```r
+#| context: server
+data <- read.csv("penguins.csv")
+ojs_define(my_data = data)  # THIS FAILS!
+```
+
+**Result**: `Error: Unexpected data.frame object... Did you forget to use a render function?`
+
+**Why**: In Shiny context, `ojs_define()` expects reactive expressions, not static data frames.
+
+::: {.callout-warning}
+## Gotcha #2
+`ojs_define()` behaves differently in Shiny documents. Don't expect it to work like the docs show for regular Quarto.
+:::
+
+## Challenge 3: Local d3.csv() Returns 404
+
+We tried D3's CSV loader:
+
+```javascript
+// THIS ALSO DOESN'T WORK!
+data = d3.csv("palmer-penguins.csv", d3.autoType)
+```
+
+**Result**: `OJS Error: 404 Not Found`
+
+**Why**: The Shiny server doesn't serve local static files the way Observable expects.
+
+## The Solution: Fetch from Public URL
+
+The only reliable approach is fetching data from a public URL:
+
+```javascript
+// THIS WORKS!
+penguins_raw = {
+  const response = await fetch(
+    "https://raw.githubusercontent.com/.../penguins.csv"
+  );
+  const text = await response.text();
+  return d3.csvParse(text, d3.autoType);
+}
+```
+
+This bypasses the Shiny server entirely by making an HTTP request to an external source.
+
+---
+
+# Dos and Don'ts
+
+## DO
+
+1. **Use `fetch()` with public URLs** for OJS data in Shiny documents
+2. **Keep OJS and Shiny data loading separate**—don't try to share data
+3. **Test incrementally**—get Shiny working first, then add OJS
+4. **Hard refresh your browser** (Cmd+Shift+R) when debugging
+5. **Restart the preview server** after major changes
+
+## DON'T
+
+1. **Don't use `FileAttachment()`** in Shiny documents
+2. **Don't use `ojs_define()` with static data** in Shiny context
+3. **Don't assume `d3.csv("local.csv")` will work**
+4. **Don't trust displayed code**—browser caching causes confusion
+5. **Don't mix contexts**—keep OJS and Shiny logic separate
+
+---
+
+# More Gotchas
+
+## Browser Caching
+
+When debugging, the browser often shows old code. The displayed code might show `FileAttachment(...)` even though your file now uses `fetch()`.
+
+**Solution**: Kill server, delete generated files, restart, hard-refresh:
+
+```bash
+rm -rf yourfile_files yourfile.html
+quarto preview yourfile.qmd
+# Then Cmd+Shift+R in browser
+```
+
+## Port Changes
+
+Every restart may give a different port (5155, 6532, 7665...). Check the terminal output for the correct URL.
+
+## Misleading Error Messages
+
+The error "Did you forget to use a render function?" doesn't mean you need `renderSomething()`. It means `ojs_define()` doesn't work with static data in Shiny context.
+
+---
+
+# Alternative Approaches
+
+If this is too complex, consider:
+
+1. **Two Separate Documents**: Create `analysis_observable.qmd` and `analysis_shiny.qmd` separately
+
+2. **OJS Only**: Remove `server: shiny` and use pure Observable with `FileAttachment()`
+
+3. **Embed Data as JSON**: Convert CSV to JSON and embed directly in the OJS code
+
+---
+
+# Lessons Learnt
+
+Here's what I took away from this exploration:
+
+**Conceptual Understanding:**
+
+- Observable JS runs entirely in the browser (client-side reactivity)
+- Shiny requires a server process (server-side reactivity)
+- Combining them means running a Shiny server that also serves OJS
+- File loading works completely differently in each context
+
+**Technical Skills:**
+
+- Using `fetch()` for OJS data loading in Shiny documents
+- Keeping OJS and Shiny code strictly separated
+- Debugging Quarto documents with multiple reactive systems
+- Understanding when `ojs_define()` works vs. fails
+
+**Gotchas and Pitfalls:**
+
+- `FileAttachment()` doesn't work in Shiny documents
+- `ojs_define()` behaves differently depending on context
+- Browser caching causes major debugging confusion
+- Error messages can be misleading
+
+## Limitations
+
+- This approach requires external data hosting for OJS
+- No data sharing between OJS and Shiny contexts
+- Debugging is significantly harder than single-framework documents
+- Documentation doesn't cover this edge case well
+
+## Opportunities for Improvement
+
+If I had more time, here's what I'd explore next:
+
+1. **Test `ojs_define()` with reactive expressions** - might work with `reactive()` wrapper
+2. **Create a helper function** to bridge OJS and Shiny data
+3. **Explore Shiny's resource serving** - maybe there's a way to make local files available to OJS
+4. **Document a clean workflow** for teams who need both frameworks
+
+# Conclusion
+
+Combining Observable JS and Shiny in one Quarto document is possible, but not straightforward:
+
+- **File loading works completely differently** in Shiny vs. static Quarto
+- **`ojs_define()` has different behavior** depending on context
+- **Documentation doesn't cover this edge case** well
+- **The working solution**—fetching from a public URL—is a workaround
+
+For educational purposes (comparing both technologies), this side-by-side approach is valuable once you get past the setup hurdles. For production applications, we recommend choosing one technology rather than combining both.
+
+---
+
+# See Also
+
+Related posts and resources:
+
+- [Quarto OJS Documentation](https://quarto.org/docs/interactive/ojs/)
+- [Quarto Shiny Documentation](https://quarto.org/docs/interactive/shiny/)
+- [Observable Plot](https://observablehq.com/plot/)
+- [Palmer Penguins Dataset](https://allisonhorst.github.io/palmerpenguins/)
+
+---
+
+# Let's Connect!
+
+*Have questions, suggestions, or spot an error? Let me know!*
+
+- **Twitter/X**: [@rgt47](https://twitter.com/rgt47)
+- **GitHub**: [rgt47](https://github.com/rgt47)
+
+**Please reach out** if you:
+- Spot errors or have corrections
+- Have suggestions for improvement
+- Want to discuss the approach
+- Have questions about implementation
+
+---
+
+*This post was written after several hours of debugging. We hope it saves you time.*
