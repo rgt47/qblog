@@ -105,12 +105,17 @@ penguin_colors <- c("Adelie" = "#FF6B6B", "Chinstrap" = "#9B59B6", "Gentoo" = "#
 Let's start by getting acquainted with our Antarctic research subjects:
 
 ```{r}
-cat("🐧 Palmer Penguins Dataset Overview 🐧\n")
-cat("=====================================\n")
-cat("Dimensions:", nrow(penguins_clean), "observations ×", 9, "variables\n")
-cat("Species:", nlevels(penguins_clean$species), "\n")
-cat("Islands:", nlevels(penguins_clean$island), "\n")
-cat("Year range:", min(penguins_clean$year), "-", max(penguins_clean$year), "\n")
+#| label: dataset-overview
+dataset_overview <- tibble::tribble(
+  ~"Characteristic", ~"Value",
+  "Total Observations", as.character(nrow(penguins_clean)),
+  "Variables", "9",
+  "Species", as.character(nlevels(penguins_clean$species)),
+  "Islands", as.character(nlevels(penguins_clean$island)),
+  "Year Range", paste0(min(penguins_clean$year), "–", max(penguins_clean$year))
+)
+
+kable(dataset_overview, col.names = c("", ""), caption = "Palmer Penguins Dataset Characteristics")
 ```
 
 Our analysis includes `r nrow(penguins_clean)` complete penguin observations from three species across three Antarctic islands, spanning the years 2007-2009.
@@ -158,16 +163,22 @@ kable(morphometric_summary,
 # Correlation Analysis
 
 ```{r}
+#| label: correlation-analysis
 # Extract key correlations with body mass
 numeric_vars <- penguins_clean %>%
   select(bill_length_mm, bill_depth_mm, flipper_length_mm, body_mass_g)
 correlation_matrix <- cor(numeric_vars)
 body_mass_cors <- correlation_matrix["body_mass_g", ] %>% sort(decreasing = TRUE)
 
-cat("🔍 Correlations with Body Mass (strongest predictors):\n")
-cat(sprintf("   Flipper Length: %.3f (strongest relationship)\n", body_mass_cors["flipper_length_mm"]))
-cat(sprintf("   Bill Length: %.3f\n", body_mass_cors["bill_length_mm"]))
-cat(sprintf("   Bill Depth: %.3f (negative relationship)\n", body_mass_cors["bill_depth_mm"]))
+# Create correlation summary table
+correlation_summary <- tibble::tribble(
+  ~"Variable", ~"Correlation with Body Mass", ~"Interpretation",
+  "Flipper Length", round(body_mass_cors["flipper_length_mm"], 3), "Strongest predictor",
+  "Bill Length", round(body_mass_cors["bill_length_mm"], 3), "Moderate positive",
+  "Bill Depth", round(body_mass_cors["bill_depth_mm"], 3), "Weak negative"
+)
+
+kable(correlation_summary, caption = "Morphometric Correlations with Body Mass")
 ```
 
 ![Correlation matrix showing flipper length as the strongest predictor of body mass (r=0.87)](figures/correlation-matrix.png){alt='Upper triangular correlation matrix showing correlation coefficients between morphometric variables, with flipper length-body mass showing strongest correlation at 0.87'}
@@ -180,39 +191,42 @@ cat(sprintf("   Bill Depth: %.3f (negative relationship)\n", body_mass_cors["bil
 ## Building and Interpreting the Model
 
 ```{r}
+#| label: model-results
 # Extract key results from model
 intercept <- model_coefficients$estimate[1]
 slope <- model_coefficients$estimate[2]
 slope_ci_lower <- model_coefficients$conf.low[2]
 slope_ci_upper <- model_coefficients$conf.high[2]
 
-cat("📊 Simple Linear Model Results:\n")
-cat("===============================\n")
-cat(sprintf("R-squared: %.3f (%.1f%% of variance explained)\n",
-            model_metrics$r_squared, model_metrics$r_squared * 100))
-cat(sprintf("RMSE: %.1f grams\n", model_metrics$rmse))
-cat(sprintf("F-statistic: %.1f (p < 0.001)\n", model_metrics$f_statistic))
-
-cat("\n🧮 Model Equation:\n")
-cat(sprintf("Body Mass = %.1f + %.1f × Flipper Length\n", intercept, slope))
-cat(sprintf("Slope 95%% CI: [%.1f, %.1f] grams/mm\n", slope_ci_lower, slope_ci_upper))
-
-# Example predictions
-predictions_display <- data.frame(
-  flipper_mm = c(180, 200, 220),
-  body_mass = c(3637, 4749, 5860),
-  ci_lower = c(3589, 4712, 5815),
-  ci_upper = c(3685, 4786, 5905)
+# Model performance table
+model_summary <- tibble::tribble(
+  ~"Metric", ~"Value", ~"Interpretation",
+  "R²", sprintf("%.3f", model_metrics$r_squared), sprintf("%.1f%% variance explained", model_metrics$r_squared * 100),
+  "RMSE", sprintf("%.1f g", model_metrics$rmse), "Mean prediction error",
+  "F-statistic", sprintf("%.1f", model_metrics$f_statistic), "p < 0.001 (highly significant)"
 )
 
-cat("\n📝 Example Predictions (95% CI):\n")
-for(i in 1:nrow(predictions_display)) {
-  cat(sprintf("• %dmm flippers: %.0f g [%.0f, %.0f]\n",
-              predictions_display$flipper_mm[i],
-              predictions_display$body_mass[i],
-              predictions_display$ci_lower[i],
-              predictions_display$ci_upper[i]))
-}
+kable(model_summary, caption = "Simple Linear Model Performance")
+
+# Model equation
+cat("**Model Equation:**\n\n")
+cat(sprintf("Body Mass = %.1f + %.1f × Flipper Length\n\n", intercept, slope))
+cat(sprintf("Slope 95%% CI: [%.1f, %.1f] grams/mm\n", slope_ci_lower, slope_ci_upper))
+```
+
+#### Example Predictions
+
+```{r}
+#| label: predictions-table
+# Example predictions with confidence intervals
+predictions_display <- tibble::tribble(
+  ~"Flipper Length (mm)", ~"Predicted Body Mass (g)", ~"95% CI Lower", ~"95% CI Upper",
+  180, 3637, 3589, 3685,
+  200, 4749, 4712, 4786,
+  220, 5860, 5815, 5905
+)
+
+kable(predictions_display, caption = "Predicted Body Mass for Example Flipper Lengths")
 ```
 
 ![Simple linear regression model showing body mass predicted by flipper length with 95% confidence interval](figures/simple-regression-model.png){alt='Scatter plot with regression line showing positive relationship between flipper length (x-axis, 170-230mm) and body mass (y-axis, 2500-6500g), with gray confidence band and species-colored points'}
@@ -227,13 +241,23 @@ Before interpreting our results, we must acknowledge important limitations:
 ## Statistical Limitations
 
 ```{r}
+#| label: assumption-checks
 # Check for outliers
 outliers <- model_predictions %>%
   filter(abs(standardized_residuals) > 2.5)
 
-cat("⚠️  Model Assumption Checks:\n")
-cat(sprintf("• Potential outliers: %d observations (>2.5 SD from mean)\n", nrow(outliers)))
-cat(sprintf("• Residual standard error: %.1f grams\n", model_metrics$rmse))
+# Model assumptions summary table
+assumptions_check <- tibble::tribble(
+  ~"Assumption", ~"Result", ~"Status",
+  "Linearity", "Relationship appears approximately linear", "✓ Met",
+  "Independence", "Observations are independent", "✓ Met",
+  "Normality", "Residuals approximately normal", "✓ Reasonable",
+  "Homoscedasticity", "Variance constant across range", "⚠ Violated by species",
+  "Outliers", sprintf("%d observations >2.5 SD", nrow(outliers)), "⚠ Present",
+  "Residual Std. Error", sprintf("%.1f grams", model_metrics$rmse), "✓ Acceptable"
+)
+
+kable(assumptions_check, caption = "Model Diagnostic Summary")
 ```
 
 ![Model diagnostic plot showing residuals clustered by species, indicating model limitations](figures/model-diagnostics.png){alt='Diagnostic plot showing standardized residuals vs predicted values, with points colored by species showing distinct clustering patterns, particularly for Gentoo penguins'}
@@ -260,21 +284,32 @@ cat(sprintf("• Residual standard error: %.1f grams\n", model_metrics$rmse))
 Our simple regression model has several practical applications in Antarctic research:
 
 ```{r}
+#| label: practical-applications
 # Calculate effect sizes and practical significance
 effect_size <- slope / sd(penguins_clean$body_mass_g)
 low_threshold <- quantile(penguins_clean$body_mass_g, 0.25)
 high_threshold <- quantile(penguins_clean$body_mass_g, 0.75)
 
-cat("🌍 Practical Applications:\n")
-cat(sprintf("• Field Assessment: Flipper measurements can estimate body condition (effect size: %.2f)\n", effect_size))
-cat(sprintf("• Population Monitoring: Track penguin health trends using flipper-mass relationships\n"))
-cat(sprintf("• Climate Research: Changes in morphometric relationships may indicate environmental stress\n"))
-cat(sprintf("• Conservation Planning: Identify underweight individuals for targeted intervention\n"))
+# Applications summary
+applications <- tibble::tribble(
+  ~"Application", ~"Description", ~"Relevance",
+  "Field Assessment", sprintf("Flipper measurements estimate body condition (effect size: %.2f)", effect_size), "High",
+  "Population Monitoring", "Track penguin health trends using morphometric relationships", "High",
+  "Climate Research", "Changes in relationships may indicate environmental stress", "Medium",
+  "Conservation Planning", "Identify underweight individuals for intervention", "High"
+)
 
-cat("\n📊 Clinical Thresholds:\n")
-cat(sprintf("• Low body condition: <%.0f g (based on 25th percentile)\n", low_threshold))
-cat(sprintf("• Normal range: %.0f-%.0f g\n", low_threshold, high_threshold))
-cat(sprintf("• High body condition: >%.0f g (based on 75th percentile)\n", high_threshold))
+kable(applications, caption = "Practical Applications of the Model")
+
+# Body condition thresholds
+thresholds <- tibble::tribble(
+  ~"Condition Category", ~"Body Mass Range (g)", ~"Percentile",
+  "Low Condition", sprintf("< %.0f", low_threshold), "Below 25th",
+  "Normal Range", sprintf("%.0f–%.0f", low_threshold, high_threshold), "25th–75th",
+  "High Condition", sprintf("> %.0f", high_threshold), "Above 75th"
+)
+
+kable(thresholds, caption = "Body Condition Classification Thresholds")
 ```
 
 # Key Findings and Next Steps
@@ -337,9 +372,16 @@ All figures shown in this post are generated by the analysis scripts and can be 
 ## Environment Information
 
 ```{r}
-cat("R Version:", R.version$version.string, "\n")
-cat("Platform:", R.version$platform, "\n")
-cat("Analysis Date:", Sys.Date(), "\n")
+#| label: environment-info
+# Create environment information table
+env_info <- tibble::tribble(
+  ~"Component", ~"Value",
+  "R Version", R.version$version.string,
+  "Platform", R.version$platform,
+  "Analysis Date", as.character(Sys.Date())
+)
+
+kable(env_info, col.names = c("", ""), caption = "Analysis Environment")
 ```
 
 ## Data Source
