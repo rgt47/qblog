@@ -1,2 +1,1430 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"></html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.25">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Clinical Research Technology">
+<meta name="dcterms.date" content="2025-12-07">
+<meta name="description" content="Learn how to deploy and manage ZZedc, an open-source EDC system designed for investigator independence. No vendor lock-in, no ongoing licensing costs—just secure, compliant data management under your control.">
+
+<title>Taking Control of Your Clinical Trial: Running ZZedc Independently – Thomas Lab</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-7b89279ff1a6dce999919e0e67d4d9ec.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-cba6959027663c8af85f024d0b434422.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": true,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "keyboard-shortcut": [
+    "?",
+    "/"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&amp;family=Open+Sans:ital,wght@0,400;0,600;1,400&amp;family=Fira+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<script src="https://kit.fontawesome.com/0fba9333d8.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+
+<!-- Custom meta tags for social sharing -->
+<meta property="og:site_name" content="Thomas Lab">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@rgt47">
+
+<!-- Add responsive features -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<!-- Add analytics if needed -->
+<!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXX');
+</script> -->
+
+<!-- Add custom javascript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Remove code tools button completely
+  const codeButton = document.querySelector('.code-tools-button');
+  if (codeButton) {
+    codeButton.remove();
+  }
+  
+  // Add any custom JavaScript functionality here
+  
+  // Example: Add smooth scrolling
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      
+      document.querySelector(this.getAttribute('href')).scrollIntoView({
+        behavior: 'smooth'
+      });
+    });
+  });
+  
+  // Make sidebar category items clickable (but not TOC items)
+  const categoryLinks = {
+    'Programming & Development': '/posts/?category=Programming+%26+Development',
+    'Data Analysis & Visualization': '/posts/?category=Data+Analysis+%26+Visualization',
+    'Deployment & Operations': '/posts/?category=Deployment+%26+Operations',
+    'Development Environment': '/posts/?category=Development+Environment',
+    'Shiny Applications': '/posts/?category=Shiny+Applications',
+    'AI & Automation': '/posts/?category=AI+%26+Automation',
+    'System Administration': '/posts/?category=System+Administration'
+  };
+  
+  // Only target sidebar items that are not in the TOC
+  document.querySelectorAll('.sidebar-item-section .sidebar-item-text').forEach(item => {
+    // Skip if this is inside the TOC
+    if (item.closest('#TOC')) return;
+    
+    const text = item.textContent.trim();
+    if (categoryLinks[text]) {
+      item.addEventListener('click', function() {
+        window.location.href = categoryLinks[text];
+      });
+    }
+  });
+});
+</script>
+
+
+<meta property="og:title" content="Taking Control of Your Clinical Trial: Running ZZedc Independently – Thomas Lab">
+<meta property="og:description" content="Learn how to deploy and manage ZZedc, an open-source EDC system designed for investigator independence. No vendor lock-in, no ongoing licensing costs—just secure, compliant data management under your control.">
+<meta property="og:image" content="https://focusonr.org/posts/zzedcindependence/zzedc-independence.png">
+<meta property="og:site_name" content="Thomas Lab">
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a href="../../index.html" class="navbar-brand navbar-brand-logo">
+    </a>
+    <a class="navbar-brand" href="../../index.html">
+    <span class="navbar-title">Thomas Lab</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../about/index.html"> 
+<span class="menu-text">About</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../blog/index.html"> 
+<span class="menu-text">Blog</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../white-papers/index.html"> 
+<span class="menu-text">White Papers</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../research/index.html"> 
+<span class="menu-text">Research</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../teaching/index.html"> 
+<span class="menu-text">Teaching</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../misc/index.html"> 
+<span class="menu-text">Misc</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47"> <i class="bi bi-twitter" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a>
+  <ul class="collapse">
+  <li><a href="#what-this-post-covers" id="toc-what-this-post-covers" class="nav-link" data-scroll-target="#what-this-post-covers"><span class="header-section-number">1.1</span> What This Post Covers</a></li>
+  </ul></li>
+  <li><a href="#the-independence-problem" id="toc-the-independence-problem" class="nav-link" data-scroll-target="#the-independence-problem"><span class="header-section-number">2</span> The Independence Problem</a>
+  <ul class="collapse">
+  <li><a href="#why-investigator-control-matters" id="toc-why-investigator-control-matters" class="nav-link" data-scroll-target="#why-investigator-control-matters"><span class="header-section-number">2.1</span> Why Investigator Control Matters</a></li>
+  <li><a href="#common-scenarios-where-investigators-break-free" id="toc-common-scenarios-where-investigators-break-free" class="nav-link" data-scroll-target="#common-scenarios-where-investigators-break-free"><span class="header-section-number">2.2</span> Common Scenarios Where Investigators Break Free</a></li>
+  <li><a href="#existing-solutions-have-limitations" id="toc-existing-solutions-have-limitations" class="nav-link" data-scroll-target="#existing-solutions-have-limitations"><span class="header-section-number">2.3</span> Existing Solutions Have Limitations</a></li>
+  </ul></li>
+  <li><a href="#introducing-zzedc" id="toc-introducing-zzedc" class="nav-link" data-scroll-target="#introducing-zzedc"><span class="header-section-number">3</span> Introducing ZZedc</a>
+  <ul class="collapse">
+  <li><a href="#core-design-philosophy" id="toc-core-design-philosophy" class="nav-link" data-scroll-target="#core-design-philosophy"><span class="header-section-number">3.1</span> Core Design Philosophy</a></li>
+  <li><a href="#what-zzedc-includes" id="toc-what-zzedc-includes" class="nav-link" data-scroll-target="#what-zzedc-includes"><span class="header-section-number">3.2</span> What ZZedc Includes</a></li>
+  </ul></li>
+  <li><a href="#how-zzedc-achieves-investigator-independence" id="toc-how-zzedc-achieves-investigator-independence" class="nav-link" data-scroll-target="#how-zzedc-achieves-investigator-independence"><span class="header-section-number">4</span> How ZZedc Achieves Investigator Independence</a>
+  <ul class="collapse">
+  <li><a href="#architecture-simplicity-and-transparency" id="toc-architecture-simplicity-and-transparency" class="nav-link" data-scroll-target="#architecture-simplicity-and-transparency"><span class="header-section-number">4.1</span> Architecture: Simplicity and Transparency</a></li>
+  <li><a href="#deployment-paths-flexibility-for-different-needs" id="toc-deployment-paths-flexibility-for-different-needs" class="nav-link" data-scroll-target="#deployment-paths-flexibility-for-different-needs"><span class="header-section-number">4.2</span> Deployment Paths: Flexibility for Different Needs</a>
+  <ul class="collapse">
+  <li><a href="#path-1-solo-researcher-local-laptop" id="toc-path-1-solo-researcher-local-laptop" class="nav-link" data-scroll-target="#path-1-solo-researcher-local-laptop"><span class="header-section-number">4.2.1</span> Path 1: Solo Researcher (Local Laptop)</a></li>
+  <li><a href="#path-2-team-research-single-aws-server" id="toc-path-2-team-research-single-aws-server" class="nav-link" data-scroll-target="#path-2-team-research-single-aws-server"><span class="header-section-number">4.2.2</span> Path 2: Team Research (Single AWS Server)</a></li>
+  <li><a href="#path-3-enterprisemulti-site" id="toc-path-3-enterprisemulti-site" class="nav-link" data-scroll-target="#path-3-enterprisemulti-site"><span class="header-section-number">4.2.3</span> Path 3: Enterprise/Multi-Site</a></li>
+  </ul></li>
+  <li><a href="#security-and-compliance" id="toc-security-and-compliance" class="nav-link" data-scroll-target="#security-and-compliance"><span class="header-section-number">4.3</span> Security and Compliance</a></li>
+  </ul></li>
+  <li><a href="#deployment-scenarios-and-examples" id="toc-deployment-scenarios-and-examples" class="nav-link" data-scroll-target="#deployment-scenarios-and-examples"><span class="header-section-number">5</span> Deployment Scenarios and Examples</a>
+  <ul class="collapse">
+  <li><a href="#scenario-1-solo-researcher-prototype" id="toc-scenario-1-solo-researcher-prototype" class="nav-link" data-scroll-target="#scenario-1-solo-researcher-prototype"><span class="header-section-number">5.1</span> Scenario 1: Solo Researcher Prototype</a></li>
+  <li><a href="#scenario-2-multi-site-trial-migration" id="toc-scenario-2-multi-site-trial-migration" class="nav-link" data-scroll-target="#scenario-2-multi-site-trial-migration"><span class="header-section-number">5.2</span> Scenario 2: Multi-Site Trial Migration</a></li>
+  <li><a href="#scenario-3-individual-investigator-independence" id="toc-scenario-3-individual-investigator-independence" class="nav-link" data-scroll-target="#scenario-3-individual-investigator-independence"><span class="header-section-number">5.3</span> Scenario 3: Individual Investigator Independence</a></li>
+  </ul></li>
+  <li><a href="#getting-started-step-by-step" id="toc-getting-started-step-by-step" class="nav-link" data-scroll-target="#getting-started-step-by-step"><span class="header-section-number">6</span> Getting Started: Step-by-Step</a>
+  <ul class="collapse">
+  <li><a href="#for-solo-researchers" id="toc-for-solo-researchers" class="nav-link" data-scroll-target="#for-solo-researchers"><span class="header-section-number">6.1</span> For Solo Researchers</a></li>
+  <li><a href="#for-aws-deployment" id="toc-for-aws-deployment" class="nav-link" data-scroll-target="#for-aws-deployment"><span class="header-section-number">6.2</span> For AWS Deployment</a></li>
+  <li><a href="#for-migration-from-other-systems" id="toc-for-migration-from-other-systems" class="nav-link" data-scroll-target="#for-migration-from-other-systems"><span class="header-section-number">6.3</span> For Migration from Other Systems</a></li>
+  </ul></li>
+  <li><a href="#long-term-sustainability" id="toc-long-term-sustainability" class="nav-link" data-scroll-target="#long-term-sustainability"><span class="header-section-number">7</span> Long-Term Sustainability</a>
+  <ul class="collapse">
+  <li><a href="#ownership-and-control" id="toc-ownership-and-control" class="nav-link" data-scroll-target="#ownership-and-control"><span class="header-section-number">7.1</span> Ownership and Control</a></li>
+  <li><a href="#maintenance-and-updates" id="toc-maintenance-and-updates" class="nav-link" data-scroll-target="#maintenance-and-updates"><span class="header-section-number">7.2</span> Maintenance and Updates</a></li>
+  <li><a href="#migration-path" id="toc-migration-path" class="nav-link" data-scroll-target="#migration-path"><span class="header-section-number">7.3</span> Migration Path</a></li>
+  </ul></li>
+  <li><a href="#comparison-zzedc-vs-commercial-edc" id="toc-comparison-zzedc-vs-commercial-edc" class="nav-link" data-scroll-target="#comparison-zzedc-vs-commercial-edc"><span class="header-section-number">8</span> Comparison: ZZedc vs Commercial EDC</a></li>
+  <li><a href="#conclusion-taking-control" id="toc-conclusion-taking-control" class="nav-link" data-scroll-target="#conclusion-taking-control"><span class="header-section-number">9</span> Conclusion: Taking Control</a>
+  <ul class="collapse">
+  <li><a href="#next-steps" id="toc-next-steps" class="nav-link" data-scroll-target="#next-steps"><span class="header-section-number">9.1</span> Next Steps</a></li>
+  <li><a href="#resources" id="toc-resources" class="nav-link" data-scroll-target="#resources"><span class="header-section-number">9.2</span> Resources</a></li>
+  </ul></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content column-page-right" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Taking Control of Your Clinical Trial: Running ZZedc Independently</h1>
+<p class="subtitle lead">A guide for investigators who want to own and operate their own electronic data capture system</p>
+  <div class="quarto-categories">
+    <div class="quarto-category">Clinical Research</div>
+    <div class="quarto-category">EDC</div>
+    <div class="quarto-category">AWS</div>
+    <div class="quarto-category">Open Source</div>
+    <div class="quarto-category">Research Tools</div>
+    <div class="quarto-category">Data Management</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    Learn how to deploy and manage ZZedc, an open-source EDC system designed for investigator independence. No vendor lock-in, no ongoing licensing costs—just secure, compliant data management under your control.
+  </div>
+</div>
+
+
+<div class="quarto-title-meta column-page-right">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Clinical Research Technology </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">December 7, 2025</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>The landscape of clinical research data management is changing. Investigators increasingly want <strong>full control</strong> over their data, systems, and operational decisions. Yet many commonly used electronic data capture (EDC) systems create <strong>vendor dependency</strong>: expensive licenses, proprietary data formats, and the uncomfortable reality that your system operates at the pleasure of your vendor.</p>
+<p>This post documents <strong>ZZedc</strong>, an open-source, investigator-owned EDC platform designed with a different philosophy. ZZedc runs on infrastructure you control, uses standard databases and formats, costs a fraction of commercial EDC systems, and—most importantly—can be deployed and managed by your research team without ongoing dependency on any biostatistics lab or commercial vendor.</p>
+<section id="what-this-post-covers" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="what-this-post-covers"><span class="header-section-number">1.1</span> What This Post Covers</h2>
+<ul>
+<li><strong>The independence problem:</strong> Why control matters in clinical research</li>
+<li><strong>ZZedc overview:</strong> What it is and how it differs from commercial EDC systems</li>
+<li><strong>Deployment paths:</strong> From a single investigator’s laptop to multi-site trials on AWS</li>
+<li><strong>Technical architecture:</strong> How ZZedc achieves simplicity and security</li>
+<li><strong>Getting started:</strong> Step-by-step guides for different deployment scenarios</li>
+<li><strong>Long-term sustainability:</strong> Ongoing maintenance, migration, and data ownership</li>
+</ul>
+<hr>
+</section>
+</section>
+<section id="the-independence-problem" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> The Independence Problem</h1>
+<section id="why-investigator-control-matters" class="level2" data-number="2.1">
+<h2 data-number="2.1" class="anchored" data-anchor-id="why-investigator-control-matters"><span class="header-section-number">2.1</span> Why Investigator Control Matters</h2>
+<p>Clinical researchers routinely face uncomfortable situations with EDC systems:</p>
+<p><strong>Vendor dependency</strong>: Your study relies on continued vendor support. If the company changes pricing, goes out of business, or decides to discontinue support, you’re stuck.</p>
+<p><strong>Data ownership ambiguity</strong>: Proprietary data formats mean your data isn’t truly “yours.” Exporting data can be expensive, slow, or impossible without vendor cooperation.</p>
+<p><strong>Operational constraints</strong>: You can’t customize validation rules, reports, or workflows without vendor professional services (and associated costs).</p>
+<p><strong>Security concerns</strong>: Your patient data sits on vendor infrastructure. You don’t control security, backup locations, or data residency.</p>
+<p><strong>Cost escalation</strong>: EDC licensing grows with patient volume. A system that costs $20K/year at baseline often costs $50K+ by study completion.</p>
+</section>
+<section id="common-scenarios-where-investigators-break-free" class="level2" data-number="2.2">
+<h2 data-number="2.2" class="anchored" data-anchor-id="common-scenarios-where-investigators-break-free"><span class="header-section-number">2.2</span> Common Scenarios Where Investigators Break Free</h2>
+<p>In practice, these situations drive investigators to seek alternatives:</p>
+<p><strong>Collaboration breakup</strong>: A productive collaboration with a biostatistics lab ends due to cost disagreements or service level mismatches. The investigator is left with data trapped in a vendor system.</p>
+<p><strong>Study expansion</strong>: A pilot study is successful and scales to multi-site. Existing EDC licensing becomes prohibitively expensive. The investigator needs a more scalable approach.</p>
+<p><strong>Regulatory concerns</strong>: The investigator’s institution requires data to be stored in a specific location or under specific security controls that the vendor can’t accommodate.</p>
+<p><strong>Long-term stewardship</strong>: The study becomes long-term follow-up. Vendor relationship doesn’t last 5+ years, but the investigator must maintain the system and data indefinitely.</p>
+<p><strong>Methodological evolution</strong>: As analysis evolves, the investigator needs flexible validation rules, custom reports, and integration with analysis tools. The vendor system feels restrictive.</p>
+</section>
+<section id="existing-solutions-have-limitations" class="level2" data-number="2.3">
+<h2 data-number="2.3" class="anchored" data-anchor-id="existing-solutions-have-limitations"><span class="header-section-number">2.3</span> Existing Solutions Have Limitations</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 31%">
+<col style="width: 34%">
+<col style="width: 34%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Solution</th>
+<th>Advantage</th>
+<th>Limitation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Commercial EDC (REDCap, Medidata)</td>
+<td>Polished interface, vendor support</td>
+<td>High cost, vendor lock-in, data ownership questions</td>
+</tr>
+<tr class="even">
+<td>Spreadsheets (Excel, Google Sheets)</td>
+<td>Familiar, free</td>
+<td>No validation, poor audit trail, compliance issues</td>
+</tr>
+<tr class="odd">
+<td>Homebrew databases (Access, FileMaker)</td>
+<td>Customizable</td>
+<td>No security, poor scalability, compliance nightmare</td>
+</tr>
+<tr class="even">
+<td>Custom R/Shiny apps</td>
+<td>Completely flexible</td>
+<td>Requires skilled programmer, no pre-built features</td>
+</tr>
+<tr class="odd">
+<td><strong>ZZedc</strong></td>
+<td><strong>Open source, low cost, independent</strong></td>
+<td><strong>Requires basic technical setup</strong></td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+</section>
+<section id="introducing-zzedc" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Introducing ZZedc</h1>
+<p>ZZedc is a <strong>modern, open-source electronic data capture system</strong> built with R and Shiny. It’s specifically designed for investigator ownership and independence.</p>
+<section id="core-design-philosophy" class="level2" data-number="3.1">
+<h2 data-number="3.1" class="anchored" data-anchor-id="core-design-philosophy"><span class="header-section-number">3.1</span> Core Design Philosophy</h2>
+<p><strong>Investigator-centered</strong>: Every design decision prioritizes your control. You own the data, the system, and the infrastructure.</p>
+<p><strong>Cloud-native but independent</strong>: Deploy on AWS, Azure, Google Cloud, or local servers. You choose the infrastructure provider based on cost and compliance needs.</p>
+<p><strong>Security and compliance by default</strong>: GDPR and 21 CFR Part 11 compliance frameworks built in. Data encryption, audit trails, and electronic signatures are standard features.</p>
+<p><strong>Open source, not proprietary</strong>: Source code is available on GitHub. If you need customization, you can do it yourself or hire any consultant—you’re not locked into the vendor.</p>
+<p><strong>Standards-based</strong>: SQLite databases, YAML configuration, standard web technologies. If you need to migrate away, your data is in standard formats.</p>
+</section>
+<section id="what-zzedc-includes" class="level2" data-number="3.2">
+<h2 data-number="3.2" class="anchored" data-anchor-id="what-zzedc-includes"><span class="header-section-number">3.2</span> What ZZedc Includes</h2>
+<p><strong>Electronic data capture with real-time validation</strong>: Enter study data with immediate field-level validation. No waiting for data manager review.</p>
+<p><strong>Role-based access control</strong>: Five built-in roles (Admin, PI, Coordinator, Data Manager, Monitor) with configurable permissions.</p>
+<p><strong>Comprehensive reporting</strong>: Basic enrollment reports, quality control summaries, and statistical overviews—all built-in, no custom programming.</p>
+<p><strong>Data quality framework</strong>: Automated checks for missing data, outliers, and consistency across visits. Nightly QC runs identify issues early.</p>
+<p><strong>Audit trail and compliance</strong>: Every action is logged with user, timestamp, and change history. Electronic signatures supported for regulatory studies.</p>
+<p><strong>Data export and analysis</strong>: Export to CSV, Excel, SPSS, or R. Integrate with your preferred analysis tool directly.</p>
+<p><strong>User-friendly admin interface</strong>: Create users, manage backups, view audit logs—all from the web interface. No command-line expertise required.</p>
+<hr>
+</section>
+</section>
+<section id="how-zzedc-achieves-investigator-independence" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> How ZZedc Achieves Investigator Independence</h1>
+<section id="architecture-simplicity-and-transparency" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="architecture-simplicity-and-transparency"><span class="header-section-number">4.1</span> Architecture: Simplicity and Transparency</h2>
+<pre><code>┌─────────────────────────────────────────────────┐
+│  Your Infrastructure (AWS, Local, Hybrid)      │
+│                                                  │
+│  ┌──────────────────────────────────────────┐  │
+│  │  Web Browser (Any Location)              │  │
+│  │  https://trial.example.org               │  │
+│  └──────────────────────────────────────────┘  │
+│            ↓ HTTPS (Automatic)                  │
+│  ┌──────────────────────────────────────────┐  │
+│  │  Caddy Reverse Proxy                     │  │
+│  │  (Automatic HTTPS, Let's Encrypt)        │  │
+│  └──────────────────────────────────────────┘  │
+│            ↓ Reverse Proxy                      │
+│  ┌──────────────────────────────────────────┐  │
+│  │  ZZedc R/Shiny Application               │  │
+│  │  (Authentication, Forms, Reporting)      │  │
+│  └──────────────────────────────────────────┘  │
+│            ↓ Database                           │
+│  ┌──────────────────────────────────────────┐  │
+│  │  SQLite Database (Standard Format)       │  │
+│  │  Your Data, Your Control                 │  │
+│  └──────────────────────────────────────────┘  │
+│                                                  │
+└─────────────────────────────────────────────────┘</code></pre>
+<p><strong>Key design points:</strong></p>
+<ul>
+<li><strong>All infrastructure is standard</strong>: Docker containers, standard web server (Caddy), open-source database (SQLite)</li>
+<li><strong>No proprietary components</strong>: You’re not dependent on any vendor-specific technology</li>
+<li><strong>Transparent processes</strong>: You can see, audit, and modify every part of the system</li>
+<li><strong>Portable data</strong>: Your data is in SQLite—you can access it with any SQL tool, analyze it with any tool, migrate it anywhere</li>
+</ul>
+</section>
+<section id="deployment-paths-flexibility-for-different-needs" class="level2" data-number="4.2">
+<h2 data-number="4.2" class="anchored" data-anchor-id="deployment-paths-flexibility-for-different-needs"><span class="header-section-number">4.2</span> Deployment Paths: Flexibility for Different Needs</h2>
+<p>ZZedc supports multiple deployment approaches, depending on your scale and technical resources:</p>
+<section id="path-1-solo-researcher-local-laptop" class="level3" data-number="4.2.1">
+<h3 data-number="4.2.1" class="anchored" data-anchor-id="path-1-solo-researcher-local-laptop"><span class="header-section-number">4.2.1</span> Path 1: Solo Researcher (Local Laptop)</h3>
+<p><strong>Best for:</strong> Individual investigators, small pilot studies, initial prototyping</p>
+<p>Install on your personal laptop in 10 minutes:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Install ZZedc package from CRAN</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">"zzedc"</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Initialize project with interactive setup</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(zzedc)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>zzedc<span class="sc">::</span><span class="fu">init</span>()  <span class="co"># Answers 15 simple questions</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Launch</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="fu">launch_zzedc</span>()</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Application opens in browser at http://localhost:3838</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Data lives in a local SQLite file (<code>data/zzedc.db</code>). You’re the only user. Backup by copying the file to cloud storage.</p>
+<p><strong>Cost</strong>: Free (only your laptop electricity) <strong>Maintenance</strong>: Minimal (you run it when needed)</p>
+</section>
+<section id="path-2-team-research-single-aws-server" class="level3" data-number="4.2.2">
+<h3 data-number="4.2.2" class="anchored" data-anchor-id="path-2-team-research-single-aws-server"><span class="header-section-number">4.2.2</span> Path 2: Team Research (Single AWS Server)</h3>
+<p><strong>Best for:</strong> Research team at single institution, collaborative multi-site trial</p>
+<p>Deploy on AWS EC2 in ~15 minutes:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Install AWS CLI, configure credentials</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Run deployment script</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./aws_setup.sh</span> <span class="dt">\</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">--region</span> us-west-2 <span class="dt">\</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">--study-name</span> <span class="st">"Depression Treatment Trial"</span> <span class="dt">\</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">--study-id</span> <span class="st">"DEPR-2025-001"</span> <span class="dt">\</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">--admin-password</span> <span class="st">"SecurePass123!"</span> <span class="dt">\</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">--domain</span> trial.example.org <span class="dt">\</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">--instance-type</span> t3.medium</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Application runs on AWS infrastructure. Multiple team members access via HTTPS. Database backed up automatically.</p>
+<p><strong>Cost</strong>: ~$30-50/month for EC2 instance (or less, depending on size) <strong>Maintenance</strong>: Basic (Docker handles updates, Caddy handles HTTPS renewal)</p>
+</section>
+<section id="path-3-enterprisemulti-site" class="level3" data-number="4.2.3">
+<h3 data-number="4.2.3" class="anchored" data-anchor-id="path-3-enterprisemulti-site"><span class="header-section-number">4.2.3</span> Path 3: Enterprise/Multi-Site</h3>
+<p><strong>Best for:</strong> Large NIH-funded studies, pharmaceutical trials, production deployments</p>
+<p>Deploy across multiple AWS availability zones with load balancing, RDS database, S3 backup, CloudWatch monitoring.</p>
+<p><strong>Cost</strong>: $200-500/month depending on data volume <strong>Maintenance</strong>: Automated (infrastructure-as-code, CI/CD pipeline)</p>
+</section>
+</section>
+<section id="security-and-compliance" class="level2" data-number="4.3">
+<h2 data-number="4.3" class="anchored" data-anchor-id="security-and-compliance"><span class="header-section-number">4.3</span> Security and Compliance</h2>
+<p>ZZedc includes security and compliance frameworks that commercial EDC systems charge extra for:</p>
+<p><strong>GDPR Compliance</strong>: - Data subject rights portal (access your data, request deletion) - Purpose limitation (users only see data they need) - Audit trail of all access</p>
+<p><strong>21 CFR Part 11 (FDA)</strong>: - Electronic signatures with role-based authorization - Immutable audit trail with hash chaining - System validation framework</p>
+<p><strong>Security Baseline</strong>: - Password encryption with configurable salt - HTTPS with automatic Let’s Encrypt certificates - Role-based access control - Session timeout and concurrent login limits</p>
+<hr>
+</section>
+</section>
+<section id="deployment-scenarios-and-examples" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Deployment Scenarios and Examples</h1>
+<section id="scenario-1-solo-researcher-prototype" class="level2" data-number="5.1">
+<h2 data-number="5.1" class="anchored" data-anchor-id="scenario-1-solo-researcher-prototype"><span class="header-section-number">5.1</span> Scenario 1: Solo Researcher Prototype</h2>
+<p><strong>Dr.&nbsp;Jane is a clinical psychologist</strong> planning a small depression treatment study. She wants to test intervention feasibility before seeking NIH funding.</p>
+<p><strong>Her approach:</strong></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Install on her laptop</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">"zzedc"</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(zzedc)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Quick setup (5 minutes of questions)</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>zzedc<span class="sc">::</span><span class="fu">init</span>()</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># - Study name: "Depression CBT Pilot"</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="co"># - Target enrollment: 20</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="co"># - Admin username: jane_smith</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co"># - Password: (secure password)</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Launch</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="fu">launch_zzedc</span>()</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="co"># App opens at http://localhost:3838</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>Result</strong>: Jane has a secure, validated EDC system running locally. She can: - Create forms for baseline, weekly, and endpoint visits - Enroll patients and enter data - Generate enrollment reports - Export data to Excel for analysis - Back up by copying a single file to Dropbox</p>
+<p><strong>Cost</strong>: $0 <strong>Timeline</strong>: 15 minutes from zero to collecting data</p>
+<hr>
+</section>
+<section id="scenario-2-multi-site-trial-migration" class="level2" data-number="5.2">
+<h2 data-number="5.2" class="anchored" data-anchor-id="scenario-2-multi-site-trial-migration"><span class="header-section-number">5.2</span> Scenario 2: Multi-Site Trial Migration</h2>
+<p><strong>The ADHD research consortium</strong> at 5 universities currently uses an expensive commercial EDC that costs $40K/year and is inflexible. They want to migrate to something more affordable and customizable.</p>
+<p><strong>Their approach:</strong></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># IT staff deploys to AWS</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./aws_setup.sh</span> <span class="dt">\</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">--region</span> us-west-2 <span class="dt">\</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">--study-name</span> <span class="st">"Multisite ADHD Trial"</span> <span class="dt">\</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">--study-id</span> <span class="st">"ADHD-MULTI-2025"</span> <span class="dt">\</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">--admin-password</span> <span class="st">"SecurePassword123!"</span> <span class="dt">\</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">--domain</span> adhd-trial.org <span class="dt">\</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">--instance-type</span> t3.large  <span class="co"># Larger instance for multi-site</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>Result</strong>: - Single centralized instance accessible from all 5 sites - HTTPS with automatic security certificates - Role-based access: 2 administrators, 5 principal investigators, 20 coordinators, 5 data managers - Data shared securely across institutions - Monthly cost: $40 (95% cheaper than commercial EDC)</p>
+<p><strong>Cost</strong>: $40/month infrastructure + staff time for administration <strong>Timeline</strong>: 1 week from decision to enrollment opened</p>
+<hr>
+</section>
+<section id="scenario-3-individual-investigator-independence" class="level2" data-number="5.3">
+<h2 data-number="5.3" class="anchored" data-anchor-id="scenario-3-individual-investigator-independence"><span class="header-section-number">5.3</span> Scenario 3: Individual Investigator Independence</h2>
+<p><strong>Dr.&nbsp;Robert</strong> was running a study with a local Biostatistics Lab that managed his EDC. The lab relationship deteriorated due to cost escalation and support issues. He wants to take control.</p>
+<p><strong>The situation</strong>: - His data is in a commercial EDC (vendor owns the data format) - Migration would cost $20K to export and reformat - He needs a system that’s independent from any vendor - He has basic IT skills but doesn’t want to manage Linux servers</p>
+<p><strong>His solution</strong>: 1. <strong>Deploy ZZedc independently</strong> on AWS (not through the Biostatistics Lab) <code>bash    ./aws_setup.sh --region us-west-1 --study-name "Robert's Study" \      --study-id "ROBERT-2025" --domain robert-study.org</code></p>
+<ol start="2" type="1">
+<li><strong>Migrate his data</strong> from the old system to ZZedc
+<ul>
+<li>Old system exports to CSV</li>
+<li>CSV imported into ZZedc</li>
+<li>Data is now in standard SQLite format</li>
+</ul></li>
+<li><strong>Complete his study independently</strong>
+<ul>
+<li>Data entry continues in ZZedc</li>
+<li>Analysis done with R/Python (direct database access)</li>
+<li>Final data archived as standard database file</li>
+</ul></li>
+<li><strong>End of study</strong>
+<ul>
+<li>Data archived in standard SQLite format to institutional repository</li>
+<li>System shut down (delete EC2 instance)</li>
+<li>Ongoing data access requires only free SQLite tools</li>
+</ul></li>
+</ol>
+<p><strong>Result</strong>: Dr.&nbsp;Robert owns his data and system. If he wants to work with another Biostatistics Lab in the future, he can—without vendor lock-in.</p>
+<hr>
+</section>
+</section>
+<section id="getting-started-step-by-step" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Getting Started: Step-by-Step</h1>
+<section id="for-solo-researchers" class="level2" data-number="6.1">
+<h2 data-number="6.1" class="anchored" data-anchor-id="for-solo-researchers"><span class="header-section-number">6.1</span> For Solo Researchers</h2>
+<p><strong>Requirements</strong>: R installed, ~5 minutes</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 1: Install</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">"zzedc"</span>)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 2: Load and initialize</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(zzedc)</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>zzedc<span class="sc">::</span><span class="fu">init</span>()</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 3: Answer interactive questions</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="co"># The system guides you through setup</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 4: Launch</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="fu">Sys.setenv</span>(<span class="at">ZZEDC_SALT =</span> <span class="st">"..."</span>)  <span class="co"># (from setup output)</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="fu">launch_zzedc</span>()</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 5: Open browser to http://localhost:3838</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 6: Login with admin credentials you chose</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Detailed instructions: See <code>vignettes/quick-start-solo-researcher.Rmd</code></p>
+</section>
+<section id="for-aws-deployment" class="level2" data-number="6.2">
+<h2 data-number="6.2" class="anchored" data-anchor-id="for-aws-deployment"><span class="header-section-number">6.2</span> For AWS Deployment</h2>
+<p><strong>Requirements</strong>: AWS account, AWS CLI, ~15 minutes plus setup time</p>
+<p><strong>Step 1: Prepare</strong></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Ensure AWS credentials configured</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">aws</span> sts get-caller-identity</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Gather information</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="co"># - Study name</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="co"># - Study protocol ID</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co"># - Domain name (e.g., trial.example.org)</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="co"># - Admin password (8+ characters)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>Step 2: Deploy</strong></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> deployment/</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">chmod</span> +x aws_setup.sh</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./aws_setup.sh</span> <span class="dt">\</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">--region</span> us-west-2 <span class="dt">\</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">--study-name</span> <span class="st">"Your Study"</span> <span class="dt">\</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">--study-id</span> <span class="st">"YOUR-STUDY-ID"</span> <span class="dt">\</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">--admin-password</span> <span class="st">"SecurePassword123!"</span> <span class="dt">\</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">--domain</span> trial.example.org <span class="dt">\</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">--instance-type</span> t3.medium</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>Step 3: Point domain to instance</strong> - Wait for DNS to propagate (can take up to 24 hours) - Access application at <code>https://trial.example.org</code></p>
+<p>Detailed instructions: See <code>deployment/AWS_DEPLOYMENT_GUIDE.md</code> or <code>vignettes/quick-start-aws-devops.Rmd</code></p>
+</section>
+<section id="for-migration-from-other-systems" class="level2" data-number="6.3">
+<h2 data-number="6.3" class="anchored" data-anchor-id="for-migration-from-other-systems"><span class="header-section-number">6.3</span> For Migration from Other Systems</h2>
+<p><strong>Migrating from commercial EDC, Excel, or other sources?</strong></p>
+<ol type="1">
+<li><strong>Export from source system</strong> (typically CSV or Excel)</li>
+<li><strong>Import into ZZedc</strong> using the data loader tools</li>
+<li><strong>Verify data quality</strong> in ZZedc’s validation interface</li>
+<li><strong>Complete study</strong> in ZZedc</li>
+<li><strong>Archive final data</strong> as standard SQLite database</li>
+</ol>
+<p>Detailed migration guides available in documentation.</p>
+<hr>
+</section>
+</section>
+<section id="long-term-sustainability" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Long-Term Sustainability</h1>
+<section id="ownership-and-control" class="level2" data-number="7.1">
+<h2 data-number="7.1" class="anchored" data-anchor-id="ownership-and-control"><span class="header-section-number">7.1</span> Ownership and Control</h2>
+<p>When you deploy ZZedc, you own: - <strong>The infrastructure</strong>: Your EC2 instance, your VPC, your data storage - <strong>The data</strong>: Standard SQLite format, completely portable - <strong>The system configuration</strong>: You control every setting - <strong>The codebase</strong>: Open source on GitHub; you can fork and modify if needed</p>
+</section>
+<section id="maintenance-and-updates" class="level2" data-number="7.2">
+<h2 data-number="7.2" class="anchored" data-anchor-id="maintenance-and-updates"><span class="header-section-number">7.2</span> Maintenance and Updates</h2>
+<p><strong>Monthly</strong>: - Monitor disk usage and instance health - Check logs for errors</p>
+<p><strong>Quarterly</strong>: - Update OS packages on EC2 - Update ZZedc package if new version available - Test backup/restore procedure</p>
+<p><strong>Annually</strong>: - Security audit - Capacity planning (do you need a larger instance?) - Archive completed studies</p>
+<p>See <code>IT_STAFF_DEPLOYMENT_CHECKLIST.md</code> and <code>IT_STAFF_TROUBLESHOOTING.md</code> for detailed guidance.</p>
+</section>
+<section id="migration-path" class="level2" data-number="7.3">
+<h2 data-number="7.3" class="anchored" data-anchor-id="migration-path"><span class="header-section-number">7.3</span> Migration Path</h2>
+<p>If you want to migrate away from ZZedc in the future:</p>
+<ol type="1">
+<li><p><strong>Export database</strong>:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># SQLite is a standard database format</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">sqlite3</span> zzedc.db <span class="st">".dump"</span> <span class="op">&gt;</span> database_export.sql</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div></li>
+<li><p><strong>Access with any tool</strong>: Your data can be accessed by any SQL tool, Python, R, Stata, SAS, etc.</p></li>
+<li><p><strong>Complete ownership</strong>: No vendor locks, no proprietary formats</p></li>
+</ol>
+<hr>
+</section>
+</section>
+<section id="comparison-zzedc-vs-commercial-edc" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Comparison: ZZedc vs Commercial EDC</h1>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 26%">
+<col style="width: 20%">
+<col style="width: 23%">
+<col style="width: 29%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Feature</th>
+<th>ZZedc</th>
+<th>REDCap</th>
+<th>Medidata</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Cost</strong></td>
+<td>~$40-500/month infrastructure</td>
+<td>$200-1000/month licensing</td>
+<td>$500-2000/month licensing</td>
+</tr>
+<tr class="even">
+<td><strong>Data ownership</strong></td>
+<td>Complete (standard SQLite)</td>
+<td>Vendor owns servers</td>
+<td>Vendor owns servers</td>
+</tr>
+<tr class="odd">
+<td><strong>Customization</strong></td>
+<td>Full source code access</td>
+<td>Limited data dictionary</td>
+<td>Limited, expensive</td>
+</tr>
+<tr class="even">
+<td><strong>Long-term sustainability</strong></td>
+<td>You control it</td>
+<td>Dependent on vendor</td>
+<td>Dependent on vendor</td>
+</tr>
+<tr class="odd">
+<td><strong>Compliance frameworks</strong></td>
+<td>GDPR, CFR Part 11 built-in</td>
+<td>Available as add-on</td>
+<td>Available as add-on</td>
+</tr>
+<tr class="even">
+<td><strong>Vendor lock-in</strong></td>
+<td>None (open source)</td>
+<td>Moderate (proprietary formats)</td>
+<td>High (proprietary system)</td>
+</tr>
+<tr class="odd">
+<td><strong>Support model</strong></td>
+<td>Community + self-support</td>
+<td>Commercial support</td>
+<td>Commercial support</td>
+</tr>
+<tr class="even">
+<td><strong>Learning curve</strong></td>
+<td>Moderate (R/Docker knowledge helpful)</td>
+<td>Low (point-and-click)</td>
+<td>Low (point-and-click)</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="conclusion-taking-control" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> Conclusion: Taking Control</h1>
+<p>Clinical research data management doesn’t require expensive, proprietary vendors. ZZedc demonstrates that open-source tools can provide <strong>security, compliance, and ease-of-use</strong> while maintaining your independence.</p>
+<p><strong>Whether you’re</strong>: - A solo investigator seeking a simple, free EDC for a pilot study - A research team tired of vendor pricing and inflexibility - An established researcher wanting to migrate away from vendor lock-in - A multi-site consortium seeking affordable, scalable data management</p>
+<p><strong>ZZedc offers</strong>: - Complete investigator ownership and control - Low or no licensing costs - Standard, portable data formats - Security and compliance by default - Flexible deployment (local, cloud, hybrid) - Open source (fork and customize as needed)</p>
+<section id="next-steps" class="level2" data-number="9.1">
+<h2 data-number="9.1" class="anchored" data-anchor-id="next-steps"><span class="header-section-number">9.1</span> Next Steps</h2>
+<p><strong>Start exploring</strong>: - <strong>Solo researcher?</strong> See <code>vignettes/quick-start-solo-researcher.Rmd</code> - <strong>Team with AWS?</strong> See <code>vignettes/quick-start-aws-devops.Rmd</code> - <strong>IT staff deploying?</strong> See <code>deployment/IT_STAFF_DEPLOYMENT_CHECKLIST.md</code> - <strong>Need help?</strong> Visit https://github.com/rgt47/zzedc for documentation and issues</p>
+<p>The goal of ZZedc is simple: <strong>Put clinical research data management back in the hands of investigators</strong>.</p>
+<hr>
+</section>
+<section id="resources" class="level2" data-number="9.2">
+<h2 data-number="9.2" class="anchored" data-anchor-id="resources"><span class="header-section-number">9.2</span> Resources</h2>
+<ul>
+<li><strong>ZZedc GitHub</strong>: https://github.com/rgt47/zzedc</li>
+<li><strong>Documentation</strong>: See <code>vignettes/</code> directory for comprehensive guides</li>
+<li><strong>Deployment guides</strong>: See <code>deployment/</code> directory for AWS, Docker, and operational guides</li>
+<li><strong>Support</strong>: Open an issue on GitHub or contact zzedc@ucsd.edu</li>
+</ul>
+<hr>
+<p><strong>Published</strong>: December 2025 <strong>Author</strong>: Clinical Research Technology Team <strong>License</strong>: Open source (see GitHub repository for license details) <strong>Status</strong>: Production ready</p>
+
+
+</section>
+</section>
+
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" id="quarto-reuse"><h2 class="anchored quarto-appendix-heading">Reuse</h2><div class="quarto-appendix-contents"><div><a rel="license" href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></div></div></section><section class="quarto-appendix-contents" id="quarto-citation"><h2 class="anchored quarto-appendix-heading">Citation</h2><div><div class="quarto-appendix-secondary-label">BibTeX citation:</div><pre class="sourceCode code-with-copy quarto-appendix-bibtex"><code class="sourceCode bibtex">@online{(ryy)_glenn_thomas2025,
+  author = {(Ryy) Glenn Thomas, Ronald and Research Technology,
+    Clinical},
+  title = {Taking {Control} of {Your} {Clinical} {Trial:} {Running}
+    {ZZedc} {Independently}},
+  date = {2025-12-07},
+  url = {https://focusonr.org/posts/zzedcindependence/},
+  langid = {en}
+}
+</code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre><div class="quarto-appendix-secondary-label">For attribution, please cite this work as:</div><div id="ref-(ryy)_glenn_thomas2025" class="csl-entry quarto-appendix-citeas" role="listitem">
+(Ryy) Glenn Thomas, Ronald, and Clinical Research Technology. 2025.
+<span>“Taking Control of Your Clinical Trial: Running ZZedc
+Independently.”</span> December 7, 2025. <a href="https://focusonr.org/posts/zzedcindependence/">https://focusonr.org/posts/zzedcindependence/</a>.
+</div></div></section></div></main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/focusonr\.org");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script src="https://utteranc.es/client.js" repo="rgt47/qblog" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Copyright 2023-2025, Ronald G. Thomas</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47">
+      <i class="bi bi-github" role="img">
+</i> 
+    </a>
+  </li>  
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47">
+      <i class="bi bi-twitter" role="img">
+</i> 
+    </a>
+  </li>  
+</ul>
+    </div>
+  </div>
+</footer>
+<!-- Fix for Quarto category encoding issue -->
+<script>
+// Fix category encoding for Quarto listing functionality
+(function() {
+  function fixAllCategoryEncoding() {
+    // Only run on pages that have Quarto listings
+    if (!document.querySelector('.quarto-listing')) {
+      return;
+    }
+    
+    // Fix sidebar category data-category attributes
+    const categoryEls = document.querySelectorAll('.quarto-listing-category .category[data-category]');
+    
+    categoryEls.forEach((categoryEl) => {
+      const category = categoryEl.getAttribute('data-category');
+      
+      if (category && category !== '') {
+        // Check if it contains only base64 characters and proper length
+        const isBase64 = /^[A-Za-z0-9+/]*={0,2}$/.test(category) && category.length % 4 === 0;
+        
+        if (isBase64) {
+          try {
+            const decoded = decodeURIComponent(atob(category));
+            // Verify it decoded to something reasonable (no control characters)
+            if (!decoded.match(/^[A-Za-z0-9\s\-,]+$/)) {
+              // Invalid encoding, re-encode from original text
+              const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+              categoryEl.setAttribute('data-category', encodedCategory);
+            }
+          } catch (e) {
+            // Base64 decode failed, re-encode from original text
+            const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+            categoryEl.setAttribute('data-category', encodedCategory);
+          }
+        } else {
+          // Not base64, encode it
+          const encodedCategory = btoa(encodeURIComponent(category));
+          categoryEl.setAttribute('data-category', encodedCategory);
+        }
+      }
+    });
+    
+    // Fix listing item data-categories attributes  
+    const listingItems = document.querySelectorAll('[data-categories]');
+    
+    listingItems.forEach((item) => {
+      const categories = item.getAttribute('data-categories');
+      
+      if (categories && categories !== '') {
+        // Check if it's already base64 encoded
+        try {
+          decodeURIComponent(atob(categories));
+          // Already encoded and valid
+        } catch (e) {
+          // Not encoded, fix it
+          const encodedCategories = btoa(encodeURIComponent(categories));
+          item.setAttribute('data-categories', encodedCategories);
+        }
+      }
+    });
+    
+    // Fix post-specific category tag click handlers
+    const postCategoryTags = document.querySelectorAll('.listing-category[onclick]');
+    
+    postCategoryTags.forEach((tag) => {
+      const categoryText = tag.textContent.trim();
+      
+      // Replace the onclick handler to use encoded category
+      tag.onclick = () => {
+        const encodedCategory = btoa(encodeURIComponent(categoryText));
+        window.quartoListingCategory(encodedCategory);
+        return false;
+      };
+    });
+  }
+  
+  // Run immediately
+  fixAllCategoryEncoding();
+  
+  // Also run when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fixAllCategoryEncoding);
+  }
+})();
+</script>
+
+<!-- PDF view/download button for blog posts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Only add the button on post pages
+  if (window.location.pathname.includes('/posts/') && !window.location.pathname.endsWith('/posts/') && !window.location.pathname.endsWith('/posts/index.html')) {
+    var currentPath = window.location.pathname;
+    // Handle both /posts/name/ and /posts/name/index.html formats
+    var pdfPath;
+    if (currentPath.endsWith('/')) {
+      pdfPath = currentPath + 'index.pdf';
+    } else {
+      pdfPath = currentPath.replace('.html', '.pdf');
+    }
+
+    // Check if PDF exists first
+    fetch(pdfPath, { method: 'HEAD' })
+      .then(function(response) {
+        if (response.ok) {
+          // PDF exists, show download button
+          showDownloadButton(pdfPath);
+        }
+        // If PDF doesn't exist, don't show any button
+      })
+      .catch(function(error) {
+        // Error checking PDF, don't show any button
+      });
+  }
+});
+
+function showDownloadButton(pdfPath) {
+  var downloadBtn = document.createElement('div');
+  downloadBtn.className = 'pdf-download-button';
+
+  // Get file size if possible
+  fetch(pdfPath, { method: 'HEAD' })
+    .then(function(response) {
+      var size = response.headers.get('Content-Length');
+      var sizeText = '';
+
+      if (size) {
+        // Convert to MB or KB
+        var sizeInMB = size / (1024 * 1024);
+        if (sizeInMB >= 1) {
+          sizeText = ' (' + sizeInMB.toFixed(1) + ' MB)';
+        } else {
+          sizeText = ' (' + (size / 1024).toFixed(0) + ' KB)';
+        }
+      }
+
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' + sizeText +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    })
+    .catch(function() {
+      // Basic fallback if we can't get file size
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    });
+
+  // Find where to insert the button (right after the title block)
+  var titleBlock = document.querySelector('.quarto-title-meta');
+  if (titleBlock) {
+    titleBlock.after(downloadBtn);
+  }
+}
+
+
+</script>
+
+<style>
+.pdf-download-button {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+</style>
+
+
+
+
+</body></html>

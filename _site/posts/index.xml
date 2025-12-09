@@ -75,6 +75,1590 @@ December 9, 2025. <a href="https://focusonr.org/posts/tableplacementrmarkdown/">
   <media:content url="https://focusonr.org/posts/tableplacementrmarkdown/img/rmarkdown.png" medium="image" type="image/png" height="166" width="144"/>
 </item>
 <item>
+  <title>Taking Control of Your Clinical Trial: Running ZZedc Independently</title>
+  <dc:creator>Ronald (Ryy) Glenn Thomas</dc:creator>
+  <dc:creator>Clinical Research Technology</dc:creator>
+  <link>https://focusonr.org/posts/zzedcindependence/</link>
+  <description><![CDATA[ 
+
+
+
+
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>The landscape of clinical research data management is changing. Investigators increasingly want <strong>full control</strong> over their data, systems, and operational decisions. Yet many commonly used electronic data capture (EDC) systems create <strong>vendor dependency</strong>: expensive licenses, proprietary data formats, and the uncomfortable reality that your system operates at the pleasure of your vendor.</p>
+<p>This post documents <strong>ZZedc</strong>, an open-source, investigator-owned EDC platform designed with a different philosophy. ZZedc runs on infrastructure you control, uses standard databases and formats, costs a fraction of commercial EDC systems, and—most importantly—can be deployed and managed by your research team without ongoing dependency on any biostatistics lab or commercial vendor.</p>
+<section id="what-this-post-covers" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="what-this-post-covers"><span class="header-section-number">1.1</span> What This Post Covers</h2>
+<ul>
+<li><strong>The independence problem:</strong> Why control matters in clinical research</li>
+<li><strong>ZZedc overview:</strong> What it is and how it differs from commercial EDC systems</li>
+<li><strong>Deployment paths:</strong> From a single investigator’s laptop to multi-site trials on AWS</li>
+<li><strong>Technical architecture:</strong> How ZZedc achieves simplicity and security</li>
+<li><strong>Getting started:</strong> Step-by-step guides for different deployment scenarios</li>
+<li><strong>Long-term sustainability:</strong> Ongoing maintenance, migration, and data ownership</li>
+</ul>
+<hr>
+</section>
+</section>
+<section id="the-independence-problem" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> The Independence Problem</h1>
+<section id="why-investigator-control-matters" class="level2" data-number="2.1">
+<h2 data-number="2.1" class="anchored" data-anchor-id="why-investigator-control-matters"><span class="header-section-number">2.1</span> Why Investigator Control Matters</h2>
+<p>Clinical researchers routinely face uncomfortable situations with EDC systems:</p>
+<p><strong>Vendor dependency</strong>: Your study relies on continued vendor support. If the company changes pricing, goes out of business, or decides to discontinue support, you’re stuck.</p>
+<p><strong>Data ownership ambiguity</strong>: Proprietary data formats mean your data isn’t truly “yours.” Exporting data can be expensive, slow, or impossible without vendor cooperation.</p>
+<p><strong>Operational constraints</strong>: You can’t customize validation rules, reports, or workflows without vendor professional services (and associated costs).</p>
+<p><strong>Security concerns</strong>: Your patient data sits on vendor infrastructure. You don’t control security, backup locations, or data residency.</p>
+<p><strong>Cost escalation</strong>: EDC licensing grows with patient volume. A system that costs $20K/year at baseline often costs $50K+ by study completion.</p>
+</section>
+<section id="common-scenarios-where-investigators-break-free" class="level2" data-number="2.2">
+<h2 data-number="2.2" class="anchored" data-anchor-id="common-scenarios-where-investigators-break-free"><span class="header-section-number">2.2</span> Common Scenarios Where Investigators Break Free</h2>
+<p>In practice, these situations drive investigators to seek alternatives:</p>
+<p><strong>Collaboration breakup</strong>: A productive collaboration with a biostatistics lab ends due to cost disagreements or service level mismatches. The investigator is left with data trapped in a vendor system.</p>
+<p><strong>Study expansion</strong>: A pilot study is successful and scales to multi-site. Existing EDC licensing becomes prohibitively expensive. The investigator needs a more scalable approach.</p>
+<p><strong>Regulatory concerns</strong>: The investigator’s institution requires data to be stored in a specific location or under specific security controls that the vendor can’t accommodate.</p>
+<p><strong>Long-term stewardship</strong>: The study becomes long-term follow-up. Vendor relationship doesn’t last 5+ years, but the investigator must maintain the system and data indefinitely.</p>
+<p><strong>Methodological evolution</strong>: As analysis evolves, the investigator needs flexible validation rules, custom reports, and integration with analysis tools. The vendor system feels restrictive.</p>
+</section>
+<section id="existing-solutions-have-limitations" class="level2" data-number="2.3">
+<h2 data-number="2.3" class="anchored" data-anchor-id="existing-solutions-have-limitations"><span class="header-section-number">2.3</span> Existing Solutions Have Limitations</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 31%">
+<col style="width: 34%">
+<col style="width: 34%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Solution</th>
+<th>Advantage</th>
+<th>Limitation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Commercial EDC (REDCap, Medidata)</td>
+<td>Polished interface, vendor support</td>
+<td>High cost, vendor lock-in, data ownership questions</td>
+</tr>
+<tr class="even">
+<td>Spreadsheets (Excel, Google Sheets)</td>
+<td>Familiar, free</td>
+<td>No validation, poor audit trail, compliance issues</td>
+</tr>
+<tr class="odd">
+<td>Homebrew databases (Access, FileMaker)</td>
+<td>Customizable</td>
+<td>No security, poor scalability, compliance nightmare</td>
+</tr>
+<tr class="even">
+<td>Custom R/Shiny apps</td>
+<td>Completely flexible</td>
+<td>Requires skilled programmer, no pre-built features</td>
+</tr>
+<tr class="odd">
+<td><strong>ZZedc</strong></td>
+<td><strong>Open source, low cost, independent</strong></td>
+<td><strong>Requires basic technical setup</strong></td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+</section>
+<section id="introducing-zzedc" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Introducing ZZedc</h1>
+<p>ZZedc is a <strong>modern, open-source electronic data capture system</strong> built with R and Shiny. It’s specifically designed for investigator ownership and independence.</p>
+<section id="core-design-philosophy" class="level2" data-number="3.1">
+<h2 data-number="3.1" class="anchored" data-anchor-id="core-design-philosophy"><span class="header-section-number">3.1</span> Core Design Philosophy</h2>
+<p><strong>Investigator-centered</strong>: Every design decision prioritizes your control. You own the data, the system, and the infrastructure.</p>
+<p><strong>Cloud-native but independent</strong>: Deploy on AWS, Azure, Google Cloud, or local servers. You choose the infrastructure provider based on cost and compliance needs.</p>
+<p><strong>Security and compliance by default</strong>: GDPR and 21 CFR Part 11 compliance frameworks built in. Data encryption, audit trails, and electronic signatures are standard features.</p>
+<p><strong>Open source, not proprietary</strong>: Source code is available on GitHub. If you need customization, you can do it yourself or hire any consultant—you’re not locked into the vendor.</p>
+<p><strong>Standards-based</strong>: SQLite databases, YAML configuration, standard web technologies. If you need to migrate away, your data is in standard formats.</p>
+</section>
+<section id="what-zzedc-includes" class="level2" data-number="3.2">
+<h2 data-number="3.2" class="anchored" data-anchor-id="what-zzedc-includes"><span class="header-section-number">3.2</span> What ZZedc Includes</h2>
+<p><strong>Electronic data capture with real-time validation</strong>: Enter study data with immediate field-level validation. No waiting for data manager review.</p>
+<p><strong>Role-based access control</strong>: Five built-in roles (Admin, PI, Coordinator, Data Manager, Monitor) with configurable permissions.</p>
+<p><strong>Comprehensive reporting</strong>: Basic enrollment reports, quality control summaries, and statistical overviews—all built-in, no custom programming.</p>
+<p><strong>Data quality framework</strong>: Automated checks for missing data, outliers, and consistency across visits. Nightly QC runs identify issues early.</p>
+<p><strong>Audit trail and compliance</strong>: Every action is logged with user, timestamp, and change history. Electronic signatures supported for regulatory studies.</p>
+<p><strong>Data export and analysis</strong>: Export to CSV, Excel, SPSS, or R. Integrate with your preferred analysis tool directly.</p>
+<p><strong>User-friendly admin interface</strong>: Create users, manage backups, view audit logs—all from the web interface. No command-line expertise required.</p>
+<hr>
+</section>
+</section>
+<section id="how-zzedc-achieves-investigator-independence" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> How ZZedc Achieves Investigator Independence</h1>
+<section id="architecture-simplicity-and-transparency" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="architecture-simplicity-and-transparency"><span class="header-section-number">4.1</span> Architecture: Simplicity and Transparency</h2>
+<pre><code>┌─────────────────────────────────────────────────┐
+│  Your Infrastructure (AWS, Local, Hybrid)      │
+│                                                  │
+│  ┌──────────────────────────────────────────┐  │
+│  │  Web Browser (Any Location)              │  │
+│  │  https://trial.example.org               │  │
+│  └──────────────────────────────────────────┘  │
+│            ↓ HTTPS (Automatic)                  │
+│  ┌──────────────────────────────────────────┐  │
+│  │  Caddy Reverse Proxy                     │  │
+│  │  (Automatic HTTPS, Let's Encrypt)        │  │
+│  └──────────────────────────────────────────┘  │
+│            ↓ Reverse Proxy                      │
+│  ┌──────────────────────────────────────────┐  │
+│  │  ZZedc R/Shiny Application               │  │
+│  │  (Authentication, Forms, Reporting)      │  │
+│  └──────────────────────────────────────────┘  │
+│            ↓ Database                           │
+│  ┌──────────────────────────────────────────┐  │
+│  │  SQLite Database (Standard Format)       │  │
+│  │  Your Data, Your Control                 │  │
+│  └──────────────────────────────────────────┘  │
+│                                                  │
+└─────────────────────────────────────────────────┘</code></pre>
+<p><strong>Key design points:</strong></p>
+<ul>
+<li><strong>All infrastructure is standard</strong>: Docker containers, standard web server (Caddy), open-source database (SQLite)</li>
+<li><strong>No proprietary components</strong>: You’re not dependent on any vendor-specific technology</li>
+<li><strong>Transparent processes</strong>: You can see, audit, and modify every part of the system</li>
+<li><strong>Portable data</strong>: Your data is in SQLite—you can access it with any SQL tool, analyze it with any tool, migrate it anywhere</li>
+</ul>
+</section>
+<section id="deployment-paths-flexibility-for-different-needs" class="level2" data-number="4.2">
+<h2 data-number="4.2" class="anchored" data-anchor-id="deployment-paths-flexibility-for-different-needs"><span class="header-section-number">4.2</span> Deployment Paths: Flexibility for Different Needs</h2>
+<p>ZZedc supports multiple deployment approaches, depending on your scale and technical resources:</p>
+<section id="path-1-solo-researcher-local-laptop" class="level3" data-number="4.2.1">
+<h3 data-number="4.2.1" class="anchored" data-anchor-id="path-1-solo-researcher-local-laptop"><span class="header-section-number">4.2.1</span> Path 1: Solo Researcher (Local Laptop)</h3>
+<p><strong>Best for:</strong> Individual investigators, small pilot studies, initial prototyping</p>
+<p>Install on your personal laptop in 10 minutes:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 1. Install ZZedc package from CRAN</span></span>
+<span id="cb2-2"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">install.packages</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"zzedc"</span>)</span>
+<span id="cb2-3"></span>
+<span id="cb2-4"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 2. Initialize project with interactive setup</span></span>
+<span id="cb2-5"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">library</span>(zzedc)</span>
+<span id="cb2-6">zzedc<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">::</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">init</span>()  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Answers 15 simple questions</span></span>
+<span id="cb2-7"></span>
+<span id="cb2-8"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 3. Launch</span></span>
+<span id="cb2-9"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">launch_zzedc</span>()</span>
+<span id="cb2-10"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Application opens in browser at http://localhost:3838</span></span></code></pre></div></div>
+<p>Data lives in a local SQLite file (<code>data/zzedc.db</code>). You’re the only user. Backup by copying the file to cloud storage.</p>
+<p><strong>Cost</strong>: Free (only your laptop electricity) <strong>Maintenance</strong>: Minimal (you run it when needed)</p>
+</section>
+<section id="path-2-team-research-single-aws-server" class="level3" data-number="4.2.2">
+<h3 data-number="4.2.2" class="anchored" data-anchor-id="path-2-team-research-single-aws-server"><span class="header-section-number">4.2.2</span> Path 2: Team Research (Single AWS Server)</h3>
+<p><strong>Best for:</strong> Research team at single institution, collaborative multi-site trial</p>
+<p>Deploy on AWS EC2 in ~15 minutes:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3" style="background: #f1f3f5;"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 1. Install AWS CLI, configure credentials</span></span>
+<span id="cb3-2"></span>
+<span id="cb3-3"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 2. Run deployment script</span></span>
+<span id="cb3-4"><span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">./aws_setup.sh</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb3-5">  <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--region</span> us-west-2 <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb3-6">  <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--study-name</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Depression Treatment Trial"</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb3-7">  <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--study-id</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"DEPR-2025-001"</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb3-8">  <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--admin-password</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"SecurePass123!"</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb3-9">  <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--domain</span> trial.example.org <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb3-10">  <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--instance-type</span> t3.medium</span></code></pre></div></div>
+<p>Application runs on AWS infrastructure. Multiple team members access via HTTPS. Database backed up automatically.</p>
+<p><strong>Cost</strong>: ~$30-50/month for EC2 instance (or less, depending on size) <strong>Maintenance</strong>: Basic (Docker handles updates, Caddy handles HTTPS renewal)</p>
+</section>
+<section id="path-3-enterprisemulti-site" class="level3" data-number="4.2.3">
+<h3 data-number="4.2.3" class="anchored" data-anchor-id="path-3-enterprisemulti-site"><span class="header-section-number">4.2.3</span> Path 3: Enterprise/Multi-Site</h3>
+<p><strong>Best for:</strong> Large NIH-funded studies, pharmaceutical trials, production deployments</p>
+<p>Deploy across multiple AWS availability zones with load balancing, RDS database, S3 backup, CloudWatch monitoring.</p>
+<p><strong>Cost</strong>: $200-500/month depending on data volume <strong>Maintenance</strong>: Automated (infrastructure-as-code, CI/CD pipeline)</p>
+</section>
+</section>
+<section id="security-and-compliance" class="level2" data-number="4.3">
+<h2 data-number="4.3" class="anchored" data-anchor-id="security-and-compliance"><span class="header-section-number">4.3</span> Security and Compliance</h2>
+<p>ZZedc includes security and compliance frameworks that commercial EDC systems charge extra for:</p>
+<p><strong>GDPR Compliance</strong>: - Data subject rights portal (access your data, request deletion) - Purpose limitation (users only see data they need) - Audit trail of all access</p>
+<p><strong>21 CFR Part 11 (FDA)</strong>: - Electronic signatures with role-based authorization - Immutable audit trail with hash chaining - System validation framework</p>
+<p><strong>Security Baseline</strong>: - Password encryption with configurable salt - HTTPS with automatic Let’s Encrypt certificates - Role-based access control - Session timeout and concurrent login limits</p>
+<hr>
+</section>
+</section>
+<section id="deployment-scenarios-and-examples" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Deployment Scenarios and Examples</h1>
+<section id="scenario-1-solo-researcher-prototype" class="level2" data-number="5.1">
+<h2 data-number="5.1" class="anchored" data-anchor-id="scenario-1-solo-researcher-prototype"><span class="header-section-number">5.1</span> Scenario 1: Solo Researcher Prototype</h2>
+<p><strong>Dr.&nbsp;Jane is a clinical psychologist</strong> planning a small depression treatment study. She wants to test intervention feasibility before seeking NIH funding.</p>
+<p><strong>Her approach:</strong></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Install on her laptop</span></span>
+<span id="cb4-2"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">install.packages</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"zzedc"</span>)</span>
+<span id="cb4-3"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">library</span>(zzedc)</span>
+<span id="cb4-4"></span>
+<span id="cb4-5"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Quick setup (5 minutes of questions)</span></span>
+<span id="cb4-6">zzedc<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">::</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">init</span>()</span>
+<span id="cb4-7"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># - Study name: "Depression CBT Pilot"</span></span>
+<span id="cb4-8"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># - Target enrollment: 20</span></span>
+<span id="cb4-9"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># - Admin username: jane_smith</span></span>
+<span id="cb4-10"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># - Password: (secure password)</span></span>
+<span id="cb4-11"></span>
+<span id="cb4-12"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Launch</span></span>
+<span id="cb4-13"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">launch_zzedc</span>()</span>
+<span id="cb4-14"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># App opens at http://localhost:3838</span></span></code></pre></div></div>
+<p><strong>Result</strong>: Jane has a secure, validated EDC system running locally. She can: - Create forms for baseline, weekly, and endpoint visits - Enroll patients and enter data - Generate enrollment reports - Export data to Excel for analysis - Back up by copying a single file to Dropbox</p>
+<p><strong>Cost</strong>: $0 <strong>Timeline</strong>: 15 minutes from zero to collecting data</p>
+<hr>
+</section>
+<section id="scenario-2-multi-site-trial-migration" class="level2" data-number="5.2">
+<h2 data-number="5.2" class="anchored" data-anchor-id="scenario-2-multi-site-trial-migration"><span class="header-section-number">5.2</span> Scenario 2: Multi-Site Trial Migration</h2>
+<p><strong>The ADHD research consortium</strong> at 5 universities currently uses an expensive commercial EDC that costs $40K/year and is inflexible. They want to migrate to something more affordable and customizable.</p>
+<p><strong>Their approach:</strong></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5" style="background: #f1f3f5;"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># IT staff deploys to AWS</span></span>
+<span id="cb5-2"><span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">./aws_setup.sh</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb5-3">  <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--region</span> us-west-2 <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb5-4">  <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--study-name</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Multisite ADHD Trial"</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb5-5">  <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--study-id</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"ADHD-MULTI-2025"</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb5-6">  <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--admin-password</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"SecurePassword123!"</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb5-7">  <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--domain</span> adhd-trial.org <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb5-8">  <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--instance-type</span> t3.large  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Larger instance for multi-site</span></span></code></pre></div></div>
+<p><strong>Result</strong>: - Single centralized instance accessible from all 5 sites - HTTPS with automatic security certificates - Role-based access: 2 administrators, 5 principal investigators, 20 coordinators, 5 data managers - Data shared securely across institutions - Monthly cost: $40 (95% cheaper than commercial EDC)</p>
+<p><strong>Cost</strong>: $40/month infrastructure + staff time for administration <strong>Timeline</strong>: 1 week from decision to enrollment opened</p>
+<hr>
+</section>
+<section id="scenario-3-individual-investigator-independence" class="level2" data-number="5.3">
+<h2 data-number="5.3" class="anchored" data-anchor-id="scenario-3-individual-investigator-independence"><span class="header-section-number">5.3</span> Scenario 3: Individual Investigator Independence</h2>
+<p><strong>Dr.&nbsp;Robert</strong> was running a study with a local Biostatistics Lab that managed his EDC. The lab relationship deteriorated due to cost escalation and support issues. He wants to take control.</p>
+<p><strong>The situation</strong>: - His data is in a commercial EDC (vendor owns the data format) - Migration would cost $20K to export and reformat - He needs a system that’s independent from any vendor - He has basic IT skills but doesn’t want to manage Linux servers</p>
+<p><strong>His solution</strong>: 1. <strong>Deploy ZZedc independently</strong> on AWS (not through the Biostatistics Lab) <code>bash    ./aws_setup.sh --region us-west-1 --study-name "Robert's Study" \      --study-id "ROBERT-2025" --domain robert-study.org</code></p>
+<ol start="2" type="1">
+<li><strong>Migrate his data</strong> from the old system to ZZedc
+<ul>
+<li>Old system exports to CSV</li>
+<li>CSV imported into ZZedc</li>
+<li>Data is now in standard SQLite format</li>
+</ul></li>
+<li><strong>Complete his study independently</strong>
+<ul>
+<li>Data entry continues in ZZedc</li>
+<li>Analysis done with R/Python (direct database access)</li>
+<li>Final data archived as standard database file</li>
+</ul></li>
+<li><strong>End of study</strong>
+<ul>
+<li>Data archived in standard SQLite format to institutional repository</li>
+<li>System shut down (delete EC2 instance)</li>
+<li>Ongoing data access requires only free SQLite tools</li>
+</ul></li>
+</ol>
+<p><strong>Result</strong>: Dr.&nbsp;Robert owns his data and system. If he wants to work with another Biostatistics Lab in the future, he can—without vendor lock-in.</p>
+<hr>
+</section>
+</section>
+<section id="getting-started-step-by-step" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Getting Started: Step-by-Step</h1>
+<section id="for-solo-researchers" class="level2" data-number="6.1">
+<h2 data-number="6.1" class="anchored" data-anchor-id="for-solo-researchers"><span class="header-section-number">6.1</span> For Solo Researchers</h2>
+<p><strong>Requirements</strong>: R installed, ~5 minutes</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Step 1: Install</span></span>
+<span id="cb6-2"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">install.packages</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"zzedc"</span>)</span>
+<span id="cb6-3"></span>
+<span id="cb6-4"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Step 2: Load and initialize</span></span>
+<span id="cb6-5"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">library</span>(zzedc)</span>
+<span id="cb6-6">zzedc<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">::</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">init</span>()</span>
+<span id="cb6-7"></span>
+<span id="cb6-8"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Step 3: Answer interactive questions</span></span>
+<span id="cb6-9"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># The system guides you through setup</span></span>
+<span id="cb6-10"></span>
+<span id="cb6-11"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Step 4: Launch</span></span>
+<span id="cb6-12"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">Sys.setenv</span>(<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">ZZEDC_SALT =</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"..."</span>)  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># (from setup output)</span></span>
+<span id="cb6-13"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">launch_zzedc</span>()</span>
+<span id="cb6-14"></span>
+<span id="cb6-15"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Step 5: Open browser to http://localhost:3838</span></span>
+<span id="cb6-16"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Step 6: Login with admin credentials you chose</span></span></code></pre></div></div>
+<p>Detailed instructions: See <code>vignettes/quick-start-solo-researcher.Rmd</code></p>
+</section>
+<section id="for-aws-deployment" class="level2" data-number="6.2">
+<h2 data-number="6.2" class="anchored" data-anchor-id="for-aws-deployment"><span class="header-section-number">6.2</span> For AWS Deployment</h2>
+<p><strong>Requirements</strong>: AWS account, AWS CLI, ~15 minutes plus setup time</p>
+<p><strong>Step 1: Prepare</strong></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7" style="background: #f1f3f5;"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Ensure AWS credentials configured</span></span>
+<span id="cb7-2"><span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">aws</span> sts get-caller-identity</span>
+<span id="cb7-3"></span>
+<span id="cb7-4"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Gather information</span></span>
+<span id="cb7-5"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># - Study name</span></span>
+<span id="cb7-6"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># - Study protocol ID</span></span>
+<span id="cb7-7"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># - Domain name (e.g., trial.example.org)</span></span>
+<span id="cb7-8"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># - Admin password (8+ characters)</span></span></code></pre></div></div>
+<p><strong>Step 2: Deploy</strong></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8" style="background: #f1f3f5;"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb8-1"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">cd</span> deployment/</span>
+<span id="cb8-2"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">chmod</span> +x aws_setup.sh</span>
+<span id="cb8-3"></span>
+<span id="cb8-4"><span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">./aws_setup.sh</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb8-5">  <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--region</span> us-west-2 <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb8-6">  <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--study-name</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Your Study"</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb8-7">  <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--study-id</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"YOUR-STUDY-ID"</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb8-8">  <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--admin-password</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"SecurePassword123!"</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb8-9">  <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--domain</span> trial.example.org <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">\</span></span>
+<span id="cb8-10">  <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">--instance-type</span> t3.medium</span></code></pre></div></div>
+<p><strong>Step 3: Point domain to instance</strong> - Wait for DNS to propagate (can take up to 24 hours) - Access application at <code>https://trial.example.org</code></p>
+<p>Detailed instructions: See <code>deployment/AWS_DEPLOYMENT_GUIDE.md</code> or <code>vignettes/quick-start-aws-devops.Rmd</code></p>
+</section>
+<section id="for-migration-from-other-systems" class="level2" data-number="6.3">
+<h2 data-number="6.3" class="anchored" data-anchor-id="for-migration-from-other-systems"><span class="header-section-number">6.3</span> For Migration from Other Systems</h2>
+<p><strong>Migrating from commercial EDC, Excel, or other sources?</strong></p>
+<ol type="1">
+<li><strong>Export from source system</strong> (typically CSV or Excel)</li>
+<li><strong>Import into ZZedc</strong> using the data loader tools</li>
+<li><strong>Verify data quality</strong> in ZZedc’s validation interface</li>
+<li><strong>Complete study</strong> in ZZedc</li>
+<li><strong>Archive final data</strong> as standard SQLite database</li>
+</ol>
+<p>Detailed migration guides available in documentation.</p>
+<hr>
+</section>
+</section>
+<section id="long-term-sustainability" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Long-Term Sustainability</h1>
+<section id="ownership-and-control" class="level2" data-number="7.1">
+<h2 data-number="7.1" class="anchored" data-anchor-id="ownership-and-control"><span class="header-section-number">7.1</span> Ownership and Control</h2>
+<p>When you deploy ZZedc, you own: - <strong>The infrastructure</strong>: Your EC2 instance, your VPC, your data storage - <strong>The data</strong>: Standard SQLite format, completely portable - <strong>The system configuration</strong>: You control every setting - <strong>The codebase</strong>: Open source on GitHub; you can fork and modify if needed</p>
+</section>
+<section id="maintenance-and-updates" class="level2" data-number="7.2">
+<h2 data-number="7.2" class="anchored" data-anchor-id="maintenance-and-updates"><span class="header-section-number">7.2</span> Maintenance and Updates</h2>
+<p><strong>Monthly</strong>: - Monitor disk usage and instance health - Check logs for errors</p>
+<p><strong>Quarterly</strong>: - Update OS packages on EC2 - Update ZZedc package if new version available - Test backup/restore procedure</p>
+<p><strong>Annually</strong>: - Security audit - Capacity planning (do you need a larger instance?) - Archive completed studies</p>
+<p>See <code>IT_STAFF_DEPLOYMENT_CHECKLIST.md</code> and <code>IT_STAFF_TROUBLESHOOTING.md</code> for detailed guidance.</p>
+</section>
+<section id="migration-path" class="level2" data-number="7.3">
+<h2 data-number="7.3" class="anchored" data-anchor-id="migration-path"><span class="header-section-number">7.3</span> Migration Path</h2>
+<p>If you want to migrate away from ZZedc in the future:</p>
+<ol type="1">
+<li><p><strong>Export database</strong>:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9" style="background: #f1f3f5;"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># SQLite is a standard database format</span></span>
+<span id="cb9-2"><span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">sqlite3</span> zzedc.db <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">".dump"</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span> database_export.sql</span></code></pre></div></div></li>
+<li><p><strong>Access with any tool</strong>: Your data can be accessed by any SQL tool, Python, R, Stata, SAS, etc.</p></li>
+<li><p><strong>Complete ownership</strong>: No vendor locks, no proprietary formats</p></li>
+</ol>
+<hr>
+</section>
+</section>
+<section id="comparison-zzedc-vs-commercial-edc" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Comparison: ZZedc vs Commercial EDC</h1>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 26%">
+<col style="width: 20%">
+<col style="width: 23%">
+<col style="width: 29%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Feature</th>
+<th>ZZedc</th>
+<th>REDCap</th>
+<th>Medidata</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Cost</strong></td>
+<td>~$40-500/month infrastructure</td>
+<td>$200-1000/month licensing</td>
+<td>$500-2000/month licensing</td>
+</tr>
+<tr class="even">
+<td><strong>Data ownership</strong></td>
+<td>Complete (standard SQLite)</td>
+<td>Vendor owns servers</td>
+<td>Vendor owns servers</td>
+</tr>
+<tr class="odd">
+<td><strong>Customization</strong></td>
+<td>Full source code access</td>
+<td>Limited data dictionary</td>
+<td>Limited, expensive</td>
+</tr>
+<tr class="even">
+<td><strong>Long-term sustainability</strong></td>
+<td>You control it</td>
+<td>Dependent on vendor</td>
+<td>Dependent on vendor</td>
+</tr>
+<tr class="odd">
+<td><strong>Compliance frameworks</strong></td>
+<td>GDPR, CFR Part 11 built-in</td>
+<td>Available as add-on</td>
+<td>Available as add-on</td>
+</tr>
+<tr class="even">
+<td><strong>Vendor lock-in</strong></td>
+<td>None (open source)</td>
+<td>Moderate (proprietary formats)</td>
+<td>High (proprietary system)</td>
+</tr>
+<tr class="odd">
+<td><strong>Support model</strong></td>
+<td>Community + self-support</td>
+<td>Commercial support</td>
+<td>Commercial support</td>
+</tr>
+<tr class="even">
+<td><strong>Learning curve</strong></td>
+<td>Moderate (R/Docker knowledge helpful)</td>
+<td>Low (point-and-click)</td>
+<td>Low (point-and-click)</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="conclusion-taking-control" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> Conclusion: Taking Control</h1>
+<p>Clinical research data management doesn’t require expensive, proprietary vendors. ZZedc demonstrates that open-source tools can provide <strong>security, compliance, and ease-of-use</strong> while maintaining your independence.</p>
+<p><strong>Whether you’re</strong>: - A solo investigator seeking a simple, free EDC for a pilot study - A research team tired of vendor pricing and inflexibility - An established researcher wanting to migrate away from vendor lock-in - A multi-site consortium seeking affordable, scalable data management</p>
+<p><strong>ZZedc offers</strong>: - Complete investigator ownership and control - Low or no licensing costs - Standard, portable data formats - Security and compliance by default - Flexible deployment (local, cloud, hybrid) - Open source (fork and customize as needed)</p>
+<section id="next-steps" class="level2" data-number="9.1">
+<h2 data-number="9.1" class="anchored" data-anchor-id="next-steps"><span class="header-section-number">9.1</span> Next Steps</h2>
+<p><strong>Start exploring</strong>: - <strong>Solo researcher?</strong> See <code>vignettes/quick-start-solo-researcher.Rmd</code> - <strong>Team with AWS?</strong> See <code>vignettes/quick-start-aws-devops.Rmd</code> - <strong>IT staff deploying?</strong> See <code>deployment/IT_STAFF_DEPLOYMENT_CHECKLIST.md</code> - <strong>Need help?</strong> Visit https://github.com/rgt47/zzedc for documentation and issues</p>
+<p>The goal of ZZedc is simple: <strong>Put clinical research data management back in the hands of investigators</strong>.</p>
+<hr>
+</section>
+<section id="resources" class="level2" data-number="9.2">
+<h2 data-number="9.2" class="anchored" data-anchor-id="resources"><span class="header-section-number">9.2</span> Resources</h2>
+<ul>
+<li><strong>ZZedc GitHub</strong>: https://github.com/rgt47/zzedc</li>
+<li><strong>Documentation</strong>: See <code>vignettes/</code> directory for comprehensive guides</li>
+<li><strong>Deployment guides</strong>: See <code>deployment/</code> directory for AWS, Docker, and operational guides</li>
+<li><strong>Support</strong>: Open an issue on GitHub or contact zzedc@ucsd.edu</li>
+</ul>
+<hr>
+<p><strong>Published</strong>: December 2025 <strong>Author</strong>: Clinical Research Technology Team <strong>License</strong>: Open source (see GitHub repository for license details) <strong>Status</strong>: Production ready</p>
+
+
+</section>
+</section>
+
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" id="quarto-reuse"><h2 class="anchored quarto-appendix-heading">Reuse</h2><div class="quarto-appendix-contents"><div><a rel="license" href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></div></div></section><section class="quarto-appendix-contents" id="quarto-citation"><h2 class="anchored quarto-appendix-heading">Citation</h2><div><div class="quarto-appendix-secondary-label">BibTeX citation:</div><pre class="sourceCode code-with-copy quarto-appendix-bibtex"><code class="sourceCode bibtex">@online{(ryy)_glenn_thomas2025,
+  author = {(Ryy) Glenn Thomas, Ronald and Research Technology,
+    Clinical},
+  title = {Taking {Control} of {Your} {Clinical} {Trial:} {Running}
+    {ZZedc} {Independently}},
+  date = {2025-12-07},
+  url = {https://focusonr.org/posts/zzedcindependence/},
+  langid = {en}
+}
+</code></pre><div class="quarto-appendix-secondary-label">For attribution, please cite this work as:</div><div id="ref-(ryy)_glenn_thomas2025" class="csl-entry quarto-appendix-citeas">
+(Ryy) Glenn Thomas, Ronald, and Clinical Research Technology. 2025.
+<span>“Taking Control of Your Clinical Trial: Running ZZedc
+Independently.”</span> December 7, 2025. <a href="https://focusonr.org/posts/zzedcindependence/">https://focusonr.org/posts/zzedcindependence/</a>.
+</div></div></section></div> ]]></description>
+  <category>Clinical Research</category>
+  <category>EDC</category>
+  <category>AWS</category>
+  <category>Open Source</category>
+  <category>Research Tools</category>
+  <category>Data Management</category>
+  <guid>https://focusonr.org/posts/zzedcindependence/</guid>
+  <pubDate>Sun, 07 Dec 2025 08:00:00 GMT</pubDate>
+  <media:content url="https://focusonr.org/posts/zzedcindependence/zzedc-independence.png" medium="image" type="image/png"/>
+</item>
+<item>
+  <title>Combining Observable JS and Shiny in One Quarto Document</title>
+  <dc:creator>Ronald (Ryy) Glenn Thomas</dc:creator>
+  <dc:creator>Ronald G. Thomas</dc:creator>
+  <link>https://focusonr.org/posts/shinyvsobservable/</link>
+  <description><![CDATA[ 
+
+
+
+
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://focusonr.org/images/posts/penguins-library-7755210_1280.jpg" class="img-fluid figure-img"></p>
+<figcaption>Penguins make great companions for learning new technologies</figcaption>
+</figure>
+</div>
+<p><em>Combining two reactive frameworks in one document: harder than it looks!</em></p>
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>I didn’t really know much about combining Observable JS and Shiny in Quarto until I tried to create a side-by-side comparison. Like many statisticians, I thought: “Quarto supports both—how hard can it be?”</p>
+<p><strong>Very hard, as it turns out.</strong></p>
+<p>This post documents our journey creating a side-by-side comparison of Observable JS and Shiny. What should have taken 30 minutes took several hours of debugging. We’re sharing our experience so you don’t have to suffer the same fate.</p>
+<section id="motivations" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="motivations"><span class="header-section-number">1.1</span> Motivations</h2>
+<p><strong>Why explore this combination?</strong></p>
+<ul>
+<li>Wanted to compare client-side (OJS) vs server-side (Shiny) reactive frameworks</li>
+<li>Needed to demonstrate both technologies to colleagues in a single document</li>
+<li>Curious whether Quarto’s multi-language support extends to mixing reactive systems</li>
+<li>Couldn’t find good documentation on combining these two approaches</li>
+</ul>
+</section>
+<section id="objectives" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="objectives"><span class="header-section-number">1.2</span> Objectives</h2>
+<p><strong>What I wanted to accomplish:</strong></p>
+<ol type="1">
+<li>Create identical interactive visualizations using both Observable JS and Shiny</li>
+<li>Display them side-by-side in a single Quarto document</li>
+<li>Document the gotchas and workarounds for others</li>
+<li>Understand the fundamental differences between client-side and server-side reactivity</li>
+</ol>
+<p><strong>Disclaimer:</strong> I’m documenting my learning process here. If you spot errors or have better approaches, please let me know!</p>
+</section>
+</section>
+<section id="live-demo-side-by-side-comparison" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Live Demo: Side-by-Side Comparison</h1>
+<p>Below are two identical visualizations—one built with Observable JS (client-side) and one with Shiny (server-side). Both filter the Palmer Penguins dataset by bill length and display a histogram of body mass.</p>
+<div class="grid">
+<section id="observable-js" class="level3 g-col-6" data-number="2.0.1">
+<h3 data-number="2.0.1" class="anchored" data-anchor-id="observable-js"><span class="header-section-number">2.0.1</span> Observable JS</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1" data-startfrom="71" data-source-offset="-111" style="background: #f1f3f5;"><pre class="sourceCode js code-with-copy"><code class="sourceCode javascript" style="counter-reset: source-line 70;"><span id="cb1-71">viewof bill_min_ojs <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> Inputs<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">range</span>(</span>
+<span id="cb1-72">  [<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">32</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">50</span>]<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb1-73">  {<span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">value</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">35</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">step</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">label</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Min bill length (mm):"</span>}</span>
+<span id="cb1-74">)</span>
+<span id="cb1-75"></span>
+<span id="cb1-76"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">// 2. LOAD DATA: Fetch from public URL</span></span>
+<span id="cb1-77"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">//    - FileAttachment doesn't work in Shiny docs!</span></span>
+<span id="cb1-78">penguins_raw <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> {</span>
+<span id="cb1-79">  <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">const</span> response <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">await</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">fetch</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"https://raw.githubusercontent.com/allisonhorst/palmerpenguins/main/inst/extdata/penguins.csv"</span>)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb1-80">  <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">const</span> text <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">await</span> response<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">text</span>()<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb1-81">  <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> d3<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">csvParse</span>(text<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> d3<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span><span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">autoType</span>)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb1-82">}</span>
+<span id="cb1-83"></span>
+<span id="cb1-84"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">// Filter out rows with missing values</span></span>
+<span id="cb1-85">data_ojs <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> penguins_raw<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">filter</span>(d <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">=&gt;</span> d<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span><span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">bill_length_mm</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">!=</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">null</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&amp;&amp;</span> d<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span><span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">body_mass_g</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">!=</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">null</span>)</span>
+<span id="cb1-86"></span>
+<span id="cb1-87"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">// 3. FILTER DATA: Reactively updates when slider changes</span></span>
+<span id="cb1-88">filtered_ojs <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> data_ojs<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">filter</span>(d <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">=&gt;</span> d<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span><span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">bill_length_mm</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span> bill_min_ojs)</span>
+<span id="cb1-89"></span>
+<span id="cb1-90"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">// 4. PLOT: Histogram colored by species</span></span>
+<span id="cb1-91">Plot<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plot</span>({</span>
+<span id="cb1-92">  <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">height</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">250</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb1-93">  <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">marks</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> [</span>
+<span id="cb1-94">    Plot<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">rectY</span>(</span>
+<span id="cb1-95">      filtered_ojs<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb1-96">      Plot<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">binX</span>({<span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">y</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"count"</span>}<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> {<span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">x</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"body_mass_g"</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> <span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">fill</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"species"</span>})</span>
+<span id="cb1-97">    )<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span></span>
+<span id="cb1-98">    Plot<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">ruleY</span>([<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>])</span>
+<span id="cb1-99">  ]</span>
+<span id="cb1-100">})</span></code></pre></div></div>
+<div class="cell-output cell-output-display">
+<div>
+<div id="ojs-cell-1-1" data-nodetype="declaration">
+
+</div>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<div id="ojs-cell-1-2" data-nodetype="declaration">
+
+</div>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<div id="ojs-cell-1-3" data-nodetype="declaration">
+
+</div>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<div id="ojs-cell-1-4" data-nodetype="declaration">
+
+</div>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<div id="ojs-cell-1-5" data-nodetype="expression">
+
+</div>
+</div>
+</div>
+</div>
+<p><strong>Count:</strong> <span><span id="ojs-element-id-1"></span></span> penguins</p>
+</section>
+<section id="shiny" class="level3 g-col-6" data-number="2.0.2">
+<h3 data-number="2.0.2" class="anchored" data-anchor-id="shiny"><span class="header-section-number">2.0.2</span> Shiny</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 1. CREATE INPUT: Slider for filtering</span></span>
+<span id="cb2-2"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">sliderInput</span>(</span>
+<span id="cb2-3">  <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">inputId =</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"bill_min_shiny"</span>,</span>
+<span id="cb2-4">  <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">label =</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Min bill length (mm):"</span>,</span>
+<span id="cb2-5">  <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">min =</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">32</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">max =</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">50</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">value =</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">35</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">step =</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span></span>
+<span id="cb2-6">)</span>
+<span id="cb2-7"></span>
+<span id="cb2-8"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 2. OUTPUT PLACEHOLDER: Where plot will render</span></span>
+<span id="cb2-9"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plotOutput</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"hist_shiny"</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">height =</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"250px"</span>)</span>
+<span id="cb2-10"></span>
+<span id="cb2-11"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># 3. OUTPUT PLACEHOLDER: Where count will render</span></span>
+<span id="cb2-12"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">textOutput</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"count_shiny"</span>)</span></code></pre></div></div>
+</div>
+<div class="cell" data-context="server">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Load libraries</span></span>
+<span id="cb3-2"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">library</span>(ggplot2)</span>
+<span id="cb3-3"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">library</span>(dplyr)</span>
+<span id="cb3-4"></span>
+<span id="cb3-5"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># LOAD DATA: Read CSV once when app starts</span></span>
+<span id="cb3-6">data_shiny <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">read.csv</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"data/raw_data/palmer-penguins.csv"</span>)</span>
+<span id="cb3-7"></span>
+<span id="cb3-8"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># FILTER DATA: reactive() updates when input changes</span></span>
+<span id="cb3-9">filtered_shiny <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">reactive</span>({</span>
+<span id="cb3-10">  data_shiny <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">|&gt;</span></span>
+<span id="cb3-11">    <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">filter</span>(bill_length_mm <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span> input<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">$</span>bill_min_shiny) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">|&gt;</span></span>
+<span id="cb3-12">    <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">filter</span>(<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">!</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">is.na</span>(body_mass_g), <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">!</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">is.na</span>(species))</span>
+<span id="cb3-13">})</span>
+<span id="cb3-14"></span>
+<span id="cb3-15"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># RENDER PLOT: Creates histogram</span></span>
+<span id="cb3-16">output<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">$</span>hist_shiny <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">renderPlot</span>({</span>
+<span id="cb3-17">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">ggplot</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">filtered_shiny</span>(), <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">aes</span>(<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">x =</span> body_mass_g, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">fill =</span> species)) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span></span>
+<span id="cb3-18">    <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">geom_histogram</span>(<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">bins =</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">20</span>) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span></span>
+<span id="cb3-19">    <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">theme_minimal</span>() <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span></span>
+<span id="cb3-20">    <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">labs</span>(<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">x =</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Body Mass (g)"</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">y =</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Count"</span>)</span>
+<span id="cb3-21">})</span>
+<span id="cb3-22"></span>
+<span id="cb3-23"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># RENDER TEXT: Shows count</span></span>
+<span id="cb3-24">output<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">$</span>count_shiny <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">renderText</span>({</span>
+<span id="cb3-25">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">paste</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Count:"</span>, <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">nrow</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">filtered_shiny</span>()), <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"penguins"</span>)</span>
+<span id="cb3-26">})</span></code></pre></div></div>
+</div>
+</section>
+</div>
+<hr>
+</section>
+<section id="key-syntax-differences" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Key Syntax Differences</h1>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 26%">
+<col style="width: 50%">
+<col style="width: 23%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Aspect</th>
+<th>Observable JS</th>
+<th>Shiny</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Input creation</td>
+<td><code>viewof x = Inputs.range()</code></td>
+<td><code>sliderInput("x", ...)</code></td>
+</tr>
+<tr class="even">
+<td>Access input value</td>
+<td>Use <code>x</code> directly</td>
+<td><code>input$x</code></td>
+</tr>
+<tr class="odd">
+<td>Data loading</td>
+<td><code>fetch()</code> or <code>FileAttachment()</code></td>
+<td><code>read.csv()</code></td>
+</tr>
+<tr class="even">
+<td>Reactive filtering</td>
+<td>Just assign: <code>filtered = data.filter()</code></td>
+<td>Wrap in <code>reactive({})</code></td>
+</tr>
+<tr class="odd">
+<td>Create plot</td>
+<td><code>Plot.plot({...})</code></td>
+<td><code>renderPlot({ggplot(...)})</code></td>
+</tr>
+<tr class="even">
+<td>Reactivity</td>
+<td>Automatic (implicit)</td>
+<td>Explicit wrappers required</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="the-challenges-we-faced" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> The Challenges We Faced</h1>
+<p>Getting this working was surprisingly difficult. Here’s what we learned:</p>
+<section id="challenge-1-fileattachment-doesnt-work" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="challenge-1-fileattachment-doesnt-work"><span class="header-section-number">4.1</span> Challenge 1: FileAttachment Doesn’t Work</h2>
+<p>Our first attempt used Observable’s standard data loading:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode javascript code-with-copy"><code class="sourceCode javascript"><span id="cb4-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">// THIS DOESN'T WORK IN SHINY DOCUMENTS!</span></span>
+<span id="cb4-2">data <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">FileAttachment</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"palmer-penguins.csv"</span>)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">csv</span>({<span class="dt" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">typed</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">:</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">true</span>})</span></code></pre></div></div>
+<p><strong>Result</strong>: <code>OJS Error: Unable to load file</code></p>
+<p><strong>Why</strong>: When you add <code>server: shiny</code>, the document runs as a Shiny app. The Shiny server doesn’t know about Observable’s file attachment system.</p>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Warning</span>Gotcha #1
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><code>FileAttachment()</code> does NOT work in Shiny documents. This is the biggest “gotcha” when combining OJS and Shiny.</p>
+</div>
+</div>
+</section>
+<section id="challenge-2-ojs_define-fails-too" class="level2" data-number="4.2">
+<h2 data-number="4.2" class="anchored" data-anchor-id="challenge-2-ojs_define-fails-too"><span class="header-section-number">4.2</span> Challenge 2: ojs_define() Fails Too</h2>
+<p>The Quarto docs mention <code>ojs_define()</code> for passing data from R to OJS:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">#| context: server</span></span>
+<span id="cb5-2">data <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">read.csv</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"penguins.csv"</span>)</span>
+<span id="cb5-3"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">ojs_define</span>(<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">my_data =</span> data)  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># THIS FAILS!</span></span></code></pre></div></div>
+<p><strong>Result</strong>: <code>Error: Unexpected data.frame object... Did you forget to use a render function?</code></p>
+<p><strong>Why</strong>: In Shiny context, <code>ojs_define()</code> expects reactive expressions, not static data frames.</p>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Warning</span>Gotcha #2
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><code>ojs_define()</code> behaves differently in Shiny documents. Don’t expect it to work like the docs show for regular Quarto.</p>
+</div>
+</div>
+</section>
+<section id="challenge-3-local-d3.csv-returns-404" class="level2" data-number="4.3">
+<h2 data-number="4.3" class="anchored" data-anchor-id="challenge-3-local-d3.csv-returns-404"><span class="header-section-number">4.3</span> Challenge 3: Local d3.csv() Returns 404</h2>
+<p>We tried D3’s CSV loader:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6" style="background: #f1f3f5;"><pre class="sourceCode javascript code-with-copy"><code class="sourceCode javascript"><span id="cb6-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">// THIS ALSO DOESN'T WORK!</span></span>
+<span id="cb6-2">data <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> d3<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">csv</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"palmer-penguins.csv"</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> d3<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span><span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">autoType</span>)</span></code></pre></div></div>
+<p><strong>Result</strong>: <code>OJS Error: 404 Not Found</code></p>
+<p><strong>Why</strong>: The Shiny server doesn’t serve local static files the way Observable expects.</p>
+</section>
+<section id="the-solution-fetch-from-public-url" class="level2" data-number="4.4">
+<h2 data-number="4.4" class="anchored" data-anchor-id="the-solution-fetch-from-public-url"><span class="header-section-number">4.4</span> The Solution: Fetch from Public URL</h2>
+<p>The only reliable approach is fetching data from a public URL:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7" style="background: #f1f3f5;"><pre class="sourceCode javascript code-with-copy"><code class="sourceCode javascript"><span id="cb7-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">// THIS WORKS!</span></span>
+<span id="cb7-2">penguins_raw <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> {</span>
+<span id="cb7-3">  <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">const</span> response <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">await</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">fetch</span>(</span>
+<span id="cb7-4">    <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"https://raw.githubusercontent.com/.../penguins.csv"</span></span>
+<span id="cb7-5">  )<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb7-6">  <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">const</span> text <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">await</span> response<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">text</span>()<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb7-7">  <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> d3<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">csvParse</span>(text<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">,</span> d3<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span><span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">autoType</span>)<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">;</span></span>
+<span id="cb7-8">}</span></code></pre></div></div>
+<p>This bypasses the Shiny server entirely by making an HTTP request to an external source.</p>
+<hr>
+</section>
+</section>
+<section id="dos-and-donts" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Dos and Don’ts</h1>
+<section id="do" class="level2" data-number="5.1">
+<h2 data-number="5.1" class="anchored" data-anchor-id="do"><span class="header-section-number">5.1</span> DO</h2>
+<ol type="1">
+<li><strong>Use <code>fetch()</code> with public URLs</strong> for OJS data in Shiny documents</li>
+<li><strong>Keep OJS and Shiny data loading separate</strong>—don’t try to share data</li>
+<li><strong>Test incrementally</strong>—get Shiny working first, then add OJS</li>
+<li><strong>Hard refresh your browser</strong> (Cmd+Shift+R) when debugging</li>
+<li><strong>Restart the preview server</strong> after major changes</li>
+</ol>
+</section>
+<section id="dont" class="level2" data-number="5.2">
+<h2 data-number="5.2" class="anchored" data-anchor-id="dont"><span class="header-section-number">5.2</span> DON’T</h2>
+<ol type="1">
+<li><strong>Don’t use <code>FileAttachment()</code></strong> in Shiny documents</li>
+<li><strong>Don’t use <code>ojs_define()</code> with static data</strong> in Shiny context</li>
+<li><strong>Don’t assume <code>d3.csv("local.csv")</code> will work</strong></li>
+<li><strong>Don’t trust displayed code</strong>—browser caching causes confusion</li>
+<li><strong>Don’t mix contexts</strong>—keep OJS and Shiny logic separate</li>
+</ol>
+<hr>
+</section>
+</section>
+<section id="more-gotchas" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> More Gotchas</h1>
+<section id="browser-caching" class="level2" data-number="6.1">
+<h2 data-number="6.1" class="anchored" data-anchor-id="browser-caching"><span class="header-section-number">6.1</span> Browser Caching</h2>
+<p>When debugging, the browser often shows old code. The displayed code might show <code>FileAttachment(...)</code> even though your file now uses <code>fetch()</code>.</p>
+<p><strong>Solution</strong>: Kill server, delete generated files, restart, hard-refresh:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8" style="background: #f1f3f5;"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb8-1"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">rm</span> <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">-rf</span> yourfile_files yourfile.html</span>
+<span id="cb8-2"><span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">quarto</span> preview yourfile.qmd</span>
+<span id="cb8-3"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Then Cmd+Shift+R in browser</span></span></code></pre></div></div>
+</section>
+<section id="port-changes" class="level2" data-number="6.2">
+<h2 data-number="6.2" class="anchored" data-anchor-id="port-changes"><span class="header-section-number">6.2</span> Port Changes</h2>
+<p>Every restart may give a different port (5155, 6532, 7665…). Check the terminal output for the correct URL.</p>
+</section>
+<section id="misleading-error-messages" class="level2" data-number="6.3">
+<h2 data-number="6.3" class="anchored" data-anchor-id="misleading-error-messages"><span class="header-section-number">6.3</span> Misleading Error Messages</h2>
+<p>The error “Did you forget to use a render function?” doesn’t mean you need <code>renderSomething()</code>. It means <code>ojs_define()</code> doesn’t work with static data in Shiny context.</p>
+<hr>
+</section>
+</section>
+<section id="alternative-approaches" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Alternative Approaches</h1>
+<p>If this is too complex, consider:</p>
+<ol type="1">
+<li><p><strong>Two Separate Documents</strong>: Create <code>analysis_observable.qmd</code> and <code>analysis_shiny.qmd</code> separately</p></li>
+<li><p><strong>OJS Only</strong>: Remove <code>server: shiny</code> and use pure Observable with <code>FileAttachment()</code></p></li>
+<li><p><strong>Embed Data as JSON</strong>: Convert CSV to JSON and embed directly in the OJS code</p></li>
+</ol>
+<hr>
+</section>
+<section id="lessons-learnt" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Lessons Learnt</h1>
+<p>Here’s what I took away from this exploration:</p>
+<p><strong>Conceptual Understanding:</strong></p>
+<ul>
+<li>Observable JS runs entirely in the browser (client-side reactivity)</li>
+<li>Shiny requires a server process (server-side reactivity)</li>
+<li>Combining them means running a Shiny server that also serves OJS</li>
+<li>File loading works completely differently in each context</li>
+</ul>
+<p><strong>Technical Skills:</strong></p>
+<ul>
+<li>Using <code>fetch()</code> for OJS data loading in Shiny documents</li>
+<li>Keeping OJS and Shiny code strictly separated</li>
+<li>Debugging Quarto documents with multiple reactive systems</li>
+<li>Understanding when <code>ojs_define()</code> works vs.&nbsp;fails</li>
+</ul>
+<p><strong>Gotchas and Pitfalls:</strong></p>
+<ul>
+<li><code>FileAttachment()</code> doesn’t work in Shiny documents</li>
+<li><code>ojs_define()</code> behaves differently depending on context</li>
+<li>Browser caching causes major debugging confusion</li>
+<li>Error messages can be misleading</li>
+</ul>
+<section id="limitations" class="level2" data-number="8.1">
+<h2 data-number="8.1" class="anchored" data-anchor-id="limitations"><span class="header-section-number">8.1</span> Limitations</h2>
+<ul>
+<li>This approach requires external data hosting for OJS</li>
+<li>No data sharing between OJS and Shiny contexts</li>
+<li>Debugging is significantly harder than single-framework documents</li>
+<li>Documentation doesn’t cover this edge case well</li>
+</ul>
+</section>
+<section id="opportunities-for-improvement" class="level2" data-number="8.2">
+<h2 data-number="8.2" class="anchored" data-anchor-id="opportunities-for-improvement"><span class="header-section-number">8.2</span> Opportunities for Improvement</h2>
+<p>If I had more time, here’s what I’d explore next:</p>
+<ol type="1">
+<li><strong>Test <code>ojs_define()</code> with reactive expressions</strong> - might work with <code>reactive()</code> wrapper</li>
+<li><strong>Create a helper function</strong> to bridge OJS and Shiny data</li>
+<li><strong>Explore Shiny’s resource serving</strong> - maybe there’s a way to make local files available to OJS</li>
+<li><strong>Document a clean workflow</strong> for teams who need both frameworks</li>
+</ol>
+</section>
+</section>
+<section id="conclusion" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> Conclusion</h1>
+<p>Combining Observable JS and Shiny in one Quarto document is possible, but not straightforward:</p>
+<ul>
+<li><strong>File loading works completely differently</strong> in Shiny vs.&nbsp;static Quarto</li>
+<li><strong><code>ojs_define()</code> has different behavior</strong> depending on context</li>
+<li><strong>Documentation doesn’t cover this edge case</strong> well</li>
+<li><strong>The working solution</strong>—fetching from a public URL—is a workaround</li>
+</ul>
+<p>For educational purposes (comparing both technologies), this side-by-side approach is valuable once you get past the setup hurdles. For production applications, we recommend choosing one technology rather than combining both.</p>
+<hr>
+</section>
+<section id="see-also" class="level1" data-number="10">
+<h1 data-number="10"><span class="header-section-number">10</span> See Also</h1>
+<p>Related posts and resources:</p>
+<ul>
+<li><a href="https://quarto.org/docs/interactive/ojs/">Quarto OJS Documentation</a></li>
+<li><a href="https://quarto.org/docs/interactive/shiny/">Quarto Shiny Documentation</a></li>
+<li><a href="https://observablehq.com/plot/">Observable Plot</a></li>
+<li><a href="https://allisonhorst.github.io/palmerpenguins/">Palmer Penguins Dataset</a></li>
+</ul>
+<hr>
+</section>
+<section id="lets-connect" class="level1" data-number="11">
+<h1 data-number="11"><span class="header-section-number">11</span> Let’s Connect!</h1>
+<p><em>Have questions, suggestions, or spot an error? Let me know!</em></p>
+<ul>
+<li><strong>Twitter/X</strong>: <a href="https://twitter.com/rgt47"><span class="citation" data-cites="rgt47">@rgt47</span></a></li>
+<li><strong>GitHub</strong>: <a href="https://github.com/rgt47">rgt47</a></li>
+</ul>
+<p><strong>Please reach out</strong> if you: - Spot errors or have corrections - Have suggestions for improvement - Want to discuss the approach - Have questions about implementation</p>
+<hr>
+<p><em>This post was written after several hours of debugging. We hope it saves you time.</em></p>
+
+
+<div class="ojs-auto-generated hidden">
+<script type="ojs-module-contents">
+eyJjb250ZW50cyI6WyAgeyJtZXRob2ROYW1lIjoiaW50ZXJwcmV0IiwiaW5saW5lIjoidHJ1ZSIsInNvdXJjZSI6Imh0bC5odG1sYDxzcGFuPiR7ZmlsdGVyZWRfb2pzLmxlbmd0aH08L3NwYW4+YCIsICJjZWxsTmFtZSI6Im9qcy1lbGVtZW50LWlkLTEifV19
+</script>
+</div>
+</section>
+
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" id="quarto-reuse"><h2 class="anchored quarto-appendix-heading">Reuse</h2><div class="quarto-appendix-contents"><div><a rel="license" href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></div></div></section><section class="quarto-appendix-contents" id="quarto-citation"><h2 class="anchored quarto-appendix-heading">Citation</h2><div><div class="quarto-appendix-secondary-label">BibTeX citation:</div><pre class="sourceCode code-with-copy quarto-appendix-bibtex"><code class="sourceCode bibtex">@online{(ryy)_glenn_thomas2025,
+  author = {(Ryy) Glenn Thomas, Ronald and G. Thomas, Ronald},
+  title = {Combining {Observable} {JS} and {Shiny} in {One} {Quarto}
+    {Document}},
+  date = {2025-12-01},
+  url = {https://focusonr.org/posts/shinyvsobservable/},
+  langid = {en}
+}
+</code></pre><div class="quarto-appendix-secondary-label">For attribution, please cite this work as:</div><div id="ref-(ryy)_glenn_thomas2025" class="csl-entry quarto-appendix-citeas">
+(Ryy) Glenn Thomas, Ronald, and Ronald G. Thomas. 2025. <span>“Combining
+Observable JS and Shiny in One Quarto Document.”</span> December 1,
+2025. <a href="https://focusonr.org/posts/shinyvsobservable/">https://focusonr.org/posts/shinyvsobservable/</a>.
+</div></div></section></div> ]]></description>
+  <category>Quarto</category>
+  <category>Observable JS</category>
+  <category>Shiny</category>
+  <category>Interactive Visualization</category>
+  <category>R Programming</category>
+  <guid>https://focusonr.org/posts/shinyvsobservable/</guid>
+  <pubDate>Mon, 01 Dec 2025 08:00:00 GMT</pubDate>
+  <media:content url="https://focusonr.org/images/posts/penguin-hero.jpg" medium="image" type="image/jpeg"/>
+</item>
+<item>
   <title>Creating a GitHub Dotfiles Repository for Configuration Management</title>
   <dc:creator>Ronald (Ryy) Glenn Thomas</dc:creator>
   <dc:creator>RG Thomas</dc:creator>
@@ -6823,718 +8407,6 @@ Regression.”</span> January 1, 2025. <a href="https://focusonr.org/posts/confi
   <media:content url="https://focusonr.org/images/posts/penguin-hero.jpg" medium="image" type="image/jpeg"/>
 </item>
 <item>
-  <title>Palmer Penguins Data Analysis Series (Part 1): Exploratory Data Analysis and Simple Regression</title>
-  <dc:creator>Ronald (Ryy) Glenn Thomas</dc:creator>
-  <dc:creator>Data Science Team</dc:creator>
-  <link>https://focusonr.org/posts/palmerpenguinspart1/</link>
-  <description><![CDATA[ 
-
-
-
-
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="https://focusonr.org/posts/palmerpenguinspart1/media/images/penguins-library-7755210_1280.jpg" class="img-fluid figure-img"></p>
-<figcaption>Curious Adelie penguins beginning their data science journey - because every great analysis starts with getting to know your data!</figcaption>
-</figure>
-</div>
-<p><em>Photo: African penguins at Boulders Beach, South Africa. Licensed under <a href="https://creativecommons.org/licenses/by/2.0/">CC BY 2.0</a> via <a href="https://commons.wikimedia.org/wiki/File:Boulders_Beach_penguins_(46475505885).jpg">Wikimedia Commons</a></em></p>
-<div class="callout callout-style-simple callout-note callout-titled">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-<span class="screen-reader-only">Note</span>Palmer Penguins Data Analysis Series
-</div>
-</div>
-<div class="callout-body-container callout-body">
-<p>This is <strong>Part 1</strong> of a 5-part series exploring penguin morphometrics:</p>
-<ol type="1">
-<li><strong>Part 1: EDA and Simple Regression</strong> (This post)</li>
-<li><a href="../palmerpenguinspart2/">Part 2: Multiple Regression and Species Effects</a></li>
-<li><a href="../palmerpenguinspart3/">Part 3: Advanced Models and Cross-Validation</a></li>
-<li><a href="../palmerpenguinspart4/">Part 4: Model Diagnostics and Interpretation</a></li>
-<li><a href="../palmerpenguinspart5/">Part 5: Random Forest vs Linear Models</a></li>
-</ol>
-</div>
-</div>
-<section id="introduction" class="level1" data-number="1">
-<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
-<p>Welcome to our comprehensive exploration of the Palmer penguins dataset! In this 5-part series, we’ll journey through the complete data science workflow, from initial data exploration to advanced modeling techniques. The Palmer penguins dataset has become a beloved alternative to the iris dataset, providing real-world biological data that’s both engaging and educationally valuable.</p>
-<p>Collected by Dr.&nbsp;Kristen Gorman at Palmer Station Antarctica, this dataset contains morphometric measurements for three penguin species: Adelie (<em>Pygoscelis adeliae</em>), Chinstrap (<em>Pygoscelis antarcticus</em>), and Gentoo (<em>Pygoscelis papua</em>). Understanding these relationships is crucial for Antarctic ecology research, as body mass serves as a key indicator of penguin health and reproductive success.</p>
-<p>In this first part, we’ll focus on:</p>
-<ul>
-<li>Getting familiar with the Palmer penguins dataset</li>
-<li>Conducting thorough exploratory data analysis</li>
-<li>Understanding the relationships between morphometric variables</li>
-<li>Building our first simple regression model</li>
-<li>Establishing the foundation for more complex analyses in subsequent parts</li>
-</ul>
-<p>By the end of this post, you’ll have a solid understanding of the data structure and the strongest individual predictors of penguin body mass.</p>
-</section>
-<section id="prerequisites-and-setup" class="level1" data-number="2">
-<h1 data-number="2"><span class="header-section-number">2</span> Prerequisites and Setup</h1>
-<p>Before we begin our Antarctic adventure, let’s ensure we have the right tools:</p>
-<p><strong>Required Packages:</strong></p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># Install required packages if not already installed</span></span>
-<span id="cb1-2"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">install.packages</span>(<span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">c</span>(<span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"palmerpenguins"</span>, <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"tidyverse"</span>, <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"broom"</span>, <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"corrplot"</span>,</span>
-<span id="cb1-3">                   <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"GGally"</span>, <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"patchwork"</span>, <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"knitr"</span>))</span></code></pre></div></div>
-<p><strong>Load Libraries:</strong></p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">library</span>(palmerpenguins)</span>
-<span id="cb2-2"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">library</span>(tidyverse)</span>
-<span id="cb2-3"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">library</span>(broom)</span>
-<span id="cb2-4"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">library</span>(corrplot)</span>
-<span id="cb2-5"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">library</span>(GGally)</span>
-<span id="cb2-6"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">library</span>(patchwork)</span>
-<span id="cb2-7"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">library</span>(knitr)</span>
-<span id="cb2-8"></span>
-<span id="cb2-9"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># Set theme for consistent plotting</span></span>
-<span id="cb2-10"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">theme_set</span>(<span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">theme_minimal</span>(<span class="at" style="color: #657422;
-background-color: null;
-font-style: inherit;">base_size =</span> <span class="dv" style="color: #AD0000;
-background-color: null;
-font-style: inherit;">12</span>))</span>
-<span id="cb2-11"></span>
-<span id="cb2-12"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># Set penguin-friendly colors (high contrast)</span></span>
-<span id="cb2-13">penguin_colors <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">c</span>(<span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"Adelie"</span> <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">=</span> <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"#FF6B6B"</span>, <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"Chinstrap"</span> <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">=</span> <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"#9B59B6"</span>, <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"Gentoo"</span> <span class="ot" style="color: #003B4F;
-background-color: null;
-font-style: inherit;">=</span> <span class="st" style="color: #20794D;
-background-color: null;
-font-style: inherit;">"#2E86AB"</span>)</span></code></pre></div></div>
-</section>
-<section id="meet-the-penguins-dataset-overview" class="level1" data-number="3">
-<h1 data-number="3"><span class="header-section-number">3</span> Meet the Penguins: Dataset Overview</h1>
-<p>Let’s start by getting acquainted with our Antarctic research subjects:</p>
-<div class="cell">
-<div class="cell-output-display">
-<table class="caption-top table table-sm table-striped small">
-<caption>Palmer Penguins Dataset Characteristics</caption>
-<tbody>
-<tr class="odd">
-<td style="text-align: left;">Total Observations</td>
-<td style="text-align: left;">333</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Variables</td>
-<td style="text-align: left;">9</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Species</td>
-<td style="text-align: left;">0</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Islands</td>
-<td style="text-align: left;">0</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Year Range</td>
-<td style="text-align: left;">2007–2009</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-<p>Our analysis includes 333 complete penguin observations from three species across three Antarctic islands, spanning the years 2007-2009.</p>
-</section>
-<section id="exploratory-data-analysis" class="level1" data-number="4">
-<h1 data-number="4"><span class="header-section-number">4</span> Exploratory Data Analysis</h1>
-<section id="species-and-morphometric-overview" class="level2" data-number="4.1">
-<h2 data-number="4.1" class="anchored" data-anchor-id="species-and-morphometric-overview"><span class="header-section-number">4.1</span> Species and Morphometric Overview</h2>
-<p>Let’s understand our penguin community composition and key measurements:</p>
-<div class="cell">
-<div class="cell-output-display">
-<table class="caption-top table table-sm table-striped small">
-<caption>Species Distribution and Key Morphometrics</caption>
-<thead>
-<tr class="header">
-<th style="text-align: left;">Species</th>
-<th style="text-align: right;">N</th>
-<th style="text-align: right;">Body Mass (g)</th>
-<th style="text-align: right;">Flipper Length (mm)</th>
-<th style="text-align: right;">% of Dataset</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: left;">Adelie</td>
-<td style="text-align: right;">146</td>
-<td style="text-align: right;">3706</td>
-<td style="text-align: right;">190.1</td>
-<td style="text-align: right;">43.8</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Chinstrap</td>
-<td style="text-align: right;">68</td>
-<td style="text-align: right;">3733</td>
-<td style="text-align: right;">195.8</td>
-<td style="text-align: right;">20.4</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Gentoo</td>
-<td style="text-align: right;">119</td>
-<td style="text-align: right;">5092</td>
-<td style="text-align: right;">217.2</td>
-<td style="text-align: right;">35.7</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="https://focusonr.org/posts/palmerpenguinspart1/figures/eda-overview.png" class="img-fluid figure-img"></p>
-<figcaption>Species distribution and morphometric relationship overview showing sample sizes and the key flipper-body mass relationship across species</figcaption>
-</figure>
-</div>
-</section>
-</section>
-<section id="species-specific-patterns" class="level1" data-number="5">
-<h1 data-number="5"><span class="header-section-number">5</span> Species-Specific Patterns</h1>
-<p><img src="https://focusonr.org/posts/palmerpenguinspart1/media/images/penguins-26046_1280.jpg" class="img-fluid" style="width:50.0%" alt="Data scientists examining their subjects"> <em>“Each species has its own personality… and body mass distribution!”</em></p>
-<div class="cell">
-<div class="cell-output-display">
-<table class="caption-top table table-sm table-striped small">
-<caption>Morphometric Statistics by Species (±95% CI)</caption>
-<thead>
-<tr class="header">
-<th style="text-align: left;">Species</th>
-<th style="text-align: right;">N</th>
-<th style="text-align: right;">Body Mass (g)</th>
-<th style="text-align: right;">±95% CI</th>
-<th style="text-align: right;">Flipper Length (mm)</th>
-<th style="text-align: right;">±95% CI</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: left;">Adelie</td>
-<td style="text-align: right;">146</td>
-<td style="text-align: right;">3706</td>
-<td style="text-align: right;">74.4</td>
-<td style="text-align: right;">190.1</td>
-<td style="text-align: right;">1.1</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Chinstrap</td>
-<td style="text-align: right;">68</td>
-<td style="text-align: right;">3733</td>
-<td style="text-align: right;">91.4</td>
-<td style="text-align: right;">195.8</td>
-<td style="text-align: right;">1.7</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Gentoo</td>
-<td style="text-align: right;">119</td>
-<td style="text-align: right;">5092</td>
-<td style="text-align: right;">90.1</td>
-<td style="text-align: right;">217.2</td>
-<td style="text-align: right;">1.2</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="https://focusonr.org/posts/palmerpenguinspart1/figures/species-comparison.png" class="img-fluid figure-img"></p>
-<figcaption>Box plot comparing body mass distributions across the three penguin species, showing Gentoo penguins are substantially larger</figcaption>
-</figure>
-</div>
-</section>
-<section id="correlation-analysis" class="level1" data-number="6">
-<h1 data-number="6"><span class="header-section-number">6</span> Correlation Analysis</h1>
-<div class="cell">
-<div class="cell-output-display">
-<table class="caption-top table table-sm table-striped small">
-<caption>Morphometric Correlations with Body Mass</caption>
-<thead>
-<tr class="header">
-<th style="text-align: left;">Variable</th>
-<th style="text-align: right;">Correlation with Body Mass</th>
-<th style="text-align: left;">Interpretation</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: left;">Flipper Length</td>
-<td style="text-align: right;">0.873</td>
-<td style="text-align: left;">Strongest predictor</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Bill Length</td>
-<td style="text-align: right;">0.589</td>
-<td style="text-align: left;">Moderate positive</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Bill Depth</td>
-<td style="text-align: right;">-0.472</td>
-<td style="text-align: left;">Weak negative</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="https://focusonr.org/posts/palmerpenguinspart1/figures/correlation-matrix.png" class="img-fluid figure-img"></p>
-<figcaption>Correlation matrix showing flipper length as the strongest predictor of body mass (r=0.87)</figcaption>
-</figure>
-</div>
-</section>
-<section id="simple-linear-regression" class="level1" data-number="7">
-<h1 data-number="7"><span class="header-section-number">7</span> Simple Linear Regression</h1>
-<p><img src="https://focusonr.org/posts/palmerpenguinspart1/media/images/penguin-gentoo-penguin-7073394_1280.jpg" class="img-fluid" style="width:45.0%" alt="Penguins lining up for regression analysis"> <em>“Time to see if flipper length really predicts our weight!”</em></p>
-<section id="building-and-interpreting-the-model" class="level2" data-number="7.1">
-<h2 data-number="7.1" class="anchored" data-anchor-id="building-and-interpreting-the-model"><span class="header-section-number">7.1</span> Building and Interpreting the Model</h2>
-<div class="cell">
-<div class="cell-output-display">
-<table class="caption-top table table-sm table-striped small">
-<caption>Simple Linear Model Performance</caption>
-<thead>
-<tr class="header">
-<th style="text-align: left;">Metric</th>
-<th style="text-align: left;">Value</th>
-<th style="text-align: left;">Interpretation</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: left;">R²</td>
-<td style="text-align: left;">0.762</td>
-<td style="text-align: left;">76.2% variance explained</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">RMSE</td>
-<td style="text-align: left;">393.3 g</td>
-<td style="text-align: left;">Mean prediction error</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">F-statistic</td>
-<td style="text-align: left;">1060.3</td>
-<td style="text-align: left;">p &lt; 0.001 (highly significant)</td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>**Model Equation:**</code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>Body Mass = -5872.1 + 50.2 × Flipper Length</code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>Slope 95% CI: [47.1, 53.2] grams/mm</code></pre>
-</div>
-</div>
-<section id="example-predictions" class="level4" data-number="7.1.0.1">
-<h4 data-number="7.1.0.1" class="anchored" data-anchor-id="example-predictions"><span class="header-section-number">7.1.0.1</span> Example Predictions</h4>
-<div class="cell">
-<div class="cell-output-display">
-<table class="caption-top table table-sm table-striped small">
-<caption>Predicted Body Mass for Example Flipper Lengths</caption>
-<colgroup>
-<col style="width: 28%">
-<col style="width: 34%">
-<col style="width: 18%">
-<col style="width: 18%">
-</colgroup>
-<thead>
-<tr class="header">
-<th style="text-align: right;">Flipper Length (mm)</th>
-<th style="text-align: right;">Predicted Body Mass (g)</th>
-<th style="text-align: right;">95% CI Lower</th>
-<th style="text-align: right;">95% CI Upper</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: right;">180</td>
-<td style="text-align: right;">3637</td>
-<td style="text-align: right;">3589</td>
-<td style="text-align: right;">3685</td>
-</tr>
-<tr class="even">
-<td style="text-align: right;">200</td>
-<td style="text-align: right;">4749</td>
-<td style="text-align: right;">4712</td>
-<td style="text-align: right;">4786</td>
-</tr>
-<tr class="odd">
-<td style="text-align: right;">220</td>
-<td style="text-align: right;">5860</td>
-<td style="text-align: right;">5815</td>
-<td style="text-align: right;">5905</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="https://focusonr.org/posts/palmerpenguinspart1/figures/simple-regression-model.png" class="img-fluid figure-img"></p>
-<figcaption>Simple linear regression model showing body mass predicted by flipper length with 95% confidence interval</figcaption>
-</figure>
-</div>
-</section>
-</section>
-</section>
-<section id="model-limitations-and-assumptions" class="level1" data-number="8">
-<h1 data-number="8"><span class="header-section-number">8</span> Model Limitations and Assumptions</h1>
-<p><img src="https://focusonr.org/posts/palmerpenguinspart1/media/images/penguins-7553626_1280.jpg" class="img-fluid" style="width:40.0%" alt="Cautious penguins reading the fine print"> <em>“Wait, we should read the assumptions first!”</em></p>
-<p>Before interpreting our results, we must acknowledge important limitations:</p>
-<section id="statistical-limitations" class="level2" data-number="8.1">
-<h2 data-number="8.1" class="anchored" data-anchor-id="statistical-limitations"><span class="header-section-number">8.1</span> Statistical Limitations</h2>
-<div class="cell">
-<div class="cell-output-display">
-<table class="caption-top table table-sm table-striped small">
-<caption>Model Diagnostic Summary</caption>
-<colgroup>
-<col style="width: 23%">
-<col style="width: 50%">
-<col style="width: 26%">
-</colgroup>
-<thead>
-<tr class="header">
-<th style="text-align: left;">Assumption</th>
-<th style="text-align: left;">Result</th>
-<th style="text-align: left;">Status</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: left;">Linearity</td>
-<td style="text-align: left;">Relationship appears approximately linear</td>
-<td style="text-align: left;">✓ Met</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Independence</td>
-<td style="text-align: left;">Observations are independent</td>
-<td style="text-align: left;">✓ Met</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Normality</td>
-<td style="text-align: left;">Residuals approximately normal</td>
-<td style="text-align: left;">✓ Reasonable</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Homoscedasticity</td>
-<td style="text-align: left;">Variance constant across range</td>
-<td style="text-align: left;">⚠ Violated by species</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Outliers</td>
-<td style="text-align: left;">5 observations &gt;2.5 SD</td>
-<td style="text-align: left;">⚠ Present</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Residual Std. Error</td>
-<td style="text-align: left;">393.3 grams</td>
-<td style="text-align: left;">✓ Acceptable</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="https://focusonr.org/posts/palmerpenguinspart1/figures/model-diagnostics.png" class="img-fluid figure-img"></p>
-<figcaption>Model diagnostic plot showing residuals clustered by species, indicating model limitations</figcaption>
-</figure>
-</div>
-</section>
-<section id="key-limitations" class="level2" data-number="8.2">
-<h2 data-number="8.2" class="anchored" data-anchor-id="key-limitations"><span class="header-section-number">8.2</span> Key Limitations</h2>
-<ol type="1">
-<li><strong>Simpson’s Paradox Risk</strong>: The model ignores species differences, potentially masking important biological relationships</li>
-<li><strong>Model Assumptions</strong>:
-<ul>
-<li>Linear relationship assumption appears reasonable</li>
-<li>Residual clustering by species indicates missing predictors</li>
-<li>Homoscedasticity assumption may be violated across species</li>
-</ul></li>
-<li><strong>Temporal Generalizability</strong>: Data spans 2007-2009; climate change may affect current relationships</li>
-<li><strong>Geographic Scope</strong>: Limited to Palmer Station region; may not generalize to other penguin populations</li>
-<li><strong>Measurement Precision</strong>: Morphometric measurements have inherent measurement error not captured in model</li>
-<li><strong>Biological Constraints</strong>: Model predictions outside observed flipper length range (172-231mm) should be interpreted cautiously</li>
-</ol>
-</section>
-</section>
-<section id="practical-applications-and-implications" class="level1" data-number="9">
-<h1 data-number="9"><span class="header-section-number">9</span> Practical Applications and Implications</h1>
-<p><img src="https://focusonr.org/posts/palmerpenguinspart1/media/images/penguin-hero.jpg" class="img-fluid" style="width:45.0%" alt="Penguins putting their data science skills to practical use"> <em>“Now let’s use this model to help our penguin community!”</em></p>
-<section id="real-world-applications" class="level2" data-number="9.1">
-<h2 data-number="9.1" class="anchored" data-anchor-id="real-world-applications"><span class="header-section-number">9.1</span> Real-World Applications</h2>
-<p>Our simple regression model has several practical applications in Antarctic research:</p>
-<div class="cell">
-<div class="cell-output-display">
-<table class="caption-top table table-sm table-striped small">
-<caption>Practical Applications of the Model</caption>
-<colgroup>
-<col style="width: 22%">
-<col style="width: 67%">
-<col style="width: 10%">
-</colgroup>
-<thead>
-<tr class="header">
-<th style="text-align: left;">Application</th>
-<th style="text-align: left;">Description</th>
-<th style="text-align: left;">Relevance</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: left;">Field Assessment</td>
-<td style="text-align: left;">Flipper measurements estimate body condition (effect size: 0.06)</td>
-<td style="text-align: left;">High</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Population Monitoring</td>
-<td style="text-align: left;">Track penguin health trends using morphometric relationships</td>
-<td style="text-align: left;">High</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Climate Research</td>
-<td style="text-align: left;">Changes in relationships may indicate environmental stress</td>
-<td style="text-align: left;">Medium</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Conservation Planning</td>
-<td style="text-align: left;">Identify underweight individuals for intervention</td>
-<td style="text-align: left;">High</td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="cell-output-display">
-<table class="caption-top table table-sm table-striped small">
-<caption>Body Condition Classification Thresholds</caption>
-<thead>
-<tr class="header">
-<th style="text-align: left;">Condition Category</th>
-<th style="text-align: left;">Body Mass Range (g)</th>
-<th style="text-align: left;">Percentile</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: left;">Low Condition</td>
-<td style="text-align: left;">&lt; 3550</td>
-<td style="text-align: left;">Below 25th</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Normal Range</td>
-<td style="text-align: left;">3550–4775</td>
-<td style="text-align: left;">25th–75th</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">High Condition</td>
-<td style="text-align: left;">&gt; 4775</td>
-<td style="text-align: left;">Above 75th</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-</section>
-</section>
-<section id="key-findings-and-next-steps" class="level1" data-number="10">
-<h1 data-number="10"><span class="header-section-number">10</span> Key Findings and Next Steps</h1>
-<section id="what-weve-learned-in-part-1" class="level2" data-number="10.1">
-<h2 data-number="10.1" class="anchored" data-anchor-id="what-weve-learned-in-part-1"><span class="header-section-number">10.1</span> What We’ve Learned in Part 1</h2>
-<ol type="1">
-<li><p><strong>Strong Predictive Relationship</strong>: Flipper length explains 76.2% of body mass variance (R² = 0.762), providing a reliable field assessment tool</p></li>
-<li><p><strong>Species-Specific Patterns</strong>: Residual clustering by species suggests important biological differences not captured by flipper length alone</p></li>
-<li><p><strong>Model Performance</strong>: RMSE of 393g indicates reasonable prediction accuracy for most applications</p></li>
-<li><p><strong>Research Implications</strong>: Simple morphometric relationships can support field research and conservation efforts</p></li>
-</ol>
-</section>
-<section id="looking-ahead-to-part-2" class="level2" data-number="10.2">
-<h2 data-number="10.2" class="anchored" data-anchor-id="looking-ahead-to-part-2"><span class="header-section-number">10.2</span> Looking Ahead to Part 2</h2>
-<p>Our residual analysis reveals clear opportunities for improvement through:</p>
-<ul>
-<li><strong>Species Integration</strong>: Accounting for biological differences between penguin species</li>
-<li><strong>Multiple Predictors</strong>: Incorporating bill measurements for enhanced accuracy</li>
-<li><strong>Interaction Effects</strong>: Exploring how predictors work together</li>
-<li><strong>Model Validation</strong>: Comparing simple vs.&nbsp;complex model performance</li>
-</ul>
-<div class="callout callout-style-default callout-tip callout-titled">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-<span class="screen-reader-only">Tip</span>🎯 Preview: Dramatic Model Improvement
-</div>
-</div>
-<div class="callout-body-container callout-body">
-<p>In Part 2, adding species information will improve our model’s R² from 0.762 to over 0.860 - demonstrating why biological context matters in ecological modeling!</p>
-</div>
-</div>
-</section>
-</section>
-<section id="reproducibility-information" class="level1" data-number="11">
-<h1 data-number="11"><span class="header-section-number">11</span> Reproducibility Information</h1>
-<p>This blog post is part of a <strong>reproducible research compendium</strong> using ZZCOLLAB. To reproduce the entire analysis:</p>
-<section id="quick-start" class="level2" data-number="11.1">
-<h2 data-number="11.1" class="anchored" data-anchor-id="quick-start"><span class="header-section-number">11.1</span> Quick Start</h2>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6" style="background: #f1f3f5;"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">git</span> clone <span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">&lt;</span>repository-url<span class="op" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;">&gt;</span></span>
-<span id="cb6-2"><span class="bu" style="color: null;
-background-color: null;
-font-style: inherit;">cd</span> posts/palmerpenguinspart1</span>
-<span id="cb6-3"></span>
-<span id="cb6-4"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># Build Docker environment (one-time setup)</span></span>
-<span id="cb6-5"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">make</span> docker-build</span>
-<span id="cb6-6"></span>
-<span id="cb6-7"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># Run complete analysis pipeline and render blog post</span></span>
-<span id="cb6-8"><span class="fu" style="color: #4758AB;
-background-color: null;
-font-style: inherit;">make</span> docker-post-render</span>
-<span id="cb6-9"></span>
-<span id="cb6-10"><span class="co" style="color: #5E5E5E;
-background-color: null;
-font-style: inherit;"># View results</span></span>
-<span id="cb6-11"><span class="ex" style="color: null;
-background-color: null;
-font-style: inherit;">open</span> index.html</span></code></pre></div></div>
-</section>
-<section id="analysis-pipeline" class="level2" data-number="11.2">
-<h2 data-number="11.2" class="anchored" data-anchor-id="analysis-pipeline"><span class="header-section-number">11.2</span> Analysis Pipeline</h2>
-<p>The complete analysis consists of three reproducible scripts:</p>
-<ol type="1">
-<li><strong>01_prepare_data.R</strong> - Load Palmer Penguins data, clean, and save derived data</li>
-<li><strong>02_fit_models.R</strong> - Fit simple linear regression model, extract coefficients and diagnostics</li>
-<li><strong>03_generate_figures.R</strong> - Generate publication-quality figures from analysis results</li>
-</ol>
-<p>All figures shown in this post are generated by the analysis scripts and can be reproduced exactly using the provided code.</p>
-</section>
-<section id="environment-information" class="level2" data-number="11.3">
-<h2 data-number="11.3" class="anchored" data-anchor-id="environment-information"><span class="header-section-number">11.3</span> Environment Information</h2>
-<div class="cell">
-<div class="cell-output-display">
-<table class="caption-top table table-sm table-striped small">
-<caption>Analysis Environment</caption>
-<tbody>
-<tr class="odd">
-<td style="text-align: left;">R Version</td>
-<td style="text-align: left;">R version 4.5.2 (2025-10-31)</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Platform</td>
-<td style="text-align: left;">aarch64-apple-darwin20</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Analysis Date</td>
-<td style="text-align: left;">2025-12-09</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-</section>
-<section id="data-source" class="level2" data-number="11.4">
-<h2 data-number="11.4" class="anchored" data-anchor-id="data-source"><span class="header-section-number">11.4</span> Data Source</h2>
-<p><strong>Palmer Penguins Dataset:</strong> - Gorman KB, Williams TD, Fraser WR (2014). Ecological sexual dimorphism and environmental variability within a community of Antarctic penguins (genus <em>Pygoscelis</em>). PLOS ONE 9(3): e90081. - Data accessible via: <code>palmerpenguins</code> R package - Original data repository: https://github.com/allisonhorst/palmerpenguins</p>
-
-
-</section>
-</section>
-
-<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" id="quarto-reuse"><h2 class="anchored quarto-appendix-heading">Reuse</h2><div class="quarto-appendix-contents"><div><a rel="license" href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></div></div></section><section class="quarto-appendix-contents" id="quarto-citation"><h2 class="anchored quarto-appendix-heading">Citation</h2><div><div class="quarto-appendix-secondary-label">BibTeX citation:</div><pre class="sourceCode code-with-copy quarto-appendix-bibtex"><code class="sourceCode bibtex">@online{(ryy)_glenn_thomas2025,
-  author = {(Ryy) Glenn Thomas, Ronald and Science Team, Data},
-  title = {Palmer {Penguins} {Data} {Analysis} {Series} {(Part} 1):
-    {Exploratory} {Data} {Analysis} and {Simple} {Regression}},
-  date = {2025-01-01},
-  url = {https://focusonr.org/posts/palmerpenguinspart1/},
-  langid = {en}
-}
-</code></pre><div class="quarto-appendix-secondary-label">For attribution, please cite this work as:</div><div id="ref-(ryy)_glenn_thomas2025" class="csl-entry quarto-appendix-citeas">
-(Ryy) Glenn Thomas, Ronald, and Data Science Team. 2025. <span>“Palmer
-Penguins Data Analysis Series (Part 1): Exploratory Data Analysis and
-Simple Regression.”</span> January 1, 2025. <a href="https://focusonr.org/posts/palmerpenguinspart1/">https://focusonr.org/posts/palmerpenguinspart1/</a>.
-</div></div></section></div> ]]></description>
-  <category>R Programming</category>
-  <category>Data Science</category>
-  <category>Statistical Computing</category>
-  <category>Exploratory Data Analysis</category>
-  <category>Palmer Penguins</category>
-  <guid>https://focusonr.org/posts/palmerpenguinspart1/</guid>
-  <pubDate>Wed, 01 Jan 2025 08:00:00 GMT</pubDate>
-  <media:content url="https://focusonr.org/posts/palmerpenguinspart1/media/images/penguin-hero.jpg" medium="image" type="image/jpeg"/>
-</item>
-<item>
   <title>Rapid conversion of draft R scripts to formal Rmd reports</title>
   <dc:creator>Ronald (Ryy) Glenn Thomas</dc:creator>
   <dc:creator>R.G. Thomas</dc:creator>
@@ -7891,6 +8763,1151 @@ Conversion of Draft R Scripts to Formal Rmd Reports.”</span> January 1,
   <media:content url="https://focusonr.org/images/posts/ucsd-geisel-library.jpg" medium="image" type="image/jpeg"/>
 </item>
 <item>
+  <title>Your Engaging Title Here: A Learning Journey</title>
+  <dc:creator>Ronald (Ryy) Glenn Thomas</dc:creator>
+  <dc:creator>Ronald G. Thomas</dc:creator>
+  <link>https://focusonr.org/posts/templatepost/</link>
+  <description><![CDATA[ 
+
+
+
+
+<!-- ============================================================================
+EXEMPLAR BLOG POST TEMPLATE
+============================================================================
+
+This is a template demonstrating ZZCOLLAB best practices for reproducible blog
+posts. It shows:
+
+✓ Separation of concerns (analysis code in scripts/, narrative in this file)
+✓ Pre-generated figures and data (loaded from analysis/*)
+✓ Professional visual rhythm (hero + ambiance images)
+✓ Result tables extracted from analysis
+✓ Clear author guidance with TEMPLATE INSTRUCTION comments
+
+TO USE THIS TEMPLATE FOR YOUR OWN POST:
+1. Copy the template_post directory
+2. Follow TEMPLATE INSTRUCTION comments throughout
+3. Update YAML front matter (title, author, date, categories, image)
+4. Replace [placeholders] with your content
+5. Ensure analysis scripts run: 01_prepare_data.R → 02_fit_models.R → 03_generate_figures.R
+6. Load results from data files (don't re-compute in this file)
+
+STRUCTURE OVERVIEW:
+- Introduction: Hook with personal learning narrative (2-3 paragraphs)
+- Motivations & Objectives: Why this topic? What did you want to learn?
+- Conceptual Explanation: What is [Topic]? (plain language)
+- Analysis Sections: Present findings with figures and tables
+- Lessons Learned: Key takeaways
+- Limitations & Future Work: Honest assessment
+- References & Reproducibility: Citations and how to reproduce
+
+VISUAL RHYTHM (2-3 "ambiance" images for engagement):
+- HERO IMAGE: ~width:80% after intro (below "Motivations")
+- AMBIANCE IMAGE 1: ~width:100%, 500px height, after first section
+- AMBIANCE IMAGE 2: ~width:100%, 500px height, after mid-point
+- Analysis figures: Full width, 600-800px height
+
+See comments below for exact placement and sizing.
+
+============================================================================ -->
+<!-- ============================================================================
+HERO IMAGE SECTION
+============================================================================ -->
+<!-- TEMPLATE INSTRUCTION: HERO IMAGE
+
+The hero image is your first visual impression - it sets the tone for the entire
+post and appears in blog listings. It should be:
+- Engaging and relevant to your topic
+- High quality (300 DPI or higher)
+- Professional and accessible
+- Properly attributed if from external source
+
+Current: penguin-hero.jpg (penguin theme - replace with your topic!)
+
+Options for sourcing:
+- UNSPLASH: Free high-quality images → put in media/images/, add attribution to media/images/README.md
+- LOCAL SCREENSHOTS: Your own analysis environments → include media/images/README.md with creation date
+- GENERATED: R-produced visualizations → save to analysis/figures/ and reference there
+
+PLACEMENT: This will be displayed in the blog listing, so make it count!
+
+ATTRIBUTION: Document the source in analysis/media/images/README.md
+-->
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://focusonr.org/posts/templatepost/media/images/penguin-hero.jpg" class="img-fluid figure-img" style="width:80.0%"></p>
+<figcaption>Engaging hero image that introduces your topic visually</figcaption>
+</figure>
+</div>
+<p><em>Photo caption with attribution if needed. This image sets the visual tone for your entire post.</em></p>
+<!-- ============================================================================
+INTRODUCTION SECTION
+============================================================================ -->
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<!-- TEMPLATE INSTRUCTION: INTRODUCTION - Ken Koon Wong Style
+
+Purpose: Hook with personal learning narrative
+Ken's approach:
+- "I didn't really know... until I learned"
+- Establishes author as learner, not expert
+- Creates immediate relatability
+- Conversational, humble tone
+
+Keep it SHORT - 2-3 paragraphs max. Save detailed explanations for later.
+
+EXAMPLE STRUCTURE:
+Paragraph 1: Your "I didn't know until..." hook
+Paragraph 2: Brief context (the problem you faced)
+Paragraph 3: Transition to what you wanted to accomplish
+-->
+<p>I didn’t really know much about [topic] until I [encountered situation/tried to implement it/needed it for project]. Like many data scientists, I thought [initial misconception or assumption]. Turns out, [what you actually discovered] 🤔</p>
+<p>[Brief context: Why did you need this? What problem were you trying to solve? Keep it personal and specific.]</p>
+<p>Here’s what I set out to understand:</p>
+<section id="motivations" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="motivations"><span class="header-section-number">1.1</span> Motivations</h2>
+<!-- TEMPLATE INSTRUCTION: MOTIVATIONS SECTION
+
+Ken Koon Wong always includes a "Motivations" section that explains WHY the topic
+matters. This is crucial - it helps readers understand if YOUR problem is THEIR problem.
+
+Make it personal and specific:
+- Don't just say "optimization is important"
+- Say "I was frustrated that my analysis took 3 hours to run on a 2M row dataset"
+
+EXAMPLE:
+**Why explore [topic]?**
+- [Personal reason 1]: I had a specific problem (e.g., "My plots looked ugly")
+- [Practical need 2]: Gap in my workflow (e.g., "I had no systematic way to X")
+- [Learning goal 3]: Skill I wanted to develop (e.g., "I'd only used Y, never Z")
+- [Curiosity 4]: Interesting question (e.g., "I wondered if X was faster than Y")
+-->
+<p><strong>Why explore [topic]?</strong> - [Personal reason 1: specific problem you faced] - [Practical need 2: gap in your workflow] - [Learning goal 3: skill you wanted to develop] - [Curiosity 4: interesting question you had]</p>
+</section>
+<section id="objectives" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="objectives"><span class="header-section-number">1.2</span> Objectives</h2>
+<!-- TEMPLATE INSTRUCTION: OBJECTIVES SECTION
+
+Clear, numbered goals. Ken's style.
+
+Make them SPECIFIC and MEASURABLE where possible:
+- BAD: "Learn about modeling"
+- GOOD: "Fit a linear regression, compare R², and identify which variables predict MPG"
+
+This section should match what you actually accomplished in the post.
+The reader uses this as a mental roadmap of what they'll learn.
+-->
+<p><strong>What I wanted to accomplish:</strong> 1. [Specific, measurable objective 1] 2. [Specific, measurable objective 2] 3. [Specific, measurable objective 3] 4. [Stretch goal or advanced concept]</p>
+<p><strong>Disclaimer:</strong> I’m documenting my learning process here. If you spot errors or have better approaches, please let me know! 💙</p>
+<!-- ============================================================================
+AMBIANCE IMAGE 1 (OPTIONAL BUT RECOMMENDED)
+============================================================================
+
+Large format image for visual rhythm. Place after introductory section.
+
+SIZING: width: 100%, height: auto (or ~500px for consistent spacing)
+PURPOSE: Break up dense introductory text, maintain reader engagement
+CONTENT: Should relate to topic but can be more atmospheric/creative
+
+EXAMPLES:
+- Overhead desk setup photo
+- Code editor screenshot
+- Data visualization in action
+- Office/workspace ambiance
+- Topic-related artwork
+============================================================================ -->
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://focusonr.org/posts/templatepost/media/images/penguin-hero.jpg" class="img-fluid figure-img"></p>
+<figcaption>Atmospheric image to maintain visual engagement - replace with relevant scene</figcaption>
+</figure>
+</div>
+<!-- ============================================================================
+PREREQUISITES AND SETUP SECTION
+============================================================================ -->
+</section>
+</section>
+<section id="prerequisites-and-setup" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Prerequisites and Setup</h1>
+<!-- TEMPLATE INSTRUCTION: PREREQUISITES - Ken's Style
+
+Keep it minimal and conversational. Show the code first, explain briefly.
+Don't overwhelm with requirements.
+
+For ZZCOLLAB blog posts, data should be ALREADY PREPARED by scripts.
+So this section should just show how to LOAD the prepared data and utilities.
+
+DO NOT include inline data cleaning here - that's in 01_prepare_data.R
+
+EXAMPLE:
+- Load libraries (from renv automatically installed)
+- Load prepared data from CSV: read_csv("data/derived_data/...")
+- Load utility functions: source("R/plotting_utils.R")
+- Display basic structure to confirm loaded correctly
+-->
+<p>Here’s what you’ll need to follow along:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Install packages if needed (renv should have handled this)</span></span>
+<span id="cb1-2"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># But just in case:</span></span>
+<span id="cb1-3"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">install.packages</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">c</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"tidyverse"</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"broom"</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"knitr"</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"patchwork"</span>))</span></code></pre></div></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Load libraries</span></span>
+<span id="cb2-2"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">library</span>(tidyverse)</span>
+<span id="cb2-3"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">library</span>(broom)</span>
+<span id="cb2-4"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">library</span>(knitr)</span>
+<span id="cb2-5"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">library</span>(patchwork)</span>
+<span id="cb2-6"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">source</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"R/plotting_utils.R"</span>)  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Load custom utility functions</span></span>
+<span id="cb2-7"></span>
+<span id="cb2-8"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Setup theme and colors</span></span>
+<span id="cb2-9"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">setup_plot_theme</span>()</span>
+<span id="cb2-10">colors <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">get_analysis_colors</span>()</span>
+<span id="cb2-11"></span>
+<span id="cb2-12"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Load PREPARED data (generated by 01_prepare_data.R)</span></span>
+<span id="cb2-13"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># This data includes derived variables and transformations</span></span>
+<span id="cb2-14">mtcars_clean <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">read_csv</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"data/derived_data/mtcars_clean.csv"</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">show_col_types =</span> <span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">FALSE</span>)</span></code></pre></div></div>
+</div>
+<p><strong>Background:</strong> Basic R and ggplot2 familiarity helpful but not required. I’ll explain concepts as we go!</p>
+</section>
+<section id="what-is-topicconcept" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> What is [Topic/Concept]?</h1>
+<!-- TEMPLATE INSTRUCTION: CONCEPTUAL FOUNDATION
+
+Ken often includes a "What is X?" section explaining concepts in plain language.
+
+STRUCTURE:
+1. Start with simple definition (1 sentence)
+2. Use analogy or comparison (helps understanding)
+3. Give concrete example (makes it real)
+4. Keep it brief (2-4 sentences total)
+5. THEN show the code
+
+Purpose: Readers without domain expertise should understand the concept.
+
+EXAMPLE FOR "LINEAR REGRESSION":
+"Linear regression is a method for understanding how one variable depends on
+another - kind of like fitting a straight line through a scatter plot of points.
+Imagine you're trying to predict someone's height based on their parents'
+heights: you'd draw a line through data points, then use that line to make
+predictions for new people. That's what linear regression does."
+-->
+<p>Before diving into code, let’s clarify what [topic] actually means. [Simple, plain-language explanation of the concept. Use an analogy if helpful.] In practice, this means [concrete example or application].</p>
+</section>
+<section id="getting-started-initial-exploration" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Getting Started: Initial Exploration</h1>
+<!-- TEMPLATE INSTRUCTION: FIRST ANALYSIS SECTION
+
+This is where the real analysis begins!
+
+STRUCTURE:
+- CODE FIRST (show it)
+- OUTPUT (display results)
+- BRIEF INTERPRETATION (2-4 sentences)
+
+Ken's ratio: ~40% code, 60% explanation. Don't explain every line of code.
+Assume reader can understand basic R - focus on the "why" and "what does this mean"
+
+INCLUDE SUMMARY TABLE: Show key statistics from prepared data
+-->
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Display structure of prepared data</span></span>
+<span id="cb3-2"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">glimpse</span>(mtcars_clean)</span></code></pre></div></div>
+</div>
+<p>Okay, so we have 32 cars with 11 variables. Let’s see what we’re working with here 🤔</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Key summary stats</span></span>
+<span id="cb4-2">summary_table <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> mtcars_clean <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb4-3">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">summarise</span>(</span>
+<span id="cb4-4">    <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">n =</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">n</span>(),</span>
+<span id="cb4-5">    <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">mpg_mean =</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">round</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">mean</span>(mpg), <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>),</span>
+<span id="cb4-6">    <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">mpg_sd =</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">round</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">sd</span>(mpg), <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>),</span>
+<span id="cb4-7">    <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">hp_mean =</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">round</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">mean</span>(hp), <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>),</span>
+<span id="cb4-8">    <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">hp_sd =</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">round</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">sd</span>(hp), <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>)</span>
+<span id="cb4-9">  )</span>
+<span id="cb4-10"></span>
+<span id="cb4-11"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">kable</span>(summary_table,</span>
+<span id="cb4-12">      <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">col.names =</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">c</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"N"</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"MPG Mean"</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"MPG SD"</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"HP Mean"</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"HP SD"</span>),</span>
+<span id="cb4-13">      <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">caption =</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Summary Statistics: Motor Trend Car Data"</span>)</span></code></pre></div></div>
+</div>
+<p>Not too shabby! Average fuel efficiency is 20.1 MPG with quite a bit of variation (SD = 6.0).</p>
+</section>
+<section id="exploring-the-data" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Exploring the Data</h1>
+<!-- TEMPLATE INSTRUCTION: RESULTS VISUALIZATION SECTION
+
+Here's where your pre-generated figures come in!
+See analysis/scripts/03_generate_figures.R for how these were created.
+
+PATTERN:
+1. Load results from analysis/data/derived_data/
+2. Display pre-generated figure with caption
+3. Brief interpretation (what do we learn?)
+
+FIGURE SIZING:
+- Main analysis figures: width = "100%" (full width)
+- Captions should be descriptive and in-line with data interpretation
+- Alt text should be detailed for accessibility
+
+DON'T: re-create these figures inline (they're already generated!)
+DO: reference the pre-generated files and focus on interpretation
+-->
+<p>Let’s visualize these patterns. I pre-generated these figures using analysis/scripts/03_generate_figures.R:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1">knitr<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">::</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">include_graphics</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"figures/eda-overview.png"</span>)</span></code></pre></div></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://focusonr.org/posts/templatepost/figures/eda-overview.png" class="img-fluid figure-img" alt="Two-panel figure: left shows histogram of MPG distribution ranging from ~10-35 mpg, right shows boxplots for 4, 6, and 8 cylinder vehicles" width="1500"></p>
+<figcaption>Distribution of fuel efficiency across the dataset. Left: Histogram showing MPG distribution. Right: Boxplots of MPG by cylinder count reveal engines with more cylinders tend to have lower fuel efficiency.</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>Wow, that’s a clear pattern! Cars with fewer cylinders are way more fuel-efficient 📊</p>
+<!-- TEMPLATE INSTRUCTION: AMBIANCE IMAGE 2 (OPTIONAL)
+
+Another atmospheric image to maintain visual engagement.
+Place after first major figure section.
+
+This creates rhythm: text → figure → ambiance image → text → figure
+
+SIZING: width: 100%, height: auto
+PURPOSE: Mental break, maintain engagement, visual balance
+============================================================================ -->
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://focusonr.org/posts/templatepost/media/images/penguin-hero.jpg" class="img-fluid figure-img"></p>
+<figcaption>Visual break - another atmospheric image maintaining engagement</figcaption>
+</figure>
+</div>
+<section id="looking-for-relationships" class="level2" data-number="5.1">
+<h2 data-number="5.1" class="anchored" data-anchor-id="looking-for-relationships"><span class="header-section-number">5.1</span> Looking for Relationships</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Find strongest correlations with MPG</span></span>
+<span id="cb6-2">correlations <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">cor</span>(mtcars_clean <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">select</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">where</span>(is.numeric))) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb6-3">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">as.data.frame</span>() <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb6-4">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">rownames_to_column</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"var1"</span>) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb6-5">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">pivot_longer</span>(<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span>var1, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">names_to =</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"var2"</span>, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">values_to =</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"correlation"</span>) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb6-6">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">filter</span>(var1 <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">==</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"mpg"</span>, var2 <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">!=</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"mpg"</span>) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb6-7">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">arrange</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">desc</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">abs</span>(correlation)))</span>
+<span id="cb6-8"></span>
+<span id="cb6-9"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Display top 5</span></span>
+<span id="cb6-10"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">kable</span>(correlations <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">head</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">5</span>),</span>
+<span id="cb6-11">      <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">caption =</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Top 5 Correlations with MPG (fuel efficiency)"</span>)</span></code></pre></div></div>
+</div>
+<p>🔍 Weight has the strongest correlation with MPG (r = -0.87). Let’s visualize that relationship:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1">knitr<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">::</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">include_graphics</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"figures/correlation-plot.png"</span>)</span></code></pre></div></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://focusonr.org/posts/templatepost/figures/correlation-plot.png" class="img-fluid figure-img" alt="Scatter plot with vehicle weight (x-axis, 1000-5500 lbs) vs MPG (y-axis, 10-35 mpg), colored by cylinder count (4/6/8 cyl), with fitted regression line" width="1200"></p>
+<figcaption>Strong negative relationship between vehicle weight and fuel efficiency. Heavier cars consistently get worse mileage, regardless of cylinder count. The fitted regression line (dashed) shows the overall trend.</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>Interesting! Heavier cars consistently get worse mileage. Makes sense when you think about it 🚗</p>
+</section>
+</section>
+<section id="building-a-model" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Building a Model</h1>
+<!-- TEMPLATE INSTRUCTION: MAIN ANALYSIS SECTION
+
+This is the heart of your post! Show your model results and interpretation.
+
+STRUCTURE:
+1. Load pre-computed model results from CSV files
+2. Display results in clean tables (using knitr::kable)
+3. Brief interpretation
+4. Show pre-generated model visualization
+
+KEY PRINCIPLE: Results were computed by 02_fit_models.R
+You're just presenting and interpreting them here.
+
+RESULT TABLES:
+- Model coefficients with confidence intervals
+- Model metrics (R², F-stat, p-value)
+- Any diagnostic summaries
+
+AVOID:
+- Re-fitting models inline (wastes time, breaks reproducibility)
+- Long code chunks (show the figure, not the code to generate it)
+- Unexplained statistics (briefly interpret each result)
+============================================================================ -->
+<p>Let me fit a simple linear model to quantify this relationship:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Load pre-computed model results from 02_fit_models.R</span></span>
+<span id="cb8-2">model_coef <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">read_csv</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"data/derived_data/model_coefficients.csv"</span>,</span>
+<span id="cb8-3">                       <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">show_col_types =</span> <span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">FALSE</span>)</span>
+<span id="cb8-4">model_metrics <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">read_csv</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"data/derived_data/model_metrics.csv"</span>,</span>
+<span id="cb8-5">                         <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">show_col_types =</span> <span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">FALSE</span>)</span></code></pre></div></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Display model coefficients</span></span>
+<span id="cb9-2"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">kable</span>(model_coef <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">select</span>(term, estimate, std.error, p.value, conf.low, conf.high),</span>
+<span id="cb9-3">      <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">digits =</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4</span>,</span>
+<span id="cb9-4">      <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">caption =</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Linear Regression Results: MPG ~ Weight"</span>)</span></code></pre></div></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Display fit metrics</span></span>
+<span id="cb10-2"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">kable</span>(model_metrics <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">select</span>(r.squared, adj.r.squared, statistic, p.value, df.residual),</span>
+<span id="cb10-3">      <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">digits =</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4</span>,</span>
+<span id="cb10-4">      <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">caption =</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Model Fit Metrics"</span>)</span></code></pre></div></div>
+</div>
+<p>📊 <strong>Nice! The model explains 75% of the variance (R² = 0.75).</strong> For every 1,000 lbs of weight, we lose about 5.3 MPG (95% CI: [-6.5, -4.1]) ✅</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1">knitr<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">::</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">include_graphics</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"figures/model-plot.png"</span>)</span></code></pre></div></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://focusonr.org/posts/templatepost/figures/model-plot.png" class="img-fluid figure-img" alt="Scatter plot with fitted regression line and gray confidence band, showing negative relationship between weight and MPG" width="1200"></p>
+<figcaption>Linear regression fit showing the relationship between vehicle weight and fuel efficiency. The gray band represents the 95% confidence interval around the fitted line. The fit is quite good, explaining 75% of the variance in MPG.</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<section id="making-predictions" class="level2" data-number="6.1">
+<h2 data-number="6.1" class="anchored" data-anchor-id="making-predictions"><span class="header-section-number">6.1</span> Making Predictions</h2>
+<!-- TEMPLATE INSTRUCTION: PRACTICAL APPLICATION
+
+Show how to use your model for something useful.
+This helps readers see the real-world value of your analysis.
+
+Include concrete examples with actual numbers.
+-->
+<p>Let me make some predictions to see how this works in practice:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Predict MPG for different weights</span></span>
+<span id="cb12-2">new_data <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">tibble</span>(<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">wt =</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">c</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">3</span>, <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4</span>))</span>
+<span id="cb12-3">model <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">readRDS</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"data/derived_data/simple_model.rds"</span>)</span>
+<span id="cb12-4">predictions <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">predict</span>(model, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">newdata =</span> new_data, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">interval =</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"confidence"</span>)</span>
+<span id="cb12-5"></span>
+<span id="cb12-6"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">cbind</span>(new_data, predictions) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%&gt;%</span></span>
+<span id="cb12-7">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">kable</span>(<span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">digits =</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>,</span>
+<span id="cb12-8">        <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">caption =</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Predicted MPG for Vehicles of Different Weights"</span>)</span></code></pre></div></div>
+</div>
+<p>📝 So a 2,000 lb car gets ~30 MPG, while a 4,000 lb car only gets ~15 MPG. That’s quite a difference!</p>
+</section>
+</section>
+<section id="checking-our-work" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Checking Our Work</h1>
+<!-- TEMPLATE INSTRUCTION: DIAGNOSTICS SECTION
+
+Show you've validated your assumptions.
+Be transparent about potential issues.
+
+Load pre-generated diagnostic data from model fitting script.
+Display residual plots and outlier analysis.
+-->
+<p>Before we trust these results, let’s check if our model assumptions hold up:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Load pre-computed diagnostics</span></span>
+<span id="cb13-2">diagnostics <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">read_csv</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"data/derived_data/model_diagnostics.csv"</span>,</span>
+<span id="cb13-3">                       <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">show_col_types =</span> <span class="cn" style="color: #8f5902;
+background-color: null;
+font-style: inherit;">FALSE</span>)</span>
+<span id="cb13-4"></span>
+<span id="cb13-5"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Summary</span></span>
+<span id="cb13-6">outlier_count <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">sum</span>(diagnostics<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">$</span>is_outlier)</span>
+<span id="cb13-7"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">cat</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Outliers found (&gt;2.5 SD):"</span>, outlier_count, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">\n</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>)</span>
+<span id="cb13-8"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">cat</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Residual SE:"</span>, <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">round</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">sqrt</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">mean</span>(diagnostics<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">$</span>residuals<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">^</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>)), <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>), <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"MPG</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">\n</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>)</span></code></pre></div></div>
+</div>
+<p>⚠️ <strong>Diagnostic checks:</strong> Found 2-3 potential outliers (&gt;2.5 SD) when running the analysis.</p>
+<p>Now let’s visualize the residuals to check for patterns:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1">knitr<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">::</span><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">include_graphics</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"figures/diagnostics-plot.png"</span>)</span></code></pre></div></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://focusonr.org/posts/templatepost/figures/diagnostics-plot.png" class="img-fluid figure-img" alt="Scatter plot of standardized residuals (y-axis) vs predicted values (x-axis), with reference lines at -2, 0, +2" width="1200"></p>
+<figcaption>Residual diagnostic plot showing standardized residuals vs fitted values. The red dashed lines mark ±2 standard deviations. A good model should show residuals randomly scattered around zero with no patterns. We have a few potential outliers but overall the fit looks reasonable.</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>Looks pretty good! No major patterns in the residuals, though we have a couple of potential outliers worth investigating 🔍</p>
+<section id="things-to-watch-out-for" class="level2" data-number="7.1">
+<h2 data-number="7.1" class="anchored" data-anchor-id="things-to-watch-out-for"><span class="header-section-number">7.1</span> Things to Watch Out For</h2>
+<!-- TEMPLATE INSTRUCTION: GOTCHAS SECTION
+
+Share what you learned the hard way.
+Be conversational and personal.
+Help readers avoid your mistakes.
+
+Use first person: "I found that..." "Watch out for..."
+-->
+<p>A few gotchas I encountered while working on this:</p>
+<ol type="1">
+<li><p><strong>Don’t extrapolate too far</strong> - This model works for weights between 1.5-5.5 thousand lbs. Predicting outside that range? Risky!</p></li>
+<li><p><strong>Correlation ≠ Causation</strong> - Weight correlates with MPG, but there are confounding variables (engine size, aerodynamics, etc.)</p></li>
+<li><p><strong>Check your assumptions</strong> - Always plot residuals! A good R² doesn’t guarantee your model is appropriate.</p></li>
+<li><p><strong>Small sample size</strong> - We only have 32 cars. Take the confidence intervals seriously!</p></li>
+</ol>
+<!-- ============================================================================
+AMBIANCE IMAGE 3 (OPTIONAL)
+
+Final atmospheric image, perhaps wrapping up the post visually.
+Place before "Lessons Learned" section.
+
+This creates visual bookends around the main analysis.
+============================================================================ -->
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://focusonr.org/posts/templatepost/media/images/penguin-hero.jpg" class="img-fluid figure-img"></p>
+<figcaption>Concluding visual - tie back to topic theme</figcaption>
+</figure>
+</div>
+</section>
+</section>
+<section id="what-did-we-learn" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> What Did We Learn?</h1>
+<!-- TEMPLATE INSTRUCTION: LESSONS LEARNT - Ken's Signature Section!
+
+This is Ken's trademark section - always included.
+
+STRUCTURE:
+- Bullet points of key takeaways
+- Tools/packages mastered
+- Concepts understood
+- Skills developed
+- Be specific and actionable
+
+THREE CATEGORIES:
+1. Conceptual Understanding (what did you learn about the domain?)
+2. Technical Skills (what tools/techniques did you master?)
+3. Gotchas and Pitfalls (what could go wrong?)
+-->
+<section id="lessons-learnt" class="level2" data-number="8.1">
+<h2 data-number="8.1" class="anchored" data-anchor-id="lessons-learnt"><span class="header-section-number">8.1</span> Lessons Learnt</h2>
+<p>Here’s what I took away from this exploration:</p>
+<p><strong>Conceptual Understanding:</strong> - Vehicle weight is a strong predictor of fuel efficiency (R² = 0.75) - Each 1,000 lbs reduces MPG by ~5.3 miles (95% CI: [-6.5, -4.1]) - Cylinder count effects are partially mediated through weight - Simple models can be surprisingly effective with the right predictor</p>
+<p><strong>Technical Skills:</strong> - Using <code>broom::tidy()</code> for clean model output formatting ✅ - Calculating and interpreting confidence intervals for predictions - Creating diagnostic plots to validate regression assumptions - Combining multiple ggplot visualizations with <code>patchwork</code></p>
+<p><strong>Gotchas and Pitfalls:</strong> - Always check residual plots - R² alone isn’t enough! - Extrapolation beyond data range is dangerous - Small sample sizes (n=32) require cautious interpretation - Correlation doesn’t prove causation (confounding variables matter)</p>
+</section>
+<section id="limitations" class="level2" data-number="8.2">
+<h2 data-number="8.2" class="anchored" data-anchor-id="limitations"><span class="header-section-number">8.2</span> Limitations</h2>
+<!-- TEMPLATE INSTRUCTION: LIMITATIONS - Ken's Style
+
+Be honest and transparent.
+Ken acknowledges limitations upfront.
+Keep it concise - bullet points work well.
+
+This shows scientific maturity and helps readers know when your findings apply.
+-->
+<p>This analysis has several limitations to keep in mind:</p>
+<ul>
+<li><strong>Old data</strong>: mtcars is from 1974 - modern vehicles (hybrids, EVs) behave differently</li>
+<li><strong>Small sample</strong>: Only 32 observations limits statistical power</li>
+<li><strong>Missing variables</strong>: Doesn’t account for aerodynamics, transmission type, engine tech</li>
+<li><strong>Simple model</strong>: Single predictor ignores important confounders</li>
+<li><strong>Limited scope</strong>: Only passenger cars; may not generalize to trucks/SUVs</li>
+</ul>
+</section>
+<section id="opportunities-for-improvement" class="level2" data-number="8.3">
+<h2 data-number="8.3" class="anchored" data-anchor-id="opportunities-for-improvement"><span class="header-section-number">8.3</span> Opportunities for Improvement</h2>
+<!-- TEMPLATE INSTRUCTION: OPPORTUNITIES - Another Ken Signature!
+
+Forward-looking section on what could be done next.
+- Extensions to try
+- Better approaches
+- Future directions
+- Related analyses
+
+This helps readers see where research/learning could go next.
+-->
+<p>If I had more time, here’s what I’d explore next:</p>
+<ol type="1">
+<li><strong>Multiple regression</strong> - Add cylinder count, horsepower, transmission type</li>
+<li><strong>Interaction effects</strong> - Does weight impact differ by number of cylinders?</li>
+<li><strong>Modern data</strong> - Replicate with 2020+ vehicle data to see how relationships changed</li>
+<li><strong>Non-linear models</strong> - Try polynomial regression or splines for better fit</li>
+<li><strong>Machine learning comparison</strong> - How does linear regression compare to random forest?</li>
+<li><strong>Causal inference</strong> - Use techniques to establish causality, not just correlation</li>
+</ol>
+</section>
+</section>
+<section id="wrapping-up" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> Wrapping Up</h1>
+<!-- TEMPLATE INSTRUCTION: CONCLUSION - Ken's Style
+
+Short, friendly, forward-looking.
+Ken often invites collaboration and questions.
+Acknowledges ongoing learning.
+Expresses gratitude.
+
+Keep it brief - 2-3 paragraphs max.
+End with 💙 or similar warm closing.
+-->
+<p>So that’s my journey exploring [topic]! We saw that vehicle weight is a powerful predictor of fuel efficiency, accounting for 75% of the variance. The model is simple but effective, though it has limitations worth keeping in mind.</p>
+<p><strong>Main takeaways:</strong> - Weight strongly predicts MPG (R² = 0.75, β = -5.3) - Always check model assumptions with diagnostic plots - Confidence intervals matter, especially with small samples - Simple models can be surprisingly powerful</p>
+<p>I learned a lot working through this, especially about [specific technical skill you gained]. There’s definitely room for improvement—adding more predictors, trying non-linear models, and using modern data would all be interesting extensions.</p>
+<p><strong>If you’re trying this yourself:</strong> - Start with exploration before modeling - Plot your residuals! - Don’t trust high R² blindly - Report confidence intervals alongside point estimates</p>
+<p>Thanks for following along! 💙</p>
+</section>
+<section id="see-also" class="level1" data-number="10">
+<h1 data-number="10"><span class="header-section-number">10</span> See Also</h1>
+<!-- TEMPLATE INSTRUCTION: SEE ALSO - Ken's Style
+
+Ken keeps this section VERY simple.
+Links to related blog posts or resources.
+Not an exhaustive bibliography.
+Usually 3-5 key links.
+-->
+<p>Related posts and resources:</p>
+<ul>
+<li>[Link to related post 1]</li>
+<li>[Link to related post 2]</li>
+<li>[Link to related resource]</li>
+</ul>
+<p><strong>Key Resources:</strong> - <a href="https://r4ds.had.co.nz/">R for Data Science</a> - Free book on tidyverse - <a href="https://www.statlearning.com/">Introduction to Statistical Learning</a> - Free textbook with R code - <a href="https://broom.tidymodels.org/">broom package docs</a> - Tidy model outputs - <a href="https://stats.stackexchange.com/">Cross Validated</a> - Stats Q&amp;A community</p>
+<hr>
+</section>
+<section id="reproducibility" class="level1" data-number="11">
+<h1 data-number="11"><span class="header-section-number">11</span> Reproducibility</h1>
+<!-- TEMPLATE INSTRUCTION: REPRODUCIBILITY
+
+The beauty of ZZCOLLAB: readers can fully reproduce your analysis!
+
+Include:
+1. How to run the analysis pipeline
+2. Environment information (Docker, renv)
+3. Session info
+
+Emphasize that all analysis code is in analysis/scripts/ and all figures
+are pre-generated - this post is just the narrative.
+-->
+<p><strong>Data:</strong> mtcars (built-in R dataset, loaded by analysis/scripts/01_prepare_data.R)</p>
+<p><strong>Analysis Pipeline:</strong></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb15" style="background: #f1f3f5;"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb15-1"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">make</span> docker-build</span>
+<span id="cb15-2"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">make</span> docker-post-render</span></code></pre></div></div>
+<p>Or step-by-step:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb16" style="background: #f1f3f5;"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb16-1"><span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">Rscript</span> analysis/scripts/01_prepare_data.R</span>
+<span id="cb16-2"><span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">Rscript</span> analysis/scripts/02_fit_models.R</span>
+<span id="cb16-3"><span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">Rscript</span> analysis/scripts/03_generate_figures.R</span>
+<span id="cb16-4"><span class="ex" style="color: null;
+background-color: null;
+font-style: inherit;">quarto</span> render index.qmd</span></code></pre></div></div>
+<p><strong>All Reproducible Code:</strong> - <code>analysis/scripts/01_prepare_data.R</code> - Data preparation - <code>analysis/scripts/02_fit_models.R</code> - Model fitting - <code>analysis/scripts/03_generate_figures.R</code> - Figure generation - <code>R/plotting_utils.R</code> - Reusable utility functions - <code>analysis/paper/index.qmd</code> - This blog post (narrative only)</p>
+<p><strong>Session Information:</strong></p>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code>R version 4.5.2 (2025-10-31)
+Platform: aarch64-apple-darwin20
+Running under: macOS Sequoia 15.6.1
+
+Matrix products: default
+BLAS:   /System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libBLAS.dylib 
+LAPACK: /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.1
+
+locale:
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+time zone: America/Los_Angeles
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+loaded via a namespace (and not attached):
+ [1] htmlwidgets_1.6.4 compiler_4.5.2    fastmap_1.2.0     cli_3.6.5        
+ [5] tools_4.5.2       htmltools_0.5.9   parallel_4.5.2    yaml_2.3.11      
+ [9] rmarkdown_2.30    knitr_1.50        jsonlite_2.0.0    xfun_0.54        
+[13] digest_0.6.39     rlang_1.1.6       png_0.1-8         evaluate_1.0.5   </code></pre>
+</div>
+</div>
+<hr>
+</section>
+<section id="lets-connect" class="level1" data-number="12">
+<h1 data-number="12"><span class="header-section-number">12</span> Let’s Connect!</h1>
+<!-- TEMPLATE INSTRUCTION: ENGAGEMENT - Ken's Style
+
+Ken invites questions and corrections.
+Emphasizes collaboration and learning together.
+Often includes social media links.
+Uses friendly, welcoming tone.
+
+This shows you're human, approachable, and open to feedback.
+-->
+<p><em>Have questions, suggestions, or spot an error? Let me know!</em></p>
+<ul>
+<li><strong>Twitter/X</strong>: <a href="https://twitter.com/rgt47"><span class="citation" data-cites="rgt47">@rgt47</span></a></li>
+<li><strong>Mastodon</strong>: <a href="https://mastodon.social/@username"><span class="citation" data-cites="your_mastodon">@your_mastodon</span></a></li>
+<li><strong>GitHub</strong>: <a href="https://github.com/rgt47">rgt47</a></li>
+<li><strong>Email</strong>: <a href="https://rgtlab.org/contact">Contact form</a></li>
+</ul>
+<p><strong>Please reach out</strong> if you: - Spot errors or have corrections - Have suggestions for improvement - Want to discuss the approach - Have questions about implementation - Just want to connect! 💙</p>
+<hr>
+<!-- ============================================================================
+TEMPLATE CHECKLIST - Review before publishing
+
+Before publishing your blog post, verify:
+
+☐ YAML Front Matter
+  ☐ Unique, engaging title
+  ☐ Descriptive subtitle
+  ☐ Correct author name
+  ☐ Publication date
+  ☐ 2-3 relevant categories
+  ☐ Brief description (for blog listing)
+  ☐ Hero image path (media/images/...)
+  ☐ document-type: "blog"
+  ☐ draft: false (when ready)
+
+☐ Structure
+  ☐ Introduction with "I didn't know..." hook (2-3 paragraphs)
+  ☐ Motivations section (personal reasons)
+  ☐ Objectives section (numbered list)
+  ☐ Conceptual explanation ("What is X?")
+  ☐ Analysis sections with CODE → OUTPUT → INTERPRETATION
+  ☐ Summary table of key results
+  ☐ Pre-generated figure with caption and alt text
+  ☐ Lessons Learnt section (conceptual + technical + gotchas)
+  ☐ Limitations (honest assessment)
+  ☐ Opportunities for Improvement (future directions)
+  ☐ Conclusion (short, friendly)
+  ☐ See Also (3-5 key links)
+  ☐ Reproducibility section
+
+☐ Visual Design
+  ☐ Hero image at top (80% width)
+  ☐ 2-3 ambiance images for visual rhythm (100% width)
+  ☐ All analysis figures with proper captions and alt text
+  ☐ Consistent image sizing
+  ☐ Professional spacing between sections
+
+☐ Analysis Integration
+  ☐ All analysis code in analysis/scripts/ (01_, 02_, 03_)
+  ☐ No inline model fitting (load results from CSV)
+  ☐ No inline figure generation (load from analysis/figures/)
+  ☐ All data loading from prepared CSVs (not raw)
+  ☐ Proper attribution of utilities (source("R/plotting_utils.R"))
+
+☐ Content Quality
+  ☐ Tone is personal and conversational
+  ☐ Author positioned as learner, not expert
+  ☐ Emoji used for visual rhythm (🤔 ✅ ❌ 📊 💙)
+  ☐ Explanations are SHORT (2-4 sentences between code blocks)
+  ☐ Results interpreted, not just displayed
+  ☐ No unexplained statistics
+
+☐ Reproducibility
+  ☐ All analysis pipelines documented
+  ☐ Docker/renv setup clear
+  ☐ Reader can clone and reproduce end-to-end
+  ☐ Session info included
+  ☐ Links to raw data/scripts
+
+☐ Metadata
+  ☐ All images have descriptive captions
+  ☐ All figures have alt text
+  ☐ References are properly cited (if applicable)
+  ☐ Author credentials clear
+  ☐ Contact information provided
+
+============================================================================ -->
+
+
+</section>
+
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" id="quarto-reuse"><h2 class="anchored quarto-appendix-heading">Reuse</h2><div class="quarto-appendix-contents"><div><a rel="license" href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></div></div></section><section class="quarto-appendix-contents" id="quarto-citation"><h2 class="anchored quarto-appendix-heading">Citation</h2><div><div class="quarto-appendix-secondary-label">BibTeX citation:</div><pre class="sourceCode code-with-copy quarto-appendix-bibtex"><code class="sourceCode bibtex">@online{(ryy)_glenn_thomas2025,
+  author = {(Ryy) Glenn Thomas, Ronald and G. Thomas, Ronald},
+  title = {Your {Engaging} {Title} {Here:} {A} {Learning} {Journey}},
+  date = {2025-01-01},
+  url = {https://focusonr.org/posts/templatepost/},
+  langid = {en}
+}
+</code></pre><div class="quarto-appendix-secondary-label">For attribution, please cite this work as:</div><div id="ref-(ryy)_glenn_thomas2025" class="csl-entry quarto-appendix-citeas">
+(Ryy) Glenn Thomas, Ronald, and Ronald G. Thomas. 2025. <span>“Your
+Engaging Title Here: A Learning Journey.”</span> January 1, 2025. <a href="https://focusonr.org/posts/templatepost/">https://focusonr.org/posts/templatepost/</a>.
+</div></div></section></div> ]]></description>
+  <category>R Programming</category>
+  <category>Data Science</category>
+  <category>Statistical Computing</category>
+  <guid>https://focusonr.org/posts/templatepost/</guid>
+  <pubDate>Wed, 01 Jan 2025 08:00:00 GMT</pubDate>
+  <media:content url="https://focusonr.org/posts/templatepost/media/images/penguin-hero.jpg" medium="image" type="image/jpeg"/>
+</item>
+<item>
   <title>Draft Posts</title>
   <dc:creator>Ronald (Ryy) Glenn Thomas</dc:creator>
   <link>https://focusonr.org/posts/drafts.html</link>
@@ -7946,7 +9963,7 @@ font-style: inherit;">./manage_drafts.sh</span> publish posts/my-post/</span></c
 (Ryy) Glenn Thomas, Ronald. n.d. <span>“Draft Posts.”</span> <a href="https://focusonr.org/posts/drafts.html">https://focusonr.org/posts/drafts.html</a>.
 </div></div></section></div> ]]></description>
   <guid>https://focusonr.org/posts/drafts.html</guid>
-  <pubDate>Tue, 09 Dec 2025 17:18:12 GMT</pubDate>
+  <pubDate>Tue, 09 Dec 2025 17:44:38 GMT</pubDate>
 </item>
 </channel>
 </rss>
