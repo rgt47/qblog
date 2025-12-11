@@ -1,0 +1,306 @@
+---
+title: "Penguins"
+format:
+  html:
+    toc: false
+    echo: false
+    keep-hidden: true
+    code-tools: true
+---
+
+<!--
+=============================================================================
+QUARTO + OBSERVABLE JS TUTORIAL
+=============================================================================
+
+This document demonstrates how to create interactive visualizations using
+Observable JavaScript (OJS) within a Quarto document.
+
+KEY CONCEPTS:
+1. OJS code blocks: Use ```{ojs} to write Observable JavaScript
+2. Reactivity: Variables automatically update when dependencies change
+3. Inputs: Interactive controls (sliders, checkboxes, etc.)
+4. Plot: A powerful library for creating charts
+5. viewof: Creates two-way data binding between inputs and variables
+
+YAML HEADER EXPLAINED:
+- toc: false         → Disable table of contents
+- echo: false        → Hide the code blocks in output (show only results)
+- keep-hidden: true  → Keep hidden code blocks in the document
+- code-tools: true   → Add a "Code" button to view/hide source code
+=============================================================================
+-->
+
+A simple example based on Allison Horst's [Palmer Penguins](https://allisonhorst.github.io/palmerpenguins/) dataset. Here we look at how penguin body mass varies across both sex and species (use the provided inputs to filter the dataset by bill length and island):
+
+<!--
+=============================================================================
+SECTION 1: INTERACTIVE INPUT CONTROLS
+=============================================================================
+These inputs allow users to filter the data interactively.
+The "//| panel: input" directive places these controls in a special input panel.
+-->
+
+```{ojs}
+//| panel: input
+
+// -----------------------------------------------------------------------------
+// RANGE SLIDER INPUT
+// -----------------------------------------------------------------------------
+// Inputs.range() creates a slider control
+//
+// Syntax: Inputs.range([min, max], options)
+//
+// Arguments:
+//   [32, 50]  → The range of allowed values (min=32, max=50)
+//
+// Options object:
+//   value: 35   → The initial/default value when page loads
+//   step: 1     → Increment amount (slider moves by 1 unit)
+//   label: "..."→ Text label displayed next to the slider
+//
+// The "viewof" keyword is CRUCIAL:
+//   - It creates a two-way binding between the UI element and a variable
+//   - "bill_length_min" will always contain the current slider value
+//   - When the slider moves, any code using bill_length_min re-runs automatically
+
+viewof bill_length_min = Inputs.range(
+  [32, 50],
+  {value: 35, step: 1, label: "Bill length (min):"}
+)
+
+// -----------------------------------------------------------------------------
+// CHECKBOX INPUT
+// -----------------------------------------------------------------------------
+// Inputs.checkbox() creates a group of checkboxes
+//
+// Syntax: Inputs.checkbox(options_array, options)
+//
+// Arguments:
+//   ["Torgersen", "Biscoe", "Dream"] → The available choices to display
+//
+// Options object:
+//   value: ["Torgersen", "Biscoe"] → Initially selected values (array)
+//   label: "Islands:"              → Text label for the checkbox group
+//
+// The "islands" variable will contain an array of currently checked values
+// e.g., ["Torgersen", "Biscoe"] or ["Dream"] or [] (empty if none selected)
+
+viewof islands = Inputs.checkbox(
+  ["Torgersen", "Biscoe", "Dream"],
+  { value: ["Torgersen", "Biscoe"],
+    label: "Islands:"
+  }
+)
+```
+
+<!--
+=============================================================================
+SECTION 2: TABBED PANEL FOR PLOT AND DATA
+=============================================================================
+The ::: {.panel-tabset} creates a tabbed interface.
+Each ## heading becomes a tab.
+-->
+
+::: {.panel-tabset}
+
+## Plot
+
+<!--
+This tab contains the main visualization - a faceted histogram
+-->
+
+```{ojs}
+// -----------------------------------------------------------------------------
+// OBSERVABLE PLOT - FACETED HISTOGRAM
+// -----------------------------------------------------------------------------
+// This creates a histogram of penguin body mass, faceted by sex and species.
+//
+// PLOT STRUCTURE (read from inside out):
+//
+// 1. Plot.binX({y: "count"}, {...})
+//    - binX groups continuous x-values into bins (like a histogram)
+//    - {y: "count"} means the y-axis shows the count of items in each bin
+//    - x: "body_mass_g" → bin by body mass
+//    - fill: "species"  → color bars by species
+//    - thresholds: 20   → create approximately 20 bins
+//
+// 2. Plot.rectY(filtered, ...)
+//    - rectY draws vertical rectangles (bars)
+//    - "filtered" is our reactive data (defined below)
+//    - The bars represent the binned counts
+//
+// 3. .plot({...})
+//    - Configures the overall plot layout
+//    - facet: splits the plot into a grid of small multiples
+//      - data: the dataset to facet
+//      - x: "sex"     → columns are male/female
+//      - y: "species" → rows are Adelie/Chinstrap/Gentoo
+//      - marginRight: 80 → space for labels on the right
+//    - marks: additional visual elements
+//      - Plot.frame() draws a border around each facet
+
+Plot.rectY(filtered,
+  Plot.binX(
+    {y: "count"},
+    {x: "body_mass_g", fill: "species", thresholds: 20}
+  ))
+  .plot({
+    facet: {
+      data: filtered,
+      x: "sex",
+      y: "species",
+      marginRight: 80
+    },
+    marks: [
+      Plot.frame(),
+    ]
+  }
+)
+```
+
+## Data
+
+<!--
+This tab shows the raw filtered data in an interactive table
+-->
+
+```{ojs}
+// -----------------------------------------------------------------------------
+// INTERACTIVE DATA TABLE
+// -----------------------------------------------------------------------------
+// Inputs.table() displays data in a sortable, scrollable table
+//
+// Features:
+//   - Click column headers to sort
+//   - Scroll through rows
+//   - Automatically updates when "filtered" data changes
+//
+// This is useful for:
+//   - Debugging (see what data the plot is using)
+//   - Allowing users to explore individual records
+
+Inputs.table(filtered)
+```
+
+:::
+
+<!--
+=============================================================================
+SECTION 3: DATA LOADING
+=============================================================================
+This section loads the CSV data file.
+Note: This code block appears AFTER the plot in the document, but Observable
+handles the dependency order automatically - it knows "data" must load before
+"filtered" can be computed.
+-->
+
+```{ojs}
+// -----------------------------------------------------------------------------
+// LOAD DATA FROM CSV FILE
+// -----------------------------------------------------------------------------
+// FileAttachment() loads files that are in the same directory as this document
+//
+// .csv({ typed: true }) parses the CSV with automatic type inference:
+//   - Numbers become JavaScript numbers (not strings)
+//   - This is important for plotting and filtering numeric values
+//
+// The "data" variable will contain an array of objects, where each object
+// represents one row (one penguin), like:
+// {
+//   species: "Adelie",
+//   island: "Torgersen",
+//   bill_length_mm: 39.1,
+//   bill_depth_mm: 18.7,
+//   flipper_length_mm: 181,
+//   body_mass_g: 3750,
+//   sex: "male",
+//   year: 2007
+// }
+
+data = FileAttachment("palmer-penguins.csv").csv({ typed: true })
+```
+
+<!--
+=============================================================================
+SECTION 4: REACTIVE DATA FILTERING
+=============================================================================
+This is where the magic of Observable's reactivity happens!
+-->
+
+```{ojs}
+// -----------------------------------------------------------------------------
+// FILTER DATA BASED ON USER INPUTS
+// -----------------------------------------------------------------------------
+// This variable "filtered" depends on:
+//   1. data (the full dataset)
+//   2. bill_length_min (from the slider)
+//   3. islands (from the checkboxes)
+//
+// REACTIVITY: Whenever ANY of these dependencies change, Observable
+// automatically re-runs this code block and updates "filtered".
+// Then, anything that depends on "filtered" (the plot, the table)
+// also updates automatically!
+//
+// The filter function:
+//   - data.filter() returns a new array with only matching items
+//   - For each penguin, we check two conditions:
+//     1. bill_length_min < penguin.bill_length_mm
+//        → Keep penguins with bill length GREATER than the slider value
+//     2. islands.includes(penguin.island)
+//        → Keep penguins from islands that are currently checked
+//   - Both conditions must be true (&&) for a penguin to be included
+
+filtered = data.filter(function(penguin) {
+  return bill_length_min < penguin.bill_length_mm &&
+         islands.includes(penguin.island);
+})
+
+// ALTERNATIVE: Using arrow function syntax (more modern JavaScript):
+// filtered = data.filter(penguin =>
+//   bill_length_min < penguin.bill_length_mm &&
+//   islands.includes(penguin.island)
+// )
+```
+
+<!--
+=============================================================================
+SUMMARY: HOW THE REACTIVITY FLOWS
+=============================================================================
+
+1. User moves the slider or checks/unchecks a box
+2. "bill_length_min" or "islands" variable updates
+3. Observable detects that "filtered" depends on these variables
+4. "filtered" is automatically recomputed with new filter criteria
+5. Observable detects that the Plot and Table depend on "filtered"
+6. Both visualizations automatically re-render with the new data
+
+This reactive programming model means you never manually wire up
+event handlers or refresh displays - Observable handles it all!
+
+=============================================================================
+NEXT STEPS TO TRY
+=============================================================================
+
+1. Add more input types:
+   - Inputs.select() for dropdowns
+   - Inputs.radio() for radio buttons
+   - Inputs.text() for text input
+   - Inputs.date() for date pickers
+
+2. Try other plot types:
+   - Plot.dot() for scatter plots
+   - Plot.line() for line charts
+   - Plot.barY() for bar charts
+   - Plot.areaY() for area charts
+
+3. Add interactivity to plots:
+   - Plot.tip() for tooltips
+   - Plot.pointer() for hover effects
+
+4. Learn more:
+   - Observable Plot: https://observablehq.com/plot/
+   - Observable Inputs: https://observablehq.com/documentation/inputs/overview
+   - Quarto OJS: https://quarto.org/docs/interactive/ojs/
+=============================================================================
+-->

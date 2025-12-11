@@ -1,0 +1,190 @@
+---
+title: "A simple vim package for interfacing with a REPL"
+draft: true
+description: "An alternative to Nvim-R and vim-slime"
+categories: [R, vim]
+image: "img/vim.png"
+date: today
+document-type: "blog"
+#format:
+#
+---
+
+```{r init, include=FALSE}
+```
+::: column-margin
+![](img/vim.png)
+:::
+
+# Introduction
+Start with youtube Chris T. 
+
+https://www.youtube.com/watch?v=lwD8G1P52Sk
+
+
+
+
+Start on  zz.tools.vim-R.vim
+
+
+
+
+Here is the code for the plugin: 
+
+
+function! SelectChunk()
+	:execute "normal! ?```{\<cr>jV/```\<cr>k"
+endfunction
+
+function! MoveNextChunk()
+:execute "normal! /```{\<CR>j"
+:noh
+endfunction
+
+function! MovePrevChunk()
+:execute "normal! 2?```{\<CR>j"
+:noh
+endfunction
+
+function! Raction(action)
+:let @c = expand("<cword>")
+:let @d=a:action . "(".@c.")\n"
+:call term_sendkeys(term_list()[0], @d)
+endfunction
+
+function! SubmitLine()
+:let @c = getline(".") . "\n"
+:call term_sendkeys(term_list()[0], @c)
+endfunction
+"
+function! GetVisualSelection(mode)
+" call with visualmode() as the argument
+let [line_start, column_start] = getpos("'<")[1:2]
+let [line_end, column_end]     = getpos("'>")[1:2]
+let lines = getline(line_start, line_end)
+if a:mode ==# 'v'
+" Must trim the end before the start, the beginning will shift left.
+let lines[-1] = lines[-1][: column_end - (&selection == 'inclusive' ? 1 : 2)]
+let lines[0] = lines[0][column_start - 1:]
+elseif  a:mode ==# 'V'
+else
+return ''
+endif
+return join(lines, "\n")
+endfunction
+
+
+function! Submit()
+:let y = "source('source_visual',echo=T)" . "\n"
+:call term_sendkeys(term_list()[0], y)
+" :call delete('source_visual')
+endfunction
+
+function! Sel()
+:let @c= GetVisualSelection(visualmode()) . "\n"
+:call writefile(getreg('c', 1, 1), "source_visual")
+endfunction
+
+function! Brk()
+:call term_sendkeys(term_list()[0], "\<c-c>")
+endfunction
+
+function! SubmitEmbed()
+:let y = "sink('temp.txt'); source('source_visual',echo=T); sink()" . "\n"
+:call term_sendkeys(term_list()[0], y)
+" :call delete('source_visual')
+endfunction
+
+function! Rd()
+!sed 's/^/\# /g' temp.txt > temp_commented.txt
+:r !cat temp_commented.txt 
+endfunction
+
+augroup r_rmd_qmd
+    autocmd!
+autocmd FileType r,rmd,qmd nnoremap <silent> <CR> :call SubmitLine()<CR><CR>
+autocmd FileType r,rmd,qmd vnoremap <silent> <CR> :call Sel() \| 
+			\ :call Submit()<CR><CR>
+autocmd FileType r,rmd,qmd nnoremap <silent> <localleader>c 
+			\ :call Brk()<CR><CR>
+autocmd FileType r,rmd,qmd nnoremap <silent> <localleader>l 
+	\ :call SelectChunk()<CR> \| :call Sel() \| :call Submit()<CR><CR>
+autocmd FileType r,rmd,qmd nnoremap <silent> <localleader>; 
+\ :call SelectChunk()<CR> \| :call Sel() \| :call Submit()<CR> \| /```{<CR>j
+autocmd FileType r,rmd,qmd nnoremap <localleader>k :call MovePrevChunk()<CR>
+autocmd FileType r,rmd,qmd nnoremap <localleader>j :call MoveNextChunk()<CR>
+autocmd FileType r,rmd,qmd nnoremap <silent> <localleader>r 
+			\ :vert term R  --no-save<CR><c-w>:wincmd p<CR>
+autocmd FileType r,rmd,qmd nnoremap ZT :!R --quiet -e 
+			\ 'render("<C-r>%", output_format="pdf_document")'<CR>
+autocmd FileType r,rmd,qmd nnoremap ZY :!R --quiet -e 
+			\ 'quarto_render("<C-r>%", output_format="pdf")'<CR>
+autocmd FileType r,rmd,qmd tnoremap ZD 
+			\ quarto::quarto_render(output_format = "pdf")<CR>
+autocmd FileType r,rmd,qmd tnoremap ZO source("<C-W>"%")
+autocmd FileType r,rmd,qmd tnoremap ZR render("<C-W>"%")<CR>
+autocmd FileType r,rmd,qmd tnoremap ZS style_dir()<CR>
+autocmd FileType r,rmd,qmd tnoremap ZQ q('no')<C-\><C-n>:q!<CR>
+autocmd FileType r,rmd,qmd tnoremap ZZ q('no')<C-\><C-n>:q!<CR>
+autocmd FileType r,rmd,qmd tnoremap lf ls()<CR>
+autocmd FileType r,rmd,qmd nnoremap <localleader>d :call Raction("dim")<CR>
+autocmd FileType r,rmd,qmd nnoremap <localleader>h :call Raction("head")<CR>
+autocmd FileType r,rmd,qmd nnoremap <localleader>s :call Raction("str")<CR>
+autocmd FileType r,rmd,qmd nnoremap <localleader>p :call Raction("print")<CR>
+autocmd FileType r,rmd,qmd nnoremap <localleader>n :call Raction("names")<CR>
+autocmd FileType r,rmd,qmd nnoremap <localleader>f :call Raction("length")<CR>
+autocmd FileType r,rmd,qmd inoremap <c-l> 
+			\ <esc>A \|><CR><C-o>0<space><space>
+autocmd FileType r,rmd,qmd vnoremap <silent> <localleader>z 
+		\ :call Sel() \| :call SubmitEmbed() \| :call Rd()<CR><CR>
+augroup END
+
+
+
+# Experiment
+
+## Title: Add the normal mode mapping `ZY` for `quarto` files.  
+
+## Introduction: 
+The goal is to allow `quarto` filetypes to render to `pdf` using a
+mapping called from the `qmd` file.
+
+*  start by constructing a mapping in .`vimrc`: (easier to develop there) map  `ZY` to a shell escape and call to `quarto_render`. 
+ ( use `ZT` map in `rgt-R.vim` as a template). 
+*  test using any `index.qmd` file in posts. e.g. `~/config_ultisnips/index.qmd`. 
+*  once the mapping works then move it to the plugin and add a autocommand that
+  only adds the mapping for quarto filetype files. 
+
+*  open `~/prj/qblog/posts/vim_plugin_zz.tools.vim-R/rgt-R/plugin/rgt-R.vim`
+
+*  copy `ZT` mapping to `ZY`
+*  modify `ZY` to render `quarto` files with `render_quarto` command. 
+
+
+# Experiment 2
+There are two functions in rgt-R that need investigating: 
+1. SubmitSel
+and 
+2. GetVisualSelection
+
+This experiment is to explore and document why SubmitSel sends p copies of
+the command "source('temp.R') to the R interpreter, where p is the number of
+lines in the selection. 
+
+type(foo) returns code for type of foo. 1 for string, 3 for list
+
+## Prerequisites
+
+In development
+
+## Step-by-Step Implementation
+
+In development
+
+## Key Takeaways
+
+In development
+
+## Further Reading
+
+In development
