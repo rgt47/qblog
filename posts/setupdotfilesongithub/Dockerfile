@@ -1,0 +1,93 @@
+# syntax=docker/dockerfile:1.4
+#======================================================================
+# ZZCOLLAB Ubuntu Standard Publishing Profile
+#======================================================================
+# Profile: ubuntu_standard_publishing (~2.5GB)
+# Purpose: Academic papers, books, blogs with LaTeX, Quarto, RStudio
+# Base: rocker/verse (R + tidyverse + LaTeX + RStudio Server)
+# Packages: tidyverse, quarto, bookdown, blogdown, distill, rmarkdown,
+#           knitr, flexdashboard, xaringan, renv, devtools
+#           (binaries from r2u)
+#
+# Build: DOCKER_BUILDKIT=1 docker build \
+#          -f Dockerfile.ubuntu_standard_publishing \
+#          -t myteam/project:ubuntu-standard-publishing .
+# Note: AMD64 only - ARM64 not natively supported by rocker/verse
+#======================================================================
+
+ARG R_VERSION=latest
+ARG USERNAME=analyst
+ARG TEAM_NAME=zzcollab
+ARG PROJECT_NAME=project
+ARG TARGETPLATFORM
+
+# Force AMD64 platform for rocker/verse (ARM64 not natively supported)
+FROM --platform=linux/amd64 rocker/verse:4.5.1
+
+ARG USERNAME=analyst
+ARG TEAM_NAME=zzcollab
+ARG PROJECT_NAME=project
+ARG DEBIAN_FRONTEND=noninteractive
+ARG TARGETPLATFORM
+
+# Reproducibility-critical environment variables (Pillar 1)
+# ZZCOLLAB_CONTAINER enables renv workflow in .Rprofile
+# RENV_CONFIG_REPOS_OVERRIDE forces renv to use Posit PM binaries (ignores lockfile repos)
+ENV LANG=en_US.UTF-8 \
+    LC_ALL=en_US.UTF-8 \
+    TZ=UTC \
+    OMP_NUM_THREADS=1 \
+    RENV_PATHS_CACHE=/home/rstudio/.cache/R/renv \
+    RENV_CONFIG_REPOS_OVERRIDE="https://packagemanager.posit.co/cran/__linux__/noble/latest" \
+    ZZCOLLAB_CONTAINER=true
+
+# Platform note (verse is AMD64 only, using emulation on ARM64)
+RUN if [ "${TARGETPLATFORM}" = "linux/arm64" ]; then \
+        echo "NOTE: rocker/verse does not support ARM64 natively" >&2; \
+        echo "Running AMD64 image via emulation (slower)" >&2; \
+    fi
+
+# Install runtime dependencies (pinned to Ubuntu Noble 24.04)
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    set -ex && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        libfontconfig1=2.15.0-1.1ubuntu2 \
+        libfreetype6=2.13.2+dfsg-1build3 \
+        libpng16-16t64=1.6.43-5build1 \
+        libjpeg8=8c-2ubuntu11 \
+        libicu74 \
+        pandoc \
+        curl
+
+# Configure R to use Posit Package Manager (pre-compiled Ubuntu binaries)
+RUN echo "options(repos = c(CRAN = 'https://packagemanager.posit.co/cran/__linux__/noble/latest'))" \
+        >> /usr/local/lib/R/etc/Rprofile.site
+
+# Install base publishing packages from CRAN
+# Note: These are "base packages" included in the profile for convenience.
+# Project-specific packages are managed via renv and renv.lock.
+RUN --mount=type=cache,target=/tmp/R-cache/4.5.1 \
+    R -e "install.packages(c('renv', 'quarto', \
+        'bookdown', 'blogdown', 'distill', 'rmarkdown', 'knitr', \
+        'flexdashboard', 'xaringan'))"
+
+# Set up renv cache directory (rocker/verse runs as root, /init handles user switching)
+# The default user 'rstudio' is created by rocker/verse base image
+RUN mkdir -p /home/rstudio/.cache/R/renv && \
+    chown -R rstudio:rstudio /home/rstudio/.cache
+
+# Set working directory (will be owned by mapped user at runtime)
+WORKDIR /home/rstudio/project
+
+# Health check: Verify R is functional
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=2 \
+    CMD R --quiet --slave -e "quit(status = 0)" || exit 1
+
+# Note: Project files mounted at runtime via -v $(pwd):/home/analyst/project
+# This keeps image reusable across projects. Run renv::restore() in first session.
+# .Rprofile is accessed from the mounted volume for auto-snapshot functionality.
+# For RStudio Server: Use CMD ["/init"] or run with 'docker run -p 8787:8787 ... /init'
+
+CMD ["R", "--quiet"]
