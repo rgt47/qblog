@@ -1,31 +1,26 @@
 # syntax=docker/dockerfile:1.4
 #======================================================================
-# ZZCOLLAB Ubuntu X11 Analysis Profile
+# ZZCOLLAB Ubuntu X11 Minimal Profile
 #======================================================================
-# Profile: ubuntu_x11_analysis (~2.0GB)
-# Purpose: Data analysis with tidyverse ecosystem and X11 support
-# Base: rocker/tidyverse (R + tidyverse + RStudio Server)
-# Packages: tidyverse, renv, devtools, here, janitor, scales, patchwork,
-#           gt, DT, skimr, DataExplorer (binaries from r2u)
+# Profile: ubuntu_x11_minimal (~1.0GB)
+# Purpose: Minimal R with X11 support for graphics viewing
+# Base: rocker/r-ver (R + minimal dependencies)
+# Packages: renv (binary from r2u)
 #
 # Build: DOCKER_BUILDKIT=1 docker build \
-#          -f Dockerfile.ubuntu_x11_analysis \
-#          -t myteam/project:ubuntu-x11-analysis .
-# Run: Requires XQuartz (macOS) or X11 (Linux). Use 'docker run -e DISPLAY'
+#          -f Dockerfile.ubuntu_x11_minimal \
+#          -t myteam/project:x11-minimal .
+# Run: Requires XQuartz (macOS) or X11 (Linux)
 #======================================================================
 
-ARG R_VERSION=latest
-ARG RENV_VERSION=1.1.5
-ARG USERNAME=analyst
-ARG TEAM_NAME=zzcollab
-ARG PROJECT_NAME=project
+# ARGs before FROM are available only for FROM instruction
+ARG R_VERSION=4.5.1
 
-FROM rocker/tidyverse:${R_VERSION}
+FROM rocker/r-ver:4.5.1
 
-ARG RENV_VERSION=1.1.5
+# Re-declare ARGs after FROM for use in build stages
 ARG USERNAME=analyst
-ARG TEAM_NAME=zzcollab
-ARG PROJECT_NAME=project
+ARG RENV_VERSION=1.1.5
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Reproducibility-critical environment variables (Pillar 1)
@@ -39,12 +34,18 @@ ENV LANG=en_US.UTF-8 \
     RENV_CONFIG_REPOS_OVERRIDE="https://packagemanager.posit.co/cran/__linux__/noble/latest" \
     ZZCOLLAB_CONTAINER=true
 
-# Install runtime dependencies for X11 (pinned to Ubuntu Noble 24.04)
+# Install runtime and build dependencies (pinned to Ubuntu Noble 24.04)
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     set -ex && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
+        build-essential \
+        pkg-config \
+        jq \
+        libcurl4-openssl-dev=8.5.0-2ubuntu10.6 \
+        libssl-dev=3.0.13-0ubuntu3.6 \
+        libxml2-dev=2.9.14+dfsg-1.3ubuntu3.6 \
         xauth \
         libx11-6 \
         libxt6 \
@@ -55,30 +56,43 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         libjpeg8=8c-2ubuntu11 \
         libicu74 \
         pandoc \
-        curl
+        wget \
+        gdebi-core
+
+# Install Quarto from official binary (not in standard repositories)
+RUN set -ex && \
+    wget -q https://github.com/quarto-dev/quarto-cli/releases/download/v1.3.450/quarto-1.3.450-linux-amd64.deb && \
+    gdebi -n quarto-1.3.450-linux-amd64.deb && \
+    rm quarto-1.3.450-linux-amd64.deb
 
 # Configure R to use Posit Package Manager (pre-compiled Ubuntu binaries)
 RUN echo "options(repos = c(CRAN = 'https://packagemanager.posit.co/cran/__linux__/noble/latest'))" \
         >> /usr/local/lib/R/etc/Rprofile.site
 
-# Install base analysis packages from CRAN
-# Note: These are "base packages" included in the profile for convenience.
-# Project-specific packages are managed via renv and renv.lock.
-RUN --mount=type=cache,target=/tmp/R-cache/${R_VERSION} \
-    R -e "install.packages(c('renv', 'here', 'janitor', \
-        'scales', 'patchwork', 'gt', 'DT', 'skimr', 'DataExplorer'))"
+# Install renv from CRAN
+RUN --mount=type=cache,target=/tmp/R-cache/4.5.1 \
+    R -e "install.packages('renv')"
+
+# Copy project files and restore packages (before USER for root access)
+COPY renv.lock renv.lock
+RUN Rscript -e "renv::restore(prompt=FALSE)"
 
 # Create non-root user and set up environment
-RUN useradd --create-home --shell /bin/bash ${USERNAME} && \
-    chown -R ${USERNAME}:${USERNAME} /usr/local/lib/R/site-library && \
-    mkdir -p /home/${USERNAME}/.cache/R/renv && \
-    chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}/.cache
+RUN useradd --create-home --shell /bin/bash analyst && \
+    chown -R analyst:analyst /usr/local/lib/R/site-library && \
+    mkdir -p /home/analyst/.cache/R/renv && \
+    chown -R analyst:analyst /home/analyst/.cache
+
+# Fix permissions for mounted volumes (GitHub Actions compatibility)
+# Mount may be owned by root; allow analyst to write
+RUN mkdir -p /home/analyst/project && \
+    chown -R analyst:analyst /home/analyst/project
 
 # Switch to non-root user
-USER ${USERNAME}
+USER analyst
 
 # WORKDIR automatically creates directory with correct ownership
-WORKDIR /home/${USERNAME}/project
+WORKDIR /home/analyst/project
 
 # Health check: Verify R is functional
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=2 \
@@ -86,6 +100,6 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=2 \
 
 # Note: Project files mounted at runtime via -v $(pwd):/home/analyst/project
 # This keeps image reusable across projects. Run renv::restore() in first session.
-# .Rprofile is accessed from the mounted volume for auto-snapshot functionality.
+# For project-specific images, add COPY renv.lock and RUN renv::restore() before USER
 
 CMD ["R", "--quiet"]
