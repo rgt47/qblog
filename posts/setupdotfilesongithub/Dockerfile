@@ -54,9 +54,9 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential 
-        libcurl4-openssl-dev 
-        libssl-dev 
-        libxml2-dev \
+        libcurl4-openssl-dev=8.5.0-2ubuntu10.6 
+        libssl-dev=3.0.13-0ubuntu3.6 
+        libxml2-dev=2.9.14+dfsg-1.3ubuntu3.6 \
         libfontconfig1=2.15.0-1.1ubuntu2 \
         libfreetype6=2.13.2+dfsg-1build3 \
         libpng16-16t64=1.6.43-5build1 \
