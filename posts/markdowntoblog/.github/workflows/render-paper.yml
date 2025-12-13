@@ -33,13 +33,14 @@ jobs:
           echo "Building computational environment..."
           docker build -t compendium-env .
 
-      - name: Restore R packages
+      - name: Restore R packages and install Quarto
         run: |
           echo "Restoring R package environment..."
           docker run --rm -v ${{ github.workspace }}:/home/analyst/project -w /home/analyst/project \
-            compendium-env bash -c 'mkdir -p .cache/R/renv compendium-env bash -c 'mkdir -p .cache/R/renv && chmod -R 777 .cache && Rscript -e "install.packages(\"renv\"); renv::restore()"'compendium-env bash -c 'mkdir -p .cache/R/renv && chmod -R 777 .cache && Rscript -e "install.packages(\"renv\"); renv::restore()"' install.packages("renv") compendium-env bash -c 'mkdir -p .cache/R/renv && chmod -R 777 .cache && Rscript -e "install.packages(\"renv\"); renv::restore()"'compendium-env bash -c 'mkdir -p .cache/R/renv && chmod -R 777 .cache && Rscript -e "install.packages(\"renv\"); renv::restore()"' renv::restore()'
+            -e RENV_PATHS_CACHE=/tmp/renv-cache \
+            compendium-env Rscript -e 'install.packages("renv"); renv::restore(); install.packages("quarto")'
 
-      - name: Render paper
+      - name: Render paper with Quarto
         run: |
           echo "Rendering manuscript..."
           docker run --rm -v ${{ github.workspace }}:/home/analyst/project -w /home/analyst/project \
@@ -56,14 +57,13 @@ jobs:
             exit 1
           fi
 
-      - name: Upload paper PDF
+      - name: Upload rendered paper
         uses: actions/upload-artifact@v4
-        if: always()  # Upload even if rendering fails (for debugging)
+        if: always()
         with:
           name: rendered-paper
           path: |
             analysis/paper/index.html
-            
           retention-days: 30
           if-no-files-found: warn
 
@@ -77,4 +77,5 @@ jobs:
           echo "**Download the HTML**: Click 'Summary' above → 'Artifacts' section → 'rendered-paper'" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**File size**: $(ls -lh analysis/paper/index.html | awk '{print $5}')" >> $GITHUB_STEP_SUMMARY
-          echo "**Computational environment**: rocker/r-ver with Quarto" >> $GITHUB_STEP_SUMMARY
+          echo "**Computational environment**: rocker/r-ver:4.5.1 with Quarto" >> $GITHUB_STEP_SUMMARY
+          echo ""
