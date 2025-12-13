@@ -47,12 +47,16 @@ RUN if [ "${TARGETPLATFORM}" = "linux/arm64" ]; then \
         echo "Running AMD64 image via emulation (slower)" >&2; \
     fi
 
-# Install runtime dependencies (pinned to Ubuntu Noble 24.04)
+# Install runtime and build dependencies (pinned to Ubuntu Noble 24.04)
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     set -ex && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
+        build-essential 
+        libcurl4-openssl-dev 
+        libssl-dev 
+        libxml2-dev \
         libfontconfig1=2.15.0-1.1ubuntu2 \
         libfreetype6=2.13.2+dfsg-1build3 \
         libpng16-16t64=1.6.43-5build1 \

@@ -34,12 +34,16 @@ ENV LANG=en_US.UTF-8 \
     RENV_CONFIG_REPOS_OVERRIDE="https://packagemanager.posit.co/cran/__linux__/noble/latest" \
     ZZCOLLAB_CONTAINER=true
 
-# Install runtime dependencies for X11 (pinned to Ubuntu Noble 24.04)
+# Install runtime and build dependencies for X11 (pinned to Ubuntu Noble 24.04)
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     set -ex && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
+        build-essential 
+        libcurl4-openssl-dev 
+        libssl-dev 
+        libxml2-dev \
         xauth \
         libx11-6 \
         libxt6 \
