@@ -53,7 +53,9 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     set -ex && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
-        build-essential 
+        build-essential \
+
+        pkg-config \
         libcurl4-openssl-dev=8.5.0-2ubuntu10.6 
         libssl-dev=3.0.13-0ubuntu3.6 
         libxml2-dev=2.9.14+dfsg-1.3ubuntu3.6 \
