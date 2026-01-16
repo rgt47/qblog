@@ -1,0 +1,619 @@
+---
+title: "Creating a Data Science Blog Post: A Step-by-Step Guide"
+author: "Your Name"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Creating a Data Science Blog Post: A Step-by-Step Guide}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+
+  fig.width = 7,
+
+  fig.height = 5,
+  eval = FALSE
+)
+```
+
+## Introduction
+
+This vignette walks you through creating a professional data science blog post
+using the zzcollab framework. By the end, you will understand how to:
+structure your analysis, write reproducible code, create effective
+visualizations, and publish your work.
+We use the Palmer Penguins blog post in this repository as a working example.
+
+## Prerequisites
+
+Before starting, ensure you have:
+1. **Docker** installed and running
+2. **Git** for version control
+3. Basic familiarity with R and RMarkdown/Quarto
+
+## Part 1: Setting Up Your Project
+
+### Step 1.1: Create the Project Structure
+
+The zzcollab framework provides a standardized structure for reproducible
+research. If you are starting fresh:
+```bash
+# Create project directory
+mkdir my-blog-post && cd my-blog-post
+
+# Initialize zzcollab project
+zzcollab
+
+# Build Docker environment
+make docker-build
+```
+
+If you are working within an existing zzcollab project (like this one), the
+structure already exists:
+```
+my-blog-post/
+├── analysis/
+│   ├── paper/          # Your blog post lives here
+│   │   └── index.qmd   # Main Quarto document
+│   ├── scripts/        # Analysis scripts
+│   ├── data/           # Raw and derived data
+│   │   ├── raw_data/
+│   │   └── derived_data/
+│   └── figures/        # Generated plots
+├── R/                  # Reusable functions
+├── tests/              # Unit and integration tests
+├── Dockerfile          # Computational environment
+├── renv.lock           # Package versions
+└── Makefile            # Build automation
+```
+
+### Step 1.2: Enter the Development Environment
+
+Always work inside the Docker container to ensure reproducibility:
+```bash
+# Enter the container (recommended)
+make r
+
+# Alternative: start RStudio Server
+make docker-rstudio
+# Then open http://localhost:8787 in your browser
+# Username: analyst, Password: analyst
+```
+
+### Step 1.3: Install Required Packages
+
+Inside the container, install packages you need:
+```r
+# Install packages for data analysis
+install.packages(c("palmerpenguins", "tidyverse", "broom"))
+
+# Install packages for visualization
+install.packages(c("corrplot", "GGally", "patchwork"))
+
+# Install packages for reporting
+install.packages(c("knitr", "here"))
+
+# Exit R (packages auto-save to renv.lock)
+q()
+```
+
+When you exit the container, packages are automatically captured in
+`renv.lock`.
+
+## Part 2: Planning Your Blog Post
+
+### Step 2.1: Define Your Objectives
+
+Before writing code, answer these questions:
+1. **What question am I answering?**
+   Example: "Can we predict penguin body mass from morphometric measurements?"
+2. **Who is my audience?**
+   Example: "Data science beginners learning regression"
+3. **What should readers learn?**
+   Example: "EDA techniques, correlation analysis, simple linear regression"
+
+### Step 2.2: Outline Your Post
+
+A well-structured data science blog post typically follows this pattern:
+
+1. **Introduction** (10%)
+   - Hook the reader
+   - State the problem
+   - Preview what they will learn
+2. **Data Overview** (15%)
+   - Introduce the dataset
+   - Show basic statistics
+   - Identify data quality issues
+3. **Exploratory Data Analysis** (25%)
+   - Visualize distributions
+   - Explore relationships
+   - Identify patterns
+4. **Analysis/Modeling** (30%)
+   - Build models
+   - Interpret results
+   - Validate assumptions
+5. **Limitations** (10%)
+   - Acknowledge constraints
+   - Discuss assumptions
+   - Suggest improvements
+6. **Conclusion** (10%)
+   - Summarize findings
+   - Provide next steps
+   - Call to action
+
+## Part 3: Writing the Quarto Document
+
+### Step 3.1: Create the YAML Header
+
+The YAML header controls document metadata and rendering. Create or edit
+`analysis/paper/index.qmd`:
+```yaml
+---
+title: "Your Blog Post Title"
+subtitle: "A descriptive subtitle"
+author: "Your Name"
+date: "2025-01-01"
+categories: [R Programming, Data Science, Your Topic]
+description: "A brief description for search engines and previews"
+image: "path/to/hero-image.jpg"
+document-type: "blog"
+draft: true
+execute:
+  echo: true
+  warning: false
+  message: false
+format:
+  html:
+    code-fold: false
+    code-tools: false
+---
+```
+
+Key YAML options explained:
+- **categories**: Tags for filtering/searching your post
+- **description**: Appears in search results and social shares
+- **image**: Hero image shown in blog listings
+- **draft**: Set to `true` while working, `false` when ready to publish
+- **execute**: Controls code chunk behavior
+  - `echo: true` shows code in output
+  - `warning: false` hides warning messages
+  - `message: false` hides package loading messages
+
+### Step 3.2: Write the Introduction
+
+Start with a hook that captures attention:
+```markdown
+# Introduction
+
+Welcome to our exploration of the Palmer penguins dataset! In this post,
+we will journey through the complete data science workflow, from initial
+data exploration to building our first predictive model.
+
+The Palmer penguins dataset has become a beloved alternative to the iris
+dataset, providing real-world biological data that is both engaging and
+educationally valuable.
+
+In this post, we will focus on:
+- Getting familiar with the Palmer penguins dataset
+- Conducting thorough exploratory data analysis
+- Understanding relationships between morphometric variables
+- Building our first simple regression model
+```
+
+### Step 3.3: Load Libraries and Data
+
+Create a setup code chunk:
+````markdown
+```{r}
+#| label: setup
+library(palmerpenguins)
+library(tidyverse)
+library(broom)
+library(corrplot)
+library(GGally)
+library(patchwork)
+library(knitr)
+
+# Set consistent theme
+theme_set(theme_minimal(base_size = 12))
+
+# Define color palette
+penguin_colors <- c(
+  "Adelie" = "#FF6B6B",
+  "Chinstrap" = "#9B59B6",
+  "Gentoo" = "#2E86AB"
+)
+```
+````
+
+Explanation of chunk options:
+- `#| label: setup` names the chunk for reference
+- Libraries loaded silently (due to `message: false` in YAML)
+
+### Step 3.4: Introduce the Data
+
+Show readers what they are working with:
+````markdown
+# Meet the Data
+
+Let us start by understanding our dataset:
+
+```{r}
+#| label: data-overview
+data(penguins)
+
+cat("Dataset dimensions:", nrow(penguins), "observations x",
+    ncol(penguins), "variables\n")
+
+# Check for missing values
+missing_counts <- sapply(penguins, function(x) sum(is.na(x)))
+cat("Total missing values:", sum(missing_counts), "\n")
+
+# Create clean dataset
+penguins_clean <- penguins |> drop_na()
+cat("Clean dataset:", nrow(penguins_clean), "observations\n")
+
+# Show structure
+glimpse(penguins_clean)
+```
+````
+
+### Step 3.5: Create Visualizations
+
+Effective visualizations tell a story. Here is a pattern for creating and
+saving plots:
+````markdown
+## Exploratory Visualizations
+
+```{r}
+#| label: fig-species-distribution
+#| fig-cap: "Distribution of penguin species in the dataset"
+# Create the plot
+species_plot <- penguins_clean |>
+  count(species) |>
+  mutate(percentage = n / sum(n) * 100) |>
+  ggplot(aes(x = species, y = n, fill = species)) +
+  geom_col(alpha = 0.8) +
+  geom_text(aes(label = paste0(n, "\n(", round(percentage, 1), "%)")),
+            vjust = -0.5) +
+  scale_fill_manual(values = penguin_colors) +
+  labs(
+    title = "Species Distribution",
+    x = "Species",
+    y = "Count"
+  ) +
+  theme(legend.position = "none")
+
+# Display the plot
+print(species_plot)
+
+# Save for later use
+ggsave(
+  "species-distribution.png",
+  plot = species_plot,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
+```
+````
+
+Key visualization principles:
+1. **Always label axes** with units
+2. **Use consistent colors** across related plots
+3. **Add informative titles** and captions
+4. **Save high-resolution versions** (300 DPI minimum)
+
+### Step 3.6: Build and Present Models
+
+When presenting statistical models, show the process:
+````markdown
+## Simple Linear Regression
+
+Let us build a model predicting body mass from flipper length:
+
+```{r}
+#| label: model-fitting
+# Fit the model
+model <- lm(body_mass_g ~ flipper_length_mm, data = penguins_clean)
+
+# Extract results
+model_summary <- glance(model)
+coefficients <- tidy(model, conf.int = TRUE)
+
+# Present key findings
+cat("Model Performance:\n")
+cat(sprintf("  R-squared: %.3f (%.1f%% variance explained)\n",
+            model_summary$r.squared,
+            model_summary$r.squared * 100))
+cat(sprintf("  RMSE: %.1f grams\n", sigma(model)))
+```
+
+### Model Interpretation
+
+```{r}
+#| label: model-interpretation
+# Extract coefficient values
+intercept <- coefficients$estimate[1]
+slope <- coefficients$estimate[2]
+slope_ci_low <- coefficients$conf.low[2]
+slope_ci_high <- coefficients$conf.high[2]
+
+cat("Model equation:\n")
+cat(sprintf("  Body Mass = %.1f + %.1f x Flipper Length\n",
+            intercept, slope))
+cat(sprintf("\nFor each 1mm increase in flipper length,\n"))
+cat(sprintf("body mass increases by %.1f grams (95%% CI: %.1f to %.1f)\n",
+            slope, slope_ci_low, slope_ci_high))
+```
+````
+
+### Step 3.7: Add Images for Visual Interest
+
+Break up dense text with relevant images:
+```markdown
+![Penguins in their natural habitat](path/to/penguin-image.jpg){.img-fluid
+width="50%"}
+*Caption: Brief description of the image*
+```
+
+Image best practices:
+- Use `.img-fluid` class for responsive sizing
+- Specify width as percentage for flexibility
+- Add descriptive alt text for accessibility
+- Include captions for context
+
+### Step 3.8: Document Limitations
+
+Every analysis has limitations. Be transparent:
+```markdown
+## Limitations
+
+Before interpreting our results, consider these constraints:
+
+1. **Sample Size**: Our analysis uses 333 observations after removing
+   missing values
+
+2. **Temporal Scope**: Data collected 2007-2009; relationships may have
+   changed
+
+3. **Geographic Scope**: Limited to Palmer Station, Antarctica
+
+4. **Model Assumptions**:
+   - Linear relationship assumed
+   - Residual clustering by species suggests missing predictors
+
+5. **Measurement Error**: Morphometric measurements have inherent
+   uncertainty not captured in the model
+```
+
+### Step 3.9: Write a Strong Conclusion
+
+Summarize and point forward:
+```markdown
+## Conclusion
+
+### What We Learned
+
+1. **Strong Predictive Relationship**: Flipper length explains 76% of body
+   mass variance (R-squared = 0.762)
+
+2. **Species Patterns**: Clear differences exist between penguin species
+   that our simple model does not capture
+
+3. **Practical Application**: Flipper measurements can serve as a
+   reasonable proxy for body condition assessment
+
+### Next Steps
+
+In the next post, we will improve our model by:
+- Adding species as a predictor
+- Exploring interaction effects
+- Validating model assumptions
+
+Have questions? Reach out on [Twitter](https://twitter.com/yourhandle) or
+[GitHub](https://github.com/yourusername).
+```
+
+## Part 4: Adding Professional Polish
+
+### Step 4.1: Use Callout Boxes
+
+Quarto provides callout boxes for emphasis:
+```markdown
+::: {.callout-note}
+## Key Insight
+Flipper length is the strongest single predictor of body mass.
+:::
+
+::: {.callout-warning}
+## Caution
+Do not extrapolate predictions beyond the observed data range.
+:::
+
+::: {.callout-tip}
+## Pro Tip
+Save your plots at 300 DPI for publication-quality figures.
+:::
+```
+
+### Step 4.2: Create Tables
+
+Present data in formatted tables:
+````markdown
+```{r}
+#| label: tbl-summary
+#| tbl-cap: "Summary statistics by species"
+penguins_clean |>
+  group_by(species) |>
+  summarise(
+    n = n(),
+    mean_mass = round(mean(body_mass_g), 0),
+    sd_mass = round(sd(body_mass_g), 0),
+    .groups = "drop"
+  ) |>
+  kable(
+    col.names = c("Species", "N", "Mean Mass (g)", "SD")
+  )
+```
+````
+
+### Step 4.3: Add Navigation for Series
+
+If your post is part of a series:
+```markdown
+::: {.callout-note appearance="simple"}
+## Blog Series Navigation
+
+This is **Part 1** of a 5-part series:
+
+1. **Part 1: EDA and Simple Regression** (This post)
+2. [Part 2: Multiple Regression](../part2/)
+3. [Part 3: Cross-Validation](../part3/)
+4. [Part 4: Model Diagnostics](../part4/)
+5. [Part 5: Model Comparison](../part5/)
+:::
+```
+
+### Step 4.4: Include Reproducibility Information
+
+End with session information:
+````markdown
+## Reproducibility
+
+```{r}
+#| label: session-info
+#| echo: false
+sessionInfo()
+```
+````
+
+## Part 5: Testing and Publishing
+
+### Step 5.1: Render Locally
+
+Before publishing, test your document:
+```bash
+# Enter the container
+make r
+
+# Inside the container, render the document
+quarto render analysis/paper/index.qmd --to html
+
+# Check the output
+# Open analysis/paper/index.html in a browser
+```
+
+### Step 5.2: Fix Common Issues
+
+**Problem: Code chunk errors**
+- Check that all packages are installed
+- Verify data files exist at expected paths
+- Run chunks individually to identify the issue
+
+**Problem: Images not displaying**
+- Verify file paths are correct (relative to the .qmd file)
+- Check that image files exist
+- Use forward slashes in paths, even on Windows
+
+**Problem: Slow rendering**
+- Cache expensive computations with `#| cache: true`
+- Pre-compute results and load from files
+- Reduce figure resolution during drafting
+
+### Step 5.3: Validate Package Dependencies
+
+Before committing, ensure all packages are tracked:
+```bash
+# Exit the container first, then run validation
+make check-renv
+```
+
+This pure-shell validation:
+- Scans all R files for package usage
+- Verifies packages are in DESCRIPTION
+- Confirms packages are locked in renv.lock
+- Auto-fixes missing packages from CRAN
+
+### Step 5.4: Run Tests
+
+Verify your analysis scripts work:
+```bash
+make docker-test
+```
+
+### Step 5.5: Commit and Push
+
+When ready to publish:
+```bash
+# Stage changes
+git add analysis/paper/index.qmd
+git add analysis/figures/
+git add renv.lock DESCRIPTION
+
+# Commit with descriptive message
+git commit -m "Add Palmer Penguins EDA blog post"
+
+# Push to trigger CI/CD
+git push
+```
+
+### Step 5.6: Remove Draft Status
+
+When satisfied with your post, update the YAML:
+```yaml
+draft: false  # Changed from true
+```
+
+## Part 6: Best Practices Summary
+
+### Writing Style
+- Write in active voice
+- Explain code before showing it
+- Use headings to create scannable structure
+- Keep paragraphs short (3-5 sentences)
+
+### Code Style
+- Use the native pipe `|>` (not `%>%`)
+- Follow snake_case naming
+- Add comments explaining "why", not "what"
+- Keep code chunks focused on one task
+
+### Visualization Style
+- One main message per plot
+- Use consistent color palettes
+- Label everything clearly
+- Save at publication resolution (300 DPI)
+
+### Reproducibility
+- Always work in Docker containers
+- Track all packages in renv.lock
+- Use relative paths with `here::here()`
+- Include session information
+
+### Engagement
+- Start with a compelling hook
+- Use images to break up text
+- End with clear next steps
+- Invite reader interaction
+
+## Conclusion
+
+Creating a professional data science blog post requires attention to
+structure, code quality, visualization design, and reproducibility. By
+following this guide, you will produce content that is both engaging for
+readers and scientifically rigorous.
+
+The zzcollab framework handles the infrastructure complexity, letting you
+focus on what matters: telling a compelling data story.
+
+## Additional Resources
+- [Quarto Documentation](https://quarto.org/docs/guide/)
+- [R for Data Science](https://r4ds.hadley.nz/)
+- [ggplot2 Book](https://ggplot2-book.org/)
+- [Palmer Penguins Package](https://allisonhorst.github.io/palmerpenguins/)
