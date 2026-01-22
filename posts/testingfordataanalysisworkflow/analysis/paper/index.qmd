@@ -1,12 +1,14 @@
 ---
-title: "Constructing tests for data analysis workflows"
-subtitle: "A compelling subtitle that expands on the main title"
+title: "Constructing Tests for Data Analysis Workflows"
+subtitle: "A practical guide to testing reproducible research pipelines in R"
 author: "RG Thomas"
 date: "2025-07-25"
 document-type: "blog"
 draft: true
-categories: [R Programming, Data Science, Statistical Computing]
-description: "A concise 1-2 sentence description that summarizes what readers will learn from this post"
+categories: [R Programming, Data Science, Statistical Computing, Reproducibility]
+description: "Learn how to construct comprehensive tests for data analysis
+  workflows using testthat, assertr, and other R testing frameworks to ensure
+  computational reproducibility and result correctness"
 image: "../../images/posts/ucsd-geisel-library.jpg"
 execute:
   echo: true
@@ -18,411 +20,677 @@ format:
     code-tools: false
 ---
 
-![UCSD Geisel Library - A hub for research and academic discovery](../../images/posts/ucsd-geisel-library.jpg){.img-fluid}
-
-*The Geisel Library at UC San Diego, where research and innovation converge. **TEMPLATE NOTE**: Replace this hero image with one relevant to your specific topic while maintaining visual impact and professional appearance. Consider using high-quality images from your field, data visualizations, or compelling stock photos that set the tone for your content.*
+![UCSD Geisel Library](../../images/posts/ucsd-geisel-library.jpg){.img-fluid}
 
 # Introduction
 
-<!-- Context setting and motivation (150-200 words)
-- Why this topic matters
-- What gap this fills
-- What readers will learn
-- Brief overview of approach -->
+Testing data analysis workflows presents unique challenges compared to
+traditional software development. While package development focuses on testing
+isolated functions with predictable inputs and outputs, data analysis involves
+testing complex pipelines, validating data quality, ensuring reproducibility,
+and verifying that analytical results are correct and meaningful.
 
-In this post, we'll explore 
-an underutilized process in the data scientists workflow that can make a major
-difference in the long term reproducibility of the data analysis product. 
-This is particularly relevant for today's scientist  because of the increased
-emphasis on reproducibility.
+Traditional software engineering has embraced testing for decades. Data science
+often lags behind, with practitioners relying on informal validation: "It's
+just exploratory analysis," "The results look reasonable," or "I checked it
+manually." These approaches fail to scale and provide no protection against
+regression when code or data change.
 
-By the end of this post, you'll be able to:
+This guide provides strategies for testing data analysis workflows in R,
+drawing on established software engineering practices while addressing the
+specific needs of computational research.
 
-- [Learning objective 1]
-- [Learning objective 2] 
-- [Learning objective 3]
+By the end of this post, you will be able to:
+
+- Distinguish between computational reproducibility and result correctness
+- Implement unit tests, data validation tests, and integration tests
+- Use the testthat framework for structured testing
+- Apply assertr for pipeline-friendly data validation
+- Test reproducibility through seed management and known-result comparison
+- Set up continuous integration for automated testing
 
 # Prerequisites and Setup
 
-<!-- Include this section if applicable -->
-
-Before we begin, ensure you have the following:
-
 **Required Packages:**
+
 ```{r}
 #| eval: false
-# Install required packages if not already installed
-install.packages(c("package1", "package2", "package3"))
+install.packages(c("testthat", "assertr", "palmerpenguins", "dplyr",
+                   "ggplot2", "validate"))
 ```
 
 **Load Libraries:**
+
 ```{r}
-#| eval: false
-# Replace with your actual packages
-# library(dplyr)
-# library(ggplot2)
-# library(readr)
+library(testthat)
+library(assertr)
+library(palmerpenguins)
+library(dplyr)
+library(ggplot2)
 ```
 
 **Sample Data:**
-```{r}
-#| eval: false
-# Replace with your actual data loading
-# data <- read_csv("your_data.csv")
-# data <- mtcars  # Example with built-in data
-```
-
-# Main Section 1: [Descriptive Heading]
-
-<!-- First major concept/step
-- Explain the theory/concept
-- Provide simple examples
-- Include 1-2 code blocks -->
-
-[Explanation of first main concept]
 
 ```{r}
-#| eval: false
-# Replace with your actual example code
-# result <- your_function(data)
-# print(result)
+data(penguins)
+glimpse(penguins)
 ```
 
-## Subsection 1.1: [More Specific Topic]
+# Why Test Data Analysis Code?
 
-<!-- Use subsections for detailed breakdowns when needed -->
+## The Testing Gap in Data Science
 
-[More detailed explanation or variation]
+Data analysis workflows fail in ways that differ from traditional software:
 
-![Optional supporting visualization with descriptive caption](../../images/posts/git.png){.img-fluid}
+**Data problems:**
 
-# Main Section 2: [Implementation/Analysis]
+- Column types change between data pulls
+- Missing values appear in unexpected places
+- IDs fail to match across tables
 
-<!-- Second major section
-- Build on previous concepts
-- Show practical application
-- Include technical visualization -->
+**Code problems:**
 
-[Detailed implementation or analysis]
+- Function behavior changes with package updates
+- Edge cases cause silent failures
+- Copy-paste errors accumulate
 
-```{r}
-#| eval: false
-# Replace with your actual advanced example
-# advanced_result <- complex_analysis(data)
-# summary(advanced_result)
-```
+**Analysis problems:**
 
-## Subsection 2.1: [Handling Edge Cases]
+- Results change when re-run
+- Different random seeds produce different answers
+- Collaborators cannot reproduce findings
 
-<!-- Common pattern: addressing limitations or special cases -->
+## Two Goals of Testing
 
-[Discussion of potential issues and solutions]
+Data analysis testing serves two primary goals:
 
-```{r}
-#| eval: false
-# Replace with your actual error handling code
-# tryCatch({
-#   risky_operation(data)
-# }, error = function(e) {
-#   message("Error handled: ", e$message)
-# })
-```
+1. **Computational Reproducibility**: Another researcher can use your code and
+   data to independently obtain identical results. Tests verify that the
+   computational pipeline works.
 
-# Main Section 3: [Results/Advanced Applications]
+2. **Result Correctness**: The results generated by the code are accurate and
+   meaningful. Tests validate expected properties of outputs.
 
-<!-- Third major section
-- Show results or advanced usage
-- Include main technical visualization
-- Demonstrate real-world application -->
+As Wilson et al. (2017) note, "An important aspect of this is to validate the
+code using software development practices that prevent errors and software
+testing methods that can help detect them when they occur."
 
-[Analysis of results or advanced applications]
+# Types of Tests for Data Analysis
+
+## Testing Taxonomy
+
+| Test Type | What It Checks | When to Use |
+|-----------|---------------|-------------|
+| Unit tests | Individual functions | Helper functions, utilities |
+| Data validation | Data quality | After loading, after transforms |
+| Integration | Full pipeline | Before finalizing analysis |
+| Reproducibility | Same results | Random processes, cross-platform |
+
+## Unit Tests
+
+Unit tests verify that individual functions behave correctly in isolation.
+Test with known inputs and expected outputs:
 
 ```{r}
 #| eval: false
-# Replace with your actual final analysis
-# final_plot <- ggplot(data, aes(x, y)) + 
-#   geom_point() +
-#   theme_minimal()
-# print(final_plot)
+test_that("outlier detection function works", {
+  test_data <- c(1, 2, 3, 100, 4, 5)
+  outliers <- detect_outliers(test_data, method = "iqr")
+
+  expect_equal(outliers, 100)
+  expect_length(outliers, 1)
+})
 ```
 
-![Data visualization workflow - from raw data to insights](../../images/posts/quarto.jpg){.img-fluid}
+## Data Validation Tests
 
-*TEMPLATE NOTE: This is a good location for a second large, compelling image. Consider using a relevant technical diagram, process flow, screenshot of results, or another high-impact visual that supports your main content. This creates visual rhythm and helps maintain reader engagement throughout the post.*
-
-# Main Section 4: [Performance/Comparison] {.optional}
-
-<!-- Optional section for performance analysis or comparisons -->
-
-[Performance analysis or comparison with alternative approaches]
+Data validation tests ensure data meets quality requirements before analysis
+proceeds:
 
 ```{r}
 #| eval: false
-# Replace with your actual benchmarking code
-# system.time(method1(data))
-# system.time(method2(data))
+test_that("data meets quality standards", {
+  data <- read.csv("analysis/data/raw_data/penguins.csv")
+
+  # Check structure
+  expect_equal(ncol(data), 8)
+  expect_true(all(c("species", "body_mass_g") %in% names(data)))
+
+  # Check ranges
+  expect_true(all(data$body_mass_g > 0, na.rm = TRUE))
+  expect_true(all(data$body_mass_g < 10000, na.rm = TRUE))
+})
 ```
 
-# Results and Key Findings
+## Integration Tests
 
-<!-- Summary of main results (100-150 words)
-- Highlight key insights
-- Quantify improvements/findings
-- Address original objectives -->
+Integration tests verify that components work together through the complete
+workflow:
 
-Our analysis revealed several key findings:
+```{r}
+#| eval: false
+test_that("analysis pipeline runs successfully", {
+  expect_no_error({
+    raw_data <- load_raw_data()
+    clean_data <- clean_data(raw_data)
+    model <- fit_model(clean_data)
+    results <- generate_results(model)
+  })
 
-1. **[Key finding 1]**: [Brief explanation with numbers if applicable]
-2. **[Key finding 2]**: [Brief explanation]
-3. **[Key finding 3]**: [Brief explanation]
+  expect_s3_class(results, "data.frame")
+  expect_true(nrow(results) > 0)
+})
+```
 
-![Research insights emerging from systematic analysis - like knowledge
-discovered in UC San Diego's academic environment](../../images/posts/ucsd-geisel-library.jpg){.img-fluid}
+## Reproducibility Tests
 
-*Just as the Geisel Library serves as a foundation for discovery, our analysis provides a solid foundation for understanding [your topic]. **TEMPLATE NOTE**: This is the primary results image location - replace with your most important visualization, key findings chart, or compelling summary graphic that encapsulates your main conclusions.*
+Reproducibility tests confirm that results are deterministic when using the
+same random seed:
 
-# Limitations and Considerations
+```{r}
+#| eval: false
+test_that("bootstrap analysis is reproducible", {
+  set.seed(42)
+  results1 <- bootstrap_analysis(data, n_boots = 1000)
 
-<!-- Honest assessment of limitations and model assumptions -->
+  set.seed(42)
+  results2 <- bootstrap_analysis(data, n_boots = 1000)
 
-While this approach is effective, there are some important considerations:
+  expect_equal(results1$estimate, results2$estimate)
+  expect_equal(results1$ci_lower, results2$ci_lower)
+})
+```
 
-## Model Assumptions
-- **[Assumption 1]**: [e.g., Linearity assumption - check with residual plots]
-- **[Assumption 2]**: [e.g., Independence of observations]
-- **[Assumption 3]**: [e.g., Homoscedasticity - constant variance]
+# The testthat Framework
 
-## Data Limitations
-- **Sample size**: [Discussion of adequacy for conclusions]
-- **Generalizability**: [Population this applies to vs. broader populations]
-- **Missing data**: [How missing values were handled and potential bias]
+## testthat Basics
 
-## Method Limitations
-- **[Limitation 1]**: [Explanation and potential workarounds]
-- **[Limitation 2]**: [When this approach may not be appropriate]
-- **Performance considerations**: [Computational requirements, scalability]
+The testthat package provides the foundation for testing in R. Tests follow the
+Arrange-Act-Assert pattern:
 
-# Future Extensions
+```{r}
+#| eval: false
+library(testthat)
 
-<!-- Potential next steps or improvements -->
+test_that("description of what we're testing", {
+  # Arrange: set up test data
+  x <- c(1, 2, 3, 4, 5)
 
-This work could be extended in several directions:
+  # Act: run the code
+  result <- mean(x)
 
-- [Extension idea 1]
-- [Extension idea 2]
-- [Extension idea 3]
+  # Assert: check expectations
+  expect_equal(result, 3)
+})
+```
+
+## Common Expectations
+
+testthat provides a rich vocabulary for expressing test expectations:
+
+```{r}
+#| eval: false
+# Equality
+expect_equal(result, expected)          # Allows tolerance
+expect_identical(result, expected)      # Exact match
+
+# Logical
+expect_true(condition)
+expect_false(condition)
+
+# Types and classes
+expect_type(x, "double")
+expect_s3_class(model, "lm")
+
+# Errors and warnings
+expect_error(bad_function())
+expect_warning(risky_function())
+expect_no_error(safe_function())
+```
+
+## Test File Organization
+
+Organize tests following R package conventions:
+
+```
+tests/
+├── testthat.R              # Test runner
+└── testthat/
+    ├── helper-test-data.R  # Shared test utilities
+    ├── test-data-loading.R
+    ├── test-data-cleaning.R
+    ├── test-models.R
+    └── test-visualization.R
+```
+
+Test files must start with `test-` to be discovered by the test runner.
+
+## Helper Functions
+
+Create reusable test utilities in `helper-*.R` files. These are automatically
+loaded before tests run:
+
+```{r}
+#| eval: false
+# helper-test-data.R
+create_test_penguins <- function(n = 50) {
+  data.frame(
+    species = sample(c("Adelie", "Chinstrap", "Gentoo"), n, replace = TRUE),
+    bill_length_mm = rnorm(n, mean = 44, sd = 5),
+    body_mass_g = rnorm(n, mean = 4200, sd = 800)
+  )
+}
+
+expect_valid_model <- function(model) {
+  expect_s3_class(model, "lm")
+  expect_true(length(coef(model)) > 0)
+  expect_true(!any(is.na(coef(model))))
+}
+```
+
+## Running Tests
+
+```{r}
+#| eval: false
+# Run all tests
+devtools::test()
+
+# Run specific test file
+testthat::test_file("tests/testthat/test-data-cleaning.R")
+
+# Run tests matching a pattern
+testthat::test_dir("tests/testthat", filter = "model")
+```
+
+# Data Validation with assertr
+
+## Pipeline-Friendly Assertions
+
+The assertr package integrates data validation into tidyverse pipelines.
+Assertions fail loudly when violated:
+
+```{r}
+#| eval: false
+library(assertr)
+
+penguins |>
+  verify(nrow(.) > 300) |>
+  verify(ncol(.) == 8) |>
+  assert(within_bounds(0, 10000), body_mass_g) |>
+  assert(in_set("Adelie", "Chinstrap", "Gentoo"), species) |>
+  insist(within_n_sds(3), bill_length_mm)
+```
+
+## assertr Functions
+
+The package provides several assertion functions:
+
+- `verify()`: Check that a logical condition is TRUE
+- `assert()`: Check that a predicate holds for a column
+- `insist()`: Check that a predicate holds using row-wise computation
+
+## Practical Example
+
+```{r}
+penguins_validated <- penguins |>
+  verify(nrow(.) > 300) |>
+  assert(not_na, species, island) |>
+  assert(within_bounds(2000, 7000), body_mass_g)
+
+cat("Validation passed:", nrow(penguins_validated), "rows\n")
+```
+
+# Custom Validation Rules
+
+## Domain-Specific Validation
+
+Create validation functions tailored to your data domain:
+
+```{r}
+#| eval: false
+validate_penguin_data <- function(data) {
+  test_that("penguin data validation", {
+    # Required columns exist
+    required_cols <- c("species", "island", "bill_length_mm",
+                       "bill_depth_mm", "flipper_length_mm",
+                       "body_mass_g", "sex", "year")
+    expect_true(all(required_cols %in% names(data)))
+
+    # Species are valid
+    valid_species <- c("Adelie", "Chinstrap", "Gentoo")
+    expect_true(all(data$species %in% valid_species))
+
+    # Measurements are positive
+    expect_true(all(data$bill_length_mm > 0, na.rm = TRUE))
+    expect_true(all(data$body_mass_g > 0, na.rm = TRUE))
+
+    # Years are reasonable
+    expect_true(all(data$year >= 2007 & data$year <= 2009))
+  })
+}
+```
+
+## Testing Data Transformations
+
+Test that data cleaning functions produce expected results:
+
+```{r}
+#| eval: false
+test_that("clean_penguins removes missing values correctly", {
+  # Create test data with known missing pattern
+  test_data <- data.frame(
+    species = c("Adelie", "Gentoo", "Chinstrap"),
+    bill_length_mm = c(39.1, NA, 46.5),
+    body_mass_g = c(3750, 4500, NA)
+  )
+
+  # Apply cleaning function
+  cleaned <- clean_penguins(test_data)
+
+  # Verify results
+  expect_equal(nrow(cleaned), 1)
+  expect_equal(cleaned$species, "Adelie")
+  expect_false(any(is.na(cleaned)))
+})
+```
+
+# Reproducibility Testing
+
+## Seed Management
+
+Random number seeds are essential for reproducible analysis. Always document
+and test seed usage:
+
+```{r}
+#| eval: false
+test_that("cross-validation is reproducible", {
+  data <- create_test_penguins(100)
+
+  set.seed(123)
+  cv1 <- perform_cv(data, folds = 5)
+
+  set.seed(123)
+  cv2 <- perform_cv(data, folds = 5)
+
+  expect_equal(cv1$fold_assignments, cv2$fold_assignments)
+  expect_equal(cv1$rmse, cv2$rmse)
+})
+```
+
+## Testing Against Known Results
+
+Store expected values from verified runs and test against them:
+
+```{r}
+#| eval: false
+test_that("regression coefficients match expected values", {
+  data(penguins, package = "palmerpenguins")
+  clean_data <- na.omit(penguins)
+
+  model <- lm(body_mass_g ~ flipper_length_mm, data = clean_data)
+  coefs <- coef(model)
+
+  # Test against pre-computed values
+  expect_equal(coefs["(Intercept)"], -5780.83, tolerance = 0.1)
+  expect_equal(coefs["flipper_length_mm"], 49.69, tolerance = 0.01)
+})
+```
+
+## Package Version Testing
+
+Track package versions to identify when results might change:
+
+```{r}
+#| eval: false
+test_that("analysis uses expected package versions", {
+  expect_true(packageVersion("dplyr") >= "1.0.0")
+  expect_true(packageVersion("ggplot2") >= "3.4.0")
+
+  # Check renv lockfile is synchronized
+  if (requireNamespace("renv", quietly = TRUE)) {
+    status <- renv::status()
+    expect_true(status$synchronized)
+  }
+})
+```
+
+# Testing Analysis Scripts
+
+## Script Execution Tests
+
+Verify that analysis scripts run without error:
+
+```{r}
+#| eval: false
+test_that("analysis scripts run without error", {
+  scripts <- c(
+    "scripts/01_load_data.R",
+    "scripts/02_clean_data.R",
+    "scripts/03_fit_models.R",
+    "scripts/04_create_figures.R"
+  )
+
+  for (script in scripts) {
+    expect_true(file.exists(script))
+    expect_no_error(
+      source(script, local = new.env()),
+      info = paste("Failed:", script)
+    )
+  }
+})
+```
+
+## Output Validation
+
+Test that scripts produce expected output files:
+
+```{r}
+#| eval: false
+test_that("scripts produce expected outputs", {
+  source("scripts/02_clean_data.R", local = new.env())
+
+  expect_true(file.exists("analysis/data/derived_data/penguins_clean.rds"))
+
+  clean_data <- readRDS("analysis/data/derived_data/penguins_clean.rds")
+  expect_true(nrow(clean_data) > 300)
+  expect_false(any(is.na(clean_data)))
+})
+```
+
+## Testing Report Rendering
+
+Verify that R Markdown documents render successfully:
+
+```{r}
+#| eval: false
+test_that("report renders successfully", {
+  report_path <- "analysis/paper/paper.Rmd"
+
+  expect_true(file.exists(report_path))
+
+  skip_if_not_installed("tinytex")
+
+  output_dir <- tempdir()
+  expect_no_error({
+    rmarkdown::render(report_path,
+                     output_dir = output_dir,
+                     quiet = TRUE)
+  })
+})
+```
+
+# Continuous Integration
+
+## GitHub Actions for R
+
+Create `.github/workflows/test-analysis.yml`:
+
+```yaml
+name: Test Analysis
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: r-lib/actions/setup-r@v2
+    - uses: r-lib/actions/setup-r-dependencies@v2
+
+    - name: Run tests
+      run: |
+        testthat::test_dir('tests/testthat')
+      shell: Rscript {0}
+```
+
+## Automated Quality Checks
+
+Add data validation and reproducibility checks to CI:
+
+```yaml
+    - name: Data validation
+      run: |
+        source('tests/validate_data.R')
+      shell: Rscript {0}
+
+    - name: Reproducibility check
+      run: |
+        source('tests/reproducibility_check.R')
+      shell: Rscript {0}
+```
+
+Tests run automatically on every push, catching problems before they reach
+collaborators.
+
+# Best Practices
+
+## Testing Philosophy
+
+1. **Test early, not just at the end.** Write tests during exploration, not
+   after the analysis is complete.
+
+2. **Test behavior, not implementation.** Focus on what the function should
+   do, not how it does it.
+
+3. **Use meaningful test names.** Write `"model returns valid coefficients"`
+   rather than `"test model"`.
+
+4. **Test edge cases.** Include empty data, missing values, and extreme values.
+
+## Common Pitfalls
+
+**Avoid:**
+
+- Testing implementation details
+- Overly specific tests that break with minor changes
+- Ignoring random elements
+- Skipping integration tests
+
+**Instead:**
+
+- Test observable behavior
+- Allow appropriate flexibility in tests
+- Always set and document seeds
+- Test full workflows
+
+## Testing Checklist for Projects
+
+- [ ] Data loading tests (file exists, correct dimensions)
+- [ ] Data validation tests (ranges, types, missing patterns)
+- [ ] Function unit tests (known inputs/outputs)
+- [ ] Model tests (coefficients, diagnostics)
+- [ ] Reproducibility tests (seeds, package versions)
+- [ ] Integration tests (full pipeline runs)
+- [ ] Output tests (files created, correct format)
+
+# Complete Example
+
+## Penguins Regression Testing
+
+Here is a complete example testing a regression analysis:
+
+```{r}
+#| eval: false
+# test-regression.R
+
+test_that("body mass model has expected properties", {
+  data(penguins, package = "palmerpenguins")
+  clean_data <- na.omit(penguins)
+
+  model <- lm(body_mass_g ~ flipper_length_mm + species,
+              data = clean_data)
+
+  # Model structure
+  expect_s3_class(model, "lm")
+  expect_equal(length(coef(model)), 4)  # Intercept + 3 predictors
+
+  # Model quality
+  r_squared <- summary(model)$r.squared
+  expect_true(r_squared > 0.8)  # Should explain >80% variance
+
+  # Residuals are reasonable
+  expect_true(abs(mean(resid(model))) < 1e-10)  # ~0
+})
+
+test_that("model is reproducible", {
+  data(penguins, package = "palmerpenguins")
+  clean_data <- na.omit(penguins)
+
+  model1 <- lm(body_mass_g ~ flipper_length_mm + species, data = clean_data)
+  model2 <- lm(body_mass_g ~ flipper_length_mm + species, data = clean_data)
+
+  expect_equal(coef(model1), coef(model2))
+  expect_equal(summary(model1)$r.squared, summary(model2)$r.squared)
+})
+```
 
 # Conclusion
 
-<!-- Wrap-up and call to action (100-150 words)
-- Reinforce key takeaways
-- Encourage experimentation
-- Provide next steps -->
+Testing data analysis workflows requires adapting traditional software testing
+practices to the unique challenges of data science. The combination of unit
+tests, data validation, integration tests, and reproducibility tests provides
+comprehensive coverage for research code.
 
-In this post, we've demonstrated [brief summary of what was accomplished]. The key advantages of this approach are [main benefits].
+**Key takeaways:**
 
-**Next Steps:**
-- Try this technique with your own data
-- Experiment with different parameters
-- Explore the additional resources below
+- Testing ensures both computational reproducibility and result correctness
+- testthat provides the foundation; assertr adds pipeline-friendly validation
+- Test during analysis development, not just at the end
+- Continuous integration automates testing on every code change
 
-I encourage you to adapt this approach to your specific use case and share your experiences in the comments below.
+Rigorous testing transforms analysis code from fragile scripts into reliable
+research infrastructure that others can trust and build upon.
 
-# References and Further Reading
-
-<!-- Comprehensive references mixing academic literature, blog posts, and technical resources -->
+# References and Acknowledgments
 
 ## Academic Literature
 
-<!-- Scholarly papers and books that provide theoretical foundation -->
+- Wilson, G., Bryan, J., Cranston, K., Kitzes, J., Nederbragt, L., & Teal,
+  T.K. (2017). Good enough practices in scientific computing. *PLOS
+  Computational Biology*, 13(6), e1005510.
+- Wickham, H. (2011). testthat: Get started with testing. *The R Journal*,
+  3(1), 5-10.
+- Poldrack, R.A. (2019). Statistical thinking for the 21st century.
+  https://statsthinking21.github.io/
+- van der Loo, M. & de Jonge, E. (2021). Data validation infrastructure for
+  R. *Journal of Statistical Software*, 97(10), 1-31.
 
-1. **Primary Research Papers:**
-   - Wickham, H. (2014). "Tidy Data". *Journal of Statistical Software*, 59(10), 1-23. https://doi.org/10.18637/jss.v059.i10
-   - Breiman, L. (2001). "Random Forests". *Machine Learning*, 45(1), 5-32. https://doi.org/10.1023/A:1010933404324
-   - [Your domain-specific paper]. Author, A. (Year). "Relevant Paper Title". *Journal Name*, Volume(Issue), pages. DOI
+## Package Documentation
 
-2. **Foundational Books:**
-   - Wickham, H., & Grolemund, G. (2017). *R for Data Science*. O'Reilly Media. https://r4ds.had.co.nz/
-   - James, G., Witten, D., Hastie, T., & Tibshirani, R. (2021). *An Introduction to Statistical Learning with Applications in R* (2nd ed.). Springer.
-   - [Your domain book]. Author, B. (Year). *Book Title*. Publisher.
+- [testthat package](https://testthat.r-lib.org/)
+- [assertr package](https://docs.ropensci.org/assertr/)
+- [validate package](https://github.com/data-cleaning/validate)
 
-3. **Statistical Methods:**
-   - Box, G. E. P., Jenkins, G. M., Reinsel, G. C., & Ljung, G. M. (2015). *Time Series Analysis: Forecasting and Control* (5th ed.). Wiley.
-   - Gelman, A., & Hill, J. (2006). *Data Analysis Using Regression and Multilevel/Hierarchical Models*. Cambridge University Press.
+## Acknowledgments
 
-## Blog Posts and Tutorials
-
-<!-- High-quality blog posts and online tutorials -->
-
-1. **Technical Blog Posts:**
-   - [R-bloggers: "Advanced ggplot2 Techniques"](https://www.r-bloggers.com/2023/01/advanced-ggplot2-techniques/) - Comprehensive visualization strategies
-   - [Simply Statistics: "The Role of Statistics in Data Science"](https://simplystatistics.org/posts/2023-02-15-statistics-data-science/) - Foundational concepts
-   - [Towards Data Science: "Machine Learning Best Practices"](https://towardsdatascience.com/machine-learning-best-practices-2023) - Practical implementation guidance
-
-2. **Package-Specific Tutorials:**
-   - [Package creator's blog: "Introduction to [PackageName]"](https://example.com/package-intro) - Official guidance from package authors
-   - [RStudio Blog: "New Features in [Package]"](https://www.rstudio.com/blog/) - Updates and best practices
-   - [Stack Overflow: "Common [Package] Issues and Solutions"](https://stackoverflow.com/questions/tagged/package-name) - Community troubleshooting
-
-3. **Domain-Specific Applications:**
-   - [Industry blog: "Real-world Application of [Method]"](https://example.com/industry-application) - Practical case studies
-   - [Academic blog: "Methodological Considerations for [Technique]"](https://example.com/academic-perspective) - Research perspectives
-   - [Practitioner blog: "Lessons Learned from [Project]"](https://example.com/lessons-learned) - Implementation insights
-
-## Technical Documentation
-
-<!-- Official documentation and authoritative guides -->
-
-1. **Package Documentation:**
-   - [Package Reference Manual](https://cran.r-project.org/package=packagename) - Complete function documentation
-   - [Package Vignettes](https://cran.r-project.org/package=packagename/vignettes/) - Detailed usage examples
-   - [GitHub Repository](https://github.com/author/packagename) - Source code and development issues
-
-2. **Language and Framework Guides:**
-   - [R Language Definition](https://cran.r-project.org/doc/manuals/r-release/R-lang.html) - Official R documentation
-   - [Quarto Documentation](https://quarto.org/docs/) - Publishing framework reference
-   - [RMarkdown Cookbook](https://bookdown.org/yihui/rmarkdown-cookbook/) - Advanced document preparation
-
-3. **Standards and Best Practices:**
-   - [Google's R Style Guide](https://google.github.io/styleguide/Rguide.html) - Code formatting standards
-   - [rOpenSci Packages](https://ropensci.org/packages/) - Peer-reviewed R packages for research
-   - [CRAN Task Views](https://cran.r-project.org/web/views/) - Domain-specific package collections
-
-## Community Resources
-
-<!-- Forums, discussions, and collaborative platforms -->
-
-1. **Q&A and Discussion:**
-   - [Cross Validated](https://stats.stackexchange.com/) - Statistical methodology discussions
-   - [Stack Overflow R Tag](https://stackoverflow.com/questions/tagged/r) - Programming troubleshooting
-   - [RStudio Community](https://community.rstudio.com/) - User support and discussions
-
-2. **Social Learning:**
-   - [#rstats Twitter](https://twitter.com/hashtag/rstats) - Community updates and tips
-   - [R Weekly Newsletter](https://rweekly.org/) - Curated R news and resources
-   - [R-Ladies Global](https://rladies.org/) - Inclusive R community and events
-
-3. **Professional Networks:**
-   - [LinkedIn R Groups](https://www.linkedin.com/groups/) - Professional networking and job opportunities
-   - [Meetup R Groups](https://www.meetup.com/topics/r-project-for-statistical-computing/) - Local community events
-   - [UseR! Conference](https://user2024.r-project.org/) - Annual R user conference
-
-## Data Sources and Repositories
-
-<!-- If applicable to your post -->
-
-1. **Public Datasets:**
-   - [UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/) - Benchmark datasets
-   - [Kaggle Datasets](https://www.kaggle.com/datasets) - Community-contributed data
-   - [government data portal] - Domain-specific public data
-
-2. **R Built-in Data:**
-   - `datasets` package - Standard R datasets for examples
-   - [Your specific dataset source] - Domain-relevant data repositories
-
-## Related Work and Extensions
-
-<!-- Academic papers that build on or relate to your work -->
-
-1. **Methodological Extensions:**
-   - Author, C. (Year). "Extension of [Your Method]". *Journal*, Volume(Issue), pages.
-   - Author, D. (Year). "Comparative Analysis of [Related Methods]". *Conference Proceedings*.
-
-2. **Applications in Other Domains:**
-   - Author, E. (Year). "Application to [Different Field]". *Domain Journal*, Volume(Issue), pages.
-   - Author, F. (Year). "Cross-disciplinary Perspectives on [Topic]". *Interdisciplinary Journal*.
-
----
-
-**Citation Note:** When using ideas or code from these resources, please cite appropriately. For academic work, use standard citation formats. For blog posts and online resources, include the author, title, publication date, and URL.
+This post draws substantially from the "Testing Data Analysis Workflows"
+vignette in the zzcollab package, developed by the ZZCOLLAB Development Team.
+The testing philosophy and three-phase approach described here follow the
+reproducible research workflow principles articulated by Poldrack (2019).
 
 # Reproducibility Information
 
-<!-- Session info and data availability for reproducibility -->
-
-## Data Availability
-- **Dataset**: [Name and source of dataset used]
-- **Access**: [How others can access the data - URL, package, etc.]
-- **License**: [Data usage license and restrictions]
-
-## Code Repository
-- **GitHub**: [Link to repository with complete analysis code]
-- **Commit**: [Specific commit hash for reproducibility]
-- **Environment**: [Docker image, renv lockfile, or environment specs]
-
-## Session Information
 ```{r}
 #| echo: false
 sessionInfo()
 ```
-
-# Appendix: [Optional Detailed Information]
-
-<!-- Use appendices sparingly - only for:
-- Detailed technical specifications
-- Extended code examples
-- Mathematical derivations
-- Additional data or tables -->
-
-## Appendix A: Complete Code
-
-<!-- Full, uncommented code for easy copying -->
-
-```{r}
-#| eval: false
-# Complete code for easy reproduction - replace with your actual code
-# library(your_packages)
-# data <- load_your_data()
-# results <- your_analysis(data)
-# plot(results)
-```
-
-## Appendix B: Mathematical Details
-
-<!-- Mathematical formulations if applicable -->
-
-For statistical posts, include relevant formulas using LaTeX notation:
-
-**Linear Regression Model:**
-$$y_i = \beta_0 + \beta_1 x_{i1} + \beta_2 x_{i2} + ... + \beta_p x_{ip} + \epsilon_i$$
-
-**Model Evaluation Metrics:**
-- **RMSE**: $RMSE = \sqrt{\frac{1}{n}\sum_{i=1}^{n}(y_i - \hat{y_i})^2}$
-- **R-squared**: $R^2 = 1 - \frac{SS_{res}}{SS_{tot}}$
-
-[Additional mathematical explanations or derivations as needed]
-
-## Appendix C: Additional Data
-
-<!-- Extended results or data tables -->
-
-[Additional tables, charts, or data summaries]
-
----
-
-## Share This Post
-
-Found this helpful? Share it with your network:
-
-- [Twitter](https://twitter.com/intent/tweet?text=Check%20out%20this%20analysis&url=YOUR_POST_URL&via=rgt47)
-- [LinkedIn](https://www.linkedin.com/sharing/share-offsite/?url=YOUR_POST_URL)
-- [Reddit](https://reddit.com/submit?url=YOUR_POST_URL&title=YOUR_POST_TITLE)
-
-## Connect and Discuss
-
-*Have questions or suggestions? I'd love to hear from you:*
-
-- **Twitter**: [@rgt47](https://twitter.com/rgt47) - Quick questions and discussions
-- **LinkedIn**: [Ronald Glenn Thomas](https://linkedin.com/in/rgthomaslab) - Professional networking
-- **GitHub**: [rgt47](https://github.com/rgt47) - Code, issues, and contributions
-- **Email**: [Contact through website](https://rgtlab.org/contact) - Detailed inquiries
-
-*Comments are enabled below via Utterances - join the discussion!*
-
----
-
-## About the Author
-
-**Ronald (Ryy) Glenn Thomas** is a biostatistician and data scientist at UC San Diego, specializing in statistical computing, machine learning applications in healthcare, and reproducible research methods. He develops R packages and conducts research at the intersection of statistics, data science, and clinical research.
-
-*Connect: [Website](https://rgtlab.org) | [ORCID](https://orcid.org/0000-0003-1686-4965) | [Google Scholar](https://scholar.google.com/citations?user=YOUR_ID)*
