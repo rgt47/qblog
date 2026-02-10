@@ -592,7 +592,7 @@
     "href": "blog/index.html",
     "title": "Blog",
     "section": "",
-    "text": "Technical articles and explorations in statistical computing, data science, and R programming.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nSet Names to Lowercase for Multiple Dataframes in R\n\n\n\nData Analysis & Visualization\n\n\n\n\n\n\n\n\n\nFeb 10, 2026\n\n\n\n\n\nNo matching items"
+    "text": "Technical articles and explorations in statistical computing, data science, and R programming.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nInstall Linux Mint on a Macbook Air\n\n\nA set of tips for installation and post install\n\n\n\nMint\n\nlinux\n\nR\n\nPython\n\nJulia\n\n\n\nstep by step description of howto install and customize a Mint instance for data science workflow\n\n\n\n\n\nFeb 10, 2026\n\n\n\n\n\n\n\n\n\n\n\n\nThe Pipe Equivalence Myth: When f() |&gt; g() Is Not the Same as g(f())\n\n\n\n\n\n\nR\n\nmetaprogramming\n\npipes\n\n\n\nMost R programmers assume that f() |&gt; g() is equivalent to g(f()). This assumption breaks down with non-standard evaluation, leading to subtle bugs. This post explains why, when it matters, and how to work around it.\n\n\n\n\n\nJan 31, 2026\n\n\nRG Thomas\n\n\n\n\n\n\n\n\n\n\n\n\nPalmer Penguins Data Analysis Series (Part 1): Exploratory Data Analysis and Simple Regression\n\n\nGetting acquainted with our Antarctic friends and their morphometric relationships\n\n\n\nR Programming\n\nData Science\n\nStatistical Computing\n\nExploratory Data Analysis\n\nPalmer Penguins\n\n\n\nPart 1 of a comprehensive 5-part series exploring Palmer penguin morphometrics through exploratory data analysis and simple regression modeling\n\n\n\n\n\nJan 1, 2025\n\n\nData Science Team\n\n\n\n\n\nNo matching items"
   },
   {
     "objectID": "about/index.html",
@@ -978,5 +978,208 @@
     "title": "White Papers",
     "section": "4 Technical Infrastructure",
     "text": "4 Technical Infrastructure\n\n4.1 Containerized R Analysis Workflows with Docker\nImplementation guide for reproducible R analysis environments using Docker containerization, including best practices for sharing and deployment.\nDocker Reproducibility R environment Containerization\n\n🔗 Full Report • 📄 PDF\n\n\n\n4.2 AWS Server Configuration for Research Computing\nComprehensive guide for setting up and configuring AWS instances for statistical computing and research data analysis.\nAWS Cloud computing Server configuration Research computing\n\n🔗 Full Report • 📄 PDF"
+  },
+  {
+    "objectID": "posts/15-piping/piping/index.html",
+    "href": "posts/15-piping/piping/index.html",
+    "title": "The Pipe Equivalence Myth: When f() |> g() Is Not the Same as g(f())",
+    "section": "",
+    "text": "Ask any R programmer what x |&gt; f() means, and they will tell you it is equivalent to f(x). The pipe operator is just syntactic sugar for function composition, right?\nThis is exactly what the documentation and tutorials tell us:\n\n“x %&gt;% f is equivalent to f(x)”\n“x %&gt;% f(y) is equivalent to f(x, y)”\n“x %&gt;% f %&gt;% g %&gt;% h is equivalent to h(g(f(x)))”\n— A popular R package vignette\n\nAnd from a widely-used data science textbook:\n\n“The pipe takes the thing on its left and passes it along to the function on its right so that x |&gt; f(y) is equivalent to f(x, y), and x |&gt; f(y) |&gt; g(z) is equivalent to g(f(x, y), z).”\n\nTutorials reinforce this message:\n\n“Multiple pipes can be chained together, such that x %&gt;% f() %&gt;% g() %&gt;% h() is equivalent to h(g(f(x))).”\n— A popular online R tutorial\n\n\n# These are \"the same\"\nsqrt(16) |&gt; log()\nlog(sqrt(16))\n\nBoth return 1.3862944. So far, so good.\nThis equivalence holds for the vast majority of R code. But there is a class of functions where this assumption breaks down completely, and understanding why reveals something fundamental about how R works."
+  },
+  {
+    "objectID": "posts/15-piping/piping/index.html#the-assumption",
+    "href": "posts/15-piping/piping/index.html#the-assumption",
+    "title": "The Pipe Equivalence Myth: When f() |> g() Is Not the Same as g(f())",
+    "section": "",
+    "text": "Ask any R programmer what x |&gt; f() means, and they will tell you it is equivalent to f(x). The pipe operator is just syntactic sugar for function composition, right?\nThis is exactly what the documentation and tutorials tell us:\n\n“x %&gt;% f is equivalent to f(x)”\n“x %&gt;% f(y) is equivalent to f(x, y)”\n“x %&gt;% f %&gt;% g %&gt;% h is equivalent to h(g(f(x)))”\n— A popular R package vignette\n\nAnd from a widely-used data science textbook:\n\n“The pipe takes the thing on its left and passes it along to the function on its right so that x |&gt; f(y) is equivalent to f(x, y), and x |&gt; f(y) |&gt; g(z) is equivalent to g(f(x, y), z).”\n\nTutorials reinforce this message:\n\n“Multiple pipes can be chained together, such that x %&gt;% f() %&gt;% g() %&gt;% h() is equivalent to h(g(f(x))).”\n— A popular online R tutorial\n\n\n# These are \"the same\"\nsqrt(16) |&gt; log()\nlog(sqrt(16))\n\nBoth return 1.3862944. So far, so good.\nThis equivalence holds for the vast majority of R code. But there is a class of functions where this assumption breaks down completely, and understanding why reveals something fundamental about how R works."
+  },
+  {
+    "objectID": "posts/15-piping/piping/index.html#when-the-equivalence-breaks",
+    "href": "posts/15-piping/piping/index.html#when-the-equivalence-breaks",
+    "title": "The Pipe Equivalence Myth: When f() |> g() Is Not the Same as g(f())",
+    "section": "2 When the Equivalence Breaks",
+    "text": "2 When the Equivalence Breaks\nConsider a function that needs to capture the expression passed to it, not just its value:\n\ncapture_expr &lt;- function(expr) {\n  deparse(substitute(expr))\n}\n\n# Direct call - captures the expression\ncapture_expr(sqrt(16))\n\n[1] \"sqrt(16)\"\n\n# Piped call - captures... what?\nsqrt(16) |&gt; capture_expr()\n\n[1] \"sqrt(16)\"\n\n\nThe direct call captures \"sqrt(16)\" as a string. The piped version captures something entirely different—the intermediate result after sqrt(16) has already been evaluated.\nThis is not a bug. It is a fundamental consequence of how pipes work."
+  },
+  {
+    "objectID": "posts/15-piping/piping/index.html#the-evaluation-order-problem",
+    "href": "posts/15-piping/piping/index.html#the-evaluation-order-problem",
+    "title": "The Pipe Equivalence Myth: When f() |> g() Is Not the Same as g(f())",
+    "section": "3 The Evaluation Order Problem",
+    "text": "3 The Evaluation Order Problem\nThe pipe operator evaluates left-to-right before passing to the next function. By the time capture_expr() can call substitute(), it only sees the return value, not the original expression.\nHere is the sequence of events:\nDirect call: capture_expr(sqrt(16))\n\nR sees the call to capture_expr()\nThe argument sqrt(16) is passed unevaluated (lazy evaluation)\nInside capture_expr(), substitute(expr) captures sqrt(16)\ndeparse() converts it to the string \"sqrt(16)\"\n\nPiped call: sqrt(16) |&gt; capture_expr()\n\nR evaluates sqrt(16) → returns 4\nThe value 4 is passed to capture_expr()\nInside capture_expr(), substitute(expr) captures 4\ndeparse() converts it to the string \"4\"\n\nThe critical difference: with direct calls, R’s lazy evaluation means arguments are passed as promises containing the unevaluated expression. The pipe forces evaluation before the handoff."
+  },
+  {
+    "objectID": "posts/15-piping/piping/index.html#why-this-matters-a-real-world-example",
+    "href": "posts/15-piping/piping/index.html#why-this-matters-a-real-world-example",
+    "title": "The Pipe Equivalence Myth: When f() |> g() Is Not the Same as g(f())",
+    "section": "4 Why This Matters: A Real-World Example",
+    "text": "4 Why This Matters: A Real-World Example\nThis is not just academic. Consider building a plot wrapper that captures what the user typed for logging or history:\n\n# Desired behavior: capture \"plot(mtcars$wt, mtcars$mpg)\" for the log\nzzplot &lt;- function(expr) {\n  # Capture what the user typed\n  code &lt;- deparse(substitute(expr))\n\n  # Open device, evaluate, close device\n  png(\"plot.png\")\n  eval(substitute(expr), envir = parent.frame())\n  dev.off()\n\n  # Log the code\n  message(\"Rendered: \", code)\n}\n\n# This works - captures the expression\nzzplot(plot(mtcars$wt, mtcars$mpg))\n# Message: Rendered: plot(mtcars$wt, mtcars$mpg)\n\n# This fails - plot already executed, returns NULL\nplot(mtcars$wt, mtcars$mpg) |&gt; zzplot()\n# Message: Rendered: NULL\n\nThe wrapper function needs to:\n\nCapture the plotting code as an expression\nEvaluate it inside a graphics device context\nLog what was executed\n\nWith piping, step 1 fails because the plot has already been drawn to whatever device was active before zzplot() even runs."
+  },
+  {
+    "objectID": "posts/15-piping/piping/index.html#functions-affected-by-this-problem",
+    "href": "posts/15-piping/piping/index.html#functions-affected-by-this-problem",
+    "title": "The Pipe Equivalence Myth: When f() |> g() Is Not the Same as g(f())",
+    "section": "5 Functions Affected by This Problem",
+    "text": "5 Functions Affected by This Problem\nAny function using non-standard evaluation (NSE) is potentially affected:\n\n\n\nFunction\nPurpose\nPipe-safe?\n\n\n\n\nsubstitute()\nCapture unevaluated expression\nNo\n\n\ndeparse(substitute())\nConvert expression to string\nNo\n\n\nmatch.call()\nCapture the entire function call\nNo\n\n\nenquo() / enquos()\nTidy eval expression capture\nNo\n\n\nrlang::enexpr()\nCapture single expression\nNo\n\n\nquote()\nQuote an expression\nYes*\n\n\nbquote()\nQuote with substitution\nYes*\n\n\n\n* These quote the literal argument, so piping changes what gets quoted.\nMany tidyverse functions use NSE internally but are designed to work with pipes because they evaluate captured expressions in data contexts. However, when you write functions that need to capture user expressions, the pipe becomes problematic."
+  },
+  {
+    "objectID": "posts/15-piping/piping/index.html#the-native-pipe-vs.-magrittr",
+    "href": "posts/15-piping/piping/index.html#the-native-pipe-vs.-magrittr",
+    "title": "The Pipe Equivalence Myth: When f() |> g() Is Not the Same as g(f())",
+    "section": "6 The Native Pipe vs. Magrittr",
+    "text": "6 The Native Pipe vs. Magrittr\nDoes it matter which pipe you use? Not for this problem.\nBoth |&gt; (native, R 4.1+) and %&gt;% (magrittr) evaluate the left-hand side before passing it to the right. The native pipe is essentially a syntax transformation at parse time (Wickham and Henry 2023):\n\n# Native pipe: parsed as\nx |&gt; f(y)\n# becomes\nf(x, y)\n\n# But x is still evaluated before f() sees it\n\nThe magrittr pipe does more work behind the scenes but has the same fundamental behavior: eager evaluation of the left-hand side (Bache and Wickham 2022).\nMagrittr does offer %!&gt;%, an “eager pipe” that forces evaluation at each step, but this is for controlling when side effects occur, not for enabling expression capture."
+  },
+  {
+    "objectID": "posts/15-piping/piping/index.html#workarounds-and-design-patterns",
+    "href": "posts/15-piping/piping/index.html#workarounds-and-design-patterns",
+    "title": "The Pipe Equivalence Myth: When f() |> g() Is Not the Same as g(f())",
+    "section": "7 Workarounds and Design Patterns",
+    "text": "7 Workarounds and Design Patterns\n\n7.1 Pattern 1: Accept the Limitation\nDesign your API to require wrapping, not piping:\n\n# Document that this is the correct usage\nzzplot(boxplot(mpg ~ cyl, data = mtcars))\n\n# Not this\nboxplot(mpg ~ cyl, data = mtcars) |&gt; zzplot()\n\nThis is explicit and unambiguous. The tradeoff is that it breaks the “pipe everything” mental model some users have developed.\n\n\n7.2 Pattern 2: Provide Both APIs\nOffer a standard evaluation version alongside the NSE version:\n\n# NSE version - for interactive use\nzzplot(plot(x, y))\n\n# SE version - for programmatic use and piping (sort of)\nzzplot_expr(quote(plot(x, y)))\n\n# Or with a string\nzzplot_code(\"plot(x, y)\")\n\n\n\n7.3 Pattern 3: Use Quosures (Tidy Eval)\nThe rlang package provides quosures, which bundle an expression with its environment (Henry and Wickham 2023). This enables more robust expression capture in some contexts:\n\nlibrary(rlang)\n\nmy_function &lt;- function(expr) {\n  quo &lt;- enquo(expr)\n  expr_text &lt;- quo_text(quo)\n  # ... use the quosure\n}\n\nHowever, this still does not solve the pipe problem—enquo() captures what it receives, and the pipe has already evaluated the left-hand side.\n\n\n7.4 Pattern 4: Redesign to Avoid NSE\nSometimes the cleanest solution is to not use NSE at all:\n\n# Instead of capturing expressions, accept functions\nzzplot_fn &lt;- function(plot_fn, ...) {\n  png(\"plot.png\")\n  plot_fn(...)\n  dev.off()\n}\n\n# Usage (pipeable with anonymous functions)\n\\() plot(mtcars$wt, mtcars$mpg) |&gt; zzplot_fn()\n\nThis is less elegant but completely unambiguous about evaluation order."
+  },
+  {
+    "objectID": "posts/15-piping/piping/index.html#the-deeper-lesson-referential-transparency",
+    "href": "posts/15-piping/piping/index.html#the-deeper-lesson-referential-transparency",
+    "title": "The Pipe Equivalence Myth: When f() |> g() Is Not the Same as g(f())",
+    "section": "8 The Deeper Lesson: Referential Transparency",
+    "text": "8 The Deeper Lesson: Referential Transparency\nThis issue reflects a fundamental property of programming languages: referential transparency. A function is referentially transparent if you can replace any expression with its value without changing the program’s behavior (Wickham 2019).\n\n# Referentially transparent\nf &lt;- function(x) x + 1\nf(2 + 2)  # Same as f(4)\n\n# NOT referentially transparent\ng &lt;- function(x) deparse(substitute(x))\ng(2 + 2)  # Returns \"2 + 2\"\ng(4)      # Returns \"4\"\n\nNSE functions are not referentially transparent by design—they care about how you express something, not just what value it produces. Pipes assume referential transparency because they pre-compute values.\nHadley Wickham notes in Advanced R: “The biggest downside of NSE is that functions that use it are no longer referentially transparent” (Wickham 2019)."
+  },
+  {
+    "objectID": "posts/15-piping/piping/index.html#conclusion",
+    "href": "posts/15-piping/piping/index.html#conclusion",
+    "title": "The Pipe Equivalence Myth: When f() |> g() Is Not the Same as g(f())",
+    "section": "9 Conclusion",
+    "text": "9 Conclusion\nThe pipe equivalence f() |&gt; g() ≡ g(f()) holds for value semantics but fails for expression semantics. This is not a bug in R or the pipe operators; it is a fundamental tension between:\n\nEager evaluation (pipes compute left-to-right)\nLazy evaluation (functions receive unevaluated promises)\nNon-standard evaluation (functions inspect the expression, not just the value)\n\nWhen writing functions that use substitute(), match.call(), or similar metaprogramming tools, document clearly that piping will not work as expected. When using such functions, remember that wrapping f(g(x)) and piping x |&gt; g() |&gt; f() are semantically different operations, even when they produce the same final value.\nUnderstanding this distinction is essential for effective R metaprogramming and explains why some tidyverse patterns require specific syntax that cannot be arbitrarily reformatted."
+  },
+  {
+    "objectID": "posts/15-piping/piping/index.html#references",
+    "href": "posts/15-piping/piping/index.html#references",
+    "title": "The Pipe Equivalence Myth: When f() |> g() Is Not the Same as g(f())",
+    "section": "10 References",
+    "text": "10 References\n\n\nBache, Stefan Milton, and Hadley Wickham. 2022. Magrittr: A Forward-Pipe Operator for R. https://CRAN.R-project.org/package=magrittr.\n\n\nHenry, Lionel, and Hadley Wickham. 2023. Rlang: Functions for Base Types and Core R and Tidyverse Features. https://CRAN.R-project.org/package=rlang.\n\n\nWickham, Hadley. 2019. Advanced R. 2nd ed. Boca Raton, FL: Chapman; Hall/CRC. https://adv-r.hadley.nz/.\n\n\nWickham, Hadley, and Lionel Henry. 2023. “Differences Between the Base R and Magrittr Pipes.” tidyverse blog. https://tidyverse.org/blog/2023/04/base-vs-magrittr-pipe/."
+  },
+  {
+    "objectID": "posts/15-piping/piping/index.html#further-reading",
+    "href": "posts/15-piping/piping/index.html#further-reading",
+    "title": "The Pipe Equivalence Myth: When f() |> g() Is Not the Same as g(f())",
+    "section": "11 Further Reading",
+    "text": "11 Further Reading\n\nNon-standard evaluation in Advanced R (1st ed.) by Hadley Wickham\nEvaluation chapter in Advanced R (2nd ed.)\nTidy Evaluation book by the tidyverse team\nStandard and Non-Standard Evaluation in R by Brodie Gaslam\nDifferences between the base R and magrittr pipes on the tidyverse blog\nDesign tradeoffs in magrittr\nUnderstanding Non-Standard Evaluation, Part 1 by Thomas Adventureson"
+  },
+  {
+    "objectID": "posts/03-installmintonmacbook/installmintonmacbook/index.html#install-mint-on-a-macbook-air",
+    "href": "posts/03-installmintonmacbook/installmintonmacbook/index.html#install-mint-on-a-macbook-air",
+    "title": "Install Linux Mint on a Macbook Air",
+    "section": "1.1 Install Mint on a macbook air",
+    "text": "1.1 Install Mint on a macbook air\nThe target machine is a 2016 13-inch MacBook Air with four Thunderbolt 3 Ports.\nTo start the process download an iso file from the Mint website. The current “Virginia” version of Mint iso file is 3.07 GB in size. The “Cinnamon” edition is recommended.\nSpecifically, download the torrent file for Linux Mint 22 Wilma Cinnamon edition. linuxmint-22-cinnamon-64bit.iso.torrent Install the mac app Transmission and add the torrent file.\nAlso download the associated sha256sum.txt file.\nTo check the integrity of your local ISO file, generate its SHA256 checksum and compare it to the content of the sha256sum.txt file:\n&gt; sha256sum -b linuxmint-22-cinnamon-64bit.iso\nWe can transfer the iso file to a USB flash drive using one of several methods. On macos we suggest using the app balanaEtcher. You can download balanaEtcher\nInsert the bootable USB flash drive into the target macbook and reboot. Hold the ALT key while the machine reboots and you’ll be presented with a screen offering boot drive options. Select the icon for the USB drive. A grub menu will appear.1\n1  GNU GRand Unified Bootloader (GRUB). “When your Linux operating system starts up, GRUB is the first program that runs. It loads the kernel of the operating system, and then the kernel loads the rest of the operating system, including the shell, the desktop environment, and other operating system features.”  codecademy.com  From the Grub menu choose Start Linux Mint 22 Cinnamon 64-bit. and the Mint install program will start.\nA linux mint desktop will appear allowing you to “test drive” Mint or to continue the install by double clicking the icon labeled install Linux Mint.\nA setup dialog will start. Select, in sequence\n\nLanguage (English for us),\nNetwork (If ethernet is available startup program will autmatically connect. If wifi only, not needed at this point, suggest skip),\ncodexes (check box “install multimedia codecs”),\noptions for installation type (choose “erase disk and install linux mint”).\nLocation (Los Angeles for us),\nname a user who will have administrator privileges, assign a password, and a hostname.\n\nAfter these screens the install process will proceed without additional user input.\nWhen complete connect the target machine to the Internet. As mentioned above, if you have ethernet connectivity plug the cable directly into the target macbook and Mint should connect automatically to the internet. For wireless wifi access Mint may or may not recognize hardware modem. If not use a supported external modem e.g. Panda Wireless modem. Panda is supported since Mint 22 has Ralink RT5372 drivers installed.\nThe final hardware related step is to add a second monitor, if available, via HDMI or “USB-C”.\nThats it. The base system is ready to go. Reboot and login with the admin username and password you provided earlier."
+  },
+  {
+    "objectID": "posts/03-installmintonmacbook/installmintonmacbook/index.html#prerequisites",
+    "href": "posts/03-installmintonmacbook/installmintonmacbook/index.html#prerequisites",
+    "title": "Install Linux Mint on a Macbook Air",
+    "section": "7.1 Prerequisites",
+    "text": "7.1 Prerequisites\nIn development"
+  },
+  {
+    "objectID": "posts/03-installmintonmacbook/installmintonmacbook/index.html#step-by-step-implementation",
+    "href": "posts/03-installmintonmacbook/installmintonmacbook/index.html#step-by-step-implementation",
+    "title": "Install Linux Mint on a Macbook Air",
+    "section": "7.2 Step-by-Step Implementation",
+    "text": "7.2 Step-by-Step Implementation\nIn development"
+  },
+  {
+    "objectID": "posts/03-installmintonmacbook/installmintonmacbook/index.html#key-takeaways",
+    "href": "posts/03-installmintonmacbook/installmintonmacbook/index.html#key-takeaways",
+    "title": "Install Linux Mint on a Macbook Air",
+    "section": "7.3 Key Takeaways",
+    "text": "7.3 Key Takeaways\nIn development"
+  },
+  {
+    "objectID": "posts/03-installmintonmacbook/installmintonmacbook/index.html#further-reading",
+    "href": "posts/03-installmintonmacbook/installmintonmacbook/index.html#further-reading",
+    "title": "Install Linux Mint on a Macbook Air",
+    "section": "7.4 Further Reading",
+    "text": "7.4 Further Reading\nIn development"
+  },
+  {
+    "objectID": "posts/08-palmerpenguinspart1/palmerpenguinspart1/index.html",
+    "href": "posts/08-palmerpenguinspart1/palmerpenguinspart1/index.html",
+    "title": "Palmer Penguins Data Analysis Series (Part 1): Exploratory Data Analysis and Simple Regression",
+    "section": "",
+    "text": "Curious Adelie penguins beginning their data science journey - because every great analysis starts with getting to know your data!\nPhoto: African penguins at Boulders Beach, South Africa. Licensed under CC BY 2.0 via Wikimedia Commons"
+  },
+  {
+    "objectID": "posts/08-palmerpenguinspart1/palmerpenguinspart1/index.html#species-and-morphometric-overview",
+    "href": "posts/08-palmerpenguinspart1/palmerpenguinspart1/index.html#species-and-morphometric-overview",
+    "title": "Palmer Penguins Data Analysis Series (Part 1): Exploratory Data Analysis and Simple Regression",
+    "section": "4.1 Species and Morphometric Overview",
+    "text": "4.1 Species and Morphometric Overview\nLet’s understand our penguin community composition and key measurements:\n\n\n\nSpecies Distribution and Key Morphometrics\n\n\nSpecies\nN\nBody Mass (g)\nFlipper Length (mm)\n% of Dataset\n\n\n\n\nAdelie\n146\n3706\n190.1\n43.8\n\n\nChinstrap\n68\n3733\n195.8\n20.4\n\n\nGentoo\n119\n5092\n217.2\n35.7\n\n\n\n\n\n\n\n\nSpecies distribution and morphometric relationship overview showing sample sizes and the key flipper-body mass relationship across species"
+  },
+  {
+    "objectID": "posts/08-palmerpenguinspart1/palmerpenguinspart1/index.html#building-and-interpreting-the-model",
+    "href": "posts/08-palmerpenguinspart1/palmerpenguinspart1/index.html#building-and-interpreting-the-model",
+    "title": "Palmer Penguins Data Analysis Series (Part 1): Exploratory Data Analysis and Simple Regression",
+    "section": "7.1 Building and Interpreting the Model",
+    "text": "7.1 Building and Interpreting the Model\n\n\n\nSimple Linear Model Performance\n\n\nMetric\nValue\nInterpretation\n\n\n\n\nR²\n0.762\n76.2% variance explained\n\n\nRMSE\n393.3 g\nMean prediction error\n\n\nF-statistic\n1060.3\np &lt; 0.001 (highly significant)\n\n\n\n\n\n**Model Equation:**\n\n\nBody Mass = -5872.1 + 50.2 × Flipper Length\n\n\nSlope 95% CI: [47.1, 53.2] grams/mm\n\n\n\n7.1.0.1 Example Predictions\n\n\n\nPredicted Body Mass for Example Flipper Lengths\n\n\n\n\n\n\n\n\nFlipper Length (mm)\nPredicted Body Mass (g)\n95% CI Lower\n95% CI Upper\n\n\n\n\n180\n3637\n3589\n3685\n\n\n200\n4749\n4712\n4786\n\n\n220\n5860\n5815\n5905\n\n\n\n\n\n\n\n\nSimple linear regression model showing body mass predicted by flipper length with 95% confidence interval"
+  },
+  {
+    "objectID": "posts/08-palmerpenguinspart1/palmerpenguinspart1/index.html#statistical-limitations",
+    "href": "posts/08-palmerpenguinspart1/palmerpenguinspart1/index.html#statistical-limitations",
+    "title": "Palmer Penguins Data Analysis Series (Part 1): Exploratory Data Analysis and Simple Regression",
+    "section": "8.1 Statistical Limitations",
+    "text": "8.1 Statistical Limitations\n\n\n\nModel Diagnostic Summary\n\n\n\n\n\n\n\nAssumption\nResult\nStatus\n\n\n\n\nLinearity\nRelationship appears approximately linear\n✓ Met\n\n\nIndependence\nObservations are independent\n✓ Met\n\n\nNormality\nResiduals approximately normal\n✓ Reasonable\n\n\nHomoscedasticity\nVariance constant across range\n⚠ Violated by species\n\n\nOutliers\n5 observations &gt;2.5 SD\n⚠ Present\n\n\nResidual Std. Error\n393.3 grams\n✓ Acceptable\n\n\n\n\n\n\n\n\nModel diagnostic plot showing residuals clustered by species, indicating model limitations"
+  },
+  {
+    "objectID": "posts/08-palmerpenguinspart1/palmerpenguinspart1/index.html#key-limitations",
+    "href": "posts/08-palmerpenguinspart1/palmerpenguinspart1/index.html#key-limitations",
+    "title": "Palmer Penguins Data Analysis Series (Part 1): Exploratory Data Analysis and Simple Regression",
+    "section": "8.2 Key Limitations",
+    "text": "8.2 Key Limitations\n\nSimpson’s Paradox Risk: The model ignores species differences, potentially masking important biological relationships\nModel Assumptions:\n\nLinear relationship assumption appears reasonable\nResidual clustering by species indicates missing predictors\nHomoscedasticity assumption may be violated across species\n\nTemporal Generalizability: Data spans 2007-2009; climate change may affect current relationships\nGeographic Scope: Limited to Palmer Station region; may not generalize to other penguin populations\nMeasurement Precision: Morphometric measurements have inherent measurement error not captured in model\nBiological Constraints: Model predictions outside observed flipper length range (172-231mm) should be interpreted cautiously"
+  },
+  {
+    "objectID": "posts/08-palmerpenguinspart1/palmerpenguinspart1/index.html#real-world-applications",
+    "href": "posts/08-palmerpenguinspart1/palmerpenguinspart1/index.html#real-world-applications",
+    "title": "Palmer Penguins Data Analysis Series (Part 1): Exploratory Data Analysis and Simple Regression",
+    "section": "9.1 Real-World Applications",
+    "text": "9.1 Real-World Applications\nOur simple regression model has several practical applications in Antarctic research:\n\n\n\nPractical Applications of the Model\n\n\n\n\n\n\n\nApplication\nDescription\nRelevance\n\n\n\n\nField Assessment\nFlipper measurements estimate body condition (effect size: 0.06)\nHigh\n\n\nPopulation Monitoring\nTrack penguin health trends using morphometric relationships\nHigh\n\n\nClimate Research\nChanges in relationships may indicate environmental stress\nMedium\n\n\nConservation Planning\nIdentify underweight individuals for intervention\nHigh\n\n\n\n\n\n\nBody Condition Classification Thresholds\n\n\nCondition Category\nBody Mass Range (g)\nPercentile\n\n\n\n\nLow Condition\n&lt; 3550\nBelow 25th\n\n\nNormal Range\n3550–4775\n25th–75th\n\n\nHigh Condition\n&gt; 4775\nAbove 75th"
+  },
+  {
+    "objectID": "posts/08-palmerpenguinspart1/palmerpenguinspart1/index.html#what-weve-learned-in-part-1",
+    "href": "posts/08-palmerpenguinspart1/palmerpenguinspart1/index.html#what-weve-learned-in-part-1",
+    "title": "Palmer Penguins Data Analysis Series (Part 1): Exploratory Data Analysis and Simple Regression",
+    "section": "10.1 What We’ve Learned in Part 1",
+    "text": "10.1 What We’ve Learned in Part 1\n\nStrong Predictive Relationship: Flipper length explains 76.2% of body mass variance (R² = 0.762), providing a reliable field assessment tool\nSpecies-Specific Patterns: Residual clustering by species suggests important biological differences not captured by flipper length alone\nModel Performance: RMSE of 393g indicates reasonable prediction accuracy for most applications\nResearch Implications: Simple morphometric relationships can support field research and conservation efforts"
+  },
+  {
+    "objectID": "posts/08-palmerpenguinspart1/palmerpenguinspart1/index.html#looking-ahead-to-part-2",
+    "href": "posts/08-palmerpenguinspart1/palmerpenguinspart1/index.html#looking-ahead-to-part-2",
+    "title": "Palmer Penguins Data Analysis Series (Part 1): Exploratory Data Analysis and Simple Regression",
+    "section": "10.2 Looking Ahead to Part 2",
+    "text": "10.2 Looking Ahead to Part 2\nOur residual analysis reveals clear opportunities for improvement through:\n\nSpecies Integration: Accounting for biological differences between penguin species\nMultiple Predictors: Incorporating bill measurements for enhanced accuracy\nInteraction Effects: Exploring how predictors work together\nModel Validation: Comparing simple vs. complex model performance\n\n\n\n\n\n\n\n🎯 Preview: Dramatic Model Improvement\n\n\n\nIn Part 2, adding species information will improve our model’s R² from 0.762 to over 0.860 - demonstrating why biological context matters in ecological modeling!"
+  },
+  {
+    "objectID": "posts/08-palmerpenguinspart1/palmerpenguinspart1/index.html#quick-start",
+    "href": "posts/08-palmerpenguinspart1/palmerpenguinspart1/index.html#quick-start",
+    "title": "Palmer Penguins Data Analysis Series (Part 1): Exploratory Data Analysis and Simple Regression",
+    "section": "11.1 Quick Start",
+    "text": "11.1 Quick Start\ngit clone &lt;repository-url&gt;\ncd posts/palmerpenguinspart1\n\n# Build Docker environment (one-time setup)\nmake docker-build\n\n# Run complete analysis pipeline and render blog post\nmake docker-post-render\n\n# View results\nopen index.html"
+  },
+  {
+    "objectID": "posts/08-palmerpenguinspart1/palmerpenguinspart1/index.html#analysis-pipeline",
+    "href": "posts/08-palmerpenguinspart1/palmerpenguinspart1/index.html#analysis-pipeline",
+    "title": "Palmer Penguins Data Analysis Series (Part 1): Exploratory Data Analysis and Simple Regression",
+    "section": "11.2 Analysis Pipeline",
+    "text": "11.2 Analysis Pipeline\nThe complete analysis consists of three reproducible scripts:\n\n01_prepare_data.R - Load Palmer Penguins data, clean, and save derived data\n02_fit_models.R - Fit simple linear regression model, extract coefficients and diagnostics\n03_generate_figures.R - Generate publication-quality figures from analysis results\n\nAll figures shown in this post are generated by the analysis scripts and can be reproduced exactly using the provided code."
+  },
+  {
+    "objectID": "posts/08-palmerpenguinspart1/palmerpenguinspart1/index.html#environment-information",
+    "href": "posts/08-palmerpenguinspart1/palmerpenguinspart1/index.html#environment-information",
+    "title": "Palmer Penguins Data Analysis Series (Part 1): Exploratory Data Analysis and Simple Regression",
+    "section": "11.3 Environment Information",
+    "text": "11.3 Environment Information\n\n\n\nAnalysis Environment\n\n\nR Version\nR version 4.5.2 (2025-10-31)\n\n\nPlatform\naarch64-apple-darwin20\n\n\nAnalysis Date\n2026-02-10"
+  },
+  {
+    "objectID": "posts/08-palmerpenguinspart1/palmerpenguinspart1/index.html#data-source",
+    "href": "posts/08-palmerpenguinspart1/palmerpenguinspart1/index.html#data-source",
+    "title": "Palmer Penguins Data Analysis Series (Part 1): Exploratory Data Analysis and Simple Regression",
+    "section": "11.4 Data Source",
+    "text": "11.4 Data Source\nPalmer Penguins Dataset: - Gorman KB, Williams TD, Fraser WR (2014). Ecological sexual dimorphism and environmental variability within a community of Antarctic penguins (genus Pygoscelis). PLOS ONE 9(3): e90081. - Data accessible via: palmerpenguins R package - Original data repository: https://github.com/allisonhorst/palmerpenguins"
   }
 ]
