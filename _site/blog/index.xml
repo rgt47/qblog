@@ -1,0 +1,571 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss  xmlns:atom="http://www.w3.org/2005/Atom" 
+      xmlns:media="http://search.yahoo.com/mrss/" 
+      xmlns:content="http://purl.org/rss/1.0/modules/content/" 
+      xmlns:dc="http://purl.org/dc/elements/1.1/" 
+      version="2.0">
+<channel>
+<title>Thomas Lab</title>
+<link>https://focusonr.org/blog/</link>
+<atom:link href="https://focusonr.org/blog/index.xml" rel="self" type="application/rss+xml"/>
+<description></description>
+<generator>quarto-1.8.27</generator>
+<lastBuildDate>Sat, 31 Jan 2026 08:00:00 GMT</lastBuildDate>
+<item>
+  <title>The Pipe Equivalence Myth: When f() |&gt; g() Is Not the Same as g(f())</title>
+  <dc:creator>RG Thomas</dc:creator>
+  <link>https://focusonr.org/posts/15-piping/</link>
+  <description><![CDATA[ 
+
+
+
+
+<section id="the-assumption" class="level2" data-number="1">
+<h2 data-number="1" class="anchored" data-anchor-id="the-assumption"><span class="header-section-number">1</span> The Assumption</h2>
+<p>Ask any R programmer what <code>x |&gt; f()</code> means, and they will tell you it is equivalent to <code>f(x)</code>. The pipe operator is just syntactic sugar for function composition, right?</p>
+<p>This is exactly what the documentation and tutorials tell us:</p>
+<blockquote class="blockquote">
+<p>“<code>x %&gt;% f</code> is equivalent to <code>f(x)</code>”</p>
+<p>“<code>x %&gt;% f(y)</code> is equivalent to <code>f(x, y)</code>”</p>
+<p>“<code>x %&gt;% f %&gt;% g %&gt;% h</code> is equivalent to <code>h(g(f(x)))</code>”</p>
+<p>— A popular R package vignette</p>
+</blockquote>
+<p>And from a widely-used data science textbook:</p>
+<blockquote class="blockquote">
+<p>“The pipe takes the thing on its left and passes it along to the function on its right so that <code>x |&gt; f(y)</code> is equivalent to <code>f(x, y)</code>, and <code>x |&gt; f(y) |&gt; g(z)</code> is equivalent to <code>g(f(x, y), z)</code>.”</p>
+</blockquote>
+<p>Tutorials reinforce this message:</p>
+<blockquote class="blockquote">
+<p>“Multiple pipes can be chained together, such that <code>x %&gt;% f() %&gt;% g() %&gt;% h()</code> is equivalent to <code>h(g(f(x)))</code>.”</p>
+<p>— A popular online R tutorial</p>
+</blockquote>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># These are "the same"</span></span>
+<span id="cb1-2"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">sqrt</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">16</span>) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">|&gt;</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">log</span>()</span>
+<span id="cb1-3"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">log</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">sqrt</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">16</span>))</span></code></pre></div></div>
+</div>
+<p>Both return 1.3862944. So far, so good.</p>
+<p>This equivalence holds for the vast majority of R code. But there is a class of functions where this assumption breaks down completely, and understanding why reveals something fundamental about how R works.</p>
+</section>
+<section id="when-the-equivalence-breaks" class="level2" data-number="2">
+<h2 data-number="2" class="anchored" data-anchor-id="when-the-equivalence-breaks"><span class="header-section-number">2</span> When the Equivalence Breaks</h2>
+<p>Consider a function that needs to capture the <em>expression</em> passed to it, not just its <em>value</em>:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1">capture_expr <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">function</span>(expr) {</span>
+<span id="cb2-2">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">deparse</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">substitute</span>(expr))</span>
+<span id="cb2-3">}</span>
+<span id="cb2-4"></span>
+<span id="cb2-5"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Direct call - captures the expression</span></span>
+<span id="cb2-6"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">capture_expr</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">sqrt</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">16</span>))</span></code></pre></div></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "sqrt(16)"</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Piped call - captures... what?</span></span>
+<span id="cb4-2"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">sqrt</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">16</span>) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">|&gt;</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">capture_expr</span>()</span></code></pre></div></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "sqrt(16)"</code></pre>
+</div>
+</div>
+<p>The direct call captures <code>"sqrt(16)"</code> as a string. The piped version captures something entirely different—the intermediate result after <code>sqrt(16)</code> has already been evaluated.</p>
+<p>This is not a bug. It is a fundamental consequence of how pipes work.</p>
+</section>
+<section id="the-evaluation-order-problem" class="level2" data-number="3">
+<h2 data-number="3" class="anchored" data-anchor-id="the-evaluation-order-problem"><span class="header-section-number">3</span> The Evaluation Order Problem</h2>
+<p>The pipe operator evaluates left-to-right <em>before</em> passing to the next function. By the time <code>capture_expr()</code> can call <code>substitute()</code>, it only sees the return value, not the original expression.</p>
+<p>Here is the sequence of events:</p>
+<p><strong>Direct call: <code>capture_expr(sqrt(16))</code></strong></p>
+<ol type="1">
+<li>R sees the call to <code>capture_expr()</code></li>
+<li>The argument <code>sqrt(16)</code> is passed <em>unevaluated</em> (lazy evaluation)</li>
+<li>Inside <code>capture_expr()</code>, <code>substitute(expr)</code> captures <code>sqrt(16)</code></li>
+<li><code>deparse()</code> converts it to the string <code>"sqrt(16)"</code></li>
+</ol>
+<p><strong>Piped call: <code>sqrt(16) |&gt; capture_expr()</code></strong></p>
+<ol type="1">
+<li>R evaluates <code>sqrt(16)</code> → returns <code>4</code></li>
+<li>The value <code>4</code> is passed to <code>capture_expr()</code></li>
+<li>Inside <code>capture_expr()</code>, <code>substitute(expr)</code> captures <code>4</code></li>
+<li><code>deparse()</code> converts it to the string <code>"4"</code></li>
+</ol>
+<p>The critical difference: with direct calls, R’s lazy evaluation means arguments are passed as <em>promises</em> containing the unevaluated expression. The pipe forces evaluation before the handoff.</p>
+</section>
+<section id="why-this-matters-a-real-world-example" class="level2" data-number="4">
+<h2 data-number="4" class="anchored" data-anchor-id="why-this-matters-a-real-world-example"><span class="header-section-number">4</span> Why This Matters: A Real-World Example</h2>
+<p>This is not just academic. Consider building a plot wrapper that captures what the user typed for logging or history:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Desired behavior: capture "plot(mtcars$wt, mtcars$mpg)" for the log</span></span>
+<span id="cb6-2">zzplot <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">function</span>(expr) {</span>
+<span id="cb6-3">  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Capture what the user typed</span></span>
+<span id="cb6-4">  code <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">deparse</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">substitute</span>(expr))</span>
+<span id="cb6-5"></span>
+<span id="cb6-6">  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Open device, evaluate, close device</span></span>
+<span id="cb6-7">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">png</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"plot.png"</span>)</span>
+<span id="cb6-8">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">eval</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">substitute</span>(expr), <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">envir =</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">parent.frame</span>())</span>
+<span id="cb6-9">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">dev.off</span>()</span>
+<span id="cb6-10"></span>
+<span id="cb6-11">  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Log the code</span></span>
+<span id="cb6-12">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">message</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Rendered: "</span>, code)</span>
+<span id="cb6-13">}</span>
+<span id="cb6-14"></span>
+<span id="cb6-15"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># This works - captures the expression</span></span>
+<span id="cb6-16"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">zzplot</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plot</span>(mtcars<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">$</span>wt, mtcars<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">$</span>mpg))</span>
+<span id="cb6-17"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Message: Rendered: plot(mtcars$wt, mtcars$mpg)</span></span>
+<span id="cb6-18"></span>
+<span id="cb6-19"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># This fails - plot already executed, returns NULL</span></span>
+<span id="cb6-20"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plot</span>(mtcars<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">$</span>wt, mtcars<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">$</span>mpg) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">|&gt;</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">zzplot</span>()</span>
+<span id="cb6-21"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Message: Rendered: NULL</span></span></code></pre></div></div>
+</div>
+<p>The wrapper function needs to:</p>
+<ol type="1">
+<li>Capture the plotting code as an expression</li>
+<li>Evaluate it inside a graphics device context</li>
+<li>Log what was executed</li>
+</ol>
+<p>With piping, step 1 fails because the plot has already been drawn to whatever device was active <em>before</em> <code>zzplot()</code> even runs.</p>
+</section>
+<section id="functions-affected-by-this-problem" class="level2" data-number="5">
+<h2 data-number="5" class="anchored" data-anchor-id="functions-affected-by-this-problem"><span class="header-section-number">5</span> Functions Affected by This Problem</h2>
+<p>Any function using non-standard evaluation (NSE) is potentially affected:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Function</th>
+<th>Purpose</th>
+<th>Pipe-safe?</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>substitute()</code></td>
+<td>Capture unevaluated expression</td>
+<td>No</td>
+</tr>
+<tr class="even">
+<td><code>deparse(substitute())</code></td>
+<td>Convert expression to string</td>
+<td>No</td>
+</tr>
+<tr class="odd">
+<td><code>match.call()</code></td>
+<td>Capture the entire function call</td>
+<td>No</td>
+</tr>
+<tr class="even">
+<td><code>enquo()</code> / <code>enquos()</code></td>
+<td>Tidy eval expression capture</td>
+<td>No</td>
+</tr>
+<tr class="odd">
+<td><code>rlang::enexpr()</code></td>
+<td>Capture single expression</td>
+<td>No</td>
+</tr>
+<tr class="even">
+<td><code>quote()</code></td>
+<td>Quote an expression</td>
+<td>Yes*</td>
+</tr>
+<tr class="odd">
+<td><code>bquote()</code></td>
+<td>Quote with substitution</td>
+<td>Yes*</td>
+</tr>
+</tbody>
+</table>
+<p>* These quote the literal argument, so piping changes <em>what</em> gets quoted.</p>
+<p>Many tidyverse functions use NSE internally but are designed to work with pipes because they evaluate captured expressions in data contexts. However, when <em>you</em> write functions that need to capture user expressions, the pipe becomes problematic.</p>
+</section>
+<section id="the-native-pipe-vs.-magrittr" class="level2" data-number="6">
+<h2 data-number="6" class="anchored" data-anchor-id="the-native-pipe-vs.-magrittr"><span class="header-section-number">6</span> The Native Pipe vs.&nbsp;Magrittr</h2>
+<p>Does it matter which pipe you use? Not for this problem.</p>
+<p>Both <code>|&gt;</code> (native, R 4.1+) and <code>%&gt;%</code> (magrittr) evaluate the left-hand side before passing it to the right. The native pipe is essentially a syntax transformation at parse time <span class="citation" data-cites="wickham2023base">(Wickham and Henry 2023)</span>:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Native pipe: parsed as</span></span>
+<span id="cb7-2">x <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">|&gt;</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">f</span>(y)</span>
+<span id="cb7-3"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># becomes</span></span>
+<span id="cb7-4"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">f</span>(x, y)</span>
+<span id="cb7-5"></span>
+<span id="cb7-6"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># But x is still evaluated before f() sees it</span></span></code></pre></div></div>
+</div>
+<p>The magrittr pipe does more work behind the scenes but has the same fundamental behavior: eager evaluation of the left-hand side <span class="citation" data-cites="bache2022magrittr">(Bache and Wickham 2022)</span>.</p>
+<p>Magrittr does offer <code>%!&gt;%</code>, an “eager pipe” that forces evaluation at each step, but this is for controlling <em>when</em> side effects occur, not for enabling expression capture.</p>
+</section>
+<section id="workarounds-and-design-patterns" class="level2" data-number="7">
+<h2 data-number="7" class="anchored" data-anchor-id="workarounds-and-design-patterns"><span class="header-section-number">7</span> Workarounds and Design Patterns</h2>
+<section id="pattern-1-accept-the-limitation" class="level3" data-number="7.1">
+<h3 data-number="7.1" class="anchored" data-anchor-id="pattern-1-accept-the-limitation"><span class="header-section-number">7.1</span> Pattern 1: Accept the Limitation</h3>
+<p>Design your API to require wrapping, not piping:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Document that this is the correct usage</span></span>
+<span id="cb8-2"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">zzplot</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">boxplot</span>(mpg <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">~</span> cyl, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">data =</span> mtcars))</span>
+<span id="cb8-3"></span>
+<span id="cb8-4"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Not this</span></span>
+<span id="cb8-5"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">boxplot</span>(mpg <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">~</span> cyl, <span class="at" style="color: #657422;
+background-color: null;
+font-style: inherit;">data =</span> mtcars) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">|&gt;</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">zzplot</span>()</span></code></pre></div></div>
+</div>
+<p>This is explicit and unambiguous. The tradeoff is that it breaks the “pipe everything” mental model some users have developed.</p>
+</section>
+<section id="pattern-2-provide-both-apis" class="level3" data-number="7.2">
+<h3 data-number="7.2" class="anchored" data-anchor-id="pattern-2-provide-both-apis"><span class="header-section-number">7.2</span> Pattern 2: Provide Both APIs</h3>
+<p>Offer a standard evaluation version alongside the NSE version:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># NSE version - for interactive use</span></span>
+<span id="cb9-2"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">zzplot</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plot</span>(x, y))</span>
+<span id="cb9-3"></span>
+<span id="cb9-4"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># SE version - for programmatic use and piping (sort of)</span></span>
+<span id="cb9-5"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">zzplot_expr</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">quote</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plot</span>(x, y)))</span>
+<span id="cb9-6"></span>
+<span id="cb9-7"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Or with a string</span></span>
+<span id="cb9-8"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">zzplot_code</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"plot(x, y)"</span>)</span></code></pre></div></div>
+</div>
+</section>
+<section id="pattern-3-use-quosures-tidy-eval" class="level3" data-number="7.3">
+<h3 data-number="7.3" class="anchored" data-anchor-id="pattern-3-use-quosures-tidy-eval"><span class="header-section-number">7.3</span> Pattern 3: Use Quosures (Tidy Eval)</h3>
+<p>The rlang package provides quosures, which bundle an expression with its environment <span class="citation" data-cites="henry2023rlang">(Henry and Wickham 2023)</span>. This enables more robust expression capture in some contexts:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">library</span>(rlang)</span>
+<span id="cb10-2"></span>
+<span id="cb10-3">my_function <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">function</span>(expr) {</span>
+<span id="cb10-4">  quo <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">enquo</span>(expr)</span>
+<span id="cb10-5">  expr_text <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">quo_text</span>(quo)</span>
+<span id="cb10-6">  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># ... use the quosure</span></span>
+<span id="cb10-7">}</span></code></pre></div></div>
+</div>
+<p>However, this still does not solve the pipe problem—<code>enquo()</code> captures what it receives, and the pipe has already evaluated the left-hand side.</p>
+</section>
+<section id="pattern-4-redesign-to-avoid-nse" class="level3" data-number="7.4">
+<h3 data-number="7.4" class="anchored" data-anchor-id="pattern-4-redesign-to-avoid-nse"><span class="header-section-number">7.4</span> Pattern 4: Redesign to Avoid NSE</h3>
+<p>Sometimes the cleanest solution is to not use NSE at all:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Instead of capturing expressions, accept functions</span></span>
+<span id="cb11-2">zzplot_fn <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">function</span>(plot_fn, ...) {</span>
+<span id="cb11-3">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">png</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"plot.png"</span>)</span>
+<span id="cb11-4">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plot_fn</span>(...)</span>
+<span id="cb11-5">  <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">dev.off</span>()</span>
+<span id="cb11-6">}</span>
+<span id="cb11-7"></span>
+<span id="cb11-8"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Usage (pipeable with anonymous functions)</span></span>
+<span id="cb11-9">\() <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">plot</span>(mtcars<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">$</span>wt, mtcars<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">$</span>mpg) <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">|&gt;</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">zzplot_fn</span>()</span></code></pre></div></div>
+</div>
+<p>This is less elegant but completely unambiguous about evaluation order.</p>
+</section>
+</section>
+<section id="the-deeper-lesson-referential-transparency" class="level2" data-number="8">
+<h2 data-number="8" class="anchored" data-anchor-id="the-deeper-lesson-referential-transparency"><span class="header-section-number">8</span> The Deeper Lesson: Referential Transparency</h2>
+<p>This issue reflects a fundamental property of programming languages: <em>referential transparency</em>. A function is referentially transparent if you can replace any expression with its value without changing the program’s behavior <span class="citation" data-cites="wickham2019advanced">(Wickham 2019)</span>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12" style="background: #f1f3f5;"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Referentially transparent</span></span>
+<span id="cb12-2">f <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">function</span>(x) x <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span></span>
+<span id="cb12-3"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">f</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span> <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>)  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Same as f(4)</span></span>
+<span id="cb12-4"></span>
+<span id="cb12-5"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># NOT referentially transparent</span></span>
+<span id="cb12-6">g <span class="ot" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">&lt;-</span> <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">function</span>(x) <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">deparse</span>(<span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">substitute</span>(x))</span>
+<span id="cb12-7"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">g</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span> <span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>)  <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Returns "2 + 2"</span></span>
+<span id="cb12-8"><span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">g</span>(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">4</span>)      <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Returns "4"</span></span></code></pre></div></div>
+</div>
+<p>NSE functions are not referentially transparent by design—they care about <em>how</em> you express something, not just <em>what</em> value it produces. Pipes assume referential transparency because they pre-compute values.</p>
+<p>Hadley Wickham notes in <em>Advanced R</em>: “The biggest downside of NSE is that functions that use it are no longer referentially transparent” <span class="citation" data-cites="wickham2019advanced">(Wickham 2019)</span>.</p>
+</section>
+<section id="conclusion" class="level2" data-number="9">
+<h2 data-number="9" class="anchored" data-anchor-id="conclusion"><span class="header-section-number">9</span> Conclusion</h2>
+<p>The pipe equivalence <code>f() |&gt; g() ≡ g(f())</code> holds for value semantics but fails for expression semantics. This is not a bug in R or the pipe operators; it is a fundamental tension between:</p>
+<ul>
+<li><strong>Eager evaluation</strong> (pipes compute left-to-right)</li>
+<li><strong>Lazy evaluation</strong> (functions receive unevaluated promises)</li>
+<li><strong>Non-standard evaluation</strong> (functions inspect the expression, not just the value)</li>
+</ul>
+<p>When writing functions that use <code>substitute()</code>, <code>match.call()</code>, or similar metaprogramming tools, document clearly that piping will not work as expected. When using such functions, remember that wrapping <code>f(g(x))</code> and piping <code>x |&gt; g() |&gt; f()</code> are semantically different operations, even when they produce the same final value.</p>
+<p>Understanding this distinction is essential for effective R metaprogramming and explains why some tidyverse patterns require specific syntax that cannot be arbitrarily reformatted.</p>
+</section>
+<section id="references" class="level2" data-number="10">
+<h2 data-number="10" class="anchored" data-anchor-id="references"><span class="header-section-number">10</span> References</h2>
+<div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0">
+<div id="ref-bache2022magrittr" class="csl-entry">
+Bache, Stefan Milton, and Hadley Wickham. 2022. <em>Magrittr: <span>A</span> Forward-Pipe Operator for <span>R</span></em>. <a href="https://CRAN.R-project.org/package=magrittr">https://CRAN.R-project.org/package=magrittr</a>.
+</div>
+<div id="ref-henry2023rlang" class="csl-entry">
+Henry, Lionel, and Hadley Wickham. 2023. <em>Rlang: <span>Functions</span> for Base Types and Core <span>R</span> and Tidyverse Features</em>. <a href="https://CRAN.R-project.org/package=rlang">https://CRAN.R-project.org/package=rlang</a>.
+</div>
+<div id="ref-wickham2019advanced" class="csl-entry">
+Wickham, Hadley. 2019. <em>Advanced <span>R</span></em>. 2nd ed. Boca Raton, FL: Chapman; Hall/CRC. <a href="https://adv-r.hadley.nz/">https://adv-r.hadley.nz/</a>.
+</div>
+<div id="ref-wickham2023base" class="csl-entry">
+Wickham, Hadley, and Lionel Henry. 2023. <span>“Differences Between the Base <span>R</span> and Magrittr Pipes.”</span> tidyverse blog. <a href="https://tidyverse.org/blog/2023/04/base-vs-magrittr-pipe/">https://tidyverse.org/blog/2023/04/base-vs-magrittr-pipe/</a>.
+</div>
+</div>
+</section>
+<section id="further-reading" class="level2" data-number="11">
+<h2 data-number="11" class="anchored" data-anchor-id="further-reading"><span class="header-section-number">11</span> Further Reading</h2>
+<ul>
+<li><a href="http://adv-r.had.co.nz/Computing-on-the-language.html">Non-standard evaluation</a> in <em>Advanced R</em> (1st ed.) by Hadley Wickham</li>
+<li><a href="https://adv-r.hadley.nz/evaluation.html">Evaluation</a> chapter in <em>Advanced R</em> (2nd ed.)</li>
+<li><a href="https://tidyeval.tidyverse.org/">Tidy Evaluation</a> book by the tidyverse team</li>
+<li><a href="https://www.brodieg.com/2020/05/05/on-nse/">Standard and Non-Standard Evaluation in R</a> by Brodie Gaslam</li>
+<li><a href="https://tidyverse.org/blog/2023/04/base-vs-magrittr-pipe/">Differences between the base R and magrittr pipes</a> on the tidyverse blog</li>
+<li><a href="https://magrittr.tidyverse.org/articles/tradeoffs.html">Design tradeoffs</a> in magrittr</li>
+<li><a href="https://thomasadventure.blog/posts/understanding-nse-part1/">Understanding Non-Standard Evaluation, Part 1</a> by Thomas Adventureson</li>
+</ul>
+
+
+</section>
+
+ ]]></description>
+  <category>R</category>
+  <category>metaprogramming</category>
+  <category>pipes</category>
+  <guid>https://focusonr.org/posts/15-piping/</guid>
+  <pubDate>Sat, 31 Jan 2026 08:00:00 GMT</pubDate>
+</item>
+</channel>
+</rss>
