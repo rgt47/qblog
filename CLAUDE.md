@@ -1891,5 +1891,124 @@ zzcollab init --profile ubuntu_x11_analysis
 
 ---
 
-*Document updated: 2025-12-13*
-*Claude Code Session: CI/CD infrastructure for 60 qblog posts with ZZCOLLAB workflow type system integration, Docker permission fixes, and package validation*
+## Session: 2026-02-09
+
+### Context
+Session focused on understanding the draft system for blog posts and fixing Netlify deployment issues.
+
+### Tasks Completed
+
+#### 1. Draft System Clarification ✅
+**User Question**: How to prevent draft posts from appearing on focusonr.org
+**Clarification**:
+- `draft: true` in YAML → hides from blog listing (but still pushed to GitHub)
+- `draft: false` or missing → appears on blog listing
+- To prevent pushing to GitHub: use `.gitignore` or `_drafts/` folder
+
+**Current Setup**:
+- 42 posts in `posts/` directory
+- All now have `draft: true` → hidden from focusonr.org
+- Posts remain in GitHub repo (acceptable per user preference)
+
+#### 2. Set All Published Posts to Draft ✅
+**Action**: Changed 4 previously published posts to `draft: true`
+- `posts/24-setupdotfilesongithub/index.qmd`
+- `posts/34-shinyvsobservable/index.qmd`
+- `posts/39-templatepost/index.qmd`
+- `posts/42-zzedcindependence/index.qmd`
+
+#### 3. Created Missing Navigation Pages ✅
+**Issue**: `quarto render` warnings about missing link targets
+**Solution**: Created placeholder files:
+- `about/index.qmd` - Basic bio page
+- `blog/index.qmd` - Listing page with Quarto listing feature
+- `teaching/index.qmd` - Placeholder for courses
+
+#### 4. Fixed Rendering Errors ✅
+**Issue 1**: Missing bibliography file
+- `posts/18-rcodepackageupdating/index.qmd` referenced `update_code.bib` which didn't exist
+- **Fix**: Removed `bibliography:` line from YAML
+
+**Issue 2**: Missing R package (`assertr`)
+- `posts/40-testingfordataanalysisworkflow/index.qmd` tried to load `assertr`
+- **Fix**: Added `eval: false` to YAML and explicit `#| eval: false` to problematic chunks
+
+#### 5. Fixed Netlify Deployment ✅
+**Issue 1**: Broken git submodules
+- `_archive/shinysimulationapp` and `_archive/shinyweathertimeapi` had no URL in `.gitmodules`
+- **Fix**: `git rm --cached` to remove broken submodule references
+
+**Issue 2**: Another broken submodule
+- `img` directory was registered as submodule without URL
+- **Fix**: `git rm --cached img`
+
+**Issue 3**: Wrong branch name
+- Netlify configured for `master` but repo uses `main`
+- **Fix**: User updated Netlify settings to use `main` branch
+
+**Issue 4**: Netlify trying to run Node.js build
+- Netlify detected (nonexistent) `package.json` and tried `npm run build`
+- **Fix**: Created `netlify.toml` with explicit config:
+  ```toml
+  [build]
+    publish = "_site"
+    command = "echo 'No build needed - serving pre-built _site'"
+
+  [build.environment]
+    NODE_VERSION = "18"
+  ```
+
+#### 6. Fixed Remaining Draft Post ✅
+**Issue**: "The Pipe Equivalence Myth" post appeared on blog (missing `draft:` field)
+- `posts/15-piping/index.qmd` had no `draft:` field (defaulted to false)
+- **Fix**: Added `draft: true`
+
+### Key Insights
+
+1. **Quarto Draft System**: Posts without `draft:` field default to published. Always explicitly set `draft: true` or `draft: false`.
+
+2. **Git Submodule Cleanup**: Broken submodule references (entries in git index without corresponding `.gitmodules` URL) cause Netlify builds to fail. Fix with `git rm --cached <path>`.
+
+3. **Netlify Configuration**: For pre-built static sites:
+   - Set publish directory to `_site`
+   - Use `netlify.toml` to prevent auto-detection of build systems
+   - Ensure production branch matches actual branch name (`main` vs `master`)
+
+### Project Status
+
+#### Blog Draft Management ✅
+- All 42 posts have explicit `draft: true`
+- Blog page at focusonr.org shows no posts (as intended)
+- To publish: change `draft: true` to `draft: false` and re-render
+
+#### Netlify Deployment ✅
+- Broken submodule references removed
+- `netlify.toml` created for explicit configuration
+- Branch set to `main`
+- Deployment working
+
+### Files Modified/Created
+
+- `posts/24-setupdotfilesongithub/index.qmd` - `draft: true`
+- `posts/34-shinyvsobservable/index.qmd` - `draft: true`
+- `posts/39-templatepost/index.qmd` - `draft: true`
+- `posts/42-zzedcindependence/index.qmd` - `draft: true`
+- `posts/15-piping/index.qmd` - Added `draft: true`
+- `posts/18-rcodepackageupdating/index.qmd` - Removed missing bibliography
+- `posts/40-testingfordataanalysisworkflow/index.qmd` - Added `eval: false`
+- `about/index.qmd` - Created placeholder
+- `blog/index.qmd` - Created with Quarto listing
+- `teaching/index.qmd` - Created placeholder
+- `netlify.toml` - Created for deployment config
+
+### Git Commits
+
+- `ea9bcc4` - Remove broken submodule references from _archive
+- `febc959` - Add netlify.toml to skip build and serve _site
+- `ef19a15` - Remove broken img submodule reference
+- `295cd48` - Set 15-piping to draft: true
+
+---
+
+*Document updated: 2026-02-09*
+*Claude Code Session: Blog draft system setup, Netlify deployment fixes, and navigation page creation*
