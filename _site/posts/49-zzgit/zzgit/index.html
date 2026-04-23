@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.37">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ronald G. Thomas">
+<meta name="dcterms.date" content="2026-04-22">
+<meta name="description" content="A reproducible configuration for zzgit, a zsh plugin that guides the three-step local git workflow (stage, commit, push) through an interactive wizard. Stages only user-selected files, scans the staged diff for credentials via gitleaks, assembles a Conventional Commits message, and gates the push behind a separate confirmation. Includes a protected-branch guard and an audited override path for confirmed false positives.">
+
+<title>zzgit: An interactive staging, secret-scanning, and commit wizard for zsh – Thomas Lab</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../../">
+<script src="../../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../../site_libs/quarto-html/quarto-syntax-highlighting-7f8f88aac4f3542376d5c11b86a4c14d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../../site_libs/bootstrap/bootstrap-6ad90c6c42fc9ba0d1bed9226462a238.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": true,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "keyboard-shortcut": [
+    "?",
+    "/"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&amp;family=Open+Sans:ital,wght@0,400;0,600;1,400&amp;family=Fira+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<script src="https://kit.fontawesome.com/0fba9333d8.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+
+<!-- Custom meta tags for social sharing -->
+<meta property="og:site_name" content="Thomas Lab">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@rgt47">
+
+<!-- Add responsive features -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<!-- Add analytics if needed -->
+<!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXX');
+</script> -->
+
+<!-- Add custom javascript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Remove code tools button completely
+  const codeButton = document.querySelector('.code-tools-button');
+  if (codeButton) {
+    codeButton.remove();
+  }
+  
+  // Add any custom JavaScript functionality here
+  
+  // Example: Add smooth scrolling
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      
+      document.querySelector(this.getAttribute('href')).scrollIntoView({
+        behavior: 'smooth'
+      });
+    });
+  });
+  
+  // Make sidebar category items clickable (but not TOC items)
+  const categoryLinks = {
+    'Programming & Development': '/posts/?category=Programming+%26+Development',
+    'Data Analysis & Visualization': '/posts/?category=Data+Analysis+%26+Visualization',
+    'Deployment & Operations': '/posts/?category=Deployment+%26+Operations',
+    'Development Environment': '/posts/?category=Development+Environment',
+    'Shiny Applications': '/posts/?category=Shiny+Applications',
+    'AI & Automation': '/posts/?category=AI+%26+Automation',
+    'System Administration': '/posts/?category=System+Administration'
+  };
+  
+  // Only target sidebar items that are not in the TOC
+  document.querySelectorAll('.sidebar-item-section .sidebar-item-text').forEach(item => {
+    // Skip if this is inside the TOC
+    if (item.closest('#TOC')) return;
+    
+    const text = item.textContent.trim();
+    if (categoryLinks[text]) {
+      item.addEventListener('click', function() {
+        window.location.href = categoryLinks[text];
+      });
+    }
+  });
+});
+</script>
+
+
+<meta property="og:title" content="zzgit: An interactive staging, secret-scanning, and commit wizard for zsh – Thomas Lab">
+<meta property="og:description" content="A reproducible configuration for zzgit, a zsh plugin that guides the three-step local git workflow (stage, commit, push) through an interactive wizard. Stages only user-selected files, scans the staged diff for credentials via gitleaks, assembles a Conventional Commits message, and gates the push behind a separate confirmation. Includes a protected-branch guard and an audited override path for confirmed false positives.">
+<meta property="og:image" content="https://focusonr.org/posts/49-zzgit/zzgit/media/images/zzgit-hero.jpg">
+<meta property="og:site_name" content="Thomas Lab">
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../../index.html">
+    <span class="navbar-title">Thomas Lab</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../about/index.html"> 
+<span class="menu-text">About</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../blog/index.html"> 
+<span class="menu-text">Blog</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../white-papers/index.html"> 
+<span class="menu-text">White Papers</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../research/index.html"> 
+<span class="menu-text">Research</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../teaching/index.html"> 
+<span class="menu-text">Teaching</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../misc/index.html"> 
+<span class="menu-text">Misc</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47"> <i class="bi bi-twitter" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a>
+  <ul class="collapse">
+  <li><a href="#motivations" id="toc-motivations" class="nav-link" data-scroll-target="#motivations"><span class="header-section-number">1.1</span> Motivations</a></li>
+  <li><a href="#objectives" id="toc-objectives" class="nav-link" data-scroll-target="#objectives"><span class="header-section-number">1.2</span> Objectives</a></li>
+  </ul></li>
+  <li><a href="#what-is-zzgit" id="toc-what-is-zzgit" class="nav-link" data-scroll-target="#what-is-zzgit"><span class="header-section-number">2</span> What is zzgit?</a></li>
+  <li><a href="#architecture-overview" id="toc-architecture-overview" class="nav-link" data-scroll-target="#architecture-overview"><span class="header-section-number">3</span> Architecture Overview</a></li>
+  <li><a href="#design-decisions" id="toc-design-decisions" class="nav-link" data-scroll-target="#design-decisions"><span class="header-section-number">4</span> Design Decisions</a></li>
+  <li><a href="#prerequisites" id="toc-prerequisites" class="nav-link" data-scroll-target="#prerequisites"><span class="header-section-number">5</span> Prerequisites</a></li>
+  <li><a href="#installation" id="toc-installation" class="nav-link" data-scroll-target="#installation"><span class="header-section-number">6</span> Installation</a>
+  <ul class="collapse">
+  <li><a href="#oh-my-zsh" id="toc-oh-my-zsh" class="nav-link" data-scroll-target="#oh-my-zsh"><span class="header-section-number">6.0.1</span> oh-my-zsh</a></li>
+  <li><a href="#zinit" id="toc-zinit" class="nav-link" data-scroll-target="#zinit"><span class="header-section-number">6.0.2</span> zinit</a></li>
+  <li><a href="#antidote" id="toc-antidote" class="nav-link" data-scroll-target="#antidote"><span class="header-section-number">6.0.3</span> antidote</a></li>
+  <li><a href="#manual" id="toc-manual" class="nav-link" data-scroll-target="#manual"><span class="header-section-number">6.0.4</span> Manual</a></li>
+  </ul></li>
+  <li><a href="#configuration" id="toc-configuration" class="nav-link" data-scroll-target="#configuration"><span class="header-section-number">7</span> Configuration</a>
+  <ul class="collapse">
+  <li><a href="#protected-branches" id="toc-protected-branches" class="nav-link" data-scroll-target="#protected-branches"><span class="header-section-number">7.0.1</span> Protected branches</a></li>
+  <li><a href="#secret-scanner" id="toc-secret-scanner" class="nav-link" data-scroll-target="#secret-scanner"><span class="header-section-number">7.0.2</span> Secret scanner</a></li>
+  <li><a href="#override-path" id="toc-override-path" class="nav-link" data-scroll-target="#override-path"><span class="header-section-number">7.0.3</span> Override path</a></li>
+  <li><a href="#gitleaks-configuration" id="toc-gitleaks-configuration" class="nav-link" data-scroll-target="#gitleaks-configuration"><span class="header-section-number">7.0.4</span> gitleaks configuration</a></li>
+  </ul></li>
+  <li><a href="#verification" id="toc-verification" class="nav-link" data-scroll-target="#verification"><span class="header-section-number">8</span> Verification</a></li>
+  <li><a href="#daily-workflow" id="toc-daily-workflow" class="nav-link" data-scroll-target="#daily-workflow"><span class="header-section-number">9</span> Daily Workflow</a></li>
+  <li><a href="#things-to-watch-out-for" id="toc-things-to-watch-out-for" class="nav-link" data-scroll-target="#things-to-watch-out-for"><span class="header-section-number">10</span> Things to Watch Out For</a></li>
+  <li><a href="#uninstall-and-rollback" id="toc-uninstall-and-rollback" class="nav-link" data-scroll-target="#uninstall-and-rollback"><span class="header-section-number">11</span> Uninstall and Rollback</a></li>
+  <li><a href="#lessons-learnt" id="toc-lessons-learnt" class="nav-link" data-scroll-target="#lessons-learnt"><span class="header-section-number">12</span> Lessons Learnt</a>
+  <ul class="collapse">
+  <li><a href="#conceptual" id="toc-conceptual" class="nav-link" data-scroll-target="#conceptual"><span class="header-section-number">12.0.1</span> Conceptual</a></li>
+  <li><a href="#technical" id="toc-technical" class="nav-link" data-scroll-target="#technical"><span class="header-section-number">12.0.2</span> Technical</a></li>
+  <li><a href="#gotcha-shaped" id="toc-gotcha-shaped" class="nav-link" data-scroll-target="#gotcha-shaped"><span class="header-section-number">12.0.3</span> Gotcha-shaped</a></li>
+  </ul></li>
+  <li><a href="#limitations" id="toc-limitations" class="nav-link" data-scroll-target="#limitations"><span class="header-section-number">13</span> Limitations</a></li>
+  <li><a href="#opportunities-for-improvement" id="toc-opportunities-for-improvement" class="nav-link" data-scroll-target="#opportunities-for-improvement"><span class="header-section-number">14</span> Opportunities for Improvement</a></li>
+  <li><a href="#wrapping-up" id="toc-wrapping-up" class="nav-link" data-scroll-target="#wrapping-up"><span class="header-section-number">15</span> Wrapping Up</a>
+  <ul class="collapse">
+  <li><a href="#main-takeaways" id="toc-main-takeaways" class="nav-link" data-scroll-target="#main-takeaways"><span class="header-section-number">15.0.1</span> Main takeaways</a></li>
+  </ul></li>
+  <li><a href="#see-also" id="toc-see-also" class="nav-link" data-scroll-target="#see-also"><span class="header-section-number">16</span> See Also</a></li>
+  <li><a href="#reproducibility" id="toc-reproducibility" class="nav-link" data-scroll-target="#reproducibility"><span class="header-section-number">17</span> Reproducibility</a></li>
+  <li><a href="#lets-connect" id="toc-lets-connect" class="nav-link" data-scroll-target="#lets-connect"><span class="header-section-number">18</span> Let’s Connect</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content column-page-left" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">zzgit: An interactive staging, secret-scanning, and commit wizard for zsh</h1>
+<p class="subtitle lead">A zsh plugin that replaces <code>git add . &amp;&amp; git commit -am ... &amp;&amp; git push</code> with a deliberate flow, a content-based secret scan of the staged diff, and independent pre-commit and pre-push confirmations.</p>
+  <div class="quarto-categories">
+    <div class="quarto-category">setup</div>
+    <div class="quarto-category">workflow</div>
+    <div class="quarto-category">tooling</div>
+    <div class="quarto-category">zsh</div>
+    <div class="quarto-category">git</div>
+    <div class="quarto-category">security</div>
+    <div class="quarto-category">conventional-commits</div>
+    <div class="quarto-category">gitleaks</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    A reproducible configuration for zzgit, a zsh plugin that guides the three-step local git workflow (stage, commit, push) through an interactive wizard. Stages only user-selected files, scans the staged diff for credentials via gitleaks, assembles a Conventional Commits message, and gates the push behind a separate confirmation. Includes a protected-branch guard and an audited override path for confirmed false positives.
+  </div>
+</div>
+
+
+<div class="quarto-title-meta column-page-left">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ronald G. Thomas </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">April 22, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/zzgit-hero.jpg" class="img-fluid figure-img" style="width:80.0%"></p>
+<figcaption>A vintage mechanical typewriter on a wooden desk, with green terminal-style text emerging on the paper in the carriage. The image juxtaposes a century-old writing tool with the syntax of a modern command-line workflow, echoing the plugin’s premise: small ergonomic interventions on a familiar mechanism.</figcaption>
+</figure>
+</div>
+<p><em>An interactive, content-aware wrapper around <code>git add</code>, <code>git commit</code>, and <code>git push</code> closes several well-known failure modes of the unassisted reflex version of the same three commands.</em></p>
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>I did not really appreciate how much trust I was placing in <code>git add .</code> until I watched a colleague accidentally commit an AWS access key embedded in a Jupyter notebook output cell. The notebook was not named <code>credentials.json</code>; it was <code>eda.ipynb</code>. The key was not flagged by any filename heuristic because its filename was entirely innocuous. The commit landed on a feature branch and was caught later by a scheduled history scan, at which point the key had to be rotated, the commit rewritten, and the remote history force-pushed. None of this would have been necessary if the secret had been caught at the moment of staging rather than after the fact.</p>
+<p>The reflex form of the local git workflow, <code>git add . &amp;&amp; git commit -am '...' &amp;&amp; git push</code>, has three well-documented failure modes, each of which contributed to the incident above. It stages every changed or untracked file in the working tree regardless of whether the user intends to publish it. It accepts a commit subject that is typically filename-derived or descriptive of the mechanical action rather than of the user’s intent. And it treats the push as an implicit continuation of the commit rather than as a separate decision. Each failure mode is individually minor; in combination they are the proximate cause of most accidentally-committed credentials, of the genre of commit messages that read ‘update’, and of the specific category of incidents in which a commit is pushed to <code>main</code> that the author intended to push to a feature branch.</p>
+<p>This post documents a zsh plugin, <code>zzgit</code>, that replaces this reflex with a deliberate interactive flow. The plugin stages only files that the user explicitly selects, scans the resulting staged diff for credentials using <code>gitleaks</code> (a content-based scanner, not a filename heuristic), assembles a Conventional Commits message through a short wizard, and treats the push as a separately-confirmed action. When the scanner flags a finding, the default behaviour is to refuse the commit and print three remediation paths; the override is guarded by a session-scoped environment variable, requires a typed reason, and is logged. The remainder of the post covers the motivations, the configuration, the design rationale, the limitations, and the set of failure modes that remain.</p>
+<section id="motivations" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="motivations"><span class="header-section-number">1.1</span> Motivations</h2>
+<p>The design decisions embedded in <code>zzgit</code> were motivated by the following specific pain points, each of which the plugin addresses directly:</p>
+<ul>
+<li><p><strong>Accidental staging of credentials.</strong> The conventional shortcut <code>git add .</code> stages every file in the working tree, including <code>.env</code> files, SSH private keys, and downloaded credentials bundles that happen to be present but are not intended to be committed. A filename-based guard (<code>*.env</code>, <code>*credentials*</code>) catches the most obvious cases but fails on the common class of credentials pasted into normal files: an API key in a configuration YAML, a database password in a test fixture, a personal access token in a notebook output cell.</p></li>
+<li><p><strong>Commit messages that describe filenames rather than intent.</strong> Under time pressure the author’s natural default is to write a commit subject that summarises what files changed, since that information is immediately available from <code>git status</code>. This produces a commit history in which the subjects are variants of <code>fix foo.py bar.py</code> rather than descriptions of the change’s purpose. The history is correspondingly difficult to navigate for bisection, code review, or release-note generation.</p></li>
+<li><p><strong>Pushes that are implicit rather than deliberate.</strong> The sequence <code>git commit -am '...' &amp;&amp; git push</code> treats publication as a mechanical consequence of the commit. In practice the author should make a second, separate decision at the push step: was the commit assembled correctly, is the branch the intended one, and is the remote ready to receive it. Collapsing the decision increases the rate of inadvertent pushes to the wrong branch and of commits that would have benefited from a moment of review.</p></li>
+<li><p><strong>Protected branches that are only protected server-side.</strong> GitHub and GitLab branch-protection rules are authoritative, but they reject the push at the remote after the author has typed the command. A client-side reminder that <code>main</code> is a protected branch closes the specific failure mode of a reflex <code>git push</code> from the wrong working copy, even when the remote’s protections would ultimately catch the attempt.</p></li>
+<li><p><strong>The absence of a convenient Conventional Commits wizard in the zsh ecosystem.</strong> <code>commitizen</code> and <code>cocogitto</code> provide the prompting but require Node or Rust toolchains respectively, bring their own configuration conventions, and do not couple to the staging and secret-scanning steps. A single zsh plugin that composes all three concerns is lighter and eliminates the friction of running three separate commands.</p></li>
+</ul>
+</section>
+<section id="objectives" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="objectives"><span class="header-section-number">1.2</span> Objectives</h2>
+<p>The scope of <code>zzgit</code> is the following set of verifiable deliverables:</p>
+<ol type="1">
+<li><p>Present an interactive list of unstaged and untracked files and stage only the user’s selection. Use <code>fzf</code> for multi-select when available; fall back to a numeric menu otherwise.</p></li>
+<li><p>Scan the resulting staged diff for credentials using <code>gitleaks</code>. When findings are present, refuse to proceed by default and print three remediation options: unstage and fix, allowlist via <code>.gitleaksignore</code>, or an audited session-scoped override.</p></li>
+<li><p>Assemble a Conventional Commits message through a four-prompt wizard (type, scope, subject, body) and require a human-written subject as the primary signal of intent.</p></li>
+<li><p>Gate the commit and the push behind independent confirmations. Apply a stronger prompt on pushes to branches listed in <code>ZZGIT_PROTECTED_BRANCHES</code>.</p></li>
+</ol>
+<p>The configuration is presented as a reproducible reference rather than as a tutorial; each design decision is annotated with the rationale for its inclusion.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/placeholder-coffee-02.jpg" class="img-fluid figure-img"></p>
+<figcaption>Placeholder ambiance image (coffee, Unsplash free licence). To be replaced with a scene depicting the Conventional Commits wizard: the staged-changes summary, the numbered commit-type menu, and the scope and subject prompts.</figcaption>
+</figure>
+</div>
+</section>
+</section>
+<section id="what-is-zzgit" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> What is zzgit?</h1>
+<p><code>zzgit</code> is a zsh plugin of approximately four hundred lines that exposes a single entry point, also named <code>zzgit</code>, plus a companion <code>zzgit-scan-history</code>. It is structurally a shell function with three internal phases: a selection phase that picks files to stage, a scan phase that inspects the staged diff for credentials, and a message-assembly phase that gathers a Conventional Commits message and requests confirmation before issuing <code>git commit</code> and <code>git push</code>. The plugin has two soft dependencies, <code>fzf</code> and <code>gitleaks</code>, each of which degrades gracefully to a reduced-capability fallback when absent.</p>
+<p>In functional terms the role of <code>zzgit</code> is analogous to that of a pre-commit hook framework, but the integration point is earlier in the workflow and the scope is wider. A pre-commit hook runs after <code>git commit</code> has been invoked and operates on a commit that has already been typed; <code>zzgit</code> intervenes before the commit is assembled, so that the wizard sees both the user’s intent and the scanner’s verdict at the same time and can refuse to issue the commit command at all. This matters particularly for the secret-scan path, where a pre-commit hook that refuses a commit still leaves the offending content in the index; <code>zzgit</code>’s refusal leaves the index as the user built it and directs them toward remediation without any cleanup.</p>
+<p>As a minimal example, invoking <code>zzgit</code> inside a clean git working tree with one untracked file containing an <code>AWS_SECRET_ACCESS_KEY</code> produces the following path: the plugin lists the untracked file in a selection UI, the user chooses it, <code>git add</code> stages it, <code>gitleaks git --staged</code> reads the staged diff and flags the key, and the plugin prints the remediation options and exits with status 1 without having issued <code>git commit</code>. The credentials never leave the local index and no message was ever typed.</p>
+</section>
+<section id="architecture-overview" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Architecture Overview</h1>
+<p>The runtime system is best understood as three layered components, each with a distinct responsibility:</p>
+<ol type="1">
+<li><p><strong>The wizard function (<code>zzgit</code>).</strong> This is the top-level function invoked by the user. It owns the sequential interactive flow, manages the branching on user choices, and is responsible for issuing the <code>git</code> subcommands that change repository state. It contains no direct credential-scanning logic; that is delegated to a helper.</p></li>
+<li><p><strong>The secret-scan helper (<code>_zzgit_secret_scan</code>).</strong> This internal function is called once, after staging and before the message-assembly wizard. It selects among three scanning strategies (gitleaks with the newer <code>git --staged</code> subcommand, gitleaks with the older <code>protect --staged</code> subcommand, or a degraded filename-heuristic fallback when gitleaks is absent), runs the selected strategy, and returns a status code that determines whether <code>zzgit</code> proceeds or refuses.</p></li>
+<li><p><strong>The history-scan companion (<code>zzgit-scan-history</code>).</strong> This is a separately-invoked function that runs the scanner over the entire git log rather than the staged diff. It is not on the hot path because history scans on large repositories can take tens of seconds to minutes; it is intended for deliberate use after cloning an unfamiliar repository, after merging a long-lived branch, or as part of a periodic audit.</p></li>
+</ol>
+<p>The invocation path for a typical <code>zzgit</code> call therefore traverses: (a) a branch and working-tree status query, (b) an <code>fzf</code> or numeric-menu selection, (c) <code>git add --</code> on the selection, (d) a <code>gitleaks</code> scan of the staged diff, (e) a type-and-subject wizard, (f) a pre-commit confirmation prompt, (g) <code>git commit</code>, (h) a pre-push confirmation prompt, and finally (i) <code>git push</code>. Each step is interruptible; pressing <code>Ctrl-C</code> or answering <code>n</code> at any confirmation prompt leaves the index and working tree in a well-defined state.</p>
+</section>
+<section id="design-decisions" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Design Decisions</h1>
+<p>Six design decisions shape the plugin’s behaviour and are worth stating explicitly. Each reflects a trade-off that could reasonably have been decided differently.</p>
+<p><strong>The scanner runs on the staged diff, not on the working tree.</strong> <code>gitleaks</code> has modes for scanning the working tree, the index, and the full history. <code>zzgit</code> invokes it on the index (<code>gitleaks git --staged</code>) so that the scan sees exactly the content that <code>git commit</code> would promote to a commit object. Files that the user chose not to stage are not scanned, which is deliberate: the plugin’s scope is the commit that is about to be made, not the developer’s broader working environment.</p>
+<p><strong>On scan findings, the default is refusal, not a <code>[y/N]</code> prompt.</strong> A prompt of the form <code>gitleaks flagged a finding; continue? [y/N]</code> trains the user to answer <code>y</code> on reflex. The <code>zzgit</code> design instead returns status 1 on a finding and prints three concrete remediation paths. The override path is gated on an environment variable (<code>ZZGIT_ALLOW_SECRET_OVERRIDE=1</code>) that the user must export in the current shell, and further requires a typed reason of at least ten characters. The friction is deliberate and is calibrated against the cost of accidentally publishing a credential.</p>
+<p><strong>The subject line is a required human input, not a filename summary.</strong> The wizard prompts for a subject before prompting for the body, and if the user leaves the subject blank it falls back to a comma-separated list of the first five staged filenames, matching the behaviour of the original single-function predecessor. Leaving the subject blank is therefore possible but visibly degraded; the prompt structure nudges the user toward writing a human description of the change.</p>
+<p><strong>The commit and the push are separately confirmed.</strong> After the message is assembled, <code>zzgit</code> prints a summary block (branch, staged file list, assembled message) and requires a <code>y</code> confirmation before issuing <code>git commit</code>. A second, independent confirmation is required before <code>git push</code>. This splits the publication decision cleanly from the commit decision; a user who changes their mind after seeing the diff has an opportunity to cancel without having rewritten any history.</p>
+<p><strong>Protected-branch detection is configurable but advisory.</strong> The environment variable <code>ZZGIT_PROTECTED_BRANCHES</code> defines a space-separated list of branch names that trigger an extra-explicit push prompt. The guard is purely client-side. It does not refuse the push; only the remote can do that. Its value is in catching the specific failure mode of reflexively pushing from the wrong branch, not in enforcing an access-control policy.</p>
+<p><strong>The plugin’s function definitions are wrapped in <code>emulate -L zsh</code>.</strong> Each function begins with <code>emulate -L zsh</code>, which resets shell options to their zsh defaults for the duration of the function call. This ensures that the plugin behaves identically across users who may have customised <code>setopt</code> flags such as <code>KSH_ARRAYS</code>, <code>SH_WORD_SPLIT</code>, or <code>NO_UNSET</code>. The cost is a small increase in function-entry overhead; the benefit is that behaviour is predictable outside the author’s own shell.</p>
+</section>
+<section id="prerequisites" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Prerequisites</h1>
+<p>The configuration assumes the following environment:</p>
+<ul>
+<li><strong>Shell:</strong> <code>zsh</code> 5.0 or later. The plugin uses native zsh array expansion flags (<code>(f)</code>, <code>(j:,:)</code>) and <code>typeset -U</code>; it is not portable to <code>bash</code>.</li>
+<li><strong>Version control:</strong> <code>git</code> 2.0 or later. No git features specific to recent releases are used.</li>
+<li><strong>Operating system:</strong> any POSIX-compatible system on which zsh runs. Development and testing took place on macOS 15; Linux distributions with <code>zsh</code>, <code>git</code>, and optionally <code>fzf</code> and <code>gitleaks</code> available in their package repositories are equivalent.</li>
+<li><strong>Optional runtime dependencies:</strong>
+<ul>
+<li><code>fzf</code> 0.30 or later for interactive multi-select file staging. Absent: a numeric-menu fallback is used.</li>
+<li><code>gitleaks</code> 8.0 or later for content-based secret scanning. Versions 8.0 through 8.20 use the <code>protect --staged</code> subcommand; versions 8.21 and later use <code>git --staged</code>. The plugin detects which form is available and uses it. Absent: a filename-heuristic fallback is used and a prominent installation hint is printed.</li>
+</ul></li>
+<li><strong>Plugin manager (optional but recommended):</strong> oh-my-zsh, zinit, antidote, zplug, or sheldon. Manual sourcing from <code>~/.zsh/plugins/</code> is supported.</li>
+<li><strong>Prior knowledge:</strong> familiarity with git workflows, with Conventional Commits, and with zsh environment-variable syntax. No prior knowledge of zsh plugin authorship is required.</li>
+<li><strong>Time investment:</strong> approximately five minutes for installation and configuration; approximately thirty seconds per invocation thereafter, compared to approximately five seconds for the <code>git add . &amp;&amp; git commit -am '...' &amp;&amp; git push</code> reflex that <code>zzgit</code> replaces.</li>
+</ul>
+</section>
+<section id="installation" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Installation</h1>
+<p><code>zzgit</code> is distributed as a standard zsh plugin. The recommended installation path depends on the plugin manager in use.</p>
+<section id="oh-my-zsh" class="level3" data-number="6.0.1">
+<h3 data-number="6.0.1" class="anchored" data-anchor-id="oh-my-zsh"><span class="header-section-number">6.0.1</span> oh-my-zsh</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode zsh code-with-copy"><code class="sourceCode zsh"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone https://github.com/rgthomas47/zzgit <span class="dt">\</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="va">${ZSH_CUSTOM</span><span class="op">:-</span><span class="pp">~</span>/.oh-my-zsh/custom<span class="va">}</span>/plugins/zzgit</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Add 'zzgit' to the plugins=(...) list in ~/.zshrc, then:</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="bu">exec</span> zsh</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="zinit" class="level3" data-number="6.0.2">
+<h3 data-number="6.0.2" class="anchored" data-anchor-id="zinit"><span class="header-section-number">6.0.2</span> zinit</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode zsh code-with-copy"><code class="sourceCode zsh"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># In ~/.zshrc:</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">zinit</span> load rgthomas47/zzgit</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="antidote" class="level3" data-number="6.0.3">
+<h3 data-number="6.0.3" class="anchored" data-anchor-id="antidote"><span class="header-section-number">6.0.3</span> antidote</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode zsh code-with-copy"><code class="sourceCode zsh"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># In ~/.zsh_plugins.txt:</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">rgthomas47/zzgit</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="manual" class="level3" data-number="6.0.4">
+<h3 data-number="6.0.4" class="anchored" data-anchor-id="manual"><span class="header-section-number">6.0.4</span> Manual</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode zsh code-with-copy"><code class="sourceCode zsh"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone https://github.com/rgthomas47/zzgit ~/.zsh/plugins/zzgit</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co"># In ~/.zshrc:</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="bu">source</span> ~/.zsh/plugins/zzgit/zzgit.plugin.zsh</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Install the optional dependencies (<code>fzf</code>, <code>gitleaks</code>) through the system package manager; on macOS:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode zsh code-with-copy"><code class="sourceCode zsh"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">brew</span> install fzf gitleaks</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>On Debian-derived Linux distributions <code>gitleaks</code> is available through the upstream install script or as a Go-built binary from the project’s releases page; the Debian archive version may lag the current release.</p>
+</section>
+</section>
+<section id="configuration" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Configuration</h1>
+<p>All configuration is exposed as environment variables. There is no configuration file, by design: the configuration surface is intentionally small, and per-repository overrides should be expressed through the repository’s own files (<code>.gitleaks.toml</code>, <code>.gitleaksignore</code>) rather than through a plugin-level file.</p>
+<section id="protected-branches" class="level3" data-number="7.0.1">
+<h3 data-number="7.0.1" class="anchored" data-anchor-id="protected-branches"><span class="header-section-number">7.0.1</span> Protected branches</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode zsh code-with-copy"><code class="sourceCode zsh"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">ZZGIT_PROTECTED_BRANCHES</span><span class="op">=</span><span class="st">'main master release develop'</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Default: <code>main master</code>. Any push to a branch whose name matches an entry on this list triggers an extra-explicit confirmation prompt with the branch name surfaced. The guard is advisory; server-side branch protection rules remain the authoritative enforcement layer.</p>
+</section>
+<section id="secret-scanner" class="level3" data-number="7.0.2">
+<h3 data-number="7.0.2" class="anchored" data-anchor-id="secret-scanner"><span class="header-section-number">7.0.2</span> Secret scanner</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode zsh code-with-copy"><code class="sourceCode zsh"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">ZZGIT_SECRET_SCANNER</span><span class="op">=</span><span class="st">'gitleaks'</span>   <span class="co"># default</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">ZZGIT_SECRET_SCANNER</span><span class="op">=</span><span class="st">'none'</span>       <span class="co"># disable the scan entirely</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The <code>none</code> setting is appropriate for repositories in which upstream CI already runs a blocking scan on every commit, and in which an additional client-side scan would be redundant. In all other cases <code>gitleaks</code> is the correct setting.</p>
+</section>
+<section id="override-path" class="level3" data-number="7.0.3">
+<h3 data-number="7.0.3" class="anchored" data-anchor-id="override-path"><span class="header-section-number">7.0.3</span> Override path</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode zsh code-with-copy"><code class="sourceCode zsh"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">ZZGIT_ALLOW_SECRET_OVERRIDE</span><span class="op">=</span>1    <span class="co"># this shell only</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>When set, a <code>gitleaks</code> finding no longer triggers an unconditional refusal; instead the plugin prompts for a reason (at least ten characters) and, on a valid reason, proceeds with the commit and push path. The reason, a timestamp, the user, the branch, and the staged file list are appended to <code>$GIT_DIR/zzgit-overrides.log</code>. The variable is deliberately session-scoped: setting it permanently in <code>~/.zshrc</code> reduces the guard to a prompt-and-continue, which was the failure mode the design was intended to avoid.</p>
+</section>
+<section id="gitleaks-configuration" class="level3" data-number="7.0.4">
+<h3 data-number="7.0.4" class="anchored" data-anchor-id="gitleaks-configuration"><span class="header-section-number">7.0.4</span> gitleaks configuration</h3>
+<p><code>gitleaks</code> reads two files from the repository root automatically: <code>.gitleaks.toml</code> for rule definitions (additions, modifications, or exclusions) and <code>.gitleaksignore</code> for per-finding fingerprints that should be allowlisted. The intended workflow for a confirmed false positive is to paste the fingerprint reported in the scan output into <code>.gitleaksignore</code>, commit that file separately with an explanation in the body, then re-run <code>zzgit</code>. This mechanism is preferable to the override path because it produces a durable, version-controlled record of the exception.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/placeholder-coffee-03.jpg" class="img-fluid figure-img"></p>
+<figcaption>Placeholder ambiance image (coffee, Unsplash free licence). To be replaced with a scene depicting the secret-scan refusal: a <code>gitleaks</code> finding against an AWS access key in a Jupyter notebook’s output cell, followed by the three remediation options <code>zzgit</code> prints in lieu of a prompt-and-continue.</figcaption>
+</figure>
+</div>
+</section>
+</section>
+<section id="verification" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Verification</h1>
+<p>After installation, the following commands confirm that the plugin is correctly loaded and that the dependencies are in place:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode zsh code-with-copy"><code class="sourceCode zsh"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Function presence</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="bu">whence</span> <span class="at">-w</span> zzgit _zzgit_secret_scan zzgit-scan-history</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Expected output: each name followed by 'function'</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Plugin version</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="ex">zzgit</span> <span class="at">--version</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Expected output: 'zzgit 0.1.0' (or later)</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Help string</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="ex">zzgit</span> <span class="at">--help</span> <span class="kw">|</span> <span class="fu">head</span> <span class="at">-5</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Expected output: a usage summary beginning with 'zzgit - interactive...'</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Dependency probes</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a><span class="bu">command</span> <span class="at">-v</span> fzf       <span class="kw">&amp;&amp;</span> <span class="ex">fzf</span> <span class="at">--version</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a><span class="bu">command</span> <span class="at">-v</span> gitleaks  <span class="kw">&amp;&amp;</span> <span class="ex">gitleaks</span> version</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>A functional smoke test can be run in a throwaway repository:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode zsh code-with-copy"><code class="sourceCode zsh"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> /tmp/zzgit-smoke <span class="kw">&amp;&amp;</span> <span class="bu">cd</span> /tmp/zzgit-smoke</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> init <span class="at">-q</span> <span class="at">-b</span> main</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">'AWS_SECRET_ACCESS_KEY = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY'</span> <span class="dt">\</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">&gt;</span> fixture.txt</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="ex">zzgit</span>    <span class="co"># choose fixture.txt, confirm the scan refuses</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ~ <span class="kw">&amp;&amp;</span> <span class="fu">rm</span> <span class="at">-rf</span> /tmp/zzgit-smoke</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The key in the fixture is the published AWS documentation example key, not a live credential; it is recognised by <code>gitleaks</code> on the basis of its prefix structure and format.</p>
+</section>
+<section id="daily-workflow" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> Daily Workflow</h1>
+<p>After installation the typical invocation pattern is a single command:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode zsh code-with-copy"><code class="sourceCode zsh"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ex">zzgit</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The subsequent interaction consists of a short sequence of prompts; the command table below summarises them in the order they appear.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Step</th>
+<th>Prompt or action</th>
+<th>User input</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>Working tree status printed</td>
+<td>none</td>
+<td>informational</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>File selection (fzf or numeric)</td>
+<td>TAB / number</td>
+<td>populates the stage set</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td><code>git add --</code> issued on the selection</td>
+<td>automatic</td>
+<td>files enter the index</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td><code>gitleaks</code> scan of the staged diff</td>
+<td>automatic</td>
+<td>may refuse</td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td>Commit type 1-9</td>
+<td>number</td>
+<td>selects <code>feat</code>, <code>fix</code>, etc.</td>
+</tr>
+<tr class="even">
+<td>6</td>
+<td>Scope (optional)</td>
+<td>text</td>
+<td>becomes <code>(scope)</code> in subject</td>
+</tr>
+<tr class="odd">
+<td>7</td>
+<td>Subject (required)</td>
+<td>text</td>
+<td>headline of the commit</td>
+</tr>
+<tr class="even">
+<td>8</td>
+<td>Body (optional)</td>
+<td>text</td>
+<td>detailed description</td>
+</tr>
+<tr class="odd">
+<td>9</td>
+<td>Pre-commit confirmation</td>
+<td><code>y</code>/<code>N</code></td>
+<td>gates <code>git commit</code></td>
+</tr>
+<tr class="even">
+<td>10</td>
+<td>Pre-push confirmation</td>
+<td><code>y</code>/<code>N</code></td>
+<td>gates <code>git push</code></td>
+</tr>
+</tbody>
+</table>
+<p>The companion command scans the full git history on demand rather than on every invocation:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode zsh code-with-copy"><code class="sourceCode zsh"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">zzgit-scan-history</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>This is appropriate after cloning an unfamiliar repository, after merging a long-lived branch, or on a periodic schedule (weekly or monthly).</p>
+</section>
+<section id="things-to-watch-out-for" class="level1" data-number="10">
+<h1 data-number="10"><span class="header-section-number">10</span> Things to Watch Out For</h1>
+<p>Seven gotchas have emerged during use. They are not defects; each represents a deliberate trade-off or a boundary condition that the design choices could not remove.</p>
+<p><strong>The protected-branch check is purely advisory.</strong> <code>zzgit</code> prints a stronger prompt on branches matching <code>ZZGIT_PROTECTED_BRANCHES</code> but it does not refuse the push. A user who types <code>y</code> on the push prompt will publish to <code>main</code> regardless of what the guard says. The guard’s purpose is to interrupt reflex, not to enforce policy; for enforcement, configure branch protection on the remote.</p>
+<p><strong>Scan coverage is bounded by the installed <code>gitleaks</code> rule set.</strong> The default rule set covers the major cloud providers, common payment APIs, PEM headers, and several dozen other recognisable credential formats. It does not cover every possible credential format; a bespoke internal API key with no recognisable prefix or entropy signature will pass the scan. Extending <code>.gitleaks.toml</code> with project-specific rules is the correct remediation.</p>
+<p><strong>Binary blobs can slip through content scanning.</strong> A PKCS#12 bundle or an unarmoured SSH key (no <code>-----BEGIN</code> marker) does not match any entropy-based or regex-based rule. The degraded filename-heuristic fallback catches these on extension, but the primary scanner does not. Adding path-based rules to <code>.gitleaks.toml</code> closes this gap.</p>
+<p><strong>Unstaged changes are not scanned.</strong> <code>zzgit</code> scans the staged diff only. Content in the working tree that the user did not select is not examined. If a secret is present in a file that is not added to the current commit, it will still be present after <code>zzgit</code> completes, and will be scanned only on the commit that next stages the file.</p>
+<p><strong>The override log is local to each clone.</strong> <code>zzgit-overrides.log</code> is written to <code>$GIT_DIR</code>, which is the local <code>.git/</code> directory. It is not committed to the repository and does not follow a clone. If override accountability needs to be centralised, the log should be copied to an auditable location through an external mechanism; this is deliberately not integrated into the plugin.</p>
+<p><strong>Filenames containing newlines are unsupported.</strong> The zsh array constructs used for file selection split on newlines. A file whose name contains an embedded newline will be treated as multiple entries. This is extremely unusual in practice but possible; on affected repositories the user should stage the offending file manually via <code>git add --</code> before invoking <code>zzgit</code>.</p>
+<p><strong>Detached HEAD resolves to the literal string <code>HEAD</code>.</strong> The branch-name query <code>git rev-parse --abbrev-ref HEAD</code> returns <code>HEAD</code> when the repository is in detached-HEAD state. The protected-branch check therefore does not match any of the usual protected branch names, and the push step will fail at the git level regardless of what the plugin does. In practice this is not usually a problem because pushes from a detached HEAD are rare and git itself provides the error.</p>
+</section>
+<section id="uninstall-and-rollback" class="level1" data-number="11">
+<h1 data-number="11"><span class="header-section-number">11</span> Uninstall and Rollback</h1>
+<p>The plugin has no persistent state outside its source directory and its environment variables. Removal consists of:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode zsh code-with-copy"><code class="sourceCode zsh"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Under oh-my-zsh</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span> <span class="at">-rf</span> <span class="va">${ZSH_CUSTOM</span><span class="op">:-</span><span class="pp">~</span>/.oh-my-zsh/custom<span class="va">}</span>/plugins/zzgit</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove 'zzgit' from plugins=(...) in ~/.zshrc</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Under zinit</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="ex">zinit</span> delete rgthomas47/zzgit</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Manual installation</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span> <span class="at">-rf</span> ~/.zsh/plugins/zzgit</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove the 'source' line from ~/.zshrc</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Unset environment variables (if exported)</span></span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a><span class="bu">unset</span> <span class="va">ZZGIT_PROTECTED_BRANCHES</span> <span class="va">ZZGIT_SECRET_SCANNER</span> <span class="va">ZZGIT_ALLOW_SECRET_OVERRIDE</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The per-repository override log (<code>.git/zzgit-overrides.log</code>) is left in place on uninstall. It should be archived or deleted manually if no longer needed; it is never committed to the repository’s tracked tree.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/placeholder-coffee-04.jpg" class="img-fluid figure-img"></p>
+<figcaption>Placeholder ambiance image (coffee, Unsplash free licence). To be replaced with a scene depicting the post-commit confirmation: the assembled message summary, the commit being made, and the subsequent independent pre-push decision.</figcaption>
+</figure>
+</div>
+</section>
+<section id="lessons-learnt" class="level1" data-number="12">
+<h1 data-number="12"><span class="header-section-number">12</span> Lessons Learnt</h1>
+<p>Working through the design and implementation surfaced a set of lessons grouped into three buckets: conceptual, technical, and gotcha-shaped.</p>
+<section id="conceptual" class="level3" data-number="12.0.1">
+<h3 data-number="12.0.1" class="anchored" data-anchor-id="conceptual"><span class="header-section-number">12.0.1</span> Conceptual</h3>
+<ul>
+<li><p><strong>Filename heuristics are a poor primary defence against credential leakage.</strong> The filename of the file that contains a credential is essentially uncorrelated with whether the file contains a credential. Content-based scanning is the only defensible primary layer; filename-based checks are useful only as fallbacks when content scanning is unavailable.</p></li>
+<li><p><strong>Confirmation prompts after safety failures are a form of user-experience debt.</strong> A <code>[y/N]</code> prompt after a scanner finding trains the user to answer <code>y</code>. The friction must be proportional to the risk; for a risk of publishing a credential to a remote, the friction should be high enough that the override is rare and deliberate.</p></li>
+<li><p><strong>The three steps of the local git workflow are not one decision.</strong> Staging, committing, and pushing are logically distinct: what to include, how to describe it, and whether to publish. Collapsing them into a single command (<code>git add . &amp;&amp; git commit -am '...' &amp;&amp; git push</code>) is an ergonomic optimisation that removes two independent decision points that should be preserved.</p></li>
+<li><p><strong>Client-side guards are complementary, not substitutive, to server-side controls.</strong> The plugin’s protected-branch guard does not replace GitHub branch-protection rules; it addresses a different failure mode (reflex) than the server-side controls (enforcement). Both layers should be present; neither is sufficient alone.</p></li>
+</ul>
+</section>
+<section id="technical" class="level3" data-number="12.0.2">
+<h3 data-number="12.0.2" class="anchored" data-anchor-id="technical"><span class="header-section-number">12.0.2</span> Technical</h3>
+<ul>
+<li><p><strong><code>gitleaks</code> scans the index, not just the working tree.</strong> Running <code>gitleaks git --staged</code> against the staged diff produces findings for content that is about to enter a commit, regardless of whether the containing file is newly added or previously tracked. This is the right granularity for a pre-commit gate and is strictly stronger than scanning the working tree.</p></li>
+<li><p><strong>Zsh parameter expansion flags subsume most shell scripting conveniences.</strong> <code>${(f)"$(cmd)"}</code>, <code>${(j:,:)array}</code>, <code>typeset -U</code>, and <code>${array:#pattern}</code> compose to do what would otherwise require calls out to <code>awk</code>, <code>tr</code>, <code>sort</code>, and <code>sed</code>. The resulting code is both faster and less fragile.</p></li>
+<li><p><strong>The <code>gitleaks</code> CLI interface changed at version 8.21.</strong> The <code>protect</code> subcommand was removed in favour of <code>git</code>. A robust invocation probes for the newer subcommand first (<code>gitleaks git --help</code>) and falls back to the older form. Hard-coding one form produces a plugin that breaks silently when users upgrade.</p></li>
+<li><p><strong><code>emulate -L zsh</code> inside a plugin function is worthwhile.</strong> It resets the option set to zsh defaults for the duration of the function call, insulating the plugin from user customisations such as <code>KSH_ARRAYS</code> or <code>NO_UNSET</code>. The overhead is negligible; the robustness gain is substantial for a plugin intended for broad distribution.</p></li>
+</ul>
+</section>
+<section id="gotcha-shaped" class="level3" data-number="12.0.3">
+<h3 data-number="12.0.3" class="anchored" data-anchor-id="gotcha-shaped"><span class="header-section-number">12.0.3</span> Gotcha-shaped</h3>
+<ul>
+<li><p><strong><code>git status --porcelain</code> column widths differ on renames.</strong> The first two columns plus a space yield the filename column starting at position four for most entries, but rename entries (<code>R  old -&gt; new</code>) break the simple <code>awk '{print substr($0, 4)}'</code> pattern. Using <code>git diff --name-only</code> plus <code>git ls-files --others --exclude-standard</code> as separate sources avoids the issue.</p></li>
+<li><p><strong><code>head -30</code> on a piped <code>git diff --cached</code> closes the pipe and raises <code>SIGPIPE</code> on the producer.</strong> Harmless in interactive zsh but visible in a <code>set -e</code> context and in error-handling scripts. <code>awk 'NR&lt;=30'</code> reads the entire stream without triggering the pipe close.</p></li>
+<li><p><strong><code>git rev-parse --abbrev-ref HEAD</code> returns <code>HEAD</code> in detached-HEAD state.</strong> A naive protected-branch check that compares against <code>main</code> and <code>master</code> will therefore silently skip the guard in exactly the scenarios where the branch state is unusual. The mitigation is to either add <code>HEAD</code> to the protected list or to accept that detached-HEAD pushes will be caught by git itself.</p></li>
+<li><p><strong>Globs in zsh <code>case</code> statements match path separators by default.</strong> <code>*.env</code> matches <code>.env</code>, <code>foo.env</code>, and <code>path/to/.env</code> in a single pattern because <code>*</code> is greedy across <code>/</code>. This is the desired behaviour for filename matching but is worth stating explicitly, as it differs from the behaviour of some other shells.</p></li>
+</ul>
+</section>
+</section>
+<section id="limitations" class="level1" data-number="13">
+<h1 data-number="13"><span class="header-section-number">13</span> Limitations</h1>
+<p>The design choices embedded in <code>zzgit</code> produce the following honest limitations:</p>
+<ul>
+<li><p><strong>The plugin does not scan unstaged content.</strong> Files that the user does not select at the staging prompt are never inspected. A credential in an untracked file that is later added in a subsequent invocation will be scanned at that time, but the plugin provides no ambient protection against credentials in the working directory.</p></li>
+<li><p><strong>The scan is only as comprehensive as <code>gitleaks</code>’s installed rule set.</strong> Upstream <code>gitleaks</code> aggregates rules for known credential formats; bespoke internal formats require project-specific additions in <code>.gitleaks.toml</code>. No scanner catches every possible credential shape.</p></li>
+<li><p><strong>The plugin does not verify that findings are live credentials.</strong> <code>trufflehog</code> optionally contacts the credential’s issuer to confirm that the flagged string is an active credential, which reduces false-positive noise for genuinely suspicious-looking strings that are not in fact credentials. <code>zzgit</code> does not use <code>trufflehog</code> in v0.1; all findings are treated as equally serious.</p></li>
+<li><p><strong>The override log is not tamper-evident.</strong> An attacker with write access to <code>.git/</code> can edit or delete <code>.git/zzgit-overrides.log</code>. The log is an accountability record, not an integrity control; for tamper-evidence, the log would need to be mirrored to an append-only store such as a notes tree or an external audit service.</p></li>
+<li><p><strong>The plugin assumes a single remote and a single branch per push.</strong> <code>git push</code> is invoked without arguments, relying on the repository’s tracking configuration. More elaborate push targets (multiple remotes, explicit refspecs) are not supported; users with such requirements should perform the push manually after <code>zzgit</code> completes the commit step.</p></li>
+<li><p><strong>No cross-shell portability.</strong> The implementation uses zsh-native constructs (parameter expansion flags, <code>typeset -U</code>) that are not available in <code>bash</code>. A port would require substantial rewriting.</p></li>
+</ul>
+</section>
+<section id="opportunities-for-improvement" class="level1" data-number="14">
+<h1 data-number="14"><span class="header-section-number">14</span> Opportunities for Improvement</h1>
+<p>Several extensions are plausible and would be appropriate for subsequent releases:</p>
+<ol type="1">
+<li><p><strong>Completion support.</strong> A <code>_zzgit</code> completion file that completes <code>-h</code>, <code>--help</code>, and <code>--version</code> at the command line, plus context-aware completion of commit types and scope candidates. This would make <code>zzgit</code> discoverable through zsh’s tab-completion infrastructure.</p></li>
+<li><p><strong>Signed-commit integration.</strong> The plugin currently does not interact with GPG or SSH commit signing. Users with signing configured have <code>git commit</code> invoke the signing machinery transparently, which is the correct behaviour; explicit feedback in the pre-commit summary (signing key identifier, expected signature) would make the signing step visible rather than implicit.</p></li>
+<li><p><strong>Trufflehog verification mode.</strong> An optional mode (<code>ZZGIT_SCANNER_VERIFY=1</code>) that, for high-value credentials, runs <code>trufflehog</code> in verified mode against the finding. This would distinguish live credentials from credential-shaped strings that are not in fact active, reducing the rate of false-positive overrides.</p></li>
+<li><p><strong>Repository-level configuration.</strong> Per-repository override files (for example <code>.zzgit.yaml</code>) could specify the protected-branch list, the allowed commit types, or a scope-from-path convention, while the plugin-level environment variables govern personal defaults. This would be useful for team repositories in which every developer should see the same protected-branch set.</p></li>
+<li><p><strong>Pre-commit hook installation.</strong> A helper command <code>zzgit-install-hook</code> that installs a <code>pre-commit</code> hook into the current repository, wrapping the same secret-scan logic as <code>zzgit</code> itself. This would catch commits made through mechanisms other than <code>zzgit</code> (for example, through an IDE’s git integration), at the cost of adding a layer that some users consider intrusive.</p></li>
+<li><p><strong>History-scan scheduling.</strong> A wrapper that registers <code>zzgit-scan-history</code> with the operating system’s scheduler (<code>launchd</code> on macOS, <code>systemd --user</code> on Linux) to run nightly or weekly, with findings emailed or posted to a designated sink. This would turn the audit from a manual invocation into a standing control.</p></li>
+<li><p><strong>Structured override-log export.</strong> A command that emits the contents of <code>.git/zzgit-overrides.log</code> as JSON, suitable for ingestion into a centralised audit system. The current plain-text format is human-readable but not directly machine-parseable.</p></li>
+</ol>
+</section>
+<section id="wrapping-up" class="level1" data-number="15">
+<h1 data-number="15"><span class="header-section-number">15</span> Wrapping Up</h1>
+<p>The reflex form of the local git workflow, <code>git add . &amp;&amp; git commit -am '...' &amp;&amp; git push</code>, optimises for typing speed at the cost of three independent failure modes: accidental staging of files the user did not intend to publish, commit subjects that describe filenames rather than intent, and pushes that happen without a second deliberate decision. Each failure mode is individually minor; in combination they account for a substantial fraction of credential-leakage incidents, illegible commit histories, and wrong-branch publications in practice.</p>
+<p>The plugin documented here replaces the reflex with an interactive flow that addresses each failure mode directly: an explicit file-selection step rather than <code>git add .</code>, a content-based secret scan of the resulting staged diff rather than a filename heuristic, a human-written commit subject rather than an auto-generated file list, and independent pre-commit and pre-push confirmation prompts. The cost is approximately twenty-five additional seconds per commit cycle; the benefit is that the three failure modes are caught at the latest moment at which they can still be caught cheaply, which is before the commit is recorded.</p>
+<p>The design intentionally declines several tempting features. It does not refuse pushes to protected branches outright; it prompts more strongly, on the theory that only the remote can authoritatively enforce branch protection. It does not silently allowlist findings that the user overrides; each override is logged with a typed reason. It does not scan the working tree ambiently; its scope is the commit that is about to be made. These choices are subject to revision and are motivated in the Design Decisions section above.</p>
+<section id="main-takeaways" class="level3" data-number="15.0.1">
+<h3 data-number="15.0.1" class="anchored" data-anchor-id="main-takeaways"><span class="header-section-number">15.0.1</span> Main takeaways</h3>
+<ul>
+<li><strong>Secret scanning belongs at the staging step, not at push time or in history-scan-only mode.</strong> The latest cheap intervention is before <code>git commit</code> is issued.</li>
+<li><strong>Filename heuristics are a fallback, not a primary defence.</strong> Content-based scanning is the only rule that survives contact with real-world credential placement.</li>
+<li><strong>Confirmation prompts after safety violations train the wrong behaviour.</strong> Default to refusal; gate the override behind friction calibrated to the risk.</li>
+<li><strong>The three local-git steps are three decisions.</strong> Preserve them.</li>
+</ul>
+</section>
+</section>
+<section id="see-also" class="level1" data-number="16">
+<h1 data-number="16"><span class="header-section-number">16</span> See Also</h1>
+<ul>
+<li><code>gitleaks</code> project repository and documentation: <a href="https://github.com/gitleaks/gitleaks">https://github.com/gitleaks/gitleaks</a></li>
+<li><code>fzf</code> project repository: <a href="https://github.com/junegunn/fzf">https://github.com/junegunn/fzf</a></li>
+<li>Conventional Commits specification: <a href="https://www.conventionalcommits.org/">https://www.conventionalcommits.org/</a></li>
+<li><code>commitizen</code> (Node-based alternative to the Conventional Commits wizard portion): <a href="https://commitizen-tools.github.io/commitizen/">https://commitizen-tools.github.io/commitizen/</a></li>
+<li><code>cocogitto</code> (Rust-based alternative, also enforces commit-message validity): <a href="https://docs.cocogitto.io/">https://docs.cocogitto.io/</a></li>
+<li>Related qblog post on zsh terminal configuration (post 01): <code>/posts/01-configtermzsh/</code></li>
+</ul>
+</section>
+<section id="reproducibility" class="level1" data-number="17">
+<h1 data-number="17"><span class="header-section-number">17</span> Reproducibility</h1>
+<p>The configuration was developed and verified on the following software stack:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Component</th>
+<th>Version</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Operating system</td>
+<td>macOS 15 (Sequoia)</td>
+<td>Linux equivalents in package repositories</td>
+</tr>
+<tr class="even">
+<td>Shell</td>
+<td>zsh 5.9</td>
+<td>minimum 5.0</td>
+</tr>
+<tr class="odd">
+<td>Version control</td>
+<td>git 2.43</td>
+<td>minimum 2.0</td>
+</tr>
+<tr class="even">
+<td>Plugin version</td>
+<td>zzgit 0.1.0</td>
+<td>tagged release</td>
+</tr>
+<tr class="odd">
+<td><code>fzf</code></td>
+<td>0.46.1</td>
+<td>optional; 0.30+ supported</td>
+</tr>
+<tr class="even">
+<td><code>gitleaks</code></td>
+<td>8.21.2</td>
+<td>optional; 8.0+ supported, pre-8.21 uses <code>protect</code> subcommand</td>
+</tr>
+<tr class="odd">
+<td>Plugin manager</td>
+<td>oh-my-zsh 2026-04</td>
+<td>zinit / antidote / manual source also tested</td>
+</tr>
+</tbody>
+</table>
+<p>Date of last verification: 2026-04-22.</p>
+</section>
+<section id="lets-connect" class="level1" data-number="18">
+<h1 data-number="18"><span class="header-section-number">18</span> Let’s Connect</h1>
+<p>Corrections, questions about specific design decisions, and bug reports are welcome through the plugin’s repository issue tracker. Contributions should follow the repository’s contribution guidance; pull requests that change the default refusal behaviour on scan findings will be reviewed with particular care, as that decision is load-bearing for the plugin’s security posture.</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/focusonr\.org");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<input type="hidden" id="giscus-base-theme" value="light">
+<input type="hidden" id="giscus-alt-theme" value="light">
+<script>
+  function loadGiscus() {
+    // Function to get the theme based on body class
+    const getTheme = () => {
+      let baseTheme = document.getElementById('giscus-base-theme').value;
+      let altTheme = document.getElementById('giscus-alt-theme').value;
+      return document.body.classList.contains('quarto-dark') ? altTheme : baseTheme;
+    };
+    const script = document.createElement("script");
+    script.src = "https://giscus.app/client.js";
+    script.async = true;
+    script.dataset.repo = "rgt47/qblog";
+    script.dataset.repoId = "R_kgDOH6TO7A";
+    script.dataset.category = "General";
+    script.dataset.categoryId = "DIC_kwDOH6TO7M4CXqIi";
+    script.dataset.mapping = "pathname";
+    script.dataset.reactionsEnabled = "1";
+    script.dataset.emitMetadata = "0";
+    script.dataset.inputPosition = "bottom";
+    script.dataset.theme = getTheme();
+    script.dataset.lang = "en";
+    script.crossOrigin = "anonymous";
+    // Append the script to the desired div instead of at the end of the body
+    document.getElementById("quarto-content").appendChild(script);
+  }
+  loadGiscus();
+</script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Copyright 2023-2025, Ronald G. Thomas</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47">
+      <i class="bi bi-github" role="img">
+</i> 
+    </a>
+  </li>  
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47">
+      <i class="bi bi-twitter" role="img">
+</i> 
+    </a>
+  </li>  
+</ul>
+    </div>
+  </div>
+</footer>
+<!-- Fix for Quarto category encoding issue -->
+<script>
+// Fix category encoding for Quarto listing functionality
+(function() {
+  function fixAllCategoryEncoding() {
+    // Only run on pages that have Quarto listings
+    if (!document.querySelector('.quarto-listing')) {
+      return;
+    }
+    
+    // Fix sidebar category data-category attributes
+    const categoryEls = document.querySelectorAll('.quarto-listing-category .category[data-category]');
+    
+    categoryEls.forEach((categoryEl) => {
+      const category = categoryEl.getAttribute('data-category');
+      
+      if (category && category !== '') {
+        // Check if it contains only base64 characters and proper length
+        const isBase64 = /^[A-Za-z0-9+/]*={0,2}$/.test(category) && category.length % 4 === 0;
+        
+        if (isBase64) {
+          try {
+            const decoded = decodeURIComponent(atob(category));
+            // Verify it decoded to something reasonable (no control characters)
+            if (!decoded.match(/^[A-Za-z0-9\s\-,]+$/)) {
+              // Invalid encoding, re-encode from original text
+              const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+              categoryEl.setAttribute('data-category', encodedCategory);
+            }
+          } catch (e) {
+            // Base64 decode failed, re-encode from original text
+            const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+            categoryEl.setAttribute('data-category', encodedCategory);
+          }
+        } else {
+          // Not base64, encode it
+          const encodedCategory = btoa(encodeURIComponent(category));
+          categoryEl.setAttribute('data-category', encodedCategory);
+        }
+      }
+    });
+    
+    // Fix listing item data-categories attributes  
+    const listingItems = document.querySelectorAll('[data-categories]');
+    
+    listingItems.forEach((item) => {
+      const categories = item.getAttribute('data-categories');
+      
+      if (categories && categories !== '') {
+        // Check if it's already base64 encoded
+        try {
+          decodeURIComponent(atob(categories));
+          // Already encoded and valid
+        } catch (e) {
+          // Not encoded, fix it
+          const encodedCategories = btoa(encodeURIComponent(categories));
+          item.setAttribute('data-categories', encodedCategories);
+        }
+      }
+    });
+    
+    // Fix post-specific category tag click handlers
+    const postCategoryTags = document.querySelectorAll('.listing-category[onclick]');
+    
+    postCategoryTags.forEach((tag) => {
+      const categoryText = tag.textContent.trim();
+      
+      // Replace the onclick handler to use encoded category
+      tag.onclick = () => {
+        const encodedCategory = btoa(encodeURIComponent(categoryText));
+        window.quartoListingCategory(encodedCategory);
+        return false;
+      };
+    });
+  }
+  
+  // Run immediately
+  fixAllCategoryEncoding();
+  
+  // Also run when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fixAllCategoryEncoding);
+  }
+})();
+</script>
+
+<!-- PDF view/download button for blog posts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Only add the button on post pages
+  if (window.location.pathname.includes('/posts/') && !window.location.pathname.endsWith('/posts/') && !window.location.pathname.endsWith('/posts/index.html')) {
+    var currentPath = window.location.pathname;
+    // Handle both /posts/name/ and /posts/name/index.html formats
+    var pdfPath;
+    if (currentPath.endsWith('/')) {
+      pdfPath = currentPath + 'index.pdf';
+    } else {
+      pdfPath = currentPath.replace('.html', '.pdf');
+    }
+
+    // Check if PDF exists first
+    fetch(pdfPath, { method: 'HEAD' })
+      .then(function(response) {
+        if (response.ok) {
+          // PDF exists, show download button
+          showDownloadButton(pdfPath);
+        }
+        // If PDF doesn't exist, don't show any button
+      })
+      .catch(function(error) {
+        // Error checking PDF, don't show any button
+      });
+  }
+});
+
+function showDownloadButton(pdfPath) {
+  var downloadBtn = document.createElement('div');
+  downloadBtn.className = 'pdf-download-button';
+
+  // Get file size if possible
+  fetch(pdfPath, { method: 'HEAD' })
+    .then(function(response) {
+      var size = response.headers.get('Content-Length');
+      var sizeText = '';
+
+      if (size) {
+        // Convert to MB or KB
+        var sizeInMB = size / (1024 * 1024);
+        if (sizeInMB >= 1) {
+          sizeText = ' (' + sizeInMB.toFixed(1) + ' MB)';
+        } else {
+          sizeText = ' (' + (size / 1024).toFixed(0) + ' KB)';
+        }
+      }
+
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' + sizeText +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    })
+    .catch(function() {
+      // Basic fallback if we can't get file size
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    });
+
+  // Find where to insert the button (right after the title block)
+  var titleBlock = document.querySelector('.quarto-title-meta');
+  if (titleBlock) {
+    titleBlock.after(downloadBtn);
+  }
+}
+
+
+</script>
+
+<style>
+.pdf-download-button {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+</style>
+
+
+
+
+</body></html>

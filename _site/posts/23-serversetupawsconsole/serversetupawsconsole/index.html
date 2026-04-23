@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.5.45">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ronald G. Thomas">
+<meta name="dcterms.date" content="2026-02-11">
+<meta name="description" content="I did not really know how cloud servers worked until I needed to host a Shiny app for collaborators and had to figure out AWS EC2 from scratch.">
+
+<title>Setting Up a Virtual Server on AWS EC2 Console – Thomas Lab</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../../">
+<script src="../../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": true,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "keyboard-shortcut": [
+    "?",
+    "/"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&amp;family=Open+Sans:ital,wght@0,400;0,600;1,400&amp;family=Fira+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<script src="https://kit.fontawesome.com/0fba9333d8.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+
+<!-- Custom meta tags for social sharing -->
+<meta property="og:site_name" content="Thomas Lab">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@rgt47">
+
+<!-- Add responsive features -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<!-- Add analytics if needed -->
+<!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXX');
+</script> -->
+
+<!-- Add custom javascript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Remove code tools button completely
+  const codeButton = document.querySelector('.code-tools-button');
+  if (codeButton) {
+    codeButton.remove();
+  }
+  
+  // Add any custom JavaScript functionality here
+  
+  // Example: Add smooth scrolling
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      
+      document.querySelector(this.getAttribute('href')).scrollIntoView({
+        behavior: 'smooth'
+      });
+    });
+  });
+  
+  // Make sidebar category items clickable (but not TOC items)
+  const categoryLinks = {
+    'Programming & Development': '/posts/?category=Programming+%26+Development',
+    'Data Analysis & Visualization': '/posts/?category=Data+Analysis+%26+Visualization',
+    'Deployment & Operations': '/posts/?category=Deployment+%26+Operations',
+    'Development Environment': '/posts/?category=Development+Environment',
+    'Shiny Applications': '/posts/?category=Shiny+Applications',
+    'AI & Automation': '/posts/?category=AI+%26+Automation',
+    'System Administration': '/posts/?category=System+Administration'
+  };
+  
+  // Only target sidebar items that are not in the TOC
+  document.querySelectorAll('.sidebar-item-section .sidebar-item-text').forEach(item => {
+    // Skip if this is inside the TOC
+    if (item.closest('#TOC')) return;
+    
+    const text = item.textContent.trim();
+    if (categoryLinks[text]) {
+      item.addEventListener('click', function() {
+        window.location.href = categoryLinks[text];
+      });
+    }
+  });
+});
+</script>
+
+
+<meta property="og:title" content="Thomas Lab - Setting Up a Virtual Server on AWS EC2 Console">
+<meta property="og:description" content="I did not really know how cloud servers worked until I needed to host a Shiny app for collaborators and had to figure out AWS EC2 from scratch.">
+<meta property="og:image" content="https://focusonr.org/posts/23-serversetupawsconsole/serversetupawsconsole/media/images/hero.jpg">
+<meta property="og:site_name" content="Thomas Lab">
+</head>
+
+<body class="nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../../index.html">
+    <span class="navbar-title">Thomas Lab</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../about/index.html"> 
+<span class="menu-text">About</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../blog/index.html"> 
+<span class="menu-text">Blog</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../white-papers/index.html"> 
+<span class="menu-text">White Papers</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../research/index.html"> 
+<span class="menu-text">Research</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../teaching/index.html"> 
+<span class="menu-text">Teaching</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../misc/index.html"> 
+<span class="menu-text">Misc</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47"> <i class="bi bi-twitter" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a>
+  <ul class="collapse">
+  <li><a href="#motivations" id="toc-motivations" class="nav-link" data-scroll-target="#motivations"><span class="header-section-number">1.1</span> Motivations</a></li>
+  <li><a href="#objectives" id="toc-objectives" class="nav-link" data-scroll-target="#objectives"><span class="header-section-number">1.2</span> Objectives</a></li>
+  </ul></li>
+  <li><a href="#prerequisites-and-setup" id="toc-prerequisites-and-setup" class="nav-link" data-scroll-target="#prerequisites-and-setup"><span class="header-section-number">2</span> Prerequisites and Setup</a></li>
+  <li><a href="#what-is-aws-ec2" id="toc-what-is-aws-ec2" class="nav-link" data-scroll-target="#what-is-aws-ec2"><span class="header-section-number">3</span> What is AWS EC2?</a></li>
+  <li><a href="#the-four-pre-launch-components" id="toc-the-four-pre-launch-components" class="nav-link" data-scroll-target="#the-four-pre-launch-components"><span class="header-section-number">4</span> The Four Pre-Launch Components</a></li>
+  <li><a href="#selecting-a-hosting-service" id="toc-selecting-a-hosting-service" class="nav-link" data-scroll-target="#selecting-a-hosting-service"><span class="header-section-number">5</span> Selecting a Hosting Service</a></li>
+  <li><a href="#setting-up-the-working-environment" id="toc-setting-up-the-working-environment" class="nav-link" data-scroll-target="#setting-up-the-working-environment"><span class="header-section-number">6</span> Setting Up the Working Environment</a>
+  <ul class="collapse">
+  <li><a href="#ssh-key-pair" id="toc-ssh-key-pair" class="nav-link" data-scroll-target="#ssh-key-pair"><span class="header-section-number">6.1</span> SSH Key Pair</a></li>
+  <li><a href="#firewall-security-group" id="toc-firewall-security-group" class="nav-link" data-scroll-target="#firewall-security-group"><span class="header-section-number">6.2</span> Firewall (Security Group)</a></li>
+  <li><a href="#static-ip-address" id="toc-static-ip-address" class="nav-link" data-scroll-target="#static-ip-address"><span class="header-section-number">6.3</span> Static IP Address</a></li>
+  <li><a href="#domain-name" id="toc-domain-name" class="nav-link" data-scroll-target="#domain-name"><span class="header-section-number">6.4</span> Domain Name</a></li>
+  </ul></li>
+  <li><a href="#selecting-and-launching-the-instance" id="toc-selecting-and-launching-the-instance" class="nav-link" data-scroll-target="#selecting-and-launching-the-instance"><span class="header-section-number">7</span> Selecting and Launching the Instance</a>
+  <ul class="collapse">
+  <li><a href="#accessing-the-server" id="toc-accessing-the-server" class="nav-link" data-scroll-target="#accessing-the-server"><span class="header-section-number">7.1</span> Accessing the Server</a></li>
+  <li><a href="#ssh-config-file-for-convenience" id="toc-ssh-config-file-for-convenience" class="nav-link" data-scroll-target="#ssh-config-file-for-convenience"><span class="header-section-number">7.2</span> SSH Config File for Convenience</a></li>
+  </ul></li>
+  <li><a href="#startup-script-for-docker-installation" id="toc-startup-script-for-docker-installation" class="nav-link" data-scroll-target="#startup-script-for-docker-installation"><span class="header-section-number">8</span> Startup Script for Docker Installation</a></li>
+  <li><a href="#verification" id="toc-verification" class="nav-link" data-scroll-target="#verification"><span class="header-section-number">9</span> Verification</a></li>
+  <li><a href="#daily-workflow" id="toc-daily-workflow" class="nav-link" data-scroll-target="#daily-workflow"><span class="header-section-number">10</span> Daily Workflow</a>
+  <ul class="collapse">
+  <li><a href="#things-to-watch-out-for" id="toc-things-to-watch-out-for" class="nav-link" data-scroll-target="#things-to-watch-out-for"><span class="header-section-number">10.1</span> Things to Watch Out For</a></li>
+  </ul></li>
+  <li><a href="#uninstall-rollback" id="toc-uninstall-rollback" class="nav-link" data-scroll-target="#uninstall-rollback"><span class="header-section-number">11</span> Uninstall / Rollback</a></li>
+  <li><a href="#what-did-we-learn" id="toc-what-did-we-learn" class="nav-link" data-scroll-target="#what-did-we-learn"><span class="header-section-number">12</span> What Did We Learn?</a>
+  <ul class="collapse">
+  <li><a href="#lessons-learnt" id="toc-lessons-learnt" class="nav-link" data-scroll-target="#lessons-learnt"><span class="header-section-number">12.1</span> Lessons Learnt</a></li>
+  <li><a href="#limitations" id="toc-limitations" class="nav-link" data-scroll-target="#limitations"><span class="header-section-number">12.2</span> Limitations</a></li>
+  <li><a href="#opportunities-for-improvement" id="toc-opportunities-for-improvement" class="nav-link" data-scroll-target="#opportunities-for-improvement"><span class="header-section-number">12.3</span> Opportunities for Improvement</a></li>
+  </ul></li>
+  <li><a href="#wrapping-up" id="toc-wrapping-up" class="nav-link" data-scroll-target="#wrapping-up"><span class="header-section-number">13</span> Wrapping Up</a></li>
+  <li><a href="#see-also" id="toc-see-also" class="nav-link" data-scroll-target="#see-also"><span class="header-section-number">14</span> See Also</a>
+  <ul class="collapse">
+  <li><a href="#related-posts" id="toc-related-posts" class="nav-link" data-scroll-target="#related-posts"><span class="header-section-number">14.0.1</span> Related Posts</a></li>
+  <li><a href="#key-resources" id="toc-key-resources" class="nav-link" data-scroll-target="#key-resources"><span class="header-section-number">14.0.2</span> Key Resources</a></li>
+  </ul></li>
+  <li><a href="#reproducibility" id="toc-reproducibility" class="nav-link" data-scroll-target="#reproducibility"><span class="header-section-number">15</span> Reproducibility</a></li>
+  <li><a href="#lets-connect" id="toc-lets-connect" class="nav-link" data-scroll-target="#lets-connect"><span class="header-section-number">16</span> Let’s Connect</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content column-page-left" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Setting Up a Virtual Server on AWS EC2 Console</h1>
+<p class="subtitle lead"></p><p>A step-by-step walkthrough for launching, securing, and accessing a lightweight cloud server</p><p></p>
+  <div class="quarto-categories">
+    <div class="quarto-category">aws</div>
+    <div class="quarto-category">ec2</div>
+    <div class="quarto-category">shiny</div>
+    <div class="quarto-category">docker</div>
+    <div class="quarto-category">cloud-computing</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    <p>I did not really know how cloud servers worked until I needed to host a Shiny app for collaborators and had to figure out AWS EC2 from scratch.</p>
+  </div>
+</div>
+
+
+<div class="quarto-title-meta column-page-left">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ronald G. Thomas </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">February 11, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/hero.jpg" class="img-fluid figure-img" style="width:80.0%"></p>
+<figcaption>AWS EC2 console workflow for launching a virtual server</figcaption>
+</figure>
+</div>
+<p><em>Setting up a cloud server – the gateway to hosting web applications on your own terms.</em></p>
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>I did not really know how virtual servers worked until I had a Shiny app running locally and needed to share it with collaborators over the web. The app was finished, the code was clean, and everything worked on my laptop. But “works on my machine” is not a deployment strategy.</p>
+<p>The challenge broke down into two parts: first, create and launch a virtual server in the cloud; second, configure that server to provide secure access to the Shiny app. This post covers the first part in detail, walking through every step of setting up an AWS EC2 instance from the console.</p>
+<p>I found the process surprisingly approachable once I understood the four components that need to be in place before launching an instance. The terminology can be intimidating at first – elastic IPs, security groups, key pairs – but each concept maps to something straightforward once you see what it does in practice.</p>
+<section id="motivations" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="motivations"><span class="header-section-number">1.1</span> Motivations</h2>
+<ul>
+<li>I had a working Shiny app and no way to share it with collaborators who needed access from different locations.</li>
+<li>I wanted to understand the fundamentals of cloud server management rather than relying on managed platforms like shinyapps.io.</li>
+<li>I needed a server that could also run Docker containers for reproducible research environments.</li>
+<li>I was frustrated by documentation that assumed prior knowledge of AWS infrastructure concepts.</li>
+<li>I wanted a lightweight, low-cost server I could control completely, including the operating system and installed software.</li>
+<li>I needed the ability to host multiple applications on a single server behind a proper domain name with HTTPS.</li>
+</ul>
+</section>
+<section id="objectives" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="objectives"><span class="header-section-number">1.2</span> Objectives</h2>
+<ol type="1">
+<li>Launch an Ubuntu-based EC2 instance on the AWS free tier, configured with an SSH key pair and firewall rules.</li>
+<li>Obtain and associate a static IP address and domain name with the server instance.</li>
+<li>Configure secure SSH access from a local workstation to the remote server.</li>
+<li>Prepare the instance for post-launch tasks by running a startup script that installs Docker and Docker Compose.</li>
+</ol>
+<p>I am documenting my learning process here. If you spot errors or have better approaches, please let me know.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/placeholder-coffee-03.jpg" class="img-fluid figure-img" style="width:30.0%"></p>
+<figcaption>Settling in for infrastructure setup.</figcaption>
+</figure>
+</div>
+<p><em>The EC2 dashboard is the control centre for managing virtual servers, security groups, and elastic IP addresses.</em></p>
+</section>
+</section>
+<section id="prerequisites-and-setup" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Prerequisites and Setup</h1>
+<p>Before beginning, I needed the following in place:</p>
+<ul>
+<li>An AWS account (free tier eligible accounts work for this tutorial).</li>
+<li>A local terminal with SSH installed (macOS Terminal or any Linux shell).</li>
+<li>Basic familiarity with the command line.</li>
+<li>A willingness to spend approximately 30 minutes working through the AWS console interface.</li>
+</ul>
+<p>The AWS free tier includes 750 hours per month of <code>t2.micro</code> instance usage for the first 12 months, which is sufficient for hosting a lightweight Shiny application.</p>
+</section>
+<section id="what-is-aws-ec2" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> What is AWS EC2?</h1>
+<p>Amazon Elastic Compute Cloud (EC2) is a service that provides resizable virtual servers in the cloud. Think of it as renting a computer that lives in an Amazon data centre. You choose the operating system, the amount of memory and storage, and the network configuration. Once launched, you connect to it over SSH just as you would connect to any remote Linux machine.</p>
+<p>The key distinction from a managed hosting platform is control: you manage everything on the server yourself, from the operating system packages to the web server configuration. This requires more effort than a managed service, but it provides complete flexibility over the software stack.</p>
+</section>
+<section id="the-four-pre-launch-components" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> The Four Pre-Launch Components</h1>
+<p>No matter what method one uses to host a Shiny app online, the following pre-launch tasks need to be completed:</p>
+<ol type="1">
+<li>Obtain a static IP address (e.g., <code>111.222.333.444</code>).</li>
+<li>Obtain a domain name (e.g., <code>rgtlab.org</code>).</li>
+<li>Define a security model (firewall) for the server.</li>
+<li>Create a public and private RSA key pair.</li>
+<li>Configure a virtual server by selecting the operating system, CPU count, memory, and storage.</li>
+<li>Generate the virtual server along with the key pair and security group.</li>
+<li>Associate the domain name with the static IP address.</li>
+<li>Associate the IP with the server.</li>
+</ol>
+<p>After launch, the post-launch tasks include installing a web server, obtaining an SSL certificate, setting up authentication, and configuring a reverse proxy to translate HTTPS (port 443) requests to Shiny (port 3838).</p>
+<p>At first glance these requirements may appear daunting, but on closer inspection each can be met with relative ease through the right tools. Technically, if the sole goal is to get the app on the web and security is not an issue, a static IP, domain name, and reverse proxy are not strictly required. However, without them the server will only communicate via unencrypted HTTP, the URL will be something like <code>111.222.333.444:3838/power1_shiny</code>, anyone with the URL can reach the site, and the IP address will change every time the server reboots.</p>
+</section>
+<section id="selecting-a-hosting-service" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Selecting a Hosting Service</h1>
+<p>There are several cloud-based server hosting options: for example, Microsoft Azure, Oracle, Google Cloud, Amazon AWS EC2, Digital Ocean, and Hetzner. Each has its own approach to setting up a custom virtual server, and several offer free or low-cost service tiers.</p>
+<p>I found AWS to be a reasonable choice for setting up a small custom server. It is not the cheapest option, but the system is well documented and, in my experience, reliable.</p>
+<p>To start, I opened the EC2 console by visiting:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">https://aws.amazon.com/console</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>In the console window I chose the regional service closest to my location (N. California). I then created an account, signed in, and navigated to the EC2 dashboard. It is through this dashboard that we define the parameters for the type of server to launch and the mechanisms for communicating with it.</p>
+</section>
+<section id="setting-up-the-working-environment" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Setting Up the Working Environment</h1>
+<p>Along with selecting a server, I needed to set up a working environment. I recommend setting up these components before launching the server, as it saves some back-and-forth with the console.</p>
+<p>The working environment consists of four main components:</p>
+<ol type="1">
+<li><strong>Security credential (RSA key pair):</strong> Allows remote and secure login to the virtual server once launched.</li>
+<li><strong>Firewall (security group):</strong> Restricts incoming server access by closing all incoming traffic except through specifically named ports.</li>
+<li><strong>Static IP address:</strong> Maintains the link between the domain name and the server across reboots. Without it, a new IP is assigned each time the instance restarts.</li>
+<li><strong>Domain name:</strong> Facilitates collaborator access by providing a human-readable URL rather than a raw IP address.</li>
+</ol>
+<p>These components are not directly tied to any specific server. You can define multiple instances of each and associate one of each with each server.</p>
+<section id="ssh-key-pair" class="level2" data-number="6.1">
+<h2 data-number="6.1" class="anchored" data-anchor-id="ssh-key-pair"><span class="header-section-number">6.1</span> SSH Key Pair</h2>
+<p>To securely communicate with the server, I needed to exchange an RSA key pair with AWS. The pair consists of a private key and a public key. EC2 supports two approaches: generate the pair locally and upload the public key, or have EC2 generate the pair and download the private key.</p>
+<p>For local generation, I created a directory on my workstation to hold the keys and navigated to it:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ~/.ssh</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh-keygen</span> <span class="at">-m</span> PEM</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The <code>PEM</code> flag defines the key format. More information on public key authentication is available from the <a href="https://www.ssh.com/academy/ssh/public-key-authentication">SSH Academy</a> and from the <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html">AWS documentation</a>.</p>
+<p>In the interactive dialog that follows, I named the key prefix <code>power1_app.pem</code>. The dialog asks for a passphrase; entering one adds an additional level of security, but it is not required. The <code>ssh-keygen</code> program generates two files: <code>power1_app.pem</code> and <code>power1_app.pem.pub</code>.</p>
+<p>To complete the process, I returned to the EC2 dashboard and selected <strong>Network &amp; Security &gt; Key Pairs &gt; Actions &gt; Import key pair</strong> in the left panel. I entered the name <code>power1_app</code>, clicked <strong>Browse</strong>, navigated to the <code>~/.ssh/power1_app.pem.pub</code> file, and selected <strong>Import key pair</strong>.</p>
+<p>For the EC2-generated approach, I selected <strong>Create key pair</strong> in the upper right of the console page. A form appears asking for a name (e.g., <code>power1_app</code>). I selected RSA for key pair type and <code>.pem</code> for key file format. The keys were created and the private key <code>power1_app.pem</code> was offered for download. I placed it in the <code>~/.ssh</code> directory and changed the permissions so only I could access it:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> chmod 400 power1_app.pem</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance2.png" class="img-fluid figure-img"></p>
+<figcaption>Soft-focus photograph suggesting the calm of working through infrastructure setup</figcaption>
+</figure>
+</div>
+<p><em>Taking time to set up the working environment properly pays dividends when the server is running in production.</em></p>
+</section>
+<section id="firewall-security-group" class="level2" data-number="6.2">
+<h2 data-number="6.2" class="anchored" data-anchor-id="firewall-security-group"><span class="header-section-number">6.2</span> Firewall (Security Group)</h2>
+<p>To create a firewall, I clicked on <strong>Security Groups</strong> under <strong>Network &amp; Security</strong> in the left panel. I chose <strong>Create security group</strong> and named it <code>power1_app</code>. Under <strong>Inbound Rules</strong>, I selected SSH and HTTPS from the <strong>Type</strong> dropdown menu, and selected <strong>Anywhere IPv4 0.0.0.0/0</strong> for both.</p>
+<p>This creates a firewall that leaves open only ports 22 and 443 for SSH and HTTPS incoming traffic, respectively.</p>
+</section>
+<section id="static-ip-address" class="level2" data-number="6.3">
+<h2 data-number="6.3" class="anchored" data-anchor-id="static-ip-address"><span class="header-section-number">6.3</span> Static IP Address</h2>
+<p>I used the EC2 Elastic IP service to obtain a static IP. I navigated to <strong>Network and Security</strong>, selected <strong>Allocate Elastic IP</strong>, and an IP was assigned from the EC2 pool of available IPv4 addresses (e.g., 13.57.139.31).</p>
+</section>
+<section id="domain-name" class="level2" data-number="6.4">
+<h2 data-number="6.4" class="anchored" data-anchor-id="domain-name"><span class="header-section-number">6.4</span> Domain Name</h2>
+<p>To obtain a dedicated domain name, I left the EC2 dashboard and went to the Amazon Route 53 dashboard (select <strong>Services</strong> at the top and search for <strong>Route 53</strong>).</p>
+<p>Once I acquired a domain name (e.g., <code>rgtlab.org</code>), I associated it with my static IP through Route 53:</p>
+<ul>
+<li>Click on <strong>Hosted zones</strong> in the side panel.</li>
+<li>Click on <code>rgtlab.org</code> in the centre panel.</li>
+<li>Click the checkbox for the <code>rgtlab.org</code> Type=A record.</li>
+<li>Click <strong>Edit record</strong> in the right panel.</li>
+<li>Change the IP address to the assigned static IP (e.g., 111.222.333.444) in the <strong>Value</strong> field.</li>
+</ul>
+</section>
+</section>
+<section id="selecting-and-launching-the-instance" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Selecting and Launching the Instance</h1>
+<p>From <strong>Instances</strong> in the EC2 dashboard, I clicked <strong>Launch Instances</strong> and followed these steps:</p>
+<ol type="1">
+<li><strong>Name the server:</strong> I entered <code>power1_app</code>.</li>
+<li><strong>Select the operating system:</strong> I chose Ubuntu, a mature Linux distribution based on Debian.</li>
+<li><strong>Choose an instance type:</strong> I selected <code>t2.micro</code>, which provides 1 CPU and 1 GiB of memory. Different instance types offer varying combinations of processors, memory, storage, and network performance.</li>
+<li><strong>Choose a key pair:</strong> I selected <code>power1_app</code> from the dropdown list.</li>
+<li><strong>Select a security group:</strong> I used the <code>power1_app</code> security group from my environment.</li>
+<li><strong>Choose storage:</strong> I entered 30 GB of EBS General Purpose SSD (GP2). Thirty gigabytes is the maximum allowed in the free tier. In my experience, smaller disk sizes can lead to problems during Docker image builds.</li>
+<li><strong>Advanced options:</strong> Under advanced options, I scrolled to the bottom and uploaded my startup script (see the Startup Script section below) to run one time after server generation.</li>
+<li><strong>Launch:</strong> I clicked <strong>Launch Instance</strong>.</li>
+</ol>
+<p>After the instance launched, I opened the Elastic IP dialog under <strong>Network &amp; Security</strong>, selected the <strong>Actions</strong> button, and associated the IP address with the new instance.</p>
+<section id="accessing-the-server" class="level2" data-number="7.1">
+<h2 data-number="7.1" class="anchored" data-anchor-id="accessing-the-server"><span class="header-section-number">7.1</span> Accessing the Server</h2>
+<p>From my laptop, I logged into the server with:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> <span class="at">-i</span> <span class="st">"~/.ssh/power1_app"</span> ubuntu@rgtlab.org</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="ssh-config-file-for-convenience" class="level2" data-number="7.2">
+<h2 data-number="7.2" class="anchored" data-anchor-id="ssh-config-file-for-convenience"><span class="header-section-number">7.2</span> SSH Config File for Convenience</h2>
+<p>For convenience, I constructed a <code>config</code> file in <code>~/.ssh</code>:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">Host</span> rgtlab.org</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">HostName</span> 13.57.139.31</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="ex">User</span> ubuntu</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="ex">Port</span> 22</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="ex">IdentityFile</span> ~/.ssh/power1_app.pem</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>With this configuration in place, I can SSH into the server with the abbreviated command:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> rgtlab.org</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+</section>
+<section id="startup-script-for-docker-installation" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Startup Script for Docker Installation</h1>
+<p>The following startup script installs Docker and Docker Compose on the Ubuntu instance. I uploaded this script in the <strong>Advanced options</strong> section of the instance launch process. It runs once, automatically, when the server first boots.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">#!/bin/bash</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">apt</span> update</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="ex">apt-get</span> install curl <span class="at">-y</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="ex">apt-get</span> install gnupg <span class="at">-y</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="ex">apt-get</span> install ca-certificates <span class="at">-y</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="ex">apt-get</span> install lsb-release <span class="at">-y</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> install <span class="at">-m</span> 0755 <span class="at">-d</span> /etc/apt/keyrings</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-fsSL</span> <span class="dt">\</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  https://download.docker.com/linux/ubuntu/gpg <span class="kw">|</span> <span class="dt">\</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sudo</span> gpg <span class="at">--dearmor</span> <span class="dt">\</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">-o</span> /etc/apt/keyrings/docker.gpg</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> chmod a+r /etc/apt/keyrings/docker.gpg</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="dt">\</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>  <span class="st">"deb [arch="</span><span class="va">$(</span><span class="ex">dpkg</span> <span class="at">--print-architecture</span><span class="va">)</span><span class="st">" </span><span class="dt">\</span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a><span class="st">  signed-by=/etc/apt/keyrings/docker.gpg] </span><span class="dt">\</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="st">  https://download.docker.com/linux/ubuntu </span><span class="dt">\</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a><span class="st">  "</span><span class="va">$(</span><span class="bu">.</span> /etc/os-release <span class="dt">\</span></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>  <span class="kw">&amp;&amp;</span> <span class="bu">echo</span> <span class="st">"</span><span class="va">$VERSION_CODENAME</span><span class="st">"</span><span class="va">)</span><span class="st">" stable"</span> <span class="kw">|</span> <span class="dt">\</span></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sudo</span> tee <span class="dt">\</span></span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>  /etc/apt/sources.list.d/docker.list <span class="op">&gt;</span> /dev/null</span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a><span class="ex">apt-get</span> update</span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a><span class="ex">apt-get</span> install docker-ce docker-ce-cli <span class="dt">\</span></span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>  containerd.io docker-compose-plugin <span class="at">-y</span></span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span> ubuntu <span class="at">-</span></span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a><span class="ex">usermod</span> <span class="at">-aG</span> docker ubuntu</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>This script installs the Docker engine, CLI, containerd runtime, and Docker Compose plugin. The final two lines add the default <code>ubuntu</code> user to the <code>docker</code> group so that Docker commands can be run without <code>sudo</code>.</p>
+</section>
+<section id="verification" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> Verification</h1>
+<p>After launching the instance and associating the elastic IP, confirm that the server is accessible and Docker is installed.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> rgtlab.org <span class="st">"echo 'SSH connection successful'"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> rgtlab.org <span class="st">"docker --version"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> rgtlab.org <span class="st">"docker compose version"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>If all three commands return expected output, the instance is correctly configured with SSH access and Docker installed.</p>
+</section>
+<section id="daily-workflow" class="level1" data-number="10">
+<h1 data-number="10"><span class="header-section-number">10</span> Daily Workflow</h1>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 40%">
+<col style="width: 60%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Task</th>
+<th style="text-align: left;">Command</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Connect to server</td>
+<td style="text-align: left;"><code>ssh rgtlab.org</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Check instance status</td>
+<td style="text-align: left;">AWS Console &gt; EC2 &gt; Instances</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">View Docker containers</td>
+<td style="text-align: left;"><code>ssh rgtlab.org "docker ps"</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Check disk usage</td>
+<td style="text-align: left;"><code>ssh rgtlab.org "df -h"</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Review startup log</td>
+<td style="text-align: left;"><code>ssh rgtlab.org "cat /var/log/cloud-init-output.log"</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Reboot instance</td>
+<td style="text-align: left;">AWS Console &gt; Instance &gt; Actions &gt; Reboot</td>
+</tr>
+</tbody>
+</table>
+<section id="things-to-watch-out-for" class="level2" data-number="10.1">
+<h2 data-number="10.1" class="anchored" data-anchor-id="things-to-watch-out-for"><span class="header-section-number">10.1</span> Things to Watch Out For</h2>
+<ol type="1">
+<li><p><strong>Key pair permissions matter.</strong> If the private key file has permissions broader than 400, SSH will refuse to use it. I learned this the hard way after a “permissions too open” error.</p></li>
+<li><p><strong>The free tier storage limit is 30 GB.</strong> Choosing less than 30 GB may seem sufficient initially, but Docker images and system packages accumulate quickly.</p></li>
+<li><p><strong>Elastic IPs incur charges when unassociated.</strong> AWS charges for elastic IPs that are allocated but not associated with a running instance. I always release unused elastic IPs.</p></li>
+<li><p><strong>Security group rules default to deny all inbound.</strong> Forgetting to add SSH (port 22) to the inbound rules means you cannot connect to your own server.</p></li>
+<li><p><strong>The startup script runs as root.</strong> The <code>userdata</code> script in the advanced options runs with root privileges on first boot only. If it fails, you need to check <code>/var/log/cloud-init-output.log</code> on the instance for debugging.</p></li>
+</ol>
+</section>
+</section>
+<section id="uninstall-rollback" class="level1" data-number="11">
+<h1 data-number="11"><span class="header-section-number">11</span> Uninstall / Rollback</h1>
+<p>To tear down the EC2 instance and release all associated resources:</p>
+<ol type="1">
+<li><strong>Terminate the instance:</strong> EC2 Console &gt; Instances &gt; select instance &gt; Actions &gt; Terminate.</li>
+<li><strong>Release the elastic IP:</strong> EC2 Console &gt; Elastic IPs &gt; select IP &gt; Actions &gt; Release.</li>
+<li><strong>Delete the security group:</strong> EC2 Console &gt; Security Groups &gt; select group &gt; Actions &gt; Delete.</li>
+<li><strong>Remove local SSH config:</strong> Delete the entry from <code>~/.ssh/config</code> and remove the key file:</li>
+</ol>
+<div class="sourceCode" id="cb11"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span> ~/.ssh/power1_app.pem</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>AWS does not charge for terminated instances. Elastic IPs incur charges only while allocated, so releasing them immediately avoids ongoing costs.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance3.jpg" class="img-fluid figure-img"></p>
+<figcaption>UCSD Geisel Library at sunset, a place for focused technical work</figcaption>
+</figure>
+</div>
+<p><em>Cloud infrastructure, like library architecture, benefits from careful planning and solid foundations.</em></p>
+</section>
+<section id="what-did-we-learn" class="level1" data-number="12">
+<h1 data-number="12"><span class="header-section-number">12</span> What Did We Learn?</h1>
+<section id="lessons-learnt" class="level2" data-number="12.1">
+<h2 data-number="12.1" class="anchored" data-anchor-id="lessons-learnt"><span class="header-section-number">12.1</span> Lessons Learnt</h2>
+<p><strong>Conceptual Understanding:</strong></p>
+<ul>
+<li>Cloud servers are ordinary Linux machines running in someone else’s data centre; the mental model of “remote laptop” is surprisingly accurate.</li>
+<li>The four pre-launch components (key pair, firewall, static IP, domain name) are independent of each other and can be configured in any order.</li>
+<li>Security groups act as stateful firewalls: if inbound traffic is allowed, the corresponding outbound response is automatically permitted.</li>
+<li>Elastic IPs provide stability across instance reboots, which is essential for maintaining DNS records.</li>
+</ul>
+<p><strong>Technical Skills:</strong></p>
+<ul>
+<li>Generating and managing RSA key pairs with <code>ssh-keygen</code> for both local and EC2-generated workflows.</li>
+<li>Configuring SSH <code>config</code> files to simplify repeated connections to remote servers.</li>
+<li>Writing <code>userdata</code> startup scripts that run automatically on first boot to install Docker and other dependencies.</li>
+<li>Associating elastic IPs, security groups, and key pairs with EC2 instances through the console interface.</li>
+</ul>
+<p><strong>Gotchas and Pitfalls:</strong></p>
+<ul>
+<li>Forgetting to change key file permissions to 400 results in an SSH connection refusal that can be confusing if you have not seen it before.</li>
+<li>The EC2 console interface changes periodically; screenshots in tutorials may not match the current layout exactly.</li>
+<li>Running out of disk space during Docker builds is a common issue on instances with less than 30 GB of storage.</li>
+<li>The <code>userdata</code> startup script only runs on first boot; if you need to re-run it, you must either recreate the instance or run the commands manually.</li>
+</ul>
+</section>
+<section id="limitations" class="level2" data-number="12.2">
+<h2 data-number="12.2" class="anchored" data-anchor-id="limitations"><span class="header-section-number">12.2</span> Limitations</h2>
+<ul>
+<li>This tutorial covers only the AWS EC2 console approach; other providers (Azure, GCP, Digital Ocean) have different workflows.</li>
+<li>The free tier <code>t2.micro</code> instance has limited CPU and memory, which may be insufficient for computationally intensive Shiny applications.</li>
+<li>The startup script installs Docker using a specific method that may need updating as Docker’s installation process evolves.</li>
+<li>This post covers only the pre-launch and basic launch steps; configuring a web server, SSL certificates, and reverse proxy are addressed in a separate post.</li>
+<li>AWS pricing and free tier eligibility change over time; readers should verify current terms before proceeding.</li>
+<li>The security group configuration shown here allows SSH and HTTPS from any IP address, which may not meet institutional security requirements.</li>
+</ul>
+</section>
+<section id="opportunities-for-improvement" class="level2" data-number="12.3">
+<h2 data-number="12.3" class="anchored" data-anchor-id="opportunities-for-improvement"><span class="header-section-number">12.3</span> Opportunities for Improvement</h2>
+<ol type="1">
+<li>Automate the entire server provisioning process using Terraform or AWS CloudFormation instead of manual console clicks.</li>
+<li>Use AWS Systems Manager Session Manager for SSH access without opening port 22, improving the security posture.</li>
+<li>Implement a more restrictive security group that limits SSH access to specific IP addresses rather than 0.0.0.0/0.</li>
+<li>Create an AMI (Amazon Machine Image) with Docker pre-installed to eliminate the need for a startup script.</li>
+<li>Explore spot instances for non-production workloads to reduce costs below the free tier threshold.</li>
+<li>Set up CloudWatch monitoring and billing alerts to avoid unexpected charges.</li>
+</ol>
+</section>
+</section>
+<section id="wrapping-up" class="level1" data-number="13">
+<h1 data-number="13"><span class="header-section-number">13</span> Wrapping Up</h1>
+<p>Setting up an AWS EC2 instance is a foundational skill for anyone who needs to host web applications, run Docker containers, or manage reproducible research environments in the cloud. The process involves four pre-launch components – key pairs, security groups, elastic IPs, and domain names – followed by a straightforward instance launch sequence.</p>
+<p>What I found most valuable in this process was understanding that each component serves a distinct, understandable purpose. The terminology is more intimidating than the actual configuration. Once the working environment is set up, it can be reused across multiple server instances.</p>
+<p>The next step from here is configuring the server for Shiny app hosting, which involves installing a web server (Caddy), obtaining an SSL certificate, and setting up a reverse proxy. That workflow is covered in a companion post on Dockerizing Shiny applications.</p>
+<p>Main takeaways:</p>
+<ul>
+<li>The four pre-launch components (key pair, firewall, static IP, domain name) are independent and reusable across multiple server instances.</li>
+<li>The free tier <code>t2.micro</code> instance with 30 GB storage is sufficient for lightweight Shiny app hosting.</li>
+<li>A startup script can automate Docker installation on first boot, reducing manual configuration.</li>
+<li>SSH config files simplify repeated connections and reduce typing errors.</li>
+</ul>
+</section>
+<section id="see-also" class="level1" data-number="14">
+<h1 data-number="14"><span class="header-section-number">14</span> See Also</h1>
+<section id="related-posts" class="level3" data-number="14.0.1">
+<h3 data-number="14.0.1" class="anchored" data-anchor-id="related-posts"><span class="header-section-number">14.0.1</span> Related Posts</h3>
+<ul>
+<li><a href="https://focusonr.org/blog/dockerize_simple/">Dockerizing a Shiny App for Production</a> – the companion post covering post-launch server configuration.</li>
+<li><a href="https://focusonr.org/posts/24-setupdotfilesongithub/">Creating a GitHub Dotfiles Repository for Configuration Management</a> – managing configuration files across machines.</li>
+<li><a href="https://focusonr.org/posts/01-configtermzsh/">Configure the Command Line for Data Science Development</a> – terminal and shell setup for productive development.</li>
+</ul>
+</section>
+<section id="key-resources" class="level3" data-number="14.0.2">
+<h3 data-number="14.0.2" class="anchored" data-anchor-id="key-resources"><span class="header-section-number">14.0.2</span> Key Resources</h3>
+<ul>
+<li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/">AWS EC2 User Guide</a> – official documentation for EC2 instances.</li>
+<li><a href="https://www.ssh.com/academy/ssh/public-key-authentication">SSH Public Key Authentication</a> – reference for key pair generation and management.</li>
+<li><a href="https://docs.docker.com/engine/install/ubuntu/">Docker Installation on Ubuntu</a> – official Docker installation guide.</li>
+<li><a href="https://aws.amazon.com/free/">AWS Free Tier Details</a> – current free tier eligibility and usage limits.</li>
+</ul>
+</section>
+</section>
+<section id="reproducibility" class="level1" data-number="15">
+<h1 data-number="15"><span class="header-section-number">15</span> Reproducibility</h1>
+<p>This tutorial does not involve R code execution. The commands shown are shell commands run either on a local macOS/Linux workstation or on the remote Ubuntu server.</p>
+<p>To reproduce the server setup:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh-keygen</span> <span class="at">-m</span> PEM</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> chmod 400 ~/.ssh/power1_app.pem</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> <span class="at">-i</span> <span class="st">"~/.ssh/power1_app"</span> ubuntu@rgtlab.org</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The startup script can be saved as <code>aws_startup_code.sh</code> and uploaded during instance launch, or run manually after SSH access is established.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>R version 4.5.3 (2026-03-11)
+Platform: aarch64-apple-darwin25.3.0
+Running under: macOS Tahoe 26.4.1
+
+Matrix products: default
+BLAS:   /opt/homebrew/Cellar/openblas/0.3.32/lib/libopenblasp-r0.3.32.dylib 
+LAPACK: /opt/homebrew/Cellar/r/4.5.3/lib/R/lib/libRlapack.dylib;  LAPACK version 3.12.1
+
+locale:
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+time zone: America/Los_Angeles
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+loaded via a namespace (and not attached):
+ [1] htmlwidgets_1.6.4 compiler_4.5.3    fastmap_1.2.0     cli_3.6.6        
+ [5] tools_4.5.3       htmltools_0.5.8.1 parallel_4.5.3    yaml_2.3.10      
+ [9] rmarkdown_2.29    knitr_1.50        jsonlite_2.0.0    xfun_0.56        
+[13] digest_0.6.37     rlang_1.2.0       evaluate_1.0.5   </code></pre>
+</div>
+</div>
+</section>
+<section id="lets-connect" class="level1" data-number="16">
+<h1 data-number="16"><span class="header-section-number">16</span> Let’s Connect</h1>
+<ul>
+<li><strong>GitHub:</strong> <a href="https://github.com/rgt47">rgt47</a></li>
+<li><strong>Twitter/X:</strong> <a href="https://twitter.com/rgt47"><span class="citation" data-cites="rgt47">@rgt47</span></a></li>
+<li><strong>LinkedIn:</strong> <a href="https://linkedin.com/in/rgthomaslab">Ronald Glenn Thomas</a></li>
+<li><strong>Email:</strong> <a href="https://rgtlab.org/contact">rgtlab.org/contact</a></li>
+</ul>
+<p>I would enjoy hearing from you if:</p>
+<ul>
+<li>You spot an error or a better approach to any of the code in this post.</li>
+<li>You have suggestions for topics you would like to see covered.</li>
+<li>You want to discuss R programming, data science, or reproducible research.</li>
+<li>You have questions about anything in this tutorial.</li>
+<li>You just want to say hello and connect.</li>
+</ul>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp("https:\/\/focusonr\.org");
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<script src="https://giscus.app/client.js" data-repo="rgt47/qblog" data-repo-id="R_kgDOH6TO7A" data-category="General" data-category-id="DIC_kwDOH6TO7M4CXqIi" data-mapping="pathname" data-reactions-enabled="1" data-emit-metadata="0" data-input-position="bottom" data-theme="light" data-lang="en" crossorigin="anonymous" async="">
+</script>
+<input type="hidden" id="giscus-base-theme" value="light">
+<input type="hidden" id="giscus-alt-theme" value="light">
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Copyright 2023-2025, Ronald G. Thomas</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47">
+      <i class="bi bi-github" role="img">
+</i> 
+    </a>
+  </li>  
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47">
+      <i class="bi bi-twitter" role="img">
+</i> 
+    </a>
+  </li>  
+</ul>
+    </div>
+  </div>
+</footer>
+<!-- Fix for Quarto category encoding issue -->
+<script>
+// Fix category encoding for Quarto listing functionality
+(function() {
+  function fixAllCategoryEncoding() {
+    // Only run on pages that have Quarto listings
+    if (!document.querySelector('.quarto-listing')) {
+      return;
+    }
+    
+    // Fix sidebar category data-category attributes
+    const categoryEls = document.querySelectorAll('.quarto-listing-category .category[data-category]');
+    
+    categoryEls.forEach((categoryEl) => {
+      const category = categoryEl.getAttribute('data-category');
+      
+      if (category && category !== '') {
+        // Check if it contains only base64 characters and proper length
+        const isBase64 = /^[A-Za-z0-9+/]*={0,2}$/.test(category) && category.length % 4 === 0;
+        
+        if (isBase64) {
+          try {
+            const decoded = decodeURIComponent(atob(category));
+            // Verify it decoded to something reasonable (no control characters)
+            if (!decoded.match(/^[A-Za-z0-9\s\-,]+$/)) {
+              // Invalid encoding, re-encode from original text
+              const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+              categoryEl.setAttribute('data-category', encodedCategory);
+            }
+          } catch (e) {
+            // Base64 decode failed, re-encode from original text
+            const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+            categoryEl.setAttribute('data-category', encodedCategory);
+          }
+        } else {
+          // Not base64, encode it
+          const encodedCategory = btoa(encodeURIComponent(category));
+          categoryEl.setAttribute('data-category', encodedCategory);
+        }
+      }
+    });
+    
+    // Fix listing item data-categories attributes  
+    const listingItems = document.querySelectorAll('[data-categories]');
+    
+    listingItems.forEach((item) => {
+      const categories = item.getAttribute('data-categories');
+      
+      if (categories && categories !== '') {
+        // Check if it's already base64 encoded
+        try {
+          decodeURIComponent(atob(categories));
+          // Already encoded and valid
+        } catch (e) {
+          // Not encoded, fix it
+          const encodedCategories = btoa(encodeURIComponent(categories));
+          item.setAttribute('data-categories', encodedCategories);
+        }
+      }
+    });
+    
+    // Fix post-specific category tag click handlers
+    const postCategoryTags = document.querySelectorAll('.listing-category[onclick]');
+    
+    postCategoryTags.forEach((tag) => {
+      const categoryText = tag.textContent.trim();
+      
+      // Replace the onclick handler to use encoded category
+      tag.onclick = () => {
+        const encodedCategory = btoa(encodeURIComponent(categoryText));
+        window.quartoListingCategory(encodedCategory);
+        return false;
+      };
+    });
+  }
+  
+  // Run immediately
+  fixAllCategoryEncoding();
+  
+  // Also run when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fixAllCategoryEncoding);
+  }
+})();
+</script>
+
+<!-- PDF view/download button for blog posts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Only add the button on post pages
+  if (window.location.pathname.includes('/posts/') && !window.location.pathname.endsWith('/posts/') && !window.location.pathname.endsWith('/posts/index.html')) {
+    var currentPath = window.location.pathname;
+    // Handle both /posts/name/ and /posts/name/index.html formats
+    var pdfPath;
+    if (currentPath.endsWith('/')) {
+      pdfPath = currentPath + 'index.pdf';
+    } else {
+      pdfPath = currentPath.replace('.html', '.pdf');
+    }
+
+    // Check if PDF exists first
+    fetch(pdfPath, { method: 'HEAD' })
+      .then(function(response) {
+        if (response.ok) {
+          // PDF exists, show download button
+          showDownloadButton(pdfPath);
+        }
+        // If PDF doesn't exist, don't show any button
+      })
+      .catch(function(error) {
+        // Error checking PDF, don't show any button
+      });
+  }
+});
+
+function showDownloadButton(pdfPath) {
+  var downloadBtn = document.createElement('div');
+  downloadBtn.className = 'pdf-download-button';
+
+  // Get file size if possible
+  fetch(pdfPath, { method: 'HEAD' })
+    .then(function(response) {
+      var size = response.headers.get('Content-Length');
+      var sizeText = '';
+
+      if (size) {
+        // Convert to MB or KB
+        var sizeInMB = size / (1024 * 1024);
+        if (sizeInMB >= 1) {
+          sizeText = ' (' + sizeInMB.toFixed(1) + ' MB)';
+        } else {
+          sizeText = ' (' + (size / 1024).toFixed(0) + ' KB)';
+        }
+      }
+
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' + sizeText +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    })
+    .catch(function() {
+      // Basic fallback if we can't get file size
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    });
+
+  // Find where to insert the button (right after the title block)
+  var titleBlock = document.querySelector('.quarto-title-meta');
+  if (titleBlock) {
+    titleBlock.after(downloadBtn);
+  }
+}
+
+
+</script>
+
+<style>
+.pdf-download-button {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+</style>
+
+
+
+
+</body></html>

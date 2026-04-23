@@ -1,0 +1,1448 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.5.45">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ronald G. Thomas">
+<meta name="dcterms.date" content="2026-04-21">
+<meta name="description" content="I did not really know how to programmatically generate multiple plots from grouped data until I discovered purrr’s map2 and pmap functions – this post walks through the approach step by step using Palmer Penguins.">
+
+<title>Functional Plot Generation with purrr – Thomas Lab</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../../../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../../../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../../../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../../../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../../../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../../../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../../../../">
+<script src="../../../../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../../../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../../../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../../../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../../../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../../../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../../../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../../../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../../../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": true,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "keyboard-shortcut": [
+    "?",
+    "/"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&amp;family=Open+Sans:ital,wght@0,400;0,600;1,400&amp;family=Fira+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<script src="https://kit.fontawesome.com/0fba9333d8.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+
+<!-- Custom meta tags for social sharing -->
+<meta property="og:site_name" content="Thomas Lab">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@rgt47">
+
+<!-- Add responsive features -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<!-- Add analytics if needed -->
+<!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXX');
+</script> -->
+
+<!-- Add custom javascript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Remove code tools button completely
+  const codeButton = document.querySelector('.code-tools-button');
+  if (codeButton) {
+    codeButton.remove();
+  }
+  
+  // Add any custom JavaScript functionality here
+  
+  // Example: Add smooth scrolling
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      
+      document.querySelector(this.getAttribute('href')).scrollIntoView({
+        behavior: 'smooth'
+      });
+    });
+  });
+  
+  // Make sidebar category items clickable (but not TOC items)
+  const categoryLinks = {
+    'Programming & Development': '/posts/?category=Programming+%26+Development',
+    'Data Analysis & Visualization': '/posts/?category=Data+Analysis+%26+Visualization',
+    'Deployment & Operations': '/posts/?category=Deployment+%26+Operations',
+    'Development Environment': '/posts/?category=Development+Environment',
+    'Shiny Applications': '/posts/?category=Shiny+Applications',
+    'AI & Automation': '/posts/?category=AI+%26+Automation',
+    'System Administration': '/posts/?category=System+Administration'
+  };
+  
+  // Only target sidebar items that are not in the TOC
+  document.querySelectorAll('.sidebar-item-section .sidebar-item-text').forEach(item => {
+    // Skip if this is inside the TOC
+    if (item.closest('#TOC')) return;
+    
+    const text = item.textContent.trim();
+    if (categoryLinks[text]) {
+      item.addEventListener('click', function() {
+        window.location.href = categoryLinks[text];
+      });
+    }
+  });
+});
+</script>
+
+
+<meta property="og:title" content="Thomas Lab - Functional Plot Generation with purrr">
+<meta property="og:description" content="I did not really know how to programmatically generate multiple plots from grouped data until I discovered purrr’s map2 and pmap functions – this post walks through the approach step by step using Palmer Penguins.">
+<meta property="og:image" content="https://focusonr.org/posts/16-plotsfrompurrr/plotsfrompurrr/analysis/report/media/images/hero.jpg">
+<meta property="og:site_name" content="Thomas Lab">
+</head>
+
+<body class="nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../../../../index.html">
+    <span class="navbar-title">Thomas Lab</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../about/index.html"> 
+<span class="menu-text">About</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../blog/index.html"> 
+<span class="menu-text">Blog</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../white-papers/index.html"> 
+<span class="menu-text">White Papers</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../research/index.html"> 
+<span class="menu-text">Research</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../teaching/index.html"> 
+<span class="menu-text">Teaching</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../misc/index.html"> 
+<span class="menu-text">Misc</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47"> <i class="bi bi-twitter" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a>
+  <ul class="collapse">
+  <li><a href="#motivations" id="toc-motivations" class="nav-link" data-scroll-target="#motivations"><span class="header-section-number">1.1</span> Motivations</a></li>
+  <li><a href="#objectives" id="toc-objectives" class="nav-link" data-scroll-target="#objectives"><span class="header-section-number">1.2</span> Objectives</a></li>
+  </ul></li>
+  <li><a href="#prerequisites-and-setup" id="toc-prerequisites-and-setup" class="nav-link" data-scroll-target="#prerequisites-and-setup"><span class="header-section-number">2</span> Prerequisites and Setup</a></li>
+  <li><a href="#what-is-functional-plot-generation" id="toc-what-is-functional-plot-generation" class="nav-link" data-scroll-target="#what-is-functional-plot-generation"><span class="header-section-number">3</span> What is Functional Plot Generation?</a></li>
+  <li><a href="#getting-started-preparing-the-data" id="toc-getting-started-preparing-the-data" class="nav-link" data-scroll-target="#getting-started-preparing-the-data"><span class="header-section-number">4</span> Getting Started: Preparing the Data</a></li>
+  <li><a href="#building-the-plotting-function" id="toc-building-the-plotting-function" class="nav-link" data-scroll-target="#building-the-plotting-function"><span class="header-section-number">5</span> Building the Plotting Function</a></li>
+  <li><a href="#mapping-across-species-and-variable-pairs" id="toc-mapping-across-species-and-variable-pairs" class="nav-link" data-scroll-target="#mapping-across-species-and-variable-pairs"><span class="header-section-number">6</span> Mapping Across Species and Variable Pairs</a></li>
+  <li><a href="#assembling-the-grid-with-patchwork" id="toc-assembling-the-grid-with-patchwork" class="nav-link" data-scroll-target="#assembling-the-grid-with-patchwork"><span class="header-section-number">7</span> Assembling the Grid with Patchwork</a>
+  <ul class="collapse">
+  <li><a href="#extracting-individual-plots" id="toc-extracting-individual-plots" class="nav-link" data-scroll-target="#extracting-individual-plots"><span class="header-section-number">7.1</span> Extracting Individual Plots</a></li>
+  <li><a href="#defining-the-layout" id="toc-defining-the-layout" class="nav-link" data-scroll-target="#defining-the-layout"><span class="header-section-number">7.2</span> Defining the Layout</a></li>
+  <li><a href="#composing-the-final-figure" id="toc-composing-the-final-figure" class="nav-link" data-scroll-target="#composing-the-final-figure"><span class="header-section-number">7.3</span> Composing the Final Figure</a></li>
+  <li><a href="#things-to-watch-out-for" id="toc-things-to-watch-out-for" class="nav-link" data-scroll-target="#things-to-watch-out-for"><span class="header-section-number">7.4</span> Things to Watch Out For</a></li>
+  </ul></li>
+  <li><a href="#what-did-we-learn" id="toc-what-did-we-learn" class="nav-link" data-scroll-target="#what-did-we-learn"><span class="header-section-number">8</span> What Did We Learn?</a>
+  <ul class="collapse">
+  <li><a href="#lessons-learnt" id="toc-lessons-learnt" class="nav-link" data-scroll-target="#lessons-learnt"><span class="header-section-number">8.1</span> Lessons Learnt</a></li>
+  <li><a href="#limitations" id="toc-limitations" class="nav-link" data-scroll-target="#limitations"><span class="header-section-number">8.2</span> Limitations</a></li>
+  <li><a href="#opportunities-for-improvement" id="toc-opportunities-for-improvement" class="nav-link" data-scroll-target="#opportunities-for-improvement"><span class="header-section-number">8.3</span> Opportunities for Improvement</a></li>
+  </ul></li>
+  <li><a href="#wrapping-up" id="toc-wrapping-up" class="nav-link" data-scroll-target="#wrapping-up"><span class="header-section-number">9</span> Wrapping Up</a></li>
+  <li><a href="#see-also" id="toc-see-also" class="nav-link" data-scroll-target="#see-also"><span class="header-section-number">10</span> See Also</a></li>
+  <li><a href="#reproducibility" id="toc-reproducibility" class="nav-link" data-scroll-target="#reproducibility"><span class="header-section-number">11</span> Reproducibility</a></li>
+  <li><a href="#lets-connect" id="toc-lets-connect" class="nav-link" data-scroll-target="#lets-connect"><span class="header-section-number">12</span> Let’s Connect</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content column-page-left" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><p>Functional Plot Generation with purrr</p></h1>
+<p class="subtitle lead"></p><p>Using map2 and pmap to programmatically build scatter plot grids across penguin species</p><p></p>
+  <div class="quarto-categories">
+    <div class="quarto-category">r</div>
+    <div class="quarto-category">purrr</div>
+    <div class="quarto-category">ggplot2</div>
+    <div class="quarto-category">functional-programming</div>
+    <div class="quarto-category">data-visualization</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    <p>I did not really know how to programmatically generate multiple plots from grouped data until I discovered purrr’s map2 and pmap functions – this post walks through the approach step by step using Palmer Penguins.</p>
+  </div>
+</div>
+
+
+<div class="quarto-title-meta column-page-left">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ronald G. Thomas </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">April 21, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/hero.jpg" class="img-fluid figure-img" style="width:80.0%"></p>
+<figcaption>Functional programming tools bring order to repetitive plotting tasks.</figcaption>
+</figure>
+</div>
+<p><em>Generating publication-quality plot grids without writing the same code three times.</em></p>
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>I did not really know how to programmatically generate multiple plots from grouped data until I started working with the Palmer Penguins dataset. The task seemed straightforward: produce scatter plots for every pairwise combination of numeric variables, separately for each penguin species, and then assemble them into a single coherent grid.</p>
+<p>My first instinct was to copy-paste code for each species and each variable pair. That approach collapsed quickly once I counted the combinations: three species, four numeric variables, six pairwise combinations per species – eighteen plots total. Copy-pasting eighteen ggplot calls is tedious, brittle, and nearly impossible to maintain.</p>
+<p>The <code>purrr</code> package solved this problem cleanly. By splitting the data by species and mapping a plotting function over every variable combination, I could generate all eighteen plots with a single pipeline and assemble them into a structured grid using <code>patchwork</code>. This post documents that workflow.</p>
+<section id="motivations" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="motivations"><span class="header-section-number">1.1</span> Motivations</h2>
+<ul>
+<li>I was tired of manually duplicating ggplot code for each subgroup in a dataset.</li>
+<li>I wanted to see all pairwise relationships between numeric features at a glance, stratified by species.</li>
+<li>I needed a workflow that could scale: if a fourth species appeared in the data, the code should handle it without modification.</li>
+<li>I was curious whether <code>purrr::pmap</code> could handle the three-argument case (x variable, y variable, grouping variable) cleanly.</li>
+<li>I wanted practice assembling complex multi-panel layouts with <code>patchwork</code> beyond simple <code>+</code> and <code>/</code> operators.</li>
+</ul>
+</section>
+<section id="objectives" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="objectives"><span class="header-section-number">1.2</span> Objectives</h2>
+<ol type="1">
+<li>Split a data frame by a categorical variable (species) and iterate over the resulting list with <code>map2</code>.</li>
+<li>Use <code>pmap</code> to map a plotting function across all pairwise combinations of numeric columns.</li>
+<li>Assemble the resulting list of plots into a structured grid using <code>patchwork::wrap_plots</code> with a custom design layout string.</li>
+<li>Produce a final composite figure with species labels, shared legends, and collected axis titles.</li>
+</ol>
+<p>I am documenting my learning process here. If you spot errors or have better approaches, please let me know in the contact section below.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/placeholder-coffee-03.jpg" class="img-fluid figure-img"></p>
+<figcaption>Functional programming and visualisation.</figcaption>
+</figure>
+</div>
+</section>
+</section>
+<section id="prerequisites-and-setup" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Prerequisites and Setup</h1>
+<p>This post assumes familiarity with <code>ggplot2</code> and basic <code>tidyverse</code> operations. The key packages are:</p>
+<ul>
+<li><code>purrr</code> for functional iteration (<code>map2</code>, <code>pmap</code>)</li>
+<li><code>patchwork</code> for plot composition (<code>wrap_plots</code>, <code>plot_layout</code>, <code>plot_spacer</code>)</li>
+<li><code>palmerpenguins</code> for the dataset</li>
+<li><code>rlang</code> for tidy evaluation (<code>.data[[var]]</code> pronoun)</li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(palmerpenguins)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(purrr)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(patchwork)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(rlang)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(grid)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The Palmer Penguins dataset contains measurements for 344 penguins across three species (Adelie, Chinstrap, Gentoo) from three islands in the Palmer Archipelago, Antarctica.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>penguins <span class="sc">|&gt;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">drop_na</span>() <span class="sc">|&gt;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(species) <span class="sc">|&gt;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  knitr<span class="sc">::</span><span class="fu">kable</span>(</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">caption =</span> <span class="st">"Observations per species after</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="st">    removing missing values."</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<table class="caption-top table table-sm table-striped small">
+<caption>Observations per species after removing missing values.</caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;">species</th>
+<th style="text-align: right;">n</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Adelie</td>
+<td style="text-align: right;">146</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Chinstrap</td>
+<td style="text-align: right;">68</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Gentoo</td>
+<td style="text-align: right;">119</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+<section id="what-is-functional-plot-generation" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> What is Functional Plot Generation?</h1>
+<p>Functional plot generation means treating plot creation as a function and then applying that function systematically across combinations of inputs. Instead of writing:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Do not do this for 18 combinations</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>plot_adelie_bill_flipper <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(...)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>plot_adelie_bill_body   <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(...)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>plot_adelie_bill_depth  <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(...)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co"># ... 15 more times</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>you write one plotting function and let <code>purrr</code> call it for every combination of species, x-variable, and y-variable. The output is a list of ggplot objects that you can arrange into any layout.</p>
+<p>Think of it like a mail merge: you define the template once and let the data fill in the blanks.</p>
+</section>
+<section id="getting-started-preparing-the-data" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Getting Started: Preparing the Data</h1>
+<p>The first step is to sample from the penguins data and split it into a named list by species. We also compute all pairwise combinations of the four numeric columns (<code>bill_length_mm</code>, <code>bill_depth_mm</code>, <code>flipper_length_mm</code>, <code>body_mass_g</code>).</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">42</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>df_sampled <span class="ot">&lt;-</span> penguins <span class="sc">|&gt;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sample_n</span>(<span class="dv">50</span>) <span class="sc">|&gt;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">drop_na</span>()</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>df_by_species <span class="ot">&lt;-</span> <span class="fu">split</span>(df_sampled, df_sampled<span class="sc">$</span>species)</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>numeric_cols <span class="ot">&lt;-</span> <span class="fu">names</span>(df_sampled)[<span class="dv">3</span><span class="sc">:</span><span class="dv">6</span>]</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>pairs <span class="ot">&lt;-</span> <span class="fu">t</span>(<span class="fu">combn</span>(numeric_cols, <span class="dv">2</span>))</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(pairs) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"x_var"</span>, <span class="st">"y_var"</span>)</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>pair_grid <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(pairs) <span class="sc">|&gt;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">group_var =</span> <span class="st">"sex"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The <code>pair_grid</code> data frame now holds six rows, one for each pairwise combination. Each row names an x-variable, a y-variable, and a grouping variable (sex) for colour coding within each species panel.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>pair_grid <span class="sc">|&gt;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  knitr<span class="sc">::</span><span class="fu">kable</span>(</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">caption =</span> <span class="st">"All pairwise variable combinations</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="st">    to plot."</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<table class="caption-top table table-sm table-striped small">
+<caption>All pairwise variable combinations to plot.</caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;">x_var</th>
+<th style="text-align: left;">y_var</th>
+<th style="text-align: left;">group_var</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">bill_length_mm</td>
+<td style="text-align: left;">bill_depth_mm</td>
+<td style="text-align: left;">sex</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">bill_length_mm</td>
+<td style="text-align: left;">flipper_length_mm</td>
+<td style="text-align: left;">sex</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">bill_length_mm</td>
+<td style="text-align: left;">body_mass_g</td>
+<td style="text-align: left;">sex</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">bill_depth_mm</td>
+<td style="text-align: left;">flipper_length_mm</td>
+<td style="text-align: left;">sex</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">bill_depth_mm</td>
+<td style="text-align: left;">body_mass_g</td>
+<td style="text-align: left;">sex</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">flipper_length_mm</td>
+<td style="text-align: left;">body_mass_g</td>
+<td style="text-align: left;">sex</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+<section id="building-the-plotting-function" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Building the Plotting Function</h1>
+<p>The core of the workflow is a single function that accepts variable names as strings and a data frame, then returns a ggplot object. The <code>.data[[var]]</code> pronoun from <code>rlang</code> allows column selection by string name inside <code>aes()</code>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>make_scatter <span class="ot">&lt;-</span> <span class="cf">function</span>(x_var, y_var,</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>                         group_var, species_name,</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>                         df) {</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  df <span class="sc">|&gt;</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggplot</span>(<span class="fu">aes</span>(</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> .data[[x_var]],</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> .data[[y_var]]</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    )) <span class="sc">+</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_point</span>(</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>      <span class="fu">aes</span>(<span class="at">color =</span> .data[[group_var]]),</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>      <span class="at">alpha =</span> <span class="fl">0.5</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_smooth</span>(</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>      <span class="at">method =</span> <span class="st">"loess"</span>,</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>      <span class="at">se =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>      <span class="at">linewidth =</span> <span class="fl">0.7</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_color_manual</span>(</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>      <span class="at">values =</span> <span class="fu">c</span>(<span class="st">"purple"</span>, <span class="st">"green"</span>, <span class="st">"red"</span>)</span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_bw</span>() <span class="sc">+</span></span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(<span class="at">text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">8</span>))</span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Two design choices deserve explanation. First, <code>geom_smooth(method = "loess")</code> adds a local regression line so we can see nonlinear trends. Second, the function does not set titles – those will come from the grid layout labels. Keeping the function minimal makes it reusable across different layouts.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance2.jpg" class="img-fluid figure-img"></p>
+<figcaption>Iterating with purpose across data strata.</figcaption>
+</figure>
+</div>
+</section>
+<section id="mapping-across-species-and-variable-pairs" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Mapping Across Species and Variable Pairs</h1>
+<p>This is the heart of the approach. We use <code>map2</code> to iterate over the list of species data frames and their names simultaneously. Inside that outer loop, <code>pmap</code> iterates over every row of <code>pair_grid</code>, calling <code>make_scatter</code> with the appropriate variable names.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>all_plots <span class="ot">&lt;-</span> df_by_species <span class="sc">|&gt;</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">map2</span>(<span class="fu">names</span>(df_by_species), <span class="cf">function</span>(df, spc) {</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    pair_grid <span class="sc">|&gt;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>      <span class="fu">pmap</span>(<span class="cf">function</span>(x_var, y_var, group_var) {</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>        <span class="fu">make_scatter</span>(</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>          x_var, y_var, group_var, spc, df</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>        )</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>      })</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  })</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The result <code>all_plots</code> is a nested list: the outer level has three elements (one per species), and each inner level has six elements (one per variable pair). That gives us eighteen ggplot objects total, organized by species.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Species:"</span>, <span class="fu">length</span>(all_plots), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>,</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Plots per species:"</span>, <span class="fu">length</span>(all_plots[[<span class="dv">1</span>]]), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>,</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Total plots:"</span>, <span class="fu">sum</span>(<span class="fu">lengths</span>(all_plots)), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Species: 3 
+ Plots per species: 6 
+ Total plots: 18 </code></pre>
+</div>
+</div>
+</section>
+<section id="assembling-the-grid-with-patchwork" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Assembling the Grid with Patchwork</h1>
+<p>The final step is arranging all eighteen plots into a structured grid. I want each species to occupy one row group, with a text label identifying the species. The <code>patchwork</code> package supports custom layout strings where each letter maps to a named plot element.</p>
+<section id="extracting-individual-plots" class="level2" data-number="7.1">
+<h2 data-number="7.1" class="anchored" data-anchor-id="extracting-individual-plots"><span class="header-section-number">7.1</span> Extracting Individual Plots</h2>
+<p>First, we pull every plot out of the nested list and assign readable names.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>p1  <span class="ot">&lt;-</span> all_plots[[<span class="dv">1</span>]][[<span class="dv">1</span>]]</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>p2  <span class="ot">&lt;-</span> all_plots[[<span class="dv">1</span>]][[<span class="dv">2</span>]]</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>p3  <span class="ot">&lt;-</span> all_plots[[<span class="dv">1</span>]][[<span class="dv">3</span>]]</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>p4  <span class="ot">&lt;-</span> all_plots[[<span class="dv">1</span>]][[<span class="dv">4</span>]]</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>p5  <span class="ot">&lt;-</span> all_plots[[<span class="dv">1</span>]][[<span class="dv">5</span>]]</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>p6  <span class="ot">&lt;-</span> all_plots[[<span class="dv">1</span>]][[<span class="dv">6</span>]]</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>p7  <span class="ot">&lt;-</span> all_plots[[<span class="dv">2</span>]][[<span class="dv">1</span>]]</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>p8  <span class="ot">&lt;-</span> all_plots[[<span class="dv">2</span>]][[<span class="dv">2</span>]]</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>p9  <span class="ot">&lt;-</span> all_plots[[<span class="dv">2</span>]][[<span class="dv">3</span>]]</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>p10 <span class="ot">&lt;-</span> all_plots[[<span class="dv">2</span>]][[<span class="dv">4</span>]]</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>p11 <span class="ot">&lt;-</span> all_plots[[<span class="dv">2</span>]][[<span class="dv">5</span>]]</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>p12 <span class="ot">&lt;-</span> all_plots[[<span class="dv">2</span>]][[<span class="dv">6</span>]]</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>p13 <span class="ot">&lt;-</span> all_plots[[<span class="dv">3</span>]][[<span class="dv">1</span>]]</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>p14 <span class="ot">&lt;-</span> all_plots[[<span class="dv">3</span>]][[<span class="dv">2</span>]]</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>p15 <span class="ot">&lt;-</span> all_plots[[<span class="dv">3</span>]][[<span class="dv">3</span>]]</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>p16 <span class="ot">&lt;-</span> all_plots[[<span class="dv">3</span>]][[<span class="dv">4</span>]]</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>p17 <span class="ot">&lt;-</span> all_plots[[<span class="dv">3</span>]][[<span class="dv">5</span>]]</span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>p18 <span class="ot">&lt;-</span> all_plots[[<span class="dv">3</span>]][[<span class="dv">6</span>]]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="defining-the-layout" class="level2" data-number="7.2">
+<h2 data-number="7.2" class="anchored" data-anchor-id="defining-the-layout"><span class="header-section-number">7.2</span> Defining the Layout</h2>
+<p>The layout string below arranges plots in an upper triangular pattern for each species, with text labels (X, Y, Z) marking each species group. Each letter in the string maps to one named plot element in <code>wrap_plots</code>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>layout_string <span class="ot">&lt;-</span> <span class="st">"</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="st">X##</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="st">ABC</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="st">#DE</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="st">##F</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="st">Y##</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="st">GHI</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="st">#JK</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="st">##L</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a><span class="st">Z##</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a><span class="st">MNO</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a><span class="st">#PQ</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a><span class="st">##R</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a><span class="st">"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The <code>#</code> characters represent empty cells. This produces a staircase pattern: three plots in the first row, two in the second, one in the third – mirroring the upper triangle of a pairwise comparison matrix.</p>
+</section>
+<section id="composing-the-final-figure" class="level2" data-number="7.3">
+<h2 data-number="7.3" class="anchored" data-anchor-id="composing-the-final-figure"><span class="header-section-number">7.3</span> Composing the Final Figure</h2>
+<p>We create text labels for each species using <code>grid::textGrob</code> and pass everything to <code>wrap_plots</code>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>label_sp1 <span class="ot">&lt;-</span> grid<span class="sc">::</span><span class="fu">textGrob</span>(</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">names</span>(df_by_species)[<span class="dv">1</span>],</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">gp =</span> <span class="fu">gpar</span>(<span class="at">fontsize =</span> <span class="dv">10</span>, <span class="at">fontface =</span> <span class="st">"bold"</span>)</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>label_sp2 <span class="ot">&lt;-</span> grid<span class="sc">::</span><span class="fu">textGrob</span>(</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">names</span>(df_by_species)[<span class="dv">2</span>],</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">gp =</span> <span class="fu">gpar</span>(<span class="at">fontsize =</span> <span class="dv">10</span>, <span class="at">fontface =</span> <span class="st">"bold"</span>)</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>label_sp3 <span class="ot">&lt;-</span> grid<span class="sc">::</span><span class="fu">textGrob</span>(</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">names</span>(df_by_species)[<span class="dv">3</span>],</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">gp =</span> <span class="fu">gpar</span>(<span class="at">fontsize =</span> <span class="dv">10</span>, <span class="at">fontface =</span> <span class="st">"bold"</span>)</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>composite <span class="ot">&lt;-</span> <span class="fu">wrap_plots</span>(</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">X =</span> label_sp1,</span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">A =</span> p1,  <span class="at">B =</span> p2,  <span class="at">C =</span> p3,</span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">D =</span> p4,  <span class="at">E =</span> p5,  <span class="at">F =</span> p6,</span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">Y =</span> label_sp2,</span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">G =</span> p7,  <span class="at">H =</span> p8,  <span class="at">I =</span> p9,</span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>  <span class="at">J =</span> p10, <span class="at">K =</span> p11, <span class="at">L =</span> p12,</span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>  <span class="at">Z =</span> label_sp3,</span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>  <span class="at">M =</span> p13, <span class="at">N =</span> p14, <span class="at">O =</span> p15,</span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>  <span class="at">P =</span> p16, <span class="at">Q =</span> p17, <span class="at">R =</span> p18,</span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a>  <span class="at">design =</span> layout_string</span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a>) <span class="sc">+</span></span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plot_layout</span>(</span>
+<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a>    <span class="at">guides =</span> <span class="st">"collect"</span>,</span>
+<span id="cb12-28"><a href="#cb12-28" aria-hidden="true" tabindex="-1"></a>    <span class="at">axis_titles =</span> <span class="st">"collect"</span></span>
+<span id="cb12-29"><a href="#cb12-29" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb12-30"><a href="#cb12-30" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(</span>
+<span id="cb12-31"><a href="#cb12-31" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend.position =</span> <span class="st">"bottom"</span>,</span>
+<span id="cb12-32"><a href="#cb12-32" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend.direction =</span> <span class="st">"horizontal"</span>,</span>
+<span id="cb12-33"><a href="#cb12-33" aria-hidden="true" tabindex="-1"></a>    <span class="at">text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">8</span>)</span>
+<span id="cb12-34"><a href="#cb12-34" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb12-35"><a href="#cb12-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-36"><a href="#cb12-36" aria-hidden="true" tabindex="-1"></a>composite</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="index_files/figure-html/final-composite-1.png" class="img-fluid figure-img" alt="A grid of 18 scatter plots arranged in three upper-triangular blocks, one per penguin species, showing pairwise relationships between bill length, bill depth, flipper length, and body mass with LOESS smoothing lines." width="768"></p>
+<figcaption>Pairwise scatter plots for four numeric penguin measurements, stratified by species. Each row group shows one species with a LOESS smooth and points coloured by sex.</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>The <code>guides = "collect"</code> argument consolidates duplicate legends into a single shared legend at the bottom. The <code>axis_titles = "collect"</code> argument prevents repeated axis labels across panels. Together, these two settings produce a clean, readable composite figure.</p>
+</section>
+<section id="things-to-watch-out-for" class="level2" data-number="7.4">
+<h2 data-number="7.4" class="anchored" data-anchor-id="things-to-watch-out-for"><span class="header-section-number">7.4</span> Things to Watch Out For</h2>
+<ol type="1">
+<li><p><strong>Variable types matter.</strong> The <code>.data[[var]]</code> pronoun works only when the column name is a string. If you pass a symbol instead, you will get cryptic subscription errors.</p></li>
+<li><p><strong>Missing data propagates.</strong> If you forget <code>drop_na()</code> before splitting, some species subsets will contain <code>NA</code> rows, and <code>geom_smooth</code> will warn about removed observations.</p></li>
+<li><p><strong>Layout string alignment.</strong> Every row in the <code>patchwork</code> layout string must have the same number of characters. A misaligned row silently produces an incorrect layout.</p></li>
+<li><p><strong>Global environment side effects.</strong> The original draft used <code>assign(..., envir = .GlobalEnv)</code> inside the plotting function. This is fragile and pollutes the workspace. Returning the plot object and storing it in a list is cleaner and more predictable.</p></li>
+<li><p><strong>Sample size per species.</strong> When sampling 50 rows from the full dataset, some species may end up with very few observations. For production analyses, use the full dataset or stratified sampling to ensure adequate representation.</p></li>
+</ol>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance3.jpg" class="img-fluid figure-img"></p>
+<figcaption>Assembling the pieces into a coherent whole.</figcaption>
+</figure>
+</div>
+</section>
+</section>
+<section id="what-did-we-learn" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> What Did We Learn?</h1>
+<section id="lessons-learnt" class="level2" data-number="8.1">
+<h2 data-number="8.1" class="anchored" data-anchor-id="lessons-learnt"><span class="header-section-number">8.1</span> Lessons Learnt</h2>
+<p><strong>Conceptual Understanding:</strong></p>
+<ul>
+<li>Pairwise scatter plot matrices provide a rapid visual summary of relationships between continuous features, but they scale quadratically: four variables produce six pairs, five produce ten.</li>
+<li>Stratification by species reveals within-group patterns that pooled analyses obscure (Simpson’s paradox).</li>
+<li>LOESS smoothers are useful for initial exploration but carry no inferential interpretation without further modeling.</li>
+<li>The upper-triangular layout avoids redundancy by showing each pair exactly once.</li>
+</ul>
+<p><strong>Technical Skills:</strong></p>
+<ul>
+<li><code>purrr::map2</code> iterates over two lists in parallel – ideal for pairing data frames with their names.</li>
+<li><code>purrr::pmap</code> generalises to arbitrary numbers of arguments by iterating over rows of a data frame.</li>
+<li><code>rlang::.data[[var]]</code> enables column selection by string name inside <code>aes()</code>, which is essential for programmatic ggplot construction.</li>
+<li><code>patchwork::wrap_plots</code> with a custom <code>design</code> string provides fine-grained control over multi-panel layouts.</li>
+</ul>
+<p><strong>Gotchas and Pitfalls:</strong></p>
+<ul>
+<li>Forgetting <code>drop_na()</code> before <code>split()</code> produces species-level data frames with missing rows that cause warnings in <code>geom_smooth</code>.</li>
+<li>The <code>plot_spacer()</code> function is useful for empty cells, but the <code>#</code> character in the design string is more readable for fixed layouts.</li>
+<li><code>assign()</code> to <code>.GlobalEnv</code> inside mapped functions creates hard-to-debug side effects. Always return values from functions and collect them in lists.</li>
+<li><code>scale_color_manual</code> requires the correct number of colour values matching the levels of the grouping variable.</li>
+</ul>
+</section>
+<section id="limitations" class="level2" data-number="8.2">
+<h2 data-number="8.2" class="anchored" data-anchor-id="limitations"><span class="header-section-number">8.2</span> Limitations</h2>
+<ul>
+<li>The sample of 50 penguins is small. Some species may have fewer than 10 observations, making LOESS fits unreliable.</li>
+<li>The grouping variable (sex) is hard-coded. A more general approach would accept the grouping variable as a parameter.</li>
+<li>The layout string is manually crafted for exactly three species and six variable pairs. Adding a fourth species or fifth numeric variable requires rewriting the layout.</li>
+<li>No statistical tests accompany the visual exploration. The plots show associations but do not quantify significance or effect size.</li>
+<li>The colour palette (purple, green, red) is not colourblind-friendly. Production code should use a palette validated for accessibility.</li>
+</ul>
+</section>
+<section id="opportunities-for-improvement" class="level2" data-number="8.3">
+<h2 data-number="8.3" class="anchored" data-anchor-id="opportunities-for-improvement"><span class="header-section-number">8.3</span> Opportunities for Improvement</h2>
+<ol type="1">
+<li>Replace the hard-coded layout string with a function that generates the design string dynamically based on the number of species and variable pairs.</li>
+<li>Add correlation coefficients as text annotations inside each scatter plot panel.</li>
+<li>Use <code>GGally::ggpairs</code> as a comparison point – it handles pairwise plots natively, though with less layout flexibility.</li>
+<li>Implement stratified sampling with <code>dplyr::slice_sample(n, by = species)</code> to ensure balanced representation.</li>
+<li>Replace the manual plot extraction (p1 through p18) with a programmatic approach using <code>list_flatten</code> and named assignment.</li>
+<li>Switch to a colourblind-friendly palette such as <code>viridis</code> or the Okabe-Ito palette.</li>
+</ol>
+</section>
+</section>
+<section id="wrapping-up" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> Wrapping Up</h1>
+<p>This post demonstrated how <code>purrr::map2</code> and <code>purrr::pmap</code> can replace copy-pasted ggplot code with a single functional pipeline. The key insight is that plots are objects: you can store them in lists, pass them to functions, and assemble them programmatically.</p>
+<p>The approach worked well for the Palmer Penguins data. Starting from a single plotting function and a table of variable combinations, we generated eighteen scatter plots and arranged them into a structured grid that reveals within-species patterns. The total code is compact enough to fit in a single script, yet flexible enough to adapt to new datasets.</p>
+<p>If you are working with grouped data and finding yourself copying ggplot code, try this pattern:</p>
+<ul>
+<li><strong>Split</strong> the data by your grouping variable.</li>
+<li><strong>Define</strong> a single plotting function that accepts column names as strings.</li>
+<li><strong>Map</strong> the function across all combinations using <code>pmap</code>.</li>
+<li><strong>Assemble</strong> the resulting list with <code>patchwork</code>.</li>
+</ul>
+</section>
+<section id="see-also" class="level1" data-number="10">
+<h1 data-number="10"><span class="header-section-number">10</span> See Also</h1>
+<ul>
+<li><a href="https://aosmith.rbind.io/2018/08/20/automating-exploratory-plots/">Automating exploratory plots with ggplot2 and purrr</a> – Ariel Muldoon’s tutorial on the same pattern with detailed examples.</li>
+<li><a href="https://www.r-bloggers.com/2021/06/principal-components-and-penguins-by-ellis2013nz/">Principal components and penguins</a> – PCA as an alternative to pairwise scatter plots for high-dimensional penguin data.</li>
+<li><a href="https://purrr.tidyverse.org/">purrr documentation</a> – Official reference for <code>map</code>, <code>map2</code>, and <code>pmap</code>.</li>
+<li><a href="https://patchwork.data-imaginist.com/">patchwork documentation</a> – Guide to plot composition and layout design.</li>
+<li><a href="https://dplyr.tidyverse.org/articles/programming.html">Programming with dplyr</a> – Background on <code>.data[[var]]</code> and tidy evaluation.</li>
+</ul>
+</section>
+<section id="reproducibility" class="level1" data-number="11">
+<h1 data-number="11"><span class="header-section-number">11</span> Reproducibility</h1>
+<p>This analysis uses the <code>palmerpenguins</code> built-in dataset and requires no external data files. To reproduce:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto</span> render index.qmd</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p><strong>Session information:</strong></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>R version 4.5.3 (2026-03-11)
+Platform: aarch64-apple-darwin25.3.0
+Running under: macOS Tahoe 26.4.1
+
+Matrix products: default
+BLAS:   /opt/homebrew/Cellar/openblas/0.3.32/lib/libopenblasp-r0.3.32.dylib 
+LAPACK: /opt/homebrew/Cellar/r/4.5.3/lib/R/lib/libRlapack.dylib;  LAPACK version 3.12.1
+
+locale:
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+time zone: America/Los_Angeles
+tzcode source: internal
+
+attached base packages:
+[1] grid      stats     graphics  grDevices utils     datasets  methods  
+[8] base     
+
+other attached packages:
+ [1] rlang_1.2.0          patchwork_1.3.2      lubridate_1.9.5     
+ [4] forcats_1.0.0        stringr_1.5.1        dplyr_1.2.1         
+ [7] purrr_1.1.0          readr_2.2.0          tidyr_1.3.1         
+[10] tibble_3.3.1         ggplot2_4.0.0        tidyverse_2.0.0     
+[13] palmerpenguins_0.1.1
+
+loaded via a namespace (and not attached):
+ [1] Matrix_1.7-4       gtable_0.3.6       jsonlite_2.0.0     compiler_4.5.3    
+ [5] tidyselect_1.2.1   parallel_4.5.3     splines_4.5.3      scales_1.4.0      
+ [9] yaml_2.3.10        fastmap_1.2.0      lattice_0.22-9     R6_2.6.1          
+[13] labeling_0.4.3     generics_0.1.4     knitr_1.50         htmlwidgets_1.6.4 
+[17] pillar_1.11.1      RColorBrewer_1.1-3 tzdb_0.5.0         stringi_1.8.7     
+[21] xfun_0.56          S7_0.2.0           timechange_0.4.0   cli_3.6.6         
+[25] mgcv_1.9-4         withr_3.0.2        magrittr_2.0.5     digest_0.6.37     
+[29] hms_1.1.4          nlme_3.1-168       lifecycle_1.0.5    vctrs_0.7.3       
+[33] evaluate_1.0.5     glue_1.8.0         farver_2.1.2       rmarkdown_2.29    
+[37] tools_4.5.3        pkgconfig_2.0.3    htmltools_0.5.8.1 </code></pre>
+</div>
+</div>
+</section>
+<section id="lets-connect" class="level1" data-number="12">
+<h1 data-number="12"><span class="header-section-number">12</span> Let’s Connect</h1>
+<ul>
+<li><strong>GitHub:</strong> <a href="https://github.com/rgt47">rgt47</a></li>
+<li><strong>Twitter/X:</strong> <a href="https://twitter.com/rgt47"><span class="citation" data-cites="rgt47">@rgt47</span></a></li>
+<li><strong>LinkedIn:</strong> <a href="https://linkedin.com/in/rgthomaslab">Ronald Glenn Thomas</a></li>
+<li><strong>Email:</strong> <a href="https://rgtlab.org/contact">rgtlab.org/contact</a></li>
+</ul>
+<p>I would enjoy hearing from you if:</p>
+<ul>
+<li>You spot an error or a better approach to any of the code in this post.</li>
+<li>You have suggestions for topics you would like to see covered.</li>
+<li>You want to discuss R programming, data science, or reproducible research.</li>
+<li>You have questions about anything in this tutorial.</li>
+<li>You just want to say hello and connect.</li>
+</ul>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp("https:\/\/focusonr\.org");
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<script src="https://giscus.app/client.js" data-repo="rgt47/qblog" data-repo-id="R_kgDOH6TO7A" data-category="General" data-category-id="DIC_kwDOH6TO7M4CXqIi" data-mapping="pathname" data-reactions-enabled="1" data-emit-metadata="0" data-input-position="bottom" data-theme="light" data-lang="en" crossorigin="anonymous" async="">
+</script>
+<input type="hidden" id="giscus-base-theme" value="light">
+<input type="hidden" id="giscus-alt-theme" value="light">
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Copyright 2023-2025, Ronald G. Thomas</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47">
+      <i class="bi bi-github" role="img">
+</i> 
+    </a>
+  </li>  
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47">
+      <i class="bi bi-twitter" role="img">
+</i> 
+    </a>
+  </li>  
+</ul>
+    </div>
+  </div>
+</footer>
+<!-- Fix for Quarto category encoding issue -->
+<script>
+// Fix category encoding for Quarto listing functionality
+(function() {
+  function fixAllCategoryEncoding() {
+    // Only run on pages that have Quarto listings
+    if (!document.querySelector('.quarto-listing')) {
+      return;
+    }
+    
+    // Fix sidebar category data-category attributes
+    const categoryEls = document.querySelectorAll('.quarto-listing-category .category[data-category]');
+    
+    categoryEls.forEach((categoryEl) => {
+      const category = categoryEl.getAttribute('data-category');
+      
+      if (category && category !== '') {
+        // Check if it contains only base64 characters and proper length
+        const isBase64 = /^[A-Za-z0-9+/]*={0,2}$/.test(category) && category.length % 4 === 0;
+        
+        if (isBase64) {
+          try {
+            const decoded = decodeURIComponent(atob(category));
+            // Verify it decoded to something reasonable (no control characters)
+            if (!decoded.match(/^[A-Za-z0-9\s\-,]+$/)) {
+              // Invalid encoding, re-encode from original text
+              const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+              categoryEl.setAttribute('data-category', encodedCategory);
+            }
+          } catch (e) {
+            // Base64 decode failed, re-encode from original text
+            const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+            categoryEl.setAttribute('data-category', encodedCategory);
+          }
+        } else {
+          // Not base64, encode it
+          const encodedCategory = btoa(encodeURIComponent(category));
+          categoryEl.setAttribute('data-category', encodedCategory);
+        }
+      }
+    });
+    
+    // Fix listing item data-categories attributes  
+    const listingItems = document.querySelectorAll('[data-categories]');
+    
+    listingItems.forEach((item) => {
+      const categories = item.getAttribute('data-categories');
+      
+      if (categories && categories !== '') {
+        // Check if it's already base64 encoded
+        try {
+          decodeURIComponent(atob(categories));
+          // Already encoded and valid
+        } catch (e) {
+          // Not encoded, fix it
+          const encodedCategories = btoa(encodeURIComponent(categories));
+          item.setAttribute('data-categories', encodedCategories);
+        }
+      }
+    });
+    
+    // Fix post-specific category tag click handlers
+    const postCategoryTags = document.querySelectorAll('.listing-category[onclick]');
+    
+    postCategoryTags.forEach((tag) => {
+      const categoryText = tag.textContent.trim();
+      
+      // Replace the onclick handler to use encoded category
+      tag.onclick = () => {
+        const encodedCategory = btoa(encodeURIComponent(categoryText));
+        window.quartoListingCategory(encodedCategory);
+        return false;
+      };
+    });
+  }
+  
+  // Run immediately
+  fixAllCategoryEncoding();
+  
+  // Also run when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fixAllCategoryEncoding);
+  }
+})();
+</script>
+
+<!-- PDF view/download button for blog posts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Only add the button on post pages
+  if (window.location.pathname.includes('/posts/') && !window.location.pathname.endsWith('/posts/') && !window.location.pathname.endsWith('/posts/index.html')) {
+    var currentPath = window.location.pathname;
+    // Handle both /posts/name/ and /posts/name/index.html formats
+    var pdfPath;
+    if (currentPath.endsWith('/')) {
+      pdfPath = currentPath + 'index.pdf';
+    } else {
+      pdfPath = currentPath.replace('.html', '.pdf');
+    }
+
+    // Check if PDF exists first
+    fetch(pdfPath, { method: 'HEAD' })
+      .then(function(response) {
+        if (response.ok) {
+          // PDF exists, show download button
+          showDownloadButton(pdfPath);
+        }
+        // If PDF doesn't exist, don't show any button
+      })
+      .catch(function(error) {
+        // Error checking PDF, don't show any button
+      });
+  }
+});
+
+function showDownloadButton(pdfPath) {
+  var downloadBtn = document.createElement('div');
+  downloadBtn.className = 'pdf-download-button';
+
+  // Get file size if possible
+  fetch(pdfPath, { method: 'HEAD' })
+    .then(function(response) {
+      var size = response.headers.get('Content-Length');
+      var sizeText = '';
+
+      if (size) {
+        // Convert to MB or KB
+        var sizeInMB = size / (1024 * 1024);
+        if (sizeInMB >= 1) {
+          sizeText = ' (' + sizeInMB.toFixed(1) + ' MB)';
+        } else {
+          sizeText = ' (' + (size / 1024).toFixed(0) + ' KB)';
+        }
+      }
+
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' + sizeText +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    })
+    .catch(function() {
+      // Basic fallback if we can't get file size
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    });
+
+  // Find where to insert the button (right after the title block)
+  var titleBlock = document.querySelector('.quarto-title-meta');
+  if (titleBlock) {
+    titleBlock.after(downloadBtn);
+  }
+}
+
+
+</script>
+
+<style>
+.pdf-download-button {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+</style>
+
+
+
+
+</body></html>

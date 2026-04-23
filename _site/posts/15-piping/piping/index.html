@@ -2,13 +2,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.7.25">
+<meta name="generator" content="quarto-1.5.45">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="author" content="RG Thomas">
+<meta name="author" content="Ronald G. Thomas">
 <meta name="dcterms.date" content="2026-01-31">
-<meta name="description" content="Most R programmers assume that f() |> g() is equivalent to g(f()). This assumption breaks down with non-standard evaluation, leading to subtle bugs. This post explains why, when it matters, and how to work around it.">
+<meta name="description" content="Piping and nesting function calls are semantically different operations. A subtle bug in an expression- capturing wrapper reveals how R’s lazy evaluation interacts with the pipe operator.">
 
 <title>The Pipe Equivalence Myth: When f() |&gt; g() Is Not the Same as g(f()) – Thomas Lab</title>
 <style>
@@ -24,9 +24,8 @@ ul.task-list li input[type="checkbox"] {
   vertical-align: middle;
 }
 /* CSS for syntax highlighting */
-html { -webkit-text-size-adjust: 100%; }
 pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span { line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
@@ -37,7 +36,7 @@ div.sourceCode { overflow: auto; }
 }
 @media print {
 pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
   { counter-reset: source-line 0; }
@@ -88,16 +87,15 @@ div.csl-indent {
 <script src="../../../site_libs/quarto-search/fuse.min.js"></script>
 <script src="../../../site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="../../../">
-<script src="../../../site_libs/quarto-html/quarto.js" type="module"></script>
-<script src="../../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../../site_libs/quarto-html/quarto.js"></script>
 <script src="../../../site_libs/quarto-html/popper.min.js"></script>
 <script src="../../../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../../../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../../../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../../../site_libs/quarto-html/quarto-syntax-highlighting-fe31d7bd2deb2a321418d01dba375a64.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../../../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../../../site_libs/bootstrap/bootstrap-7dd285ed06a48d62959b0a054d794c24.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": true,
@@ -195,12 +193,13 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 
-<meta property="og:title" content="The Pipe Equivalence Myth: When f() |> g() Is Not the Same as g(f()) – Thomas Lab">
-<meta property="og:description" content="Most R programmers assume that f() |> g() is equivalent to g(f()). This assumption breaks down with non-standard evaluation, leading to subtle bugs. This post explains why, when it matters, and how to work around it.">
+<meta property="og:title" content="Thomas Lab - The Pipe Equivalence Myth: When f() |> g() Is Not the Same as g(f())">
+<meta property="og:description" content="Piping and nesting function calls are semantically different operations. A subtle bug in an expression- capturing wrapper reveals how R’s lazy evaluation interacts with the pipe operator.">
+<meta property="og:image" content="https://focusonr.org/posts/15-piping/piping/media/images/hero.jpg">
 <meta property="og:site_name" content="Thomas Lab">
 </head>
 
-<body class="nav-fixed quarto-light">
+<body class="nav-fixed">
 
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
@@ -273,12 +272,23 @@ document.addEventListener('DOMContentLoaded', function() {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#the-assumption" id="toc-the-assumption" class="nav-link active" data-scroll-target="#the-assumption"><span class="header-section-number">1</span> The Assumption</a></li>
-  <li><a href="#when-the-equivalence-breaks" id="toc-when-the-equivalence-breaks" class="nav-link" data-scroll-target="#when-the-equivalence-breaks"><span class="header-section-number">2</span> When the Equivalence Breaks</a></li>
-  <li><a href="#the-evaluation-order-problem" id="toc-the-evaluation-order-problem" class="nav-link" data-scroll-target="#the-evaluation-order-problem"><span class="header-section-number">3</span> The Evaluation Order Problem</a></li>
-  <li><a href="#why-this-matters-a-real-world-example" id="toc-why-this-matters-a-real-world-example" class="nav-link" data-scroll-target="#why-this-matters-a-real-world-example"><span class="header-section-number">4</span> Why This Matters: A Real-World Example</a></li>
-  <li><a href="#functions-affected-by-this-problem" id="toc-functions-affected-by-this-problem" class="nav-link" data-scroll-target="#functions-affected-by-this-problem"><span class="header-section-number">5</span> Functions Affected by This Problem</a></li>
-  <li><a href="#the-native-pipe-vs.-magrittr" id="toc-the-native-pipe-vs.-magrittr" class="nav-link" data-scroll-target="#the-native-pipe-vs.-magrittr"><span class="header-section-number">6</span> The Native Pipe vs.&nbsp;Magrittr</a></li>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a>
+  <ul class="collapse">
+  <li><a href="#motivations" id="toc-motivations" class="nav-link" data-scroll-target="#motivations"><span class="header-section-number">1.1</span> Motivations</a></li>
+  <li><a href="#objectives" id="toc-objectives" class="nav-link" data-scroll-target="#objectives"><span class="header-section-number">1.2</span> Objectives</a></li>
+  </ul></li>
+  <li><a href="#prerequisites-and-setup" id="toc-prerequisites-and-setup" class="nav-link" data-scroll-target="#prerequisites-and-setup"><span class="header-section-number">2</span> Prerequisites and Setup</a></li>
+  <li><a href="#what-is-pipe-equivalence" id="toc-what-is-pipe-equivalence" class="nav-link" data-scroll-target="#what-is-pipe-equivalence"><span class="header-section-number">3</span> What is Pipe Equivalence?</a></li>
+  <li><a href="#the-assumption-everyone-teaches" id="toc-the-assumption-everyone-teaches" class="nav-link" data-scroll-target="#the-assumption-everyone-teaches"><span class="header-section-number">4</span> The Assumption Everyone Teaches</a></li>
+  <li><a href="#when-the-equivalence-breaks" id="toc-when-the-equivalence-breaks" class="nav-link" data-scroll-target="#when-the-equivalence-breaks"><span class="header-section-number">5</span> When the Equivalence Breaks</a>
+  <ul class="collapse">
+  <li><a href="#the-evaluation-order-problem" id="toc-the-evaluation-order-problem" class="nav-link" data-scroll-target="#the-evaluation-order-problem"><span class="header-section-number">5.1</span> The Evaluation Order Problem</a></li>
+  </ul></li>
+  <li><a href="#a-real-world-example" id="toc-a-real-world-example" class="nav-link" data-scroll-target="#a-real-world-example"><span class="header-section-number">6</span> A Real-World Example</a>
+  <ul class="collapse">
+  <li><a href="#functions-affected-by-this-problem" id="toc-functions-affected-by-this-problem" class="nav-link" data-scroll-target="#functions-affected-by-this-problem"><span class="header-section-number">6.1</span> Functions Affected by This Problem</a></li>
+  <li><a href="#the-native-pipe-vs.-magrittr" id="toc-the-native-pipe-vs.-magrittr" class="nav-link" data-scroll-target="#the-native-pipe-vs.-magrittr"><span class="header-section-number">6.2</span> The Native Pipe vs.&nbsp;Magrittr</a></li>
+  </ul></li>
   <li><a href="#workarounds-and-design-patterns" id="toc-workarounds-and-design-patterns" class="nav-link" data-scroll-target="#workarounds-and-design-patterns"><span class="header-section-number">7</span> Workarounds and Design Patterns</a>
   <ul class="collapse">
   <li><a href="#pattern-1-accept-the-limitation" id="toc-pattern-1-accept-the-limitation" class="nav-link" data-scroll-target="#pattern-1-accept-the-limitation"><span class="header-section-number">7.1</span> Pattern 1: Accept the Limitation</a></li>
@@ -286,10 +296,25 @@ document.addEventListener('DOMContentLoaded', function() {
   <li><a href="#pattern-3-use-quosures-tidy-eval" id="toc-pattern-3-use-quosures-tidy-eval" class="nav-link" data-scroll-target="#pattern-3-use-quosures-tidy-eval"><span class="header-section-number">7.3</span> Pattern 3: Use Quosures (Tidy Eval)</a></li>
   <li><a href="#pattern-4-redesign-to-avoid-nse" id="toc-pattern-4-redesign-to-avoid-nse" class="nav-link" data-scroll-target="#pattern-4-redesign-to-avoid-nse"><span class="header-section-number">7.4</span> Pattern 4: Redesign to Avoid NSE</a></li>
   </ul></li>
-  <li><a href="#the-deeper-lesson-referential-transparency" id="toc-the-deeper-lesson-referential-transparency" class="nav-link" data-scroll-target="#the-deeper-lesson-referential-transparency"><span class="header-section-number">8</span> The Deeper Lesson: Referential Transparency</a></li>
-  <li><a href="#conclusion" id="toc-conclusion" class="nav-link" data-scroll-target="#conclusion"><span class="header-section-number">9</span> Conclusion</a></li>
-  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references"><span class="header-section-number">10</span> References</a></li>
-  <li><a href="#further-reading" id="toc-further-reading" class="nav-link" data-scroll-target="#further-reading"><span class="header-section-number">11</span> Further Reading</a></li>
+  <li><a href="#checking-our-work-referential-transparency" id="toc-checking-our-work-referential-transparency" class="nav-link" data-scroll-target="#checking-our-work-referential-transparency"><span class="header-section-number">8</span> Checking Our Work: Referential Transparency</a>
+  <ul class="collapse">
+  <li><a href="#things-to-watch-out-for" id="toc-things-to-watch-out-for" class="nav-link" data-scroll-target="#things-to-watch-out-for"><span class="header-section-number">8.1</span> Things to Watch Out For</a></li>
+  </ul></li>
+  <li><a href="#what-did-we-learn" id="toc-what-did-we-learn" class="nav-link" data-scroll-target="#what-did-we-learn"><span class="header-section-number">9</span> What Did We Learn?</a>
+  <ul class="collapse">
+  <li><a href="#lessons-learnt" id="toc-lessons-learnt" class="nav-link" data-scroll-target="#lessons-learnt"><span class="header-section-number">9.1</span> Lessons Learnt</a></li>
+  <li><a href="#limitations" id="toc-limitations" class="nav-link" data-scroll-target="#limitations"><span class="header-section-number">9.2</span> Limitations</a></li>
+  <li><a href="#opportunities-for-improvement" id="toc-opportunities-for-improvement" class="nav-link" data-scroll-target="#opportunities-for-improvement"><span class="header-section-number">9.3</span> Opportunities for Improvement</a></li>
+  </ul></li>
+  <li><a href="#wrapping-up" id="toc-wrapping-up" class="nav-link" data-scroll-target="#wrapping-up"><span class="header-section-number">10</span> Wrapping Up</a></li>
+  <li><a href="#see-also" id="toc-see-also" class="nav-link" data-scroll-target="#see-also"><span class="header-section-number">11</span> See Also</a>
+  <ul class="collapse">
+  <li><a href="#related-posts" id="toc-related-posts" class="nav-link" data-scroll-target="#related-posts"><span class="header-section-number">11.1</span> Related Posts</a></li>
+  <li><a href="#key-resources" id="toc-key-resources" class="nav-link" data-scroll-target="#key-resources"><span class="header-section-number">11.2</span> Key Resources</a></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references"><span class="header-section-number">11.3</span> References</a></li>
+  </ul></li>
+  <li><a href="#reproducibility" id="toc-reproducibility" class="nav-link" data-scroll-target="#reproducibility"><span class="header-section-number">12</span> Reproducibility</a></li>
+  <li><a href="#lets-connect" id="toc-lets-connect" class="nav-link" data-scroll-target="#lets-connect"><span class="header-section-number">13</span> Let’s Connect</a></li>
   </ul>
 </nav>
     </div>
@@ -298,17 +323,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">The Pipe Equivalence Myth: When <code>f() |&gt; g()</code> Is Not the Same as <code>g(f())</code></h1>
+<h1 class="title"><p>The Pipe Equivalence Myth: When <code>f() |&gt; g()</code> Is Not the Same as <code>g(f())</code></p></h1>
+<p class="subtitle lead"></p><p>Why Non-Standard Evaluation Breaks the Most Common Assumption About R Pipes</p><p></p>
   <div class="quarto-categories">
-    <div class="quarto-category">R</div>
+    <div class="quarto-category">r</div>
     <div class="quarto-category">metaprogramming</div>
-    <div class="quarto-category">pipes</div>
+    <div class="quarto-category">tidy-evaluation</div>
+    <div class="quarto-category">lazy-evaluation</div>
+    <div class="quarto-category">functional-programming</div>
   </div>
   </div>
 
 <div>
   <div class="description">
-    <p>Most R programmers assume that <code>f() |&gt; g()</code> is equivalent to <code>g(f())</code>. This assumption breaks down with non-standard evaluation, leading to subtle bugs. This post explains why, when it matters, and how to work around it.</p>
+    <p>Piping and nesting function calls are semantically different operations. A subtle bug in an expression- capturing wrapper reveals how R’s lazy evaluation interacts with the pipe operator.</p>
   </div>
 </div>
 
@@ -318,7 +346,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <div>
     <div class="quarto-title-meta-heading">Author</div>
     <div class="quarto-title-meta-contents">
-             <p>RG Thomas </p>
+             <p>Ronald G. Thomas </p>
           </div>
   </div>
     
@@ -337,8 +365,61 @@ document.addEventListener('DOMContentLoaded', function() {
 </header>
 
 
-<section id="the-assumption" class="level2" data-number="1">
-<h2 data-number="1" class="anchored" data-anchor-id="the-assumption"><span class="header-section-number">1</span> The Assumption</h2>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/hero.png" class="img-fluid figure-img" style="width:80.0%"></p>
+<figcaption>Pipe equivalence in R: a closer look at when the assumption breaks down.</figcaption>
+</figure>
+</div>
+<p><em>When pipes meet metaprogramming, the results may surprise you.</em></p>
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>Are <code>f() |&gt; g()</code> and <code>g(f())</code> truly interchangeable notations? A plot wrapper that captured user expressions for logging revealed otherwise. The wrapper worked perfectly with nested calls but silently produced wrong output when piped. That experience leads directly into R’s evaluation model, revealing that the “equivalence” every tutorial teaches has a significant caveat that is rarely discussed.</p>
+<p>Most R programmers internalize the pipe as pure syntactic sugar. The documentation and textbooks reinforce this mental model, and for the vast majority of everyday code, it holds. But there is a class of functions where the assumption breaks down completely, and understanding why reveals something fundamental about how R works under the hood.</p>
+<p>This post documents the interaction between pipes, lazy evaluation, and non-standard evaluation (NSE), walking through the problem, showing exactly when and why the equivalence fails, and presenting practical workarounds for designing pipe-safe APIs.</p>
+<section id="motivations" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="motivations"><span class="header-section-number">1.1</span> Motivations</h2>
+<ul>
+<li>To understand a silent bug in a plot wrapper function that only manifested when users piped input instead of nesting calls.</li>
+<li>To develop a deeper understanding of R’s evaluation semantics beyond the surface-level “pipe is just sugar” explanation.</li>
+<li>To document a limitation that tutorials and textbooks rarely mention.</li>
+<li>To determine which utility function patterns using <code>substitute()</code> and <code>match.call()</code> are pipe-safe and which are not.</li>
+<li>To understand the relationship between referential transparency, lazy evaluation, and non-standard evaluation in R.</li>
+</ul>
+</section>
+<section id="objectives" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="objectives"><span class="header-section-number">1.2</span> Objectives</h2>
+<ol type="1">
+<li>Demonstrate that <code>f() |&gt; g()</code> and <code>g(f())</code> produce different results when <code>g()</code> uses non-standard evaluation.</li>
+<li>Explain the evaluation order difference between piped and nested calls, with step-by-step tracing.</li>
+<li>Catalogue which R functions and metaprogramming tools are affected by this problem.</li>
+<li>Present four practical design patterns for writing functions that work correctly regardless of how they are called.</li>
+</ol>
+<p>Errors and better approaches are welcome; see the Feedback section at the end.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/placeholder-coffee-02.jpg" class="img-fluid figure-img"></p>
+<figcaption>A moment of focus before diving into evaluation semantics.</figcaption>
+</figure>
+</div>
+</section>
+</section>
+<section id="prerequisites-and-setup" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Prerequisites and Setup</h1>
+<p>This post is conceptual and uses minimal code. No special packages are required beyond base R. The rlang package appears in one example to illustrate tidy evaluation, but the core concepts rely entirely on base R functions.</p>
+<p><strong>Background assumed:</strong> Familiarity with writing R functions, basic understanding of the pipe operator (<code>|&gt;</code> or <code>%&gt;%</code>), and awareness that R has both standard and non-standard evaluation.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># The only external package referenced (one example)</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co"># install.packages("rlang")</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(rlang)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="what-is-pipe-equivalence" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> What is Pipe Equivalence?</h1>
+<p>Pipe equivalence is the widely-taught principle that <code>x |&gt; f()</code> means exactly the same thing as <code>f(x)</code>. The pipe takes the result on the left and passes it as the first argument to the function on the right. Every R tutorial, textbook, and vignette states this as fact, and for value-based functions it is true. The equivalence breaks, however, when the receiving function inspects the <em>expression</em> it was given rather than just the <em>value</em>. This happens with any function that uses non-standard evaluation (functions like <code>substitute()</code>, <code>match.call()</code>, and their tidy evaluation counterparts).</p>
+</section>
+<section id="the-assumption-everyone-teaches" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> The Assumption Everyone Teaches</h1>
 <p>Ask any R programmer what <code>x |&gt; f()</code> means, and they will tell you it is equivalent to <code>f(x)</code>. The pipe operator is just syntactic sugar for function composition, right?</p>
 <p>This is exactly what the documentation and tutorials tell us:</p>
 <blockquote class="blockquote">
@@ -357,37 +438,36 @@ document.addEventListener('DOMContentLoaded', function() {
 <p>— A popular online R tutorial</p>
 </blockquote>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># These are "the same"</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sqrt</span>(<span class="dv">16</span>) <span class="sc">|&gt;</span> <span class="fu">log</span>()</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">log</span>(<span class="fu">sqrt</span>(<span class="dv">16</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># These are "the same"</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sqrt</span>(<span class="dv">16</span>) <span class="sc">|&gt;</span> <span class="fu">log</span>()</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="fu">log</span>(<span class="fu">sqrt</span>(<span class="dv">16</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Both return 1.3862944. So far, so good.</p>
 <p>This equivalence holds for the vast majority of R code. But there is a class of functions where this assumption breaks down completely, and understanding why reveals something fundamental about how R works.</p>
 </section>
-<section id="when-the-equivalence-breaks" class="level2" data-number="2">
-<h2 data-number="2" class="anchored" data-anchor-id="when-the-equivalence-breaks"><span class="header-section-number">2</span> When the Equivalence Breaks</h2>
+<section id="when-the-equivalence-breaks" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> When the Equivalence Breaks</h1>
 <p>Consider a function that needs to capture the <em>expression</em> passed to it, not just its <em>value</em>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>capture_expr <span class="ot">&lt;-</span> <span class="cf">function</span>(expr) {</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">deparse</span>(<span class="fu">substitute</span>(expr))</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Direct call - captures the expression</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="fu">capture_expr</span>(<span class="fu">sqrt</span>(<span class="dv">16</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>capture_expr <span class="ot">&lt;-</span> <span class="cf">function</span>(expr) {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">deparse</span>(<span class="fu">substitute</span>(expr))</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Direct call - captures the expression</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="fu">capture_expr</span>(<span class="fu">sqrt</span>(<span class="dv">16</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] "sqrt(16)"</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Piped call - captures... what?</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sqrt</span>(<span class="dv">16</span>) <span class="sc">|&gt;</span> <span class="fu">capture_expr</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Piped call - captures... what?</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sqrt</span>(<span class="dv">16</span>) <span class="sc">|&gt;</span> <span class="fu">capture_expr</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] "sqrt(16)"</code></pre>
 </div>
 </div>
-<p>The direct call captures <code>"sqrt(16)"</code> as a string. The piped version captures something entirely different—the intermediate result after <code>sqrt(16)</code> has already been evaluated.</p>
+<p>The direct call captures <code>"sqrt(16)"</code> as a string. The piped version captures something entirely different – the intermediate result after <code>sqrt(16)</code> has already been evaluated.</p>
 <p>This is not a bug. It is a fundamental consequence of how pipes work.</p>
-</section>
-<section id="the-evaluation-order-problem" class="level2" data-number="3">
-<h2 data-number="3" class="anchored" data-anchor-id="the-evaluation-order-problem"><span class="header-section-number">3</span> The Evaluation Order Problem</h2>
+<section id="the-evaluation-order-problem" class="level2" data-number="5.1">
+<h2 data-number="5.1" class="anchored" data-anchor-id="the-evaluation-order-problem"><span class="header-section-number">5.1</span> The Evaluation Order Problem</h2>
 <p>The pipe operator evaluates left-to-right <em>before</em> passing to the next function. By the time <code>capture_expr()</code> can call <code>substitute()</code>, it only sees the return value, not the original expression.</p>
 <p>Here is the sequence of events:</p>
 <p><strong>Direct call: <code>capture_expr(sqrt(16))</code></strong></p>
@@ -399,38 +479,50 @@ document.addEventListener('DOMContentLoaded', function() {
 </ol>
 <p><strong>Piped call: <code>sqrt(16) |&gt; capture_expr()</code></strong></p>
 <ol type="1">
-<li>R evaluates <code>sqrt(16)</code> → returns <code>4</code></li>
+<li>R evaluates <code>sqrt(16)</code>, which returns <code>4</code></li>
 <li>The value <code>4</code> is passed to <code>capture_expr()</code></li>
 <li>Inside <code>capture_expr()</code>, <code>substitute(expr)</code> captures <code>4</code></li>
 <li><code>deparse()</code> converts it to the string <code>"4"</code></li>
 </ol>
 <p>The critical difference: with direct calls, R’s lazy evaluation means arguments are passed as <em>promises</em> containing the unevaluated expression. The pipe forces evaluation before the handoff.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance2.jpg" class="img-fluid figure-img"></p>
+<figcaption>Diving deeper into R’s evaluation semantics.</figcaption>
+</figure>
+</div>
+<p><em>Understanding the internals helps explain the surface behaviour.</em></p>
 </section>
-<section id="why-this-matters-a-real-world-example" class="level2" data-number="4">
-<h2 data-number="4" class="anchored" data-anchor-id="why-this-matters-a-real-world-example"><span class="header-section-number">4</span> Why This Matters: A Real-World Example</h2>
-<p>This is not just academic. Consider building a plot wrapper that captures what the user typed for logging or history:</p>
+</section>
+<section id="a-real-world-example" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> A Real-World Example</h1>
+<p>This is not just academic. The problem surfaces immediately when building practical tools. Consider building a plot wrapper that captures what the user typed for logging or history:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Desired behavior: capture "plot(mtcars$wt, mtcars$mpg)" for the log</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>zzplot <span class="ot">&lt;-</span> <span class="cf">function</span>(expr) {</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Capture what the user typed</span></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  code <span class="ot">&lt;-</span> <span class="fu">deparse</span>(<span class="fu">substitute</span>(expr))</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Open device, evaluate, close device</span></span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">png</span>(<span class="st">"plot.png"</span>)</span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">eval</span>(<span class="fu">substitute</span>(expr), <span class="at">envir =</span> <span class="fu">parent.frame</span>())</span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">dev.off</span>()</span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Log the code</span></span>
-<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="st">"Rendered: "</span>, code)</span>
-<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a><span class="co"># This works - captures the expression</span></span>
-<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a><span class="fu">zzplot</span>(<span class="fu">plot</span>(mtcars<span class="sc">$</span>wt, mtcars<span class="sc">$</span>mpg))</span>
-<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Message: Rendered: plot(mtcars$wt, mtcars$mpg)</span></span>
-<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a><span class="co"># This fails - plot already executed, returns NULL</span></span>
-<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(mtcars<span class="sc">$</span>wt, mtcars<span class="sc">$</span>mpg) <span class="sc">|&gt;</span> <span class="fu">zzplot</span>()</span>
-<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Message: Rendered: NULL</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Desired behavior: capture "plot(mtcars$wt,</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co"># mtcars$mpg)" for the log</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>zzplot <span class="ot">&lt;-</span> <span class="cf">function</span>(expr) {</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Capture what the user typed</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  code <span class="ot">&lt;-</span> <span class="fu">deparse</span>(<span class="fu">substitute</span>(expr))</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Open device, evaluate, close device</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">png</span>(<span class="st">"plot.png"</span>)</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">eval</span>(</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">substitute</span>(expr),</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">envir =</span> <span class="fu">parent.frame</span>()</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">dev.off</span>()</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Log the code</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="st">"Rendered: "</span>, code)</span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a><span class="co"># This works - captures the expression</span></span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a><span class="fu">zzplot</span>(<span class="fu">plot</span>(mtcars<span class="sc">$</span>wt, mtcars<span class="sc">$</span>mpg))</span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Message: Rendered: plot(mtcars$wt, mtcars$mpg)</span></span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a><span class="co"># This fails - plot already executed, returns NULL</span></span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(mtcars<span class="sc">$</span>wt, mtcars<span class="sc">$</span>mpg) <span class="sc">|&gt;</span> <span class="fu">zzplot</span>()</span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a><span class="co"># Message: Rendered: NULL</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>The wrapper function needs to:</p>
 <ol type="1">
@@ -439,9 +531,8 @@ document.addEventListener('DOMContentLoaded', function() {
 <li>Log what was executed</li>
 </ol>
 <p>With piping, step 1 fails because the plot has already been drawn to whatever device was active <em>before</em> <code>zzplot()</code> even runs.</p>
-</section>
-<section id="functions-affected-by-this-problem" class="level2" data-number="5">
-<h2 data-number="5" class="anchored" data-anchor-id="functions-affected-by-this-problem"><span class="header-section-number">5</span> Functions Affected by This Problem</h2>
+<section id="functions-affected-by-this-problem" class="level2" data-number="6.1">
+<h2 data-number="6.1" class="anchored" data-anchor-id="functions-affected-by-this-problem"><span class="header-section-number">6.1</span> Functions Affected by This Problem</h2>
 <p>Any function using non-standard evaluation (NSE) is potentially affected:</p>
 <table class="caption-top table">
 <thead>
@@ -492,109 +583,205 @@ document.addEventListener('DOMContentLoaded', function() {
 <p>* These quote the literal argument, so piping changes <em>what</em> gets quoted.</p>
 <p>Many tidyverse functions use NSE internally but are designed to work with pipes because they evaluate captured expressions in data contexts. However, when <em>you</em> write functions that need to capture user expressions, the pipe becomes problematic.</p>
 </section>
-<section id="the-native-pipe-vs.-magrittr" class="level2" data-number="6">
-<h2 data-number="6" class="anchored" data-anchor-id="the-native-pipe-vs.-magrittr"><span class="header-section-number">6</span> The Native Pipe vs.&nbsp;Magrittr</h2>
+<section id="the-native-pipe-vs.-magrittr" class="level2" data-number="6.2">
+<h2 data-number="6.2" class="anchored" data-anchor-id="the-native-pipe-vs.-magrittr"><span class="header-section-number">6.2</span> The Native Pipe vs.&nbsp;Magrittr</h2>
 <p>Does it matter which pipe you use? Not for this problem.</p>
 <p>Both <code>|&gt;</code> (native, R 4.1+) and <code>%&gt;%</code> (magrittr) evaluate the left-hand side before passing it to the right. The native pipe is essentially a syntax transformation at parse time <span class="citation" data-cites="wickham2023base">(<a href="#ref-wickham2023base" role="doc-biblioref">Wickham and Henry 2023</a>)</span>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Native pipe: parsed as</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>x <span class="sc">|&gt;</span> <span class="fu">f</span>(y)</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="co"># becomes</span></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="fu">f</span>(x, y)</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="co"># But x is still evaluated before f() sees it</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Native pipe: parsed as</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>x <span class="sc">|&gt;</span> <span class="fu">f</span>(y)</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="co"># becomes</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="fu">f</span>(x, y)</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="co"># But x is still evaluated before f() sees it</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>The magrittr pipe does more work behind the scenes but has the same fundamental behavior: eager evaluation of the left-hand side <span class="citation" data-cites="bache2022magrittr">(<a href="#ref-bache2022magrittr" role="doc-biblioref">Bache and Wickham 2022</a>)</span>.</p>
 <p>Magrittr does offer <code>%!&gt;%</code>, an “eager pipe” that forces evaluation at each step, but this is for controlling <em>when</em> side effects occur, not for enabling expression capture.</p>
 </section>
-<section id="workarounds-and-design-patterns" class="level2" data-number="7">
-<h2 data-number="7" class="anchored" data-anchor-id="workarounds-and-design-patterns"><span class="header-section-number">7</span> Workarounds and Design Patterns</h2>
-<section id="pattern-1-accept-the-limitation" class="level3" data-number="7.1">
-<h3 data-number="7.1" class="anchored" data-anchor-id="pattern-1-accept-the-limitation"><span class="header-section-number">7.1</span> Pattern 1: Accept the Limitation</h3>
+</section>
+<section id="workarounds-and-design-patterns" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Workarounds and Design Patterns</h1>
+<section id="pattern-1-accept-the-limitation" class="level2" data-number="7.1">
+<h2 data-number="7.1" class="anchored" data-anchor-id="pattern-1-accept-the-limitation"><span class="header-section-number">7.1</span> Pattern 1: Accept the Limitation</h2>
 <p>Design your API to require wrapping, not piping:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Document that this is the correct usage</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">zzplot</span>(<span class="fu">boxplot</span>(mpg <span class="sc">~</span> cyl, <span class="at">data =</span> mtcars))</span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Not this</span></span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="fu">boxplot</span>(mpg <span class="sc">~</span> cyl, <span class="at">data =</span> mtcars) <span class="sc">|&gt;</span> <span class="fu">zzplot</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Document that this is the correct usage</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">zzplot</span>(</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">boxplot</span>(mpg <span class="sc">~</span> cyl, <span class="at">data =</span> mtcars)</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Not this</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="fu">boxplot</span>(mpg <span class="sc">~</span> cyl, <span class="at">data =</span> mtcars) <span class="sc">|&gt;</span> <span class="fu">zzplot</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>This is explicit and unambiguous. The tradeoff is that it breaks the “pipe everything” mental model some users have developed.</p>
 </section>
-<section id="pattern-2-provide-both-apis" class="level3" data-number="7.2">
-<h3 data-number="7.2" class="anchored" data-anchor-id="pattern-2-provide-both-apis"><span class="header-section-number">7.2</span> Pattern 2: Provide Both APIs</h3>
+<section id="pattern-2-provide-both-apis" class="level2" data-number="7.2">
+<h2 data-number="7.2" class="anchored" data-anchor-id="pattern-2-provide-both-apis"><span class="header-section-number">7.2</span> Pattern 2: Provide Both APIs</h2>
 <p>Offer a standard evaluation version alongside the NSE version:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># NSE version - for interactive use</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">zzplot</span>(<span class="fu">plot</span>(x, y))</span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="co"># SE version - for programmatic use and piping (sort of)</span></span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="fu">zzplot_expr</span>(<span class="fu">quote</span>(<span class="fu">plot</span>(x, y)))</span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Or with a string</span></span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="fu">zzplot_code</span>(<span class="st">"plot(x, y)"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># NSE version - for interactive use</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="fu">zzplot</span>(<span class="fu">plot</span>(x, y))</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="co"># SE version - for programmatic use and piping</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="fu">zzplot_expr</span>(<span class="fu">quote</span>(<span class="fu">plot</span>(x, y)))</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Or with a string</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="fu">zzplot_code</span>(<span class="st">"plot(x, y)"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
-<section id="pattern-3-use-quosures-tidy-eval" class="level3" data-number="7.3">
-<h3 data-number="7.3" class="anchored" data-anchor-id="pattern-3-use-quosures-tidy-eval"><span class="header-section-number">7.3</span> Pattern 3: Use Quosures (Tidy Eval)</h3>
+<section id="pattern-3-use-quosures-tidy-eval" class="level2" data-number="7.3">
+<h2 data-number="7.3" class="anchored" data-anchor-id="pattern-3-use-quosures-tidy-eval"><span class="header-section-number">7.3</span> Pattern 3: Use Quosures (Tidy Eval)</h2>
 <p>The rlang package provides quosures, which bundle an expression with its environment <span class="citation" data-cites="henry2023rlang">(<a href="#ref-henry2023rlang" role="doc-biblioref">Henry and Wickham 2023</a>)</span>. This enables more robust expression capture in some contexts:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(rlang)</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>my_function <span class="ot">&lt;-</span> <span class="cf">function</span>(expr) {</span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  quo <span class="ot">&lt;-</span> <span class="fu">enquo</span>(expr)</span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  expr_text <span class="ot">&lt;-</span> <span class="fu">quo_text</span>(quo)</span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="co"># ... use the quosure</span></span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(rlang)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>my_function <span class="ot">&lt;-</span> <span class="cf">function</span>(expr) {</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  quo <span class="ot">&lt;-</span> <span class="fu">enquo</span>(expr)</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  expr_text <span class="ot">&lt;-</span> <span class="fu">quo_text</span>(quo)</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  <span class="co"># ... use the quosure</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>However, this still does not solve the pipe problem—<code>enquo()</code> captures what it receives, and the pipe has already evaluated the left-hand side.</p>
+<p>However, this still does not solve the pipe problem – <code>enquo()</code> captures what it receives, and the pipe has already evaluated the left-hand side.</p>
 </section>
-<section id="pattern-4-redesign-to-avoid-nse" class="level3" data-number="7.4">
-<h3 data-number="7.4" class="anchored" data-anchor-id="pattern-4-redesign-to-avoid-nse"><span class="header-section-number">7.4</span> Pattern 4: Redesign to Avoid NSE</h3>
+<section id="pattern-4-redesign-to-avoid-nse" class="level2" data-number="7.4">
+<h2 data-number="7.4" class="anchored" data-anchor-id="pattern-4-redesign-to-avoid-nse"><span class="header-section-number">7.4</span> Pattern 4: Redesign to Avoid NSE</h2>
 <p>Sometimes the cleanest solution is to not use NSE at all:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Instead of capturing expressions, accept functions</span></span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>zzplot_fn <span class="ot">&lt;-</span> <span class="cf">function</span>(plot_fn, ...) {</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">png</span>(<span class="st">"plot.png"</span>)</span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plot_fn</span>(...)</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">dev.off</span>()</span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Usage (pipeable with anonymous functions)</span></span>
-<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>\() <span class="fu">plot</span>(mtcars<span class="sc">$</span>wt, mtcars<span class="sc">$</span>mpg) <span class="sc">|&gt;</span> <span class="fu">zzplot_fn</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Instead of capturing expressions, accept functions</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>zzplot_fn <span class="ot">&lt;-</span> <span class="cf">function</span>(plot_fn, ...) {</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">png</span>(<span class="st">"plot.png"</span>)</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plot_fn</span>(...)</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">dev.off</span>()</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Usage (pipeable with anonymous functions)</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>\() <span class="fu">plot</span>(mtcars<span class="sc">$</span>wt, mtcars<span class="sc">$</span>mpg) <span class="sc">|&gt;</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">zzplot_fn</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>This is less elegant but completely unambiguous about evaluation order.</p>
 </section>
 </section>
-<section id="the-deeper-lesson-referential-transparency" class="level2" data-number="8">
-<h2 data-number="8" class="anchored" data-anchor-id="the-deeper-lesson-referential-transparency"><span class="header-section-number">8</span> The Deeper Lesson: Referential Transparency</h2>
+<section id="checking-our-work-referential-transparency" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Checking Our Work: Referential Transparency</h1>
 <p>This issue reflects a fundamental property of programming languages: <em>referential transparency</em>. A function is referentially transparent if you can replace any expression with its value without changing the program’s behavior <span class="citation" data-cites="wickham2019advanced">(<a href="#ref-wickham2019advanced" role="doc-biblioref">Wickham 2019</a>)</span>.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Referentially transparent</span></span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>f <span class="ot">&lt;-</span> <span class="cf">function</span>(x) x <span class="sc">+</span> <span class="dv">1</span></span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="fu">f</span>(<span class="dv">2</span> <span class="sc">+</span> <span class="dv">2</span>)  <span class="co"># Same as f(4)</span></span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="co"># NOT referentially transparent</span></span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="cf">function</span>(x) <span class="fu">deparse</span>(<span class="fu">substitute</span>(x))</span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="fu">g</span>(<span class="dv">2</span> <span class="sc">+</span> <span class="dv">2</span>)  <span class="co"># Returns "2 + 2"</span></span>
-<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="fu">g</span>(<span class="dv">4</span>)      <span class="co"># Returns "4"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Referentially transparent</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>f <span class="ot">&lt;-</span> <span class="cf">function</span>(x) x <span class="sc">+</span> <span class="dv">1</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="fu">f</span>(<span class="dv">2</span> <span class="sc">+</span> <span class="dv">2</span>)  <span class="co"># Same as f(4)</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="co"># NOT referentially transparent</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="cf">function</span>(x) <span class="fu">deparse</span>(<span class="fu">substitute</span>(x))</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="fu">g</span>(<span class="dv">2</span> <span class="sc">+</span> <span class="dv">2</span>)  <span class="co"># Returns "2 + 2"</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="fu">g</span>(<span class="dv">4</span>)      <span class="co"># Returns "4"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>NSE functions are not referentially transparent by design—they care about <em>how</em> you express something, not just <em>what</em> value it produces. Pipes assume referential transparency because they pre-compute values.</p>
+<p>NSE functions are not referentially transparent by design: they care about <em>how</em> you express something, not just <em>what</em> value it produces. Pipes assume referential transparency because they pre-compute values.</p>
 <p>Hadley Wickham notes in <em>Advanced R</em>: “The biggest downside of NSE is that functions that use it are no longer referentially transparent” <span class="citation" data-cites="wickham2019advanced">(<a href="#ref-wickham2019advanced" role="doc-biblioref">Wickham 2019</a>)</span>.</p>
+<section id="things-to-watch-out-for" class="level2" data-number="8.1">
+<h2 data-number="8.1" class="anchored" data-anchor-id="things-to-watch-out-for"><span class="header-section-number">8.1</span> Things to Watch Out For</h2>
+<p>Several situations catch people off guard:</p>
+<ol type="1">
+<li><strong>Plot wrappers with logging.</strong> Any function that uses <code>substitute()</code> to record what the user typed will capture the wrong thing when piped.</li>
+<li><strong>Custom assertion functions.</strong> If your assertion function captures the expression for error messages (like <code>stopifnot()</code> does internally), piping changes the error output.</li>
+<li><strong>Tidyverse extensions.</strong> Writing functions that wrap <code>dplyr</code> verbs with additional <code>enquo()</code> logic can behave differently depending on how users call them.</li>
+<li><strong>Debugging tools.</strong> Functions that reconstruct the call stack or print “you called f(x)” will show the piped intermediate value rather than the original expression.</li>
+<li><strong>Code generation.</strong> Any metaprogramming that builds code from captured expressions will generate different code depending on whether the user piped or nested.</li>
+</ol>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance3.jpg" class="img-fluid figure-img"></p>
+<figcaption>Reflecting on what we have learned.</figcaption>
+</figure>
+</div>
+<p><em>The distinction between value semantics and expression semantics runs deep in R.</em></p>
 </section>
-<section id="conclusion" class="level2" data-number="9">
-<h2 data-number="9" class="anchored" data-anchor-id="conclusion"><span class="header-section-number">9</span> Conclusion</h2>
-<p>The pipe equivalence <code>f() |&gt; g() ≡ g(f())</code> holds for value semantics but fails for expression semantics. This is not a bug in R or the pipe operators; it is a fundamental tension between:</p>
+</section>
+<section id="what-did-we-learn" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> What Did We Learn?</h1>
+<section id="lessons-learnt" class="level2" data-number="9.1">
+<h2 data-number="9.1" class="anchored" data-anchor-id="lessons-learnt"><span class="header-section-number">9.1</span> Lessons Learnt</h2>
+<p><strong>Conceptual Understanding:</strong></p>
+<ul>
+<li>The pipe equivalence <code>f() |&gt; g()</code> and <code>g(f())</code> holds for <em>value semantics</em> but fails for <em>expression semantics</em>. This is not a bug but a fundamental property of how R evaluates code.</li>
+<li>R’s lazy evaluation passes arguments as unevaluated <em>promises</em>, which NSE functions can inspect. The pipe forces evaluation before the handoff, destroying the promise.</li>
+<li>Referential transparency is the key concept: pipes assume it, and NSE functions violate it by design.</li>
+<li>The tension between eager evaluation (pipes), lazy evaluation (promises), and non-standard evaluation (expression inspection) is inherent in R’s design.</li>
+</ul>
+<p><strong>Technical Skills:</strong></p>
+<ul>
+<li>Tracing the evaluation order difference between <code>capture_expr(sqrt(16))</code> and <code>sqrt(16) |&gt; capture_expr()</code> step by step clarifies the underlying mechanism.</li>
+<li>Distinguishing between functions that are pipe-safe (value-based) and those that are not (expression-based) requires checking whether they use <code>substitute()</code>, <code>match.call()</code>, or <code>enquo()</code>.</li>
+<li>Four design patterns exist for building pipe-compatible APIs: accepting the limitation, dual APIs, quosures, and NSE avoidance.</li>
+<li>Tidyverse functions work with pipes despite using NSE internally because they evaluate captured expressions in data contexts rather than inspecting them for the calling expression.</li>
+</ul>
+<p><strong>Gotchas and Pitfalls:</strong></p>
+<ul>
+<li>The native pipe (<code>|&gt;</code>) and magrittr pipe (<code>%&gt;%</code>) both have this limitation. Switching pipe operators does not solve the problem.</li>
+<li>The failure is <em>silent</em>: the piped version does not throw an error; it simply captures the wrong thing. This makes the bug difficult to detect without explicit testing.</li>
+<li>Documentation for NSE functions rarely mentions pipe incompatibility. If you are writing such a function, document the limitation explicitly.</li>
+<li>Quosures (<code>enquo()</code>) do not solve the pipe problem – they still receive the pre-evaluated value when the call is piped.</li>
+</ul>
+</section>
+<section id="limitations" class="level2" data-number="9.2">
+<h2 data-number="9.2" class="anchored" data-anchor-id="limitations"><span class="header-section-number">9.2</span> Limitations</h2>
+<ul>
+<li>This post focuses on expression capture via <code>substitute()</code> and related tools. Other forms of NSE (such as formula evaluation or <code>eval(parse())</code>) may interact with pipes differently and are not covered.</li>
+<li>The examples use simple, isolated functions. In production code, the interaction between pipes, NSE, and environments can be more complex, particularly with nested function calls.</li>
+<li>This post did not benchmark the performance implications of the different workaround patterns. For most use cases the performance difference is negligible, but this is not verified.</li>
+<li>The discussion treats <code>|&gt;</code> and <code>%&gt;%</code> as equivalent for this problem. There are other differences between them (placeholder syntax, anonymous function support) that are outside the scope of this post.</li>
+<li>This analysis is based on R 4.1+ behavior. Earlier versions of R did not have the native pipe, and the magrittr pipe has evolved over time.</li>
+</ul>
+</section>
+<section id="opportunities-for-improvement" class="level2" data-number="9.3">
+<h2 data-number="9.3" class="anchored" data-anchor-id="opportunities-for-improvement"><span class="header-section-number">9.3</span> Opportunities for Improvement</h2>
+<ol type="1">
+<li>Build a comprehensive test suite that validates pipe-safety for a library of utility functions, automatically flagging any function that uses NSE internally.</li>
+<li>Investigate whether R’s native pipe could be extended to support a “lazy” mode that preserves promise semantics, and assess the trade-offs.</li>
+<li>Create a static analysis tool (perhaps using the <code>codetools</code> package) that warns when NSE functions appear downstream of a pipe operator.</li>
+<li>Explore how other languages with pipe operators (Elixir, F#, Julia) handle the tension between eager evaluation and expression capture.</li>
+<li>Document this limitation in the context of specific tidyverse extension patterns, providing a cookbook of pipe-safe alternatives for common NSE use cases.</li>
+</ol>
+</section>
+</section>
+<section id="wrapping-up" class="level1" data-number="10">
+<h1 data-number="10"><span class="header-section-number">10</span> Wrapping Up</h1>
+<p>The pipe equivalence <code>f() |&gt; g()</code> and <code>g(f())</code> holds for value semantics but fails for expression semantics. This is not a bug in R or the pipe operators; it is a fundamental tension between:</p>
 <ul>
 <li><strong>Eager evaluation</strong> (pipes compute left-to-right)</li>
 <li><strong>Lazy evaluation</strong> (functions receive unevaluated promises)</li>
 <li><strong>Non-standard evaluation</strong> (functions inspect the expression, not just the value)</li>
 </ul>
-<p>When writing functions that use <code>substitute()</code>, <code>match.call()</code>, or similar metaprogramming tools, document clearly that piping will not work as expected. When using such functions, remember that wrapping <code>f(g(x))</code> and piping <code>x |&gt; g() |&gt; f()</code> are semantically different operations, even when they produce the same final value.</p>
-<p>Understanding this distinction is essential for effective R metaprogramming and explains why some tidyverse patterns require specific syntax that cannot be arbitrarily reformatted.</p>
+<p>The most valuable aspect of this investigation is the clarity it brings to understanding R’s evaluation model. The pipe is not “just sugar”; it changes the evaluation semantics in a way that matters for a specific but important class of functions.</p>
+<p>For anyone writing functions that use <code>substitute()</code>, <code>match.call()</code>, or similar metaprogramming tools: document clearly that piping will not work as expected. For anyone using such functions: remember that wrapping <code>f(g(x))</code> and piping <code>x |&gt; g() |&gt; f()</code> are semantically different operations, even when they produce the same final value.</p>
+<p>Main takeaways:</p>
+<ul>
+<li>Pipes force eager evaluation, destroying the lazy promises that NSE functions depend on.</li>
+<li>The failure is silent: no error, just wrong output.</li>
+<li>Four design patterns exist for working around this: accept it, dual APIs, quosures, or avoid NSE entirely.</li>
+<li>Understanding this distinction is essential for effective R metaprogramming.</li>
+</ul>
 </section>
-<section id="references" class="level2" data-number="10">
-<h2 data-number="10" class="anchored" data-anchor-id="references"><span class="header-section-number">10</span> References</h2>
+<section id="see-also" class="level1" data-number="11">
+<h1 data-number="11"><span class="header-section-number">11</span> See Also</h1>
+<section id="related-posts" class="level2" data-number="11.1">
+<h2 data-number="11.1" class="anchored" data-anchor-id="related-posts"><span class="header-section-number">11.1</span> Related Posts</h2>
+<ul>
+<li><a href="../../../posts/01-configtermzsh/configtermzsh/analysis/report/index.html">Configure the Command Line for Data Science Development</a> : Terminal and Zsh configuration for R workflows</li>
+</ul>
+</section>
+<section id="key-resources" class="level2" data-number="11.2">
+<h2 data-number="11.2" class="anchored" data-anchor-id="key-resources"><span class="header-section-number">11.2</span> Key Resources</h2>
+<ul>
+<li><a href="http://adv-r.had.co.nz/Computing-on-the-language.html">Non-standard evaluation</a> in <em>Advanced R</em> (1st ed.) by Hadley Wickham</li>
+<li><a href="https://adv-r.hadley.nz/evaluation.html">Evaluation</a> chapter in <em>Advanced R</em> (2nd ed.)</li>
+<li><a href="https://tidyeval.tidyverse.org/">Tidy Evaluation</a> book by the tidyverse team</li>
+<li><a href="https://www.brodieg.com/2020/05/05/on-nse/">Standard and Non-Standard Evaluation in R</a> by Brodie Gaslam</li>
+<li><a href="https://tidyverse.org/blog/2023/04/base-vs-magrittr-pipe/">Differences between the base R and magrittr pipes</a> on the tidyverse blog</li>
+<li><a href="https://magrittr.tidyverse.org/articles/tradeoffs.html">Design tradeoffs</a> in magrittr</li>
+<li><a href="https://thomasadventure.blog/posts/understanding-nse-part1/">Understanding Non-Standard Evaluation, Part 1</a> by Thomas Adventureson</li>
+</ul>
+</section>
+<section id="references" class="level2" data-number="11.3">
+<h2 data-number="11.3" class="anchored" data-anchor-id="references"><span class="header-section-number">11.3</span> References</h2>
 <div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list">
 <div id="ref-bache2022magrittr" class="csl-entry" role="listitem">
 Bache, Stefan Milton, and Hadley Wickham. 2022. <em>Magrittr: <span>A</span> Forward-Pipe Operator for <span>R</span></em>. <a href="https://CRAN.R-project.org/package=magrittr">https://CRAN.R-project.org/package=magrittr</a>.
@@ -610,16 +797,57 @@ Wickham, Hadley, and Lionel Henry. 2023. <span>“Differences Between the Base <
 </div>
 </div>
 </section>
-<section id="further-reading" class="level2" data-number="11">
-<h2 data-number="11" class="anchored" data-anchor-id="further-reading"><span class="header-section-number">11</span> Further Reading</h2>
+</section>
+<section id="reproducibility" class="level1" data-number="12">
+<h1 data-number="12"><span class="header-section-number">12</span> Reproducibility</h1>
+<p>This post is primarily conceptual with minimal executable code. The few code chunks that do execute require only base R (version 4.1 or later for native pipe support).</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>R version 4.5.3 (2026-03-11)
+Platform: aarch64-apple-darwin25.3.0
+Running under: macOS Tahoe 26.4.1
+
+Matrix products: default
+BLAS:   /opt/homebrew/Cellar/openblas/0.3.32/lib/libopenblasp-r0.3.32.dylib 
+LAPACK: /opt/homebrew/Cellar/r/4.5.3/lib/R/lib/libRlapack.dylib;  LAPACK version 3.12.1
+
+locale:
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+time zone: America/Los_Angeles
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+loaded via a namespace (and not attached):
+ [1] htmlwidgets_1.6.4 compiler_4.5.3    fastmap_1.2.0     cli_3.6.6        
+ [5] tools_4.5.3       htmltools_0.5.8.1 parallel_4.5.3    yaml_2.3.10      
+ [9] rmarkdown_2.29    knitr_1.50        jsonlite_2.0.0    xfun_0.56        
+[13] digest_0.6.37     rlang_1.2.0       evaluate_1.0.5   </code></pre>
+</div>
+</div>
+<p><strong>Files in this analysis:</strong></p>
+<pre><code>analysis/report/index.qmd    This blog post
+references.bib                Bibliography (BibTeX)</code></pre>
+</section>
+<section id="lets-connect" class="level1" data-number="13">
+<h1 data-number="13"><span class="header-section-number">13</span> Let’s Connect</h1>
+<p><em>Have questions, suggestions, or spot an error? Let me know.</em></p>
 <ul>
-<li><a href="http://adv-r.had.co.nz/Computing-on-the-language.html">Non-standard evaluation</a> in <em>Advanced R</em> (1st ed.) by Hadley Wickham</li>
-<li><a href="https://adv-r.hadley.nz/evaluation.html">Evaluation</a> chapter in <em>Advanced R</em> (2nd ed.)</li>
-<li><a href="https://tidyeval.tidyverse.org/">Tidy Evaluation</a> book by the tidyverse team</li>
-<li><a href="https://www.brodieg.com/2020/05/05/on-nse/">Standard and Non-Standard Evaluation in R</a> by Brodie Gaslam</li>
-<li><a href="https://tidyverse.org/blog/2023/04/base-vs-magrittr-pipe/">Differences between the base R and magrittr pipes</a> on the tidyverse blog</li>
-<li><a href="https://magrittr.tidyverse.org/articles/tradeoffs.html">Design tradeoffs</a> in magrittr</li>
-<li><a href="https://thomasadventure.blog/posts/understanding-nse-part1/">Understanding Non-Standard Evaluation, Part 1</a> by Thomas Adventureson</li>
+<li><strong>GitHub:</strong> <a href="https://github.com/rgt47">rgt47</a></li>
+<li><strong>Twitter/X:</strong> <a href="https://twitter.com/rgt47"><span class="citation" data-cites="rgt47">(<span><strong>rgt47?</strong></span>)</span></a></li>
+<li><strong>LinkedIn:</strong> <a href="https://linkedin.com/in/rgthomaslab">Ronald Glenn Thomas</a></li>
+<li><strong>Email:</strong> <a href="https://rgtlab.org/contact">Contact form</a></li>
+</ul>
+<p>I would enjoy hearing from you if:</p>
+<ul>
+<li>You spot an error or a better approach to any of the code in this post.</li>
+<li>You have suggestions for topics you would like to see covered.</li>
+<li>You want to discuss R programming, data science, or reproducible research.</li>
+<li>You have questions about anything in this tutorial.</li>
+<li>You just want to say hello and connect.</li>
 </ul>
 
 
@@ -627,242 +855,239 @@ Wickham, Hadley, and Lionel Henry. 2023. <span>“Differences Between the Base <
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
-  window.document.addEventListener("DOMContentLoaded", function (event) {
-    const icon = "";
-    const anchorJS = new window.AnchorJS();
-    anchorJS.options = {
-      placement: 'right',
-      icon: icon
-    };
-    anchorJS.add('.anchored');
-    const isCodeAnnotation = (el) => {
-      for (const clz of el.classList) {
-        if (clz.startsWith('code-annotation-')) {                     
-          return true;
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
         }
       }
-      return false;
-    }
-    const onCopySuccess = function(e) {
-      // button target
-      const button = e.trigger;
-      // don't keep focus
-      button.blur();
-      // flash "checked"
-      button.classList.add('code-copy-button-checked');
-      var currentTitle = button.getAttribute("title");
-      button.setAttribute("title", "Copied!");
-      let tooltip;
-      if (window.bootstrap) {
-        button.setAttribute("data-bs-toggle", "tooltip");
-        button.setAttribute("data-bs-placement", "left");
-        button.setAttribute("data-bs-title", "Copied!");
-        tooltip = new bootstrap.Tooltip(button, 
-          { trigger: "manual", 
-            customClass: "code-copy-button-tooltip",
-            offset: [0, -8]});
-        tooltip.show();    
-      }
-      setTimeout(function() {
-        if (tooltip) {
-          tooltip.hide();
-          button.removeAttribute("data-bs-title");
-          button.removeAttribute("data-bs-toggle");
-          button.removeAttribute("data-bs-placement");
-        }
-        button.setAttribute("title", currentTitle);
-        button.classList.remove('code-copy-button-checked');
-      }, 1000);
-      // clear code selection
-      e.clearSelection();
-    }
-    const getTextToCopy = function(trigger) {
-        const codeEl = trigger.previousElementSibling.cloneNode(true);
-        for (const childEl of codeEl.children) {
-          if (isCodeAnnotation(childEl)) {
-            childEl.remove();
-          }
-        }
-        return codeEl.innerText;
-    }
-    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
-      text: getTextToCopy
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
     });
-    clipboard.on('success', onCopySuccess);
-    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
-      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
-        text: getTextToCopy,
-        container: window.document.getElementById('quarto-embedded-source-code-modal')
-      });
-      clipboardModal.on('success', onCopySuccess);
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp("https:\/\/focusonr\.org");
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
     }
-      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
-      var mailtoRegex = new RegExp(/^mailto:/);
-        var filterRegex = new RegExp("https:\/\/focusonr\.org");
-      var isInternal = (href) => {
-          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
-      }
-      // Inspect non-navigation links and adorn them if external
-     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
-      for (var i=0; i<links.length; i++) {
-        const link = links[i];
-        if (!isInternal(link.href)) {
-          // undo the damage that might have been done by quarto-nav.js in the case of
-          // links that we want to consider external
-          if (link.dataset.originalHref !== undefined) {
-            link.href = link.dataset.originalHref;
-          }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
         }
       }
-    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
-      const config = {
-        allowHTML: true,
-        maxWidth: 500,
-        delay: 100,
-        arrow: false,
-        appendTo: function(el) {
-            return el.parentElement;
-        },
-        interactive: true,
-        interactiveBorder: 10,
-        theme: 'quarto',
-        placement: 'bottom-start',
-      };
-      if (contentFn) {
-        config.content = contentFn;
-      }
-      if (onTriggerFn) {
-        config.onTrigger = onTriggerFn;
-      }
-      if (onUntriggerFn) {
-        config.onUntrigger = onUntriggerFn;
-      }
-      window.tippy(el, config); 
     }
-    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
-    for (var i=0; i<noterefs.length; i++) {
-      const ref = noterefs[i];
-      tippyHover(ref, function() {
-        // use id or data attribute instead here
-        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
-        try { href = new URL(href).hash; } catch {}
-        const id = href.replace(/^#\/?/, "");
-        const note = window.document.getElementById(id);
-        if (note) {
-          return note.innerHTML;
-        } else {
-          return "";
-        }
-      });
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
     }
-    const xrefs = window.document.querySelectorAll('a.quarto-xref');
-    const processXRef = (id, note) => {
-      // Strip column container classes
-      const stripColumnClz = (el) => {
-        el.classList.remove("page-full", "page-columns");
-        if (el.children) {
-          for (const child of el.children) {
-            stripColumnClz(child);
-          }
-        }
-      }
-      stripColumnClz(note)
-      if (id === null || id.startsWith('sec-')) {
-        // Special case sections, only their first couple elements
-        const container = document.createElement("div");
-        if (note.children && note.children.length > 2) {
-          container.appendChild(note.children[0].cloneNode(true));
-          for (let i = 1; i < note.children.length; i++) {
-            const child = note.children[i];
-            if (child.tagName === "P" && child.innerText === "") {
-              continue;
-            } else {
-              container.appendChild(child.cloneNode(true));
-              break;
-            }
-          }
-          if (window.Quarto?.typesetMath) {
-            window.Quarto.typesetMath(container);
-          }
-          return container.innerHTML
-        } else {
-          if (window.Quarto?.typesetMath) {
-            window.Quarto.typesetMath(note);
-          }
-          return note.innerHTML;
-        }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
       } else {
-        // Remove any anchor links if they are present
-        const anchorLink = note.querySelector('a.anchorjs-link');
-        if (anchorLink) {
-          anchorLink.remove();
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
         }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
         if (window.Quarto?.typesetMath) {
           window.Quarto.typesetMath(note);
         }
-        if (note.classList.contains("callout")) {
-          return note.outerHTML;
-        } else {
-          return note.innerHTML;
-        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
       }
     }
-    for (var i=0; i<xrefs.length; i++) {
-      const xref = xrefs[i];
-      tippyHover(xref, undefined, function(instance) {
-        instance.disable();
-        let url = xref.getAttribute('href');
-        let hash = undefined; 
-        if (url.startsWith('#')) {
-          hash = url;
-        } else {
-          try { hash = new URL(url).hash; } catch {}
-        }
-        if (hash) {
-          const id = hash.replace(/^#\/?/, "");
-          const note = window.document.getElementById(id);
-          if (note !== null) {
-            try {
-              const html = processXRef(id, note.cloneNode(true));
-              instance.setContent(html);
-            } finally {
-              instance.enable();
-              instance.show();
-            }
-          } else {
-            // See if we can fetch this
-            fetch(url.split('#')[0])
-            .then(res => res.text())
-            .then(html => {
-              const parser = new DOMParser();
-              const htmlDoc = parser.parseFromString(html, "text/html");
-              const note = htmlDoc.getElementById(id);
-              if (note !== null) {
-                const html = processXRef(id, note);
-                instance.setContent(html);
-              } 
-            }).finally(() => {
-              instance.enable();
-              instance.show();
-            });
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
           }
         } else {
-          // See if we can fetch a full url (with no hash to target)
-          // This is a special case and we should probably do some content thinning / targeting
-          fetch(url)
+          // See if we can fetch this
+          fetch(url.split('#')[0])
           .then(res => res.text())
           .then(html => {
             const parser = new DOMParser();
             const htmlDoc = parser.parseFromString(html, "text/html");
-            const note = htmlDoc.querySelector('main.content');
+            const note = htmlDoc.getElementById(id);
             if (note !== null) {
-              // This should only happen for chapter cross references
-              // (since there is no id in the URL)
-              // remove the first header
-              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
-                note.children[0].remove();
-              }
-              const html = processXRef(null, note);
+              const html = processXRef(id, note);
               instance.setContent(html);
             } 
           }).finally(() => {
@@ -870,210 +1095,189 @@ Wickham, Hadley, and Lionel Henry. 2023. <span>“Differences Between the Base <
             instance.show();
           });
         }
-      }, function(instance) {
-      });
-    }
-        let selectedAnnoteEl;
-        const selectorForAnnotation = ( cell, annotation) => {
-          let cellAttr = 'data-code-cell="' + cell + '"';
-          let lineAttr = 'data-code-annotation="' +  annotation + '"';
-          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
-          return selector;
-        }
-        const selectCodeLines = (annoteEl) => {
-          const doc = window.document;
-          const targetCell = annoteEl.getAttribute("data-target-cell");
-          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
-          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
-          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
-          const lineIds = lines.map((line) => {
-            return targetCell + "-" + line;
-          })
-          let top = null;
-          let height = null;
-          let parent = null;
-          if (lineIds.length > 0) {
-              //compute the position of the single el (top and bottom and make a div)
-              const el = window.document.getElementById(lineIds[0]);
-              top = el.offsetTop;
-              height = el.offsetHeight;
-              parent = el.parentElement.parentElement;
-            if (lineIds.length > 1) {
-              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
-              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
-              height = bottom - top;
-            }
-            if (top !== null && height !== null && parent !== null) {
-              // cook up a div (if necessary) and position it 
-              let div = window.document.getElementById("code-annotation-line-highlight");
-              if (div === null) {
-                div = window.document.createElement("div");
-                div.setAttribute("id", "code-annotation-line-highlight");
-                div.style.position = 'absolute';
-                parent.appendChild(div);
-              }
-              div.style.top = top - 2 + "px";
-              div.style.height = height + 4 + "px";
-              div.style.left = 0;
-              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
-              if (gutterDiv === null) {
-                gutterDiv = window.document.createElement("div");
-                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
-                gutterDiv.style.position = 'absolute';
-                const codeCell = window.document.getElementById(targetCell);
-                const gutter = codeCell.querySelector('.code-annotation-gutter');
-                gutter.appendChild(gutterDiv);
-              }
-              gutterDiv.style.top = top - 2 + "px";
-              gutterDiv.style.height = height + 4 + "px";
-            }
-            selectedAnnoteEl = annoteEl;
-          }
-        };
-        const unselectCodeLines = () => {
-          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
-          elementsIds.forEach((elId) => {
-            const div = window.document.getElementById(elId);
-            if (div) {
-              div.remove();
-            }
-          });
-          selectedAnnoteEl = undefined;
-        };
-          // Handle positioning of the toggle
-      window.addEventListener(
-        "resize",
-        throttle(() => {
-          elRect = undefined;
-          if (selectedAnnoteEl) {
-            selectCodeLines(selectedAnnoteEl);
-          }
-        }, 10)
-      );
-      function throttle(fn, ms) {
-      let throttle = false;
-      let timer;
-        return (...args) => {
-          if(!throttle) { // first call gets through
-              fn.apply(this, args);
-              throttle = true;
-          } else { // all the others get throttled
-              if(timer) clearTimeout(timer); // cancel #2
-              timer = setTimeout(() => {
-                fn.apply(this, args);
-                timer = throttle = false;
-              }, ms);
-          }
-        };
-      }
-        // Attach click handler to the DT
-        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
-        for (const annoteDlNode of annoteDls) {
-          annoteDlNode.addEventListener('click', (event) => {
-            const clickedEl = event.target;
-            if (clickedEl !== selectedAnnoteEl) {
-              unselectCodeLines();
-              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
-              if (activeEl) {
-                activeEl.classList.remove('code-annotation-active');
-              }
-              selectCodeLines(clickedEl);
-              clickedEl.classList.add('code-annotation-active');
-            } else {
-              // Unselect the line
-              unselectCodeLines();
-              clickedEl.classList.remove('code-annotation-active');
-            }
-          });
-        }
-    const findCites = (el) => {
-      const parentEl = el.parentElement;
-      if (parentEl) {
-        const cites = parentEl.dataset.cites;
-        if (cites) {
-          return {
-            el,
-            cites: cites.split(' ')
-          };
-        } else {
-          return findCites(el.parentElement)
-        }
       } else {
-        return undefined;
-      }
-    };
-    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
-    for (var i=0; i<bibliorefs.length; i++) {
-      const ref = bibliorefs[i];
-      const citeInfo = findCites(ref);
-      if (citeInfo) {
-        tippyHover(citeInfo.el, function() {
-          var popup = window.document.createElement('div');
-          citeInfo.cites.forEach(function(cite) {
-            var citeDiv = window.document.createElement('div');
-            citeDiv.classList.add('hanging-indent');
-            citeDiv.classList.add('csl-entry');
-            var biblioDiv = window.document.getElementById('ref-' + cite);
-            if (biblioDiv) {
-              citeDiv.innerHTML = biblioDiv.innerHTML;
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
             }
-            popup.appendChild(citeDiv);
-          });
-          return popup.innerHTML;
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
         });
       }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
     }
-  });
-  </script>
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<script src="https://giscus.app/client.js" data-repo="rgt47/qblog" data-repo-id="R_kgDOH6TO7A" data-category="General" data-category-id="DIC_kwDOH6TO7M4CXqIi" data-mapping="pathname" data-reactions-enabled="1" data-emit-metadata="0" data-input-position="bottom" data-theme="light" data-lang="en" crossorigin="anonymous" async="">
+</script>
 <input type="hidden" id="giscus-base-theme" value="light">
 <input type="hidden" id="giscus-alt-theme" value="light">
-<script>
-function loadGiscusWhenReady() {
-  // Function to get the theme based on body class
-  const getTheme = () => {
-    const baseTheme = document.getElementById('giscus-base-theme').value;
-    const altTheme = document.getElementById('giscus-alt-theme').value;
-    return document.body.classList.contains('quarto-dark') ? altTheme : baseTheme;
-  };
-  // Create the Giscus script and add it to the desired location
-  const loadGiscus = () => {
-    const script = document.createElement("script");
-    script.src = "https://giscus.app/client.js";
-    script.async = true;
-    script.dataset.repo = "rgt47/qblog";
-    script.dataset.repoId = "R_kgDOH6TO7A";
-    script.dataset.category = "General";
-    script.dataset.categoryId = "DIC_kwDOH6TO7M4CXqIi";
-    script.dataset.mapping = "pathname";
-    script.dataset.reactionsEnabled = "1";
-    script.dataset.emitMetadata = "0";
-    script.dataset.inputPosition = "bottom";
-    script.dataset.theme = getTheme();
-    script.dataset.lang = "en";
-    script.crossOrigin = "anonymous";
-    // Append the script to the desired div instead of at the end of the body
-    document.getElementById("quarto-content").appendChild(script);
-  };
-  // MutationObserver to detect when the 'quarto-light' or 'quarto-dark' class is added to the body
-  const observer = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      if (mutation.type === "attributes" && mutation.attributeName === "class") {
-        if (document.body.classList.contains('quarto-light') || document.body.classList.contains('quarto-dark')) {
-          loadGiscus();
-          observer.disconnect(); // Stop observing once Giscus is loaded
-          break;
-        }
-      }
-    }
-  });
-  // Start observing the body for class attribute changes
-  observer.observe(document.body, {
-    attributes: true,
-    attributeFilter: ["class"],
-  });
-}
-loadGiscusWhenReady();
-</script>
 </div> <!-- /content -->
 <footer class="footer">
   <div class="nav-footer">

@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.5.45">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ronald G. Thomas">
+<meta name="dcterms.date" content="2025-05-20">
+<meta name="description" content="I did not really know how Vim’s terminal API worked until I wrote a small plugin that sends code from an editing buffer to a running R session.">
+
+<title>Writing a Simple Vim Plugin for REPL Interaction – Thomas Lab</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="../../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../../">
+<script src="../../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": true,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "keyboard-shortcut": [
+    "?",
+    "/"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&amp;family=Open+Sans:ital,wght@0,400;0,600;1,400&amp;family=Fira+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<script src="https://kit.fontawesome.com/0fba9333d8.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+
+<!-- Custom meta tags for social sharing -->
+<meta property="og:site_name" content="Thomas Lab">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@rgt47">
+
+<!-- Add responsive features -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<!-- Add analytics if needed -->
+<!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXX');
+</script> -->
+
+<!-- Add custom javascript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Remove code tools button completely
+  const codeButton = document.querySelector('.code-tools-button');
+  if (codeButton) {
+    codeButton.remove();
+  }
+  
+  // Add any custom JavaScript functionality here
+  
+  // Example: Add smooth scrolling
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      
+      document.querySelector(this.getAttribute('href')).scrollIntoView({
+        behavior: 'smooth'
+      });
+    });
+  });
+  
+  // Make sidebar category items clickable (but not TOC items)
+  const categoryLinks = {
+    'Programming & Development': '/posts/?category=Programming+%26+Development',
+    'Data Analysis & Visualization': '/posts/?category=Data+Analysis+%26+Visualization',
+    'Deployment & Operations': '/posts/?category=Deployment+%26+Operations',
+    'Development Environment': '/posts/?category=Development+Environment',
+    'Shiny Applications': '/posts/?category=Shiny+Applications',
+    'AI & Automation': '/posts/?category=AI+%26+Automation',
+    'System Administration': '/posts/?category=System+Administration'
+  };
+  
+  // Only target sidebar items that are not in the TOC
+  document.querySelectorAll('.sidebar-item-section .sidebar-item-text').forEach(item => {
+    // Skip if this is inside the TOC
+    if (item.closest('#TOC')) return;
+    
+    const text = item.textContent.trim();
+    if (categoryLinks[text]) {
+      item.addEventListener('click', function() {
+        window.location.href = categoryLinks[text];
+      });
+    }
+  });
+});
+</script>
+
+
+<meta property="og:title" content="Thomas Lab - Writing a Simple Vim Plugin for REPL Interaction">
+<meta property="og:description" content="I did not really know how Vim’s terminal API worked until I wrote a small plugin that sends code from an editing buffer to a running R session.">
+<meta property="og:image" content="https://focusonr.org/posts/37-simplevimplugin/simplevimplugin/media/images/hero.jpg">
+<meta property="og:site_name" content="Thomas Lab">
+</head>
+
+<body class="nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../../index.html">
+    <span class="navbar-title">Thomas Lab</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../about/index.html"> 
+<span class="menu-text">About</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../blog/index.html"> 
+<span class="menu-text">Blog</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../white-papers/index.html"> 
+<span class="menu-text">White Papers</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../research/index.html"> 
+<span class="menu-text">Research</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../teaching/index.html"> 
+<span class="menu-text">Teaching</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../misc/index.html"> 
+<span class="menu-text">Misc</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47"> <i class="bi bi-twitter" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a>
+  <ul class="collapse">
+  <li><a href="#motivations" id="toc-motivations" class="nav-link" data-scroll-target="#motivations"><span class="header-section-number">1.1</span> Motivations</a></li>
+  <li><a href="#objectives" id="toc-objectives" class="nav-link" data-scroll-target="#objectives"><span class="header-section-number">1.2</span> Objectives</a></li>
+  </ul></li>
+  <li><a href="#prerequisites-and-setup" id="toc-prerequisites-and-setup" class="nav-link" data-scroll-target="#prerequisites-and-setup"><span class="header-section-number">2</span> Prerequisites and Setup</a></li>
+  <li><a href="#what-is-a-vim-repl-plugin" id="toc-what-is-a-vim-repl-plugin" class="nav-link" data-scroll-target="#what-is-a-vim-repl-plugin"><span class="header-section-number">3</span> What is a Vim REPL Plugin?</a></li>
+  <li><a href="#getting-started" id="toc-getting-started" class="nav-link" data-scroll-target="#getting-started"><span class="header-section-number">4</span> Getting Started</a>
+  <ul class="collapse">
+  <li><a href="#launching-an-r-terminal" id="toc-launching-an-r-terminal" class="nav-link" data-scroll-target="#launching-an-r-terminal"><span class="header-section-number">4.1</span> Launching an R Terminal</a></li>
+  </ul></li>
+  <li><a href="#the-complete-plugin" id="toc-the-complete-plugin" class="nav-link" data-scroll-target="#the-complete-plugin"><span class="header-section-number">5</span> The Complete Plugin</a>
+  <ul class="collapse">
+  <li><a href="#core-submission-functions" id="toc-core-submission-functions" class="nav-link" data-scroll-target="#core-submission-functions"><span class="header-section-number">5.1</span> Core Submission Functions</a>
+  <ul class="collapse">
+  <li><a href="#submitline-send-the-current-line" id="toc-submitline-send-the-current-line" class="nav-link" data-scroll-target="#submitline-send-the-current-line"><span class="header-section-number">5.1.1</span> SubmitLine: Send the Current Line</a></li>
+  <li><a href="#getvisualselection-extract-selected-text" id="toc-getvisualselection-extract-selected-text" class="nav-link" data-scroll-target="#getvisualselection-extract-selected-text"><span class="header-section-number">5.1.2</span> GetVisualSelection: Extract Selected Text</a></li>
+  <li><a href="#sel-and-submit-two-stage-submission" id="toc-sel-and-submit-two-stage-submission" class="nav-link" data-scroll-target="#sel-and-submit-two-stage-submission"><span class="header-section-number">5.1.3</span> Sel and Submit: Two-Stage Submission</a></li>
+  <li><a href="#brk-interrupt-r" id="toc-brk-interrupt-r" class="nav-link" data-scroll-target="#brk-interrupt-r"><span class="header-section-number">5.1.4</span> Brk: Interrupt R</a></li>
+  </ul></li>
+  <li><a href="#chunk-navigation-functions" id="toc-chunk-navigation-functions" class="nav-link" data-scroll-target="#chunk-navigation-functions"><span class="header-section-number">5.2</span> Chunk Navigation Functions</a>
+  <ul class="collapse">
+  <li><a href="#selectchunk-select-an-r-markdown-chunk" id="toc-selectchunk-select-an-r-markdown-chunk" class="nav-link" data-scroll-target="#selectchunk-select-an-r-markdown-chunk"><span class="header-section-number">5.2.1</span> SelectChunk: Select an R Markdown Chunk</a></li>
+  <li><a href="#movenextchunk-and-moveprevchunk" id="toc-movenextchunk-and-moveprevchunk" class="nav-link" data-scroll-target="#movenextchunk-and-moveprevchunk"><span class="header-section-number">5.2.2</span> MoveNextChunk and MovePrevChunk</a></li>
+  </ul></li>
+  <li><a href="#convenience-functions" id="toc-convenience-functions" class="nav-link" data-scroll-target="#convenience-functions"><span class="header-section-number">5.3</span> Convenience Functions</a>
+  <ul class="collapse">
+  <li><a href="#raction-quick-r-inspection" id="toc-raction-quick-r-inspection" class="nav-link" data-scroll-target="#raction-quick-r-inspection"><span class="header-section-number">5.3.1</span> Raction: Quick R Inspection</a></li>
+  <li><a href="#submitembed-and-rd-inline-output" id="toc-submitembed-and-rd-inline-output" class="nav-link" data-scroll-target="#submitembed-and-rd-inline-output"><span class="header-section-number">5.3.2</span> SubmitEmbed and Rd: Inline Output</a></li>
+  </ul></li>
+  <li><a href="#the-autocommand-group" id="toc-the-autocommand-group" class="nav-link" data-scroll-target="#the-autocommand-group"><span class="header-section-number">5.4</span> The Autocommand Group</a></li>
+  </ul></li>
+  <li><a href="#experiments" id="toc-experiments" class="nav-link" data-scroll-target="#experiments"><span class="header-section-number">6</span> Experiments</a>
+  <ul class="collapse">
+  <li><a href="#experiment-1-adding-quarto-rendering" id="toc-experiment-1-adding-quarto-rendering" class="nav-link" data-scroll-target="#experiment-1-adding-quarto-rendering"><span class="header-section-number">6.1</span> Experiment 1: Adding Quarto Rendering</a></li>
+  <li><a href="#experiment-2-visual-selection-duplication" id="toc-experiment-2-visual-selection-duplication" class="nav-link" data-scroll-target="#experiment-2-visual-selection-duplication"><span class="header-section-number">6.2</span> Experiment 2: Visual Selection Duplication</a></li>
+  <li><a href="#things-to-watch-out-for" id="toc-things-to-watch-out-for" class="nav-link" data-scroll-target="#things-to-watch-out-for"><span class="header-section-number">6.3</span> Things to Watch Out For</a></li>
+  <li><a href="#lessons-learnt" id="toc-lessons-learnt" class="nav-link" data-scroll-target="#lessons-learnt"><span class="header-section-number">6.4</span> Lessons Learnt</a>
+  <ul class="collapse">
+  <li><a href="#conceptual-understanding" id="toc-conceptual-understanding" class="nav-link" data-scroll-target="#conceptual-understanding"><span class="header-section-number">6.4.1</span> Conceptual Understanding</a></li>
+  <li><a href="#technical-skills" id="toc-technical-skills" class="nav-link" data-scroll-target="#technical-skills"><span class="header-section-number">6.4.2</span> Technical Skills</a></li>
+  <li><a href="#gotchas-and-pitfalls" id="toc-gotchas-and-pitfalls" class="nav-link" data-scroll-target="#gotchas-and-pitfalls"><span class="header-section-number">6.4.3</span> Gotchas and Pitfalls</a></li>
+  </ul></li>
+  <li><a href="#limitations" id="toc-limitations" class="nav-link" data-scroll-target="#limitations"><span class="header-section-number">6.5</span> Limitations</a></li>
+  <li><a href="#opportunities-for-improvement" id="toc-opportunities-for-improvement" class="nav-link" data-scroll-target="#opportunities-for-improvement"><span class="header-section-number">6.6</span> Opportunities for Improvement</a></li>
+  </ul></li>
+  <li><a href="#wrapping-up" id="toc-wrapping-up" class="nav-link" data-scroll-target="#wrapping-up"><span class="header-section-number">7</span> Wrapping Up</a></li>
+  <li><a href="#see-also" id="toc-see-also" class="nav-link" data-scroll-target="#see-also"><span class="header-section-number">8</span> See Also</a></li>
+  <li><a href="#reproducibility" id="toc-reproducibility" class="nav-link" data-scroll-target="#reproducibility"><span class="header-section-number">9</span> Reproducibility</a></li>
+  <li><a href="#lets-connect" id="toc-lets-connect" class="nav-link" data-scroll-target="#lets-connect"><span class="header-section-number">10</span> Let’s Connect</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content column-page-left" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Writing a Simple Vim Plugin for REPL Interaction</h1>
+<p class="subtitle lead"></p><p>An alternative to Nvim-R and vim-slime for sending code to an R terminal</p><p></p>
+  <div class="quarto-categories">
+    <div class="quarto-category">vim</div>
+    <div class="quarto-category">r</div>
+    <div class="quarto-category">plugin-development</div>
+    <div class="quarto-category">neovim</div>
+    <div class="quarto-category">vimscript</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    <p>I did not really know how Vim’s terminal API worked until I wrote a small plugin that sends code from an editing buffer to a running R session.</p>
+  </div>
+</div>
+
+
+<div class="quarto-title-meta column-page-left">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ronald G. Thomas </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">May 20, 2025</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/hero.jpg" class="img-fluid figure-img" style="width:80.0%"></p>
+<figcaption>A terminal split between a Vim editing buffer and a running R session with code being sent between them</figcaption>
+</figure>
+</div>
+<p><em>A lightweight Vim plugin for sending R code to a terminal REPL.</em></p>
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>I did not really know how Vim’s terminal API worked until I sat down and wrote a small plugin that sends code from an editing buffer to a running R session. The established tools for this task – Nvim-R and vim-slime – are feature-rich but complex. I wanted something minimal: select code in Vim, press a key, and see it execute in an R terminal pane.</p>
+<p>The result is <code>rgt-R.vim</code>, a single-file plugin under 150 lines that handles line submission, visual selection, chunk navigation, and a handful of convenience mappings for common R inspection commands. It uses Vim’s built-in <code>term_sendkeys()</code> and <code>term_list()</code> functions, requiring no external dependencies beyond Vim 8+ with terminal support.</p>
+<p>This post presents the complete plugin code, explains each function, documents the key mappings, and discusses the experiments that shaped the design.</p>
+<section id="motivations" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="motivations"><span class="header-section-number">1.1</span> Motivations</h2>
+<ul>
+<li>Nvim-R is powerful but introduces substantial complexity for users who only need code submission; I wanted a lightweight alternative.</li>
+<li>vim-slime uses tmux or screen as intermediaries, adding configuration overhead that I wanted to avoid for a simple R workflow.</li>
+<li>Understanding Vim’s terminal API (<code>term_sendkeys</code>, <code>term_list</code>) seemed valuable for building custom development workflows beyond R.</li>
+<li>I teach R programming and wanted a plugin simple enough that students could read and understand the source code in a single sitting.</li>
+<li>I was curious whether a minimal plugin could cover 90% of my daily R interaction needs without the remaining 10% of features that add complexity.</li>
+</ul>
+</section>
+<section id="objectives" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="objectives"><span class="header-section-number">1.2</span> Objectives</h2>
+<ol type="1">
+<li>Build a Vim plugin that sends individual lines, visual selections, and R Markdown chunks to a running R terminal using Vim’s built-in terminal API.</li>
+<li>Document each VimScript function with its purpose, mechanism, and interaction with the terminal buffer.</li>
+<li>Explain the autocommand group that restricts mappings to R, Rmd, and Qmd filetypes.</li>
+<li>Present the experiments that explored edge cases in visual selection submission and Quarto rendering.</li>
+</ol>
+<p>I am documenting my learning process here. If you spot errors or have better approaches, please let me know.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/vim-logo.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:30.0%"></p>
+</figure>
+</div>
+<p><em>Understanding Vim’s terminal API opens the door to custom development workflows.</em></p>
+</section>
+</section>
+<section id="prerequisites-and-setup" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Prerequisites and Setup</h1>
+<p>To use this plugin, you will need:</p>
+<ul>
+<li>Vim 8.0 or later with <code>+terminal</code> feature (check with <code>:echo has('terminal')</code>)</li>
+<li>R installed and accessible from the command line</li>
+<li>The plugin file placed in your Vim plugin directory (e.g., <code>~/.vim/plugin/rgt-R.vim</code>)</li>
+</ul>
+<p><strong>Background assumed:</strong> Basic Vim fluency (normal mode, visual mode, command mode) and familiarity with R. No prior VimScript experience is required; this post explains each function.</p>
+<p>To verify terminal support:</p>
+<pre class="vim"><code>:echo has('terminal')</code></pre>
+<p>If this returns <code>1</code>, your Vim build supports the terminal API. If it returns <code>0</code>, you will need to install a Vim build with terminal support (e.g., <code>brew install vim</code> on macOS).</p>
+</section>
+<section id="what-is-a-vim-repl-plugin" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> What is a Vim REPL Plugin?</h1>
+<p>A REPL (Read-Eval-Print Loop) plugin connects a text editor to a running interpreter. You write code in the editor, press a key combination, and the code is sent to the interpreter for execution. The interpreter prints its output, and you continue editing.</p>
+<p>Vim’s terminal API provides the plumbing for this connection. The function <code>term_list()</code> returns a list of open terminal buffers, and <code>term_sendkeys()</code> sends keystrokes to a specific terminal. By combining these with Vim’s visual selection and search capabilities, a small plugin can provide a complete code-submission workflow.</p>
+<p>Think of it as a pipe between your editor and your R session. The plugin handles the mechanics of extracting selected text and pushing it through the pipe; R handles the evaluation and output.</p>
+</section>
+<section id="getting-started" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Getting Started</h1>
+<section id="launching-an-r-terminal" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="launching-an-r-terminal"><span class="header-section-number">4.1</span> Launching an R Terminal</h2>
+<p>The plugin includes a mapping to open an R terminal in a vertical split. Press <code>&lt;localleader&gt;r</code> in normal mode:</p>
+<pre class="vim"><code>nnoremap &lt;silent&gt; &lt;localleader&gt;r
+  \ :vert term R --no-save&lt;CR&gt;&lt;c-w&gt;:wincmd p&lt;CR&gt;</code></pre>
+<p>This opens R in a vertical terminal split and returns focus to the editing buffer. The <code>--no-save</code> flag prevents R from prompting to save the workspace on exit.</p>
+</section>
+</section>
+<section id="the-complete-plugin" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> The Complete Plugin</h1>
+<section id="core-submission-functions" class="level2" data-number="5.1">
+<h2 data-number="5.1" class="anchored" data-anchor-id="core-submission-functions"><span class="header-section-number">5.1</span> Core Submission Functions</h2>
+<section id="submitline-send-the-current-line" class="level3" data-number="5.1.1">
+<h3 data-number="5.1.1" class="anchored" data-anchor-id="submitline-send-the-current-line"><span class="header-section-number">5.1.1</span> SubmitLine: Send the Current Line</h3>
+<pre class="vim"><code>function! SubmitLine()
+  :let @c = getline(".") . "\n"
+  :call term_sendkeys(term_list()[0], @c)
+endfunction</code></pre>
+<p><code>SubmitLine</code> copies the current line into register <code>c</code>, appends a newline character, and sends it to the first terminal in <code>term_list()</code>. The newline triggers R to evaluate the expression.</p>
+<p><strong>Mapping:</strong> Press <code>&lt;CR&gt;</code> (Enter) in normal mode on any R, Rmd, or Qmd file to submit the current line.</p>
+</section>
+<section id="getvisualselection-extract-selected-text" class="level3" data-number="5.1.2">
+<h3 data-number="5.1.2" class="anchored" data-anchor-id="getvisualselection-extract-selected-text"><span class="header-section-number">5.1.2</span> GetVisualSelection: Extract Selected Text</h3>
+<pre class="vim"><code>function! GetVisualSelection(mode)
+  let [line_start, column_start] =
+    \ getpos("'&lt;")[1:2]
+  let [line_end, column_end] =
+    \ getpos("'&gt;")[1:2]
+  let lines = getline(line_start, line_end)
+  if a:mode ==# 'v'
+    let lines[-1] = lines[-1][
+      \ : column_end -
+      \ (&amp;selection == 'inclusive' ? 1 : 2)]
+    let lines[0] = lines[0][column_start - 1:]
+  elseif a:mode ==# 'V'
+  else
+    return ''
+  endif
+  return join(lines, "\n")
+endfunction</code></pre>
+<p><code>GetVisualSelection</code> handles both character-wise (<code>v</code>) and line-wise (<code>V</code>) visual selections. For character-wise selection, it trims to the exact column range. For line-wise selection, it returns the full lines without modification. The function returns the selected text as a single string with newlines preserved.</p>
+</section>
+<section id="sel-and-submit-two-stage-submission" class="level3" data-number="5.1.3">
+<h3 data-number="5.1.3" class="anchored" data-anchor-id="sel-and-submit-two-stage-submission"><span class="header-section-number">5.1.3</span> Sel and Submit: Two-Stage Submission</h3>
+<pre class="vim"><code>function! Sel()
+  :let @c = GetVisualSelection(
+    \ visualmode()) . "\n"
+  :call writefile(
+    \ getreg('c', 1, 1), "source_visual")
+endfunction
+
+function! Submit()
+  :let y = "source('source_visual',echo=T)"
+    \ . "\n"
+  :call term_sendkeys(term_list()[0], y)
+endfunction</code></pre>
+<p>Visual selection submission uses a two-stage process: <code>Sel</code> writes the selected text to a temporary file (<code>source_visual</code>), and <code>Submit</code> tells R to source that file with echo enabled. This approach avoids the complexity of sending multi-line text directly through <code>term_sendkeys</code>, which can cause timing issues with long selections.</p>
+<p><strong>Mapping:</strong> Select code visually and press <code>&lt;CR&gt;</code> to submit the selection.</p>
+</section>
+<section id="brk-interrupt-r" class="level3" data-number="5.1.4">
+<h3 data-number="5.1.4" class="anchored" data-anchor-id="brk-interrupt-r"><span class="header-section-number">5.1.4</span> Brk: Interrupt R</h3>
+<pre class="vim"><code>function! Brk()
+  :call term_sendkeys(
+    \ term_list()[0], "\&lt;c-c&gt;")
+endfunction</code></pre>
+<p><code>Brk</code> sends Ctrl-C to the R terminal, interrupting any running computation. Mapped to <code>&lt;localleader&gt;c</code>.</p>
+</section>
+</section>
+<section id="chunk-navigation-functions" class="level2" data-number="5.2">
+<h2 data-number="5.2" class="anchored" data-anchor-id="chunk-navigation-functions"><span class="header-section-number">5.2</span> Chunk Navigation Functions</h2>
+<section id="selectchunk-select-an-r-markdown-chunk" class="level3" data-number="5.2.1">
+<h3 data-number="5.2.1" class="anchored" data-anchor-id="selectchunk-select-an-r-markdown-chunk"><span class="header-section-number">5.2.1</span> SelectChunk: Select an R Markdown Chunk</h3>
+<pre class="vim"><code>function! SelectChunk()
+  :execute
+    \ "normal! ?```{\&lt;cr&gt;jV/```\&lt;cr&gt;k"
+endfunction</code></pre>
+<p><code>SelectChunk</code> searches backward for a code fence opening (<code>```{</code>), moves down one line, enters visual line mode, searches forward for the closing fence, and moves up one line. The result is a visual selection of the chunk contents, excluding the fences.</p>
+</section>
+<section id="movenextchunk-and-moveprevchunk" class="level3" data-number="5.2.2">
+<h3 data-number="5.2.2" class="anchored" data-anchor-id="movenextchunk-and-moveprevchunk"><span class="header-section-number">5.2.2</span> MoveNextChunk and MovePrevChunk</h3>
+<pre class="vim"><code>function! MoveNextChunk()
+  :execute "normal! /```{\&lt;CR&gt;j"
+  :noh
+endfunction
+
+function! MovePrevChunk()
+  :execute "normal! 2?```{\&lt;CR&gt;j"
+  :noh
+endfunction</code></pre>
+<p>These navigation functions move the cursor to the first line of the next or previous code chunk. The <code>:noh</code> command clears the search highlighting. <code>MovePrevChunk</code> searches backward twice because the first match is the current chunk’s opening fence.</p>
+<p><strong>Mappings:</strong> <code>&lt;localleader&gt;j</code> for next chunk, <code>&lt;localleader&gt;k</code> for previous chunk.</p>
+</section>
+</section>
+<section id="convenience-functions" class="level2" data-number="5.3">
+<h2 data-number="5.3" class="anchored" data-anchor-id="convenience-functions"><span class="header-section-number">5.3</span> Convenience Functions</h2>
+<section id="raction-quick-r-inspection" class="level3" data-number="5.3.1">
+<h3 data-number="5.3.1" class="anchored" data-anchor-id="raction-quick-r-inspection"><span class="header-section-number">5.3.1</span> Raction: Quick R Inspection</h3>
+<pre class="vim"><code>function! Raction(action)
+  :let @c = expand("&lt;cword&gt;")
+  :let @d = a:action . "(" . @c . ")\n"
+  :call term_sendkeys(term_list()[0], @d)
+endfunction</code></pre>
+<p><code>Raction</code> takes an R function name as its argument, wraps the word under the cursor as its argument, and sends the call to R. This enables quick inspection mappings:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Mapping</th>
+<th>R Command</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>&lt;localleader&gt;d</code></td>
+<td><code>dim(x)</code></td>
+<td>Dimensions</td>
+</tr>
+<tr class="even">
+<td><code>&lt;localleader&gt;h</code></td>
+<td><code>head(x)</code></td>
+<td>First rows</td>
+</tr>
+<tr class="odd">
+<td><code>&lt;localleader&gt;s</code></td>
+<td><code>str(x)</code></td>
+<td>Structure</td>
+</tr>
+<tr class="even">
+<td><code>&lt;localleader&gt;p</code></td>
+<td><code>print(x)</code></td>
+<td>Print</td>
+</tr>
+<tr class="odd">
+<td><code>&lt;localleader&gt;n</code></td>
+<td><code>names(x)</code></td>
+<td>Column names</td>
+</tr>
+<tr class="even">
+<td><code>&lt;localleader&gt;f</code></td>
+<td><code>length(x)</code></td>
+<td>Length</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="submitembed-and-rd-inline-output" class="level3" data-number="5.3.2">
+<h3 data-number="5.3.2" class="anchored" data-anchor-id="submitembed-and-rd-inline-output"><span class="header-section-number">5.3.2</span> SubmitEmbed and Rd: Inline Output</h3>
+<pre class="vim"><code>function! SubmitEmbed()
+  :let y = "sink('temp.txt'); " .
+    \ "source('source_visual',echo=T); " .
+    \ "sink()" . "\n"
+  :call term_sendkeys(term_list()[0], y)
+endfunction
+
+function! Rd()
+  !sed 's/^/\# /g' temp.txt &gt; temp_commented.txt
+  :r !cat temp_commented.txt
+endfunction</code></pre>
+<p><code>SubmitEmbed</code> sources a visual selection while redirecting output to a file. <code>Rd</code> reads that output back into the editing buffer, prepending each line with <code>#</code> so the output appears as R comments. This is useful for embedding results directly in scripts.</p>
+<p><strong>Mapping:</strong> <code>&lt;localleader&gt;z</code> in visual mode.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance2.jpg" class="img-fluid figure-img"></p>
+<figcaption>A split terminal showing Vim on the left and R output on the right with code being evaluated</figcaption>
+</figure>
+</div>
+<p><em>The plugin in action: code flows from the editor to the R terminal with a single keypress.</em></p>
+</section>
+</section>
+<section id="the-autocommand-group" class="level2" data-number="5.4">
+<h2 data-number="5.4" class="anchored" data-anchor-id="the-autocommand-group"><span class="header-section-number">5.4</span> The Autocommand Group</h2>
+<p>The complete autocommand group restricts all mappings to R, Rmd, and Qmd filetypes:</p>
+<pre class="vim"><code>augroup r_rmd_qmd
+  autocmd!
+  autocmd FileType r,rmd,qmd
+    \ nnoremap &lt;silent&gt; &lt;CR&gt;
+    \ :call SubmitLine()&lt;CR&gt;&lt;CR&gt;
+  autocmd FileType r,rmd,qmd
+    \ vnoremap &lt;silent&gt; &lt;CR&gt;
+    \ :call Sel() \|
+    \ :call Submit()&lt;CR&gt;&lt;CR&gt;
+  autocmd FileType r,rmd,qmd
+    \ nnoremap &lt;silent&gt; &lt;localleader&gt;c
+    \ :call Brk()&lt;CR&gt;&lt;CR&gt;
+  autocmd FileType r,rmd,qmd
+    \ nnoremap &lt;silent&gt; &lt;localleader&gt;l
+    \ :call SelectChunk()&lt;CR&gt; \|
+    \ :call Sel() \|
+    \ :call Submit()&lt;CR&gt;&lt;CR&gt;
+  autocmd FileType r,rmd,qmd
+    \ nnoremap &lt;silent&gt; &lt;localleader&gt;;
+    \ :call SelectChunk()&lt;CR&gt; \|
+    \ :call Sel() \|
+    \ :call Submit()&lt;CR&gt; \|
+    \ /```{&lt;CR&gt;j
+  autocmd FileType r,rmd,qmd
+    \ nnoremap &lt;localleader&gt;k
+    \ :call MovePrevChunk()&lt;CR&gt;
+  autocmd FileType r,rmd,qmd
+    \ nnoremap &lt;localleader&gt;j
+    \ :call MoveNextChunk()&lt;CR&gt;
+  autocmd FileType r,rmd,qmd
+    \ nnoremap &lt;silent&gt; &lt;localleader&gt;r
+    \ :vert term R --no-save&lt;CR&gt;
+    \ &lt;c-w&gt;:wincmd p&lt;CR&gt;
+  autocmd FileType r,rmd,qmd
+    \ nnoremap ZT :!R --quiet -e
+    \ 'render("&lt;C-r&gt;%",
+    \ output_format="pdf_document")'&lt;CR&gt;
+  autocmd FileType r,rmd,qmd
+    \ nnoremap ZY :!R --quiet -e
+    \ 'quarto_render("&lt;C-r&gt;%",
+    \ output_format="pdf")'&lt;CR&gt;
+  autocmd FileType r,rmd,qmd
+    \ tnoremap ZD
+    \ quarto::quarto_render(
+    \ output_format = "pdf")&lt;CR&gt;
+  autocmd FileType r,rmd,qmd
+    \ tnoremap ZO source("&lt;C-W&gt;"%")&lt;CR&gt;
+  autocmd FileType r,rmd,qmd
+    \ tnoremap ZR render("&lt;C-W&gt;"%")&lt;CR&gt;
+  autocmd FileType r,rmd,qmd
+    \ tnoremap ZS style_dir()&lt;CR&gt;
+  autocmd FileType r,rmd,qmd
+    \ tnoremap ZQ q('no')&lt;C-\&gt;&lt;C-n&gt;:q!&lt;CR&gt;
+  autocmd FileType r,rmd,qmd
+    \ tnoremap ZZ q('no')&lt;C-\&gt;&lt;C-n&gt;:q!&lt;CR&gt;
+  autocmd FileType r,rmd,qmd
+    \ tnoremap lf ls()&lt;CR&gt;
+  autocmd FileType r,rmd,qmd
+    \ nnoremap &lt;localleader&gt;d
+    \ :call Raction("dim")&lt;CR&gt;
+  autocmd FileType r,rmd,qmd
+    \ nnoremap &lt;localleader&gt;h
+    \ :call Raction("head")&lt;CR&gt;
+  autocmd FileType r,rmd,qmd
+    \ nnoremap &lt;localleader&gt;s
+    \ :call Raction("str")&lt;CR&gt;
+  autocmd FileType r,rmd,qmd
+    \ nnoremap &lt;localleader&gt;p
+    \ :call Raction("print")&lt;CR&gt;
+  autocmd FileType r,rmd,qmd
+    \ nnoremap &lt;localleader&gt;n
+    \ :call Raction("names")&lt;CR&gt;
+  autocmd FileType r,rmd,qmd
+    \ nnoremap &lt;localleader&gt;f
+    \ :call Raction("length")&lt;CR&gt;
+  autocmd FileType r,rmd,qmd
+    \ inoremap &lt;c-l&gt;
+    \ &lt;esc&gt;A \|&gt;&lt;CR&gt;&lt;C-o&gt;0&lt;space&gt;&lt;space&gt;
+  autocmd FileType r,rmd,qmd
+    \ vnoremap &lt;silent&gt; &lt;localleader&gt;z
+    \ :call Sel() \|
+    \ :call SubmitEmbed() \|
+    \ :call Rd()&lt;CR&gt;&lt;CR&gt;
+augroup END</code></pre>
+<p>The <code>autocmd!</code> at the top clears any previous definitions, preventing duplicate mappings when the plugin is reloaded. Each mapping is scoped to R, Rmd, and Qmd filetypes only.</p>
+</section>
+</section>
+<section id="experiments" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Experiments</h1>
+<section id="experiment-1-adding-quarto-rendering" class="level2" data-number="6.1">
+<h2 data-number="6.1" class="anchored" data-anchor-id="experiment-1-adding-quarto-rendering"><span class="header-section-number">6.1</span> Experiment 1: Adding Quarto Rendering</h2>
+<p>The <code>ZY</code> mapping was added to support rendering Quarto documents to PDF directly from Vim:</p>
+<pre class="vim"><code>nnoremap ZY :!R --quiet -e
+  \ 'quarto_render("&lt;C-r&gt;%",
+  \ output_format="pdf")'&lt;CR&gt;</code></pre>
+<p>The development process:</p>
+<ol type="1">
+<li>Start by constructing the mapping in <code>.vimrc</code> (easier to iterate than in the plugin file).</li>
+<li>Use <code>ZT</code> (the existing Rmd render mapping) as a template.</li>
+<li>Replace <code>render()</code> with <code>quarto_render()</code> and adjust the output format argument.</li>
+<li>Test with any <code>index.qmd</code> file.</li>
+<li>Once working, move the mapping to the plugin file with an appropriate autocommand.</li>
+</ol>
+</section>
+<section id="experiment-2-visual-selection-duplication" class="level2" data-number="6.2">
+<h2 data-number="6.2" class="anchored" data-anchor-id="experiment-2-visual-selection-duplication"><span class="header-section-number">6.2</span> Experiment 2: Visual Selection Duplication</h2>
+<p>An investigation into why <code>Sel()</code> was sending multiple copies of the source command to R when submitting visual selections. The number of duplicate submissions equalled the number of lines in the selection.</p>
+<p>The root cause was that the visual-mode mapping triggered the <code>Sel</code> and <code>Submit</code> functions once per selected line rather than once for the entire selection. The fix was ensuring the mapping operated on the selection as a single unit using the <code>\|</code> command separator.</p>
+</section>
+<section id="things-to-watch-out-for" class="level2" data-number="6.3">
+<h2 data-number="6.3" class="anchored" data-anchor-id="things-to-watch-out-for"><span class="header-section-number">6.3</span> Things to Watch Out For</h2>
+<ol type="1">
+<li><strong><code>term_list()[0]</code> assumes one terminal.</strong> If you have multiple terminal buffers open, the plugin sends code to the first one, which may not be the R session. Close unused terminals or modify the plugin to target a specific buffer.</li>
+<li><strong>The <code>source_visual</code> temp file persists.</strong> The plugin writes a temporary file to the current directory on every visual submission. Add <code>source_visual</code> to your <code>.gitignore</code> to prevent accidental commits.</li>
+<li><strong>Long selections may cause timing issues.</strong> The two-stage approach (write to file, then source) avoids most timing problems, but very large selections may still encounter race conditions between file writing and sourcing.</li>
+<li><strong><code>&lt;CR&gt;</code> remapping overrides Enter in normal mode.</strong> This is intentional for R files but may surprise users who expect Enter to move the cursor down. The mapping only applies to R, Rmd, and Qmd filetypes.</li>
+</ol>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance3.jpg" class="img-fluid figure-img"></p>
+<figcaption>Reference documentation for VimScript functions beside an open terminal editor</figcaption>
+</figure>
+</div>
+<p><em>A minimal plugin teaches more about Vim’s internals than a feature-rich one.</em></p>
+</section>
+<section id="lessons-learnt" class="level2" data-number="6.4">
+<h2 data-number="6.4" class="anchored" data-anchor-id="lessons-learnt"><span class="header-section-number">6.4</span> Lessons Learnt</h2>
+<section id="conceptual-understanding" class="level3" data-number="6.4.1">
+<h3 data-number="6.4.1" class="anchored" data-anchor-id="conceptual-understanding"><span class="header-section-number">6.4.1</span> Conceptual Understanding</h3>
+<ul>
+<li>Vim’s terminal API (<code>term_sendkeys</code>, <code>term_list</code>) provides sufficient infrastructure for a complete REPL workflow without external dependencies.</li>
+<li>The two-stage submission pattern (write to file, then source) is more robust than sending text directly through <code>term_sendkeys</code> for multi-line selections.</li>
+<li>Scoping mappings to specific filetypes via autocommand groups prevents key conflicts in non-R buffers.</li>
+<li>A plugin under 150 lines can cover the vast majority of daily R interaction needs.</li>
+</ul>
+</section>
+<section id="technical-skills" class="level3" data-number="6.4.2">
+<h3 data-number="6.4.2" class="anchored" data-anchor-id="technical-skills"><span class="header-section-number">6.4.2</span> Technical Skills</h3>
+<ul>
+<li><code>getpos("'&lt;")</code> and <code>getpos("'&gt;")</code> extract the exact positions of visual selection boundaries.</li>
+<li><code>expand("&lt;cword&gt;")</code> captures the word under the cursor, enabling generic inspection commands.</li>
+<li><code>autocmd FileType</code> is the correct mechanism for filetype-scoped mappings; <code>ftplugin/</code> directories are an alternative but require more file management.</li>
+<li>The <code>\|</code> separator chains Vim commands on a single autocommand line, which is necessary for multi-step visual mode operations.</li>
+</ul>
+</section>
+<section id="gotchas-and-pitfalls" class="level3" data-number="6.4.3">
+<h3 data-number="6.4.3" class="anchored" data-anchor-id="gotchas-and-pitfalls"><span class="header-section-number">6.4.3</span> Gotchas and Pitfalls</h3>
+<ul>
+<li>Visual mode mappings execute once per line by default unless the mapping explicitly operates on the selection as a unit.</li>
+<li><code>term_list()</code> returns terminals in creation order, not in order of last use; the first terminal may not be the one you expect.</li>
+<li>The <code>&lt;C-r&gt;%</code> expansion in mappings inserts the current filename, but fails if the filename contains spaces.</li>
+<li><code>noh</code> after search-based navigation is necessary to avoid persistent highlighting that obscures the editing buffer.</li>
+</ul>
+</section>
+</section>
+<section id="limitations" class="level2" data-number="6.5">
+<h2 data-number="6.5" class="anchored" data-anchor-id="limitations"><span class="header-section-number">6.5</span> Limitations</h2>
+<ul>
+<li>The plugin targets Vim 8+ only; Neovim users would need to adapt the terminal API calls to Neovim’s <code>jobsend()</code> and related functions.</li>
+<li>Only the first terminal buffer receives code submissions; multiple R sessions are not supported.</li>
+<li>The <code>source_visual</code> temporary file approach leaves artefacts in the working directory.</li>
+<li>No support for sending code to non-R interpreters (Python, Julia, etc.) without modification.</li>
+<li>The plugin does not provide R object completion, help lookup, or any of the advanced features that Nvim-R offers.</li>
+<li>Chunk navigation relies on markdown code fences and will not work in plain <code>.R</code> files.</li>
+</ul>
+</section>
+<section id="opportunities-for-improvement" class="level2" data-number="6.6">
+<h2 data-number="6.6" class="anchored" data-anchor-id="opportunities-for-improvement"><span class="header-section-number">6.6</span> Opportunities for Improvement</h2>
+<ol type="1">
+<li>Add a function to identify the R terminal specifically (by checking the terminal command) rather than relying on <code>term_list()[0]</code>.</li>
+<li>Use <code>tempname()</code> instead of a fixed filename for the temporary source file, preventing conflicts in multi-instance Vim sessions.</li>
+<li>Extend the autocommand group to support Python and Julia filetypes with appropriate interpreter commands.</li>
+<li>Add a function to display R help pages in a Vim buffer (e.g., <code>&lt;localleader&gt;?</code> on a function name).</li>
+<li>Implement a chunk execution function that automatically advances to the next chunk after submission, matching the RStudio workflow.</li>
+<li>Package the plugin as a proper Vim package with documentation in <code>doc/</code> for <code>:help</code> integration.</li>
+</ol>
+</section>
+</section>
+<section id="wrapping-up" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Wrapping Up</h1>
+<p>Writing a Vim plugin for REPL interaction taught me more about Vim’s terminal API than months of using other people’s plugins. The result – <code>rgt-R.vim</code> – is under 150 lines, has no external dependencies, and handles the core workflow of sending R code from an editing buffer to a running terminal session.</p>
+<p>What I learnt most from this project is that minimalism in tooling is undervalued. The established R-Vim plugins are powerful, but their complexity creates a barrier to understanding and customisation. A small, readable plugin that you wrote yourself is easier to debug, extend, and teach from than a large plugin maintained by someone else.</p>
+<p>If you use Vim for R development and find the existing plugins more complex than you need, I encourage you to try writing your own. The terminal API is well-documented, and a working plugin can be built in an afternoon.</p>
+<p>Main takeaways:</p>
+<ul>
+<li>Vim’s <code>term_sendkeys()</code> and <code>term_list()</code> provide the complete infrastructure for REPL interaction.</li>
+<li>The two-stage submission pattern (file, then source) handles multi-line selections robustly.</li>
+<li>Autocommand groups scope mappings to relevant filetypes without affecting other buffers.</li>
+<li>A minimal plugin under 150 lines covers 90% of daily R interaction needs.</li>
+</ul>
+</section>
+<section id="see-also" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> See Also</h1>
+<p><strong>Related posts:</strong></p>
+<ul>
+<li><a href="../01-configtermzsh/">Configure the Command Line for Data Science</a> – Terminal and shell configuration for development</li>
+</ul>
+<p><strong>Key resources:</strong></p>
+<ul>
+<li><a href="https://vimhelp.org/terminal.txt.html">Vim Terminal API</a> – Official documentation for terminal functions</li>
+<li><a href="https://www.youtube.com/watch?v=lwD8G1P52Sk">Chris Toomey’s Vim Talk</a> – Inspiration for the plugin approach</li>
+<li><a href="https://github.com/jalvesaq/Nvim-R">Nvim-R</a> – The full-featured alternative for Neovim</li>
+<li><a href="https://github.com/jpalardy/vim-slime">vim-slime</a> – The tmux-based alternative</li>
+<li><a href="https://learnvimscriptthehardway.stevelosh.com/">Learn Vimscript the Hard Way</a> – Comprehensive guide to writing Vim plugins</li>
+</ul>
+</section>
+<section id="reproducibility" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> Reproducibility</h1>
+<p>The complete plugin source is presented inline above. To install:</p>
+<ol type="1">
+<li>Copy the code into <code>~/.vim/plugin/rgt-R.vim</code>.</li>
+<li>Ensure your <code>localleader</code> is set (e.g., <code>let maplocalleader = ","</code> in <code>.vimrc</code>).</li>
+<li>Open an R, Rmd, or Qmd file in Vim.</li>
+<li>Press <code>&lt;localleader&gt;r</code> to open an R terminal.</li>
+<li>Press <code>&lt;CR&gt;</code> on any line to submit it.</li>
+</ol>
+<p><strong>Project files:</strong></p>
+<pre><code>simplevimplugin/
+  analysis/report/index.qmd  -- This post
+  plugin/rgt-R.vim            -- The plugin
+  analysis/media/images/      -- Hero, ambiance</code></pre>
+</section>
+<section id="lets-connect" class="level1" data-number="10">
+<h1 data-number="10"><span class="header-section-number">10</span> Let’s Connect</h1>
+<ul>
+<li><strong>GitHub:</strong> <a href="https://github.com/rgt47">rgt47</a></li>
+<li><strong>Twitter/X:</strong> <a href="https://twitter.com/rgt47"><span class="citation" data-cites="rgt47">@rgt47</span></a></li>
+<li><strong>LinkedIn:</strong> <a href="https://linkedin.com/in/rgthomaslab">Ronald Glenn Thomas</a></li>
+<li><strong>Email:</strong> <a href="https://rgtlab.org/contact">rgtlab.org/contact</a></li>
+</ul>
+<p>I would enjoy hearing from you if:</p>
+<ul>
+<li>You spot an error or a better approach to any of the code in this post.</li>
+<li>You have suggestions for topics you would like to see covered.</li>
+<li>You want to discuss R programming, data science, or reproducible research.</li>
+<li>You have questions about anything in this tutorial.</li>
+<li>You just want to say hello and connect.</li>
+</ul>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp("https:\/\/focusonr\.org");
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<script src="https://giscus.app/client.js" data-repo="rgt47/qblog" data-repo-id="R_kgDOH6TO7A" data-category="General" data-category-id="DIC_kwDOH6TO7M4CXqIi" data-mapping="pathname" data-reactions-enabled="1" data-emit-metadata="0" data-input-position="bottom" data-theme="light" data-lang="en" crossorigin="anonymous" async="">
+</script>
+<input type="hidden" id="giscus-base-theme" value="light">
+<input type="hidden" id="giscus-alt-theme" value="light">
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Copyright 2023-2025, Ronald G. Thomas</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47">
+      <i class="bi bi-github" role="img">
+</i> 
+    </a>
+  </li>  
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47">
+      <i class="bi bi-twitter" role="img">
+</i> 
+    </a>
+  </li>  
+</ul>
+    </div>
+  </div>
+</footer>
+<!-- Fix for Quarto category encoding issue -->
+<script>
+// Fix category encoding for Quarto listing functionality
+(function() {
+  function fixAllCategoryEncoding() {
+    // Only run on pages that have Quarto listings
+    if (!document.querySelector('.quarto-listing')) {
+      return;
+    }
+    
+    // Fix sidebar category data-category attributes
+    const categoryEls = document.querySelectorAll('.quarto-listing-category .category[data-category]');
+    
+    categoryEls.forEach((categoryEl) => {
+      const category = categoryEl.getAttribute('data-category');
+      
+      if (category && category !== '') {
+        // Check if it contains only base64 characters and proper length
+        const isBase64 = /^[A-Za-z0-9+/]*={0,2}$/.test(category) && category.length % 4 === 0;
+        
+        if (isBase64) {
+          try {
+            const decoded = decodeURIComponent(atob(category));
+            // Verify it decoded to something reasonable (no control characters)
+            if (!decoded.match(/^[A-Za-z0-9\s\-,]+$/)) {
+              // Invalid encoding, re-encode from original text
+              const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+              categoryEl.setAttribute('data-category', encodedCategory);
+            }
+          } catch (e) {
+            // Base64 decode failed, re-encode from original text
+            const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+            categoryEl.setAttribute('data-category', encodedCategory);
+          }
+        } else {
+          // Not base64, encode it
+          const encodedCategory = btoa(encodeURIComponent(category));
+          categoryEl.setAttribute('data-category', encodedCategory);
+        }
+      }
+    });
+    
+    // Fix listing item data-categories attributes  
+    const listingItems = document.querySelectorAll('[data-categories]');
+    
+    listingItems.forEach((item) => {
+      const categories = item.getAttribute('data-categories');
+      
+      if (categories && categories !== '') {
+        // Check if it's already base64 encoded
+        try {
+          decodeURIComponent(atob(categories));
+          // Already encoded and valid
+        } catch (e) {
+          // Not encoded, fix it
+          const encodedCategories = btoa(encodeURIComponent(categories));
+          item.setAttribute('data-categories', encodedCategories);
+        }
+      }
+    });
+    
+    // Fix post-specific category tag click handlers
+    const postCategoryTags = document.querySelectorAll('.listing-category[onclick]');
+    
+    postCategoryTags.forEach((tag) => {
+      const categoryText = tag.textContent.trim();
+      
+      // Replace the onclick handler to use encoded category
+      tag.onclick = () => {
+        const encodedCategory = btoa(encodeURIComponent(categoryText));
+        window.quartoListingCategory(encodedCategory);
+        return false;
+      };
+    });
+  }
+  
+  // Run immediately
+  fixAllCategoryEncoding();
+  
+  // Also run when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fixAllCategoryEncoding);
+  }
+})();
+</script>
+
+<!-- PDF view/download button for blog posts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Only add the button on post pages
+  if (window.location.pathname.includes('/posts/') && !window.location.pathname.endsWith('/posts/') && !window.location.pathname.endsWith('/posts/index.html')) {
+    var currentPath = window.location.pathname;
+    // Handle both /posts/name/ and /posts/name/index.html formats
+    var pdfPath;
+    if (currentPath.endsWith('/')) {
+      pdfPath = currentPath + 'index.pdf';
+    } else {
+      pdfPath = currentPath.replace('.html', '.pdf');
+    }
+
+    // Check if PDF exists first
+    fetch(pdfPath, { method: 'HEAD' })
+      .then(function(response) {
+        if (response.ok) {
+          // PDF exists, show download button
+          showDownloadButton(pdfPath);
+        }
+        // If PDF doesn't exist, don't show any button
+      })
+      .catch(function(error) {
+        // Error checking PDF, don't show any button
+      });
+  }
+});
+
+function showDownloadButton(pdfPath) {
+  var downloadBtn = document.createElement('div');
+  downloadBtn.className = 'pdf-download-button';
+
+  // Get file size if possible
+  fetch(pdfPath, { method: 'HEAD' })
+    .then(function(response) {
+      var size = response.headers.get('Content-Length');
+      var sizeText = '';
+
+      if (size) {
+        // Convert to MB or KB
+        var sizeInMB = size / (1024 * 1024);
+        if (sizeInMB >= 1) {
+          sizeText = ' (' + sizeInMB.toFixed(1) + ' MB)';
+        } else {
+          sizeText = ' (' + (size / 1024).toFixed(0) + ' KB)';
+        }
+      }
+
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' + sizeText +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    })
+    .catch(function() {
+      // Basic fallback if we can't get file size
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    });
+
+  // Find where to insert the button (right after the title block)
+  var titleBlock = document.querySelector('.quarto-title-meta');
+  if (titleBlock) {
+    titleBlock.after(downloadBtn);
+  }
+}
+
+
+</script>
+
+<style>
+.pdf-download-button {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+</style>
+
+
+
+
+</body></html>

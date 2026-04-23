@@ -1,0 +1,1633 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.5.45">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ronald G. Thomas">
+<meta name="dcterms.date" content="2026-04-15">
+<meta name="description" content="A reproducible configuration for browser-based terminal access to a Linux laptop from a mobile device, using ttyd for the terminal emulation layer and Tailscale for authenticated network transport, with no public-internet exposure.">
+
+<title>A pocket terminal for your Linux laptop with ttyd and Tailscale – Thomas Lab</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../../../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../../../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../../../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../../../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../../../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../../../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../../../../">
+<script src="../../../../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../../../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../../../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../../../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../../../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../../../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../../../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../../../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../../../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": true,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "keyboard-shortcut": [
+    "?",
+    "/"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&amp;family=Open+Sans:ital,wght@0,400;0,600;1,400&amp;family=Fira+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<script src="https://kit.fontawesome.com/0fba9333d8.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+
+<!-- Custom meta tags for social sharing -->
+<meta property="og:site_name" content="Thomas Lab">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@rgt47">
+
+<!-- Add responsive features -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<!-- Add analytics if needed -->
+<!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXX');
+</script> -->
+
+<!-- Add custom javascript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Remove code tools button completely
+  const codeButton = document.querySelector('.code-tools-button');
+  if (codeButton) {
+    codeButton.remove();
+  }
+  
+  // Add any custom JavaScript functionality here
+  
+  // Example: Add smooth scrolling
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      
+      document.querySelector(this.getAttribute('href')).scrollIntoView({
+        behavior: 'smooth'
+      });
+    });
+  });
+  
+  // Make sidebar category items clickable (but not TOC items)
+  const categoryLinks = {
+    'Programming & Development': '/posts/?category=Programming+%26+Development',
+    'Data Analysis & Visualization': '/posts/?category=Data+Analysis+%26+Visualization',
+    'Deployment & Operations': '/posts/?category=Deployment+%26+Operations',
+    'Development Environment': '/posts/?category=Development+Environment',
+    'Shiny Applications': '/posts/?category=Shiny+Applications',
+    'AI & Automation': '/posts/?category=AI+%26+Automation',
+    'System Administration': '/posts/?category=System+Administration'
+  };
+  
+  // Only target sidebar items that are not in the TOC
+  document.querySelectorAll('.sidebar-item-section .sidebar-item-text').forEach(item => {
+    // Skip if this is inside the TOC
+    if (item.closest('#TOC')) return;
+    
+    const text = item.textContent.trim();
+    if (categoryLinks[text]) {
+      item.addEventListener('click', function() {
+        window.location.href = categoryLinks[text];
+      });
+    }
+  });
+});
+</script>
+
+
+<meta property="og:title" content="Thomas Lab - A pocket terminal for your Linux laptop with ttyd and Tailscale">
+<meta property="og:description" content="A reproducible configuration for browser-based terminal access to a Linux laptop from a mobile device, using ttyd for the terminal emulation layer and Tailscale for authenticated network transport, with no public-internet exposure.">
+<meta property="og:image" content="https://focusonr.org/posts/48-ttyd_setup/ttyd_setup/analysis/report/media/images/hero.png">
+<meta property="og:site_name" content="Thomas Lab">
+<meta property="og:image:height" content="450">
+<meta property="og:image:width" content="800">
+</head>
+
+<body class="nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../../../../index.html">
+    <span class="navbar-title">Thomas Lab</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../about/index.html"> 
+<span class="menu-text">About</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../blog/index.html"> 
+<span class="menu-text">Blog</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../white-papers/index.html"> 
+<span class="menu-text">White Papers</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../research/index.html"> 
+<span class="menu-text">Research</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../teaching/index.html"> 
+<span class="menu-text">Teaching</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../misc/index.html"> 
+<span class="menu-text">Misc</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47"> <i class="bi bi-twitter" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a>
+  <ul class="collapse">
+  <li><a href="#motivations" id="toc-motivations" class="nav-link" data-scroll-target="#motivations"><span class="header-section-number">1.1</span> Motivations</a></li>
+  <li><a href="#objectives" id="toc-objectives" class="nav-link" data-scroll-target="#objectives"><span class="header-section-number">1.2</span> Objectives</a></li>
+  </ul></li>
+  <li><a href="#what-is-ttyd" id="toc-what-is-ttyd" class="nav-link" data-scroll-target="#what-is-ttyd"><span class="header-section-number">2</span> What is ttyd?</a></li>
+  <li><a href="#architecture-overview" id="toc-architecture-overview" class="nav-link" data-scroll-target="#architecture-overview"><span class="header-section-number">3</span> Architecture Overview</a></li>
+  <li><a href="#security-model" id="toc-security-model" class="nav-link" data-scroll-target="#security-model"><span class="header-section-number">4</span> Security Model</a></li>
+  <li><a href="#prerequisites" id="toc-prerequisites" class="nav-link" data-scroll-target="#prerequisites"><span class="header-section-number">5</span> Prerequisites</a></li>
+  <li><a href="#installation" id="toc-installation" class="nav-link" data-scroll-target="#installation"><span class="header-section-number">6</span> Installation</a></li>
+  <li><a href="#configuration" id="toc-configuration" class="nav-link" data-scroll-target="#configuration"><span class="header-section-number">7</span> Configuration</a>
+  <ul class="collapse">
+  <li><a href="#the-ttyd-invocation" id="toc-the-ttyd-invocation" class="nav-link" data-scroll-target="#the-ttyd-invocation"><span class="header-section-number">7.0.1</span> The ttyd invocation</a></li>
+  <li><a href="#the-systemd-user-unit" id="toc-the-systemd-user-unit" class="nav-link" data-scroll-target="#the-systemd-user-unit"><span class="header-section-number">7.0.2</span> The systemd user unit</a></li>
+  </ul></li>
+  <li><a href="#verification" id="toc-verification" class="nav-link" data-scroll-target="#verification"><span class="header-section-number">8</span> Verification</a></li>
+  <li><a href="#connecting-from-the-iphone" id="toc-connecting-from-the-iphone" class="nav-link" data-scroll-target="#connecting-from-the-iphone"><span class="header-section-number">9</span> Connecting from the iPhone</a></li>
+  <li><a href="#daily-workflow" id="toc-daily-workflow" class="nav-link" data-scroll-target="#daily-workflow"><span class="header-section-number">10</span> Daily Workflow</a></li>
+  <li><a href="#operational-considerations" id="toc-operational-considerations" class="nav-link" data-scroll-target="#operational-considerations"><span class="header-section-number">11</span> Operational Considerations</a></li>
+  <li><a href="#uninstall-rollback" id="toc-uninstall-rollback" class="nav-link" data-scroll-target="#uninstall-rollback"><span class="header-section-number">12</span> Uninstall / Rollback</a></li>
+  <li><a href="#discussion" id="toc-discussion" class="nav-link" data-scroll-target="#discussion"><span class="header-section-number">13</span> Discussion</a>
+  <ul class="collapse">
+  <li><a href="#observations" id="toc-observations" class="nav-link" data-scroll-target="#observations"><span class="header-section-number">13.1</span> Observations</a></li>
+  <li><a href="#limitations" id="toc-limitations" class="nav-link" data-scroll-target="#limitations"><span class="header-section-number">13.2</span> Limitations</a></li>
+  <li><a href="#opportunities-for-improvement" id="toc-opportunities-for-improvement" class="nav-link" data-scroll-target="#opportunities-for-improvement"><span class="header-section-number">13.3</span> Opportunities for Improvement</a></li>
+  </ul></li>
+  <li><a href="#conclusion" id="toc-conclusion" class="nav-link" data-scroll-target="#conclusion"><span class="header-section-number">14</span> Conclusion</a></li>
+  <li><a href="#see-also" id="toc-see-also" class="nav-link" data-scroll-target="#see-also"><span class="header-section-number">15</span> See Also</a></li>
+  <li><a href="#extended-glossary" id="toc-extended-glossary" class="nav-link" data-scroll-target="#extended-glossary"><span class="header-section-number">16</span> Extended Glossary</a></li>
+  <li><a href="#reproducibility" id="toc-reproducibility" class="nav-link" data-scroll-target="#reproducibility"><span class="header-section-number">17</span> Reproducibility</a></li>
+  <li><a href="#appendix-a" id="toc-appendix-a" class="nav-link" data-scroll-target="#appendix-a"><span class="header-section-number">18</span> Appendix A: TLS with tailscale cert</a></li>
+  <li><a href="#appendix-b" id="toc-appendix-b" class="nav-link" data-scroll-target="#appendix-b"><span class="header-section-number">19</span> Appendix B: Sample Work Session</a></li>
+  <li><a href="#appendix-c" id="toc-appendix-c" class="nav-link" data-scroll-target="#appendix-c"><span class="header-section-number">20</span> Appendix C: Teardown (Undo)</a></li>
+  <li><a href="#contact" id="toc-contact" class="nav-link" data-scroll-target="#contact"><span class="header-section-number">21</span> Contact</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content column-page-left" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">A pocket terminal for your Linux laptop with ttyd and Tailscale</h1>
+<p class="subtitle lead">Browser-based access to a home machine from an iPhone, without SSH or open ports</p>
+  <div class="quarto-categories">
+    <div class="quarto-category">setup</div>
+    <div class="quarto-category">workflow</div>
+    <div class="quarto-category">tooling</div>
+    <div class="quarto-category">ttyd</div>
+    <div class="quarto-category">tailscale</div>
+    <div class="quarto-category">remote-access</div>
+    <div class="quarto-category">linux</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    A reproducible configuration for browser-based terminal access to a Linux laptop from a mobile device, using ttyd for the terminal emulation layer and Tailscale for authenticated network transport, with no public-internet exposure.
+  </div>
+</div>
+
+
+<div class="quarto-title-meta column-page-left">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ronald G. Thomas </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">April 15, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<!-- ============================================================================
+AUTHOR PROVIDES — concrete inputs the blogger must supply
+
+Every item below maps to a placeholder in the body. Fill in this checklist
+FIRST, then paste your answers into the matching `[bracketed]` slots. Do not
+publish until every box is ticked.
+
+YAML FRONT MATTER (lines 1-20)
+  [x] title           — 'ttyd + Tailscale' replaces '[Tool]' slot
+  [x] subtitle        — one-line elaboration of what the post sets up
+  [x] date            — 2026-04-15
+  [x] categories      — setup, ttyd, tailscale, linux
+  [x] description     — 1-2 sentences for blog listing card
+  [ ] image           — media/images/hero.png (to be supplied)
+  [ ] draft: false    — flip when ready
+
+NARRATIVE INPUTS
+  [x] Hook sentence
+  [x] Pain point
+  [x] Motivations
+  [x] Objectives
+  [x] What is ttyd?
+  [x] Daily-workflow paragraph
+  [x] Things to Watch Out For (5-7 gotchas)
+  [x] Lessons Learnt (conceptual + technical + gotchas)
+  [x] Limitations
+  [x] Opportunities for Improvement
+  [x] Wrapping Up + main takeaways
+  [x] See Also
+
+CONFIGURATION DELIVERABLES
+  [x] Prerequisites list
+  [x] Installation block
+  [x] Complete config file(s) — systemd unit under analysis/configs/
+  [x] Verification commands
+  [x] Keybinding / command reference table
+  [x] Uninstall / rollback steps
+  [x] Optional appendices — TLS with tailscale cert, sample session
+
+VERSION MATRIX
+  [x] OS + version tested: Ubuntu 24.04
+  [x] Tool version pinned: ttyd 1.7.7, tailscale 1.64
+  [x] Dependency versions: tmux 3.4
+  [x] Date of last verification: 2026-04-15
+
+IMAGES
+  [ ] Hero image (80% width)
+  [ ] Ambiance image 1 (after Objectives)
+  [ ] Ambiance image 2 (after Configuration)
+  [ ] Ambiance image 3 (before Lessons Learnt)
+  [ ] media/images/README.md with attributions
+
+CONTACT & METADATA
+  [x] Author name matches site author
+  [ ] Social links verified
+  [ ] Giscus comments inherited
+============================================================================ -->
+<!-- ============================================================================
+HERO IMAGE
+============================================================================ -->
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/hero.png" class="img-fluid figure-img" style="width:80.0%"></p>
+<figcaption>A phone displaying a terminal window connected to a laptop over a private network, illustrating remote shell access from a mobile device.</figcaption>
+</figure>
+</div>
+<p><em>A browser-based interface to a persistent shell, reachable over an authenticated private network, provides a workable mobile surface for observing and intervening in long-running tasks.</em></p>
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<!-- TEMPLATE INSTRUCTION: 'I did not really appreciate X until Y'. Peer, not
+teacher. Three short paragraphs. -->
+<p>The ergonomics of operating an SSH client on a mobile device become apparent only when the task is non-trivial. Identity-file selection, modifier-key entry on a soft keyboard, reliable reconnection after the device sleeps, and the rendering of a monospace font at phone or tablet scale each impose non-negligible overhead. In practice these frictions accumulate to the point where many users defer routine oversight work until they regain physical access to the host machine. The resulting delay is not merely inconvenient; it creates an asymmetry between the pace at which background work progresses and the pace at which an operator can respond to it.</p>
+<p>Two components, used together, reduce this overhead substantially. The first, <code>ttyd</code>, is a small C daemon that serves a terminal emulator over HTTP using the xterm.js JavaScript library; any standards-compliant browser becomes a client without additional software. The second, Tailscale, builds a peer-to-peer WireGuard mesh between enrolled devices and provides an authenticated overlay network, so that the <code>ttyd</code> listener is addressable only by devices already admitted to the private tailnet rather than by arbitrary hosts on the public internet. The combination yields a single URL that is reachable from an enrolled phone, is invisible to every other network the laptop is attached to, and resumes a persistent tmux session on each visit.</p>
+<p>This post documents the configuration end to end. It covers the installation of <code>ttyd</code>, Tailscale, and tmux on an Ubuntu 24.04 laptop; the binding of the <code>ttyd</code> listener to the Tailscale network interface; the wrapping of the service in a per-user systemd unit that survives logout and reboot; the client-side configuration on iOS; and optional hardening with a TLS certificate issued by <code>tailscale cert</code>. Appendices cover a sample work session and the full teardown procedure. Corrections and alternative approaches are welcome.</p>
+<section id="motivations" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="motivations"><span class="header-section-number">1.1</span> Motivations</h2>
+<!-- TEMPLATE INSTRUCTION: Specific, tied to concrete pain points. -->
+<p>The configuration described here was motivated by the following requirements, each tied to a concrete limitation of the alternatives:</p>
+<ul>
+<li>Monitoring and occasional intervention in long-running interactive sessions, including agentic coding workflows that may run for hours, without requiring physical access to the host machine.</li>
+<li>Avoidance of identity-file management and modifier-key entry on a small touchscreen, which are the two principal ergonomic costs of native SSH clients on iOS.</li>
+<li>Elimination of any public-internet exposure on the laptop. Opening inbound port 22 through a home router, combined with dynamic DNS, would grant global addressability to a device that regularly attaches to untrusted networks; this is an unacceptable risk profile for a personal workstation.</li>
+<li>Network-location independence. A single stable URL should be usable from the home network, the institutional network, and a cellular carrier’s network without client-side reconfiguration.</li>
+<li>Generalisation to future deployments. The component choices (a WireGuard-based overlay, an HTTP-native terminal, a per-user systemd unit) transfer cleanly to a cloud-hosted VPS workstation, which was identified as a plausible next step.</li>
+</ul>
+</section>
+<section id="objectives" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="objectives"><span class="header-section-number">1.2</span> Objectives</h2>
+<!-- TEMPLATE INSTRUCTION: Each objective should be verifiable. -->
+<p>The scope of this post is the following set of verifiable deliverables:</p>
+<ol type="1">
+<li>Install <code>ttyd</code>, Tailscale, and <code>tmux</code> on a Linux laptop and confirm each by version query.</li>
+<li>Run <code>ttyd</code> bound exclusively to the Tailscale network interface, protected by HTTP basic authentication, and attached to a persistent tmux session.</li>
+<li>Wrap the service in a per-user systemd unit that remains active across logout and reboot.</li>
+<li>Connect to the service from an iPhone browser over the tailnet, verify that interactive input and output behave correctly, and document a complete teardown procedure.</li>
+</ol>
+<p>The configuration is presented as a reproducible reference rather than a tutorial. Each command and configuration directive is annotated with the rationale for its inclusion.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance1.png" class="img-fluid figure-img"></p>
+<figcaption>Workspace ambiance: a Linux laptop on a desk with a phone propped beside it, mirroring the same tmux session.</figcaption>
+</figure>
+</div>
+</section>
+</section>
+<section id="what-is-ttyd" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> What is ttyd?</h1>
+<!-- TEMPLATE INSTRUCTION: One sentence definition. One analogy. One example. -->
+<p><code>ttyd</code> is a small C daemon, approximately six thousand lines of source, that serves a terminal emulator over HTTP. On the server side it allocates a pseudo-terminal (pty), spawns a process attached to it (commonly a shell or a multiplexer such as tmux), and exposes the pty’s input and output through a WebSocket on an HTTP listener. On the client side the browser loads the xterm.js library, opens the WebSocket, and renders a full VT100-family terminal in a <code>&lt;canvas&gt;</code> element; keystrokes are forwarded as they are generated, and output bytes are written back to the terminal buffer.</p>
+<p>In functional terms the role of <code>ttyd</code> is analogous to that of an SSH daemon, but the transport is HTTP(S) and the client is a browser rather than a native terminal emulator. This has three practical consequences. First, no client-side software installation is required; any device with a recent browser is a viable client. Second, the authentication and transport-security story is different: <code>ttyd</code> itself provides only HTTP basic authentication, and is not intended to be exposed to untrusted networks without an enclosing security layer (a reverse proxy with client-certificate authentication, or in this configuration, a Tailscale overlay). Third, session persistence across client disconnections is delegated: closing the browser tab tears down the WebSocket, but the pty and its attached process continue to run as long as <code>ttyd</code> is running, which is why this configuration always attaches <code>ttyd</code> to a tmux session rather than to a bare shell.</p>
+<p>As a minimal example, <code>ttyd -W -p 7681 zsh</code> starts a writable shell on port 7681; any host that can establish a TCP connection to that endpoint obtains an interactive terminal. The Tailscale layer constrains the meaning of ‘any host that can reach that endpoint’ to devices that have been authenticated into the tailnet, and routes the traffic over an encrypted WireGuard tunnel rather than over a TCP connection that transits intermediate networks in clear text.</p>
+</section>
+<section id="architecture-overview" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Architecture Overview</h1>
+<!-- TEMPLATE INSTRUCTION: One paragraph describing the runtime system. -->
+<p>The runtime system is best understood as three layered components, each with a distinct responsibility:</p>
+<ol type="1">
+<li><p><strong>The terminal process.</strong> tmux runs as a long-lived user process on the laptop, maintaining one or more pty pairs and the associated shell state. Its lifecycle is independent of any network connection and outlasts both the <code>ttyd</code> daemon and the browser.</p></li>
+<li><p><strong>The HTTP gateway.</strong> <code>ttyd</code> runs as a systemd user service, attaches to the tmux session specified on its command line, and serves the terminal contents over HTTP. It listens only on the Tailscale virtual interface (<code>tailscale0</code>), so its socket is unreachable from the physical wired, wireless, or cellular interfaces of the host.</p></li>
+<li><p><strong>The transport overlay.</strong> Tailscale runs as a system-level daemon (<code>tailscaled</code>) and maintains the <code>tailscale0</code> WireGuard interface. All packets arriving on that interface have already been authenticated against the tailnet’s public-key infrastructure and decrypted from their WireGuard envelopes. On the client (the phone), the Tailscale iOS app maintains the corresponding peer relationship and presents the tailnet as a routeable network.</p></li>
+</ol>
+<p>The request path for a single keystroke therefore traverses: browser on phone, iOS Tailscale VPN, WireGuard tunnel (direct peer-to-peer where possible, or via a DERP relay when both endpoints are behind restrictive NATs), <code>tailscale0</code> on the laptop, <code>ttyd</code> listener on port 7681, the pty master owned by <code>ttyd</code>, and finally the tmux process that is the pty slave. The response path returns bytes by the reverse route. All segments between the phone and the laptop are encrypted by WireGuard; the segment between <code>ttyd</code> and <code>tailscale0</code> is local to the loopback-like virtual interface and does not leave the host.</p>
+</section>
+<section id="security-model" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Security Model</h1>
+<!-- TEMPLATE INSTRUCTION: State the threat model and the controls. -->
+<p>The configuration is designed to withstand the following threats, in approximate order of likelihood: (a) an attacker scanning the public IP addresses of the laptop’s current network for open ports, (b) an attacker on the same Layer-2 network as the laptop (for example, a shared coffee-shop SSID) attempting to observe or connect to local services, (c) an attacker who compromises a single device on the tailnet and attempts to move laterally, and (d) an attacker with access to the basic-authentication password but not to the tailnet.</p>
+<p>Three layered controls address these threats:</p>
+<ul>
+<li><p><strong>Network-layer authentication (Tailscale).</strong> Only devices that have completed the OAuth-style authentication flow with the tailnet’s coordination server and received a signed node key can establish WireGuard sessions with the laptop. This eliminates threats (a) and (b): the <code>ttyd</code> port is not even visible to hosts outside the tailnet. An attacker on a shared SSID sees only the encrypted WireGuard packets, which are indistinguishable from other UDP traffic.</p></li>
+<li><p><strong>Interface binding (<code>ttyd -i tailscale0</code>).</strong> The listener is bound to the Tailscale virtual interface rather than to <code>0.0.0.0</code>. If the tailnet were somehow compromised at the coordination-server level, or if Tailscale itself were misconfigured to route traffic from unexpected sources into <code>tailscale0</code>, the service would still be unreachable from the physical interfaces. This is a defence-in-depth control.</p></li>
+<li><p><strong>Application-layer authentication (HTTP basic auth).</strong> A username and password are required to open a WebSocket, providing a final barrier against threat (c): an attacker who has compromised one tailnet device cannot open a shell on the laptop without also possessing the <code>ttyd</code> credentials. Basic authentication is not a strong control in isolation (the credentials are sent on every request and are visible in <code>ps</code> output on the host), but it is appropriate as the innermost layer of a multi-layer model.</p></li>
+</ul>
+<p>Threat (d) is out of scope: an attacker with the basic-auth password but no tailnet credentials has no routable path to the service. This is the intended shape of the model: Tailscale provides confidentiality and network-layer authentication; basic authentication provides an independent defence against compromised tailnet peers; the interface binding ensures that neither of the other two controls is single-point-of-failure.</p>
+<p>Appendix A describes an optional additional layer (TLS via <code>tailscale cert</code>) that closes the remaining residual risk of plaintext credentials on the wire between <code>ttyd</code> and the <code>tailscale0</code> interface, at a modest operational cost.</p>
+</section>
+<section id="prerequisites" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Prerequisites</h1>
+<!-- TEMPLATE INSTRUCTION: Front-load assumptions. Reader should know in
+30 seconds whether this applies. -->
+<p>The configuration assumes the following environment:</p>
+<ul>
+<li><strong>Operating system:</strong> Ubuntu 24.04 on the laptop acting as the server. Other Linux distributions can be accommodated with minor substitutions in the package-manager invocations.</li>
+<li><strong>Client device:</strong> an iPhone running iOS 17 or later with Safari as the browser. Android and desktop browsers function identically with respect to the xterm.js client.</li>
+<li><strong>Hardware:</strong> any laptop with sufficient resources to run Ubuntu; the runtime footprint of the services described here is negligible.</li>
+<li><strong>Prior installation state:</strong> a Linux user account with <code>sudo</code> privileges, and a Tailscale account (the free tier is adequate for the use cases described here).</li>
+<li><strong>Prior knowledge:</strong> familiarity with systemd unit-file syntax and general Linux administration at the shell. Prior experience with tmux is helpful but not required.</li>
+<li><strong>Time investment:</strong> approximately thirty minutes for installation, configuration, and verification of the first successful browser connection.</li>
+</ul>
+<p>Where any assumption fails to hold, the commands below may require adaptation.</p>
+</section>
+<section id="installation" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Installation</h1>
+<!-- TEMPLATE INSTRUCTION: Show command, show expected output, prose < 3 sentences. -->
+<p>On Ubuntu, the three required packages are available from the distribution repositories and the Tailscale install script:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt update</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt install <span class="at">-y</span> ttyd tmux</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-fsSL</span> https://tailscale.com/install.sh <span class="kw">|</span> <span class="fu">sh</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> tailscale up</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The <code>tailscale up</code> command prints an authentication URL. Open it in any browser, sign in, and confirm the device appears in the tailnet.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>If your distribution ships a <code>ttyd</code> older than 1.7, install a prebuilt binary from the <a href="https://github.com/tsl0922/ttyd/releases">ttyd releases page</a> instead. Earlier versions lack the <code>-i</code> interface-binding flag used below.</p>
+</div>
+</div>
+<p>Confirm the installs succeeded:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ttyd</span> <span class="at">--version</span>        <span class="co"># Expected: ttyd version 1.7.x</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">tailscale</span> version     <span class="co"># Expected: 1.64.x or later</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="ex">tmux</span> <span class="at">-V</span>               <span class="co"># Expected: tmux 3.4 or later</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="ex">tailscale</span> ip <span class="at">-4</span>       <span class="co"># Prints the laptop's 100.x.y.z address</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="configuration" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Configuration</h1>
+<!-- TEMPLATE INSTRUCTION: Full config file, not snippets. Inline comments
+explain the WHY of non-obvious settings. -->
+<p>Two configuration artifacts drive the setup: a single <code>ttyd</code> command line and a systemd user unit that wraps it. Both are stored in full under <code>analysis/configs/</code> in the post repository.</p>
+<section id="the-ttyd-invocation" class="level3" data-number="7.0.1">
+<h3 data-number="7.0.1" class="anchored" data-anchor-id="the-ttyd-invocation"><span class="header-section-number">7.0.1</span> The ttyd invocation</h3>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ttyd</span> <span class="at">-W</span> <span class="dt">\</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">-p</span> 7681 <span class="dt">\</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">-i</span> tailscale0 <span class="dt">\</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">-c</span> user:<span class="st">'REPLACE_WITH_STRONG_PASSWORD'</span> <span class="dt">\</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  tmux new <span class="at">-A</span> <span class="at">-s</span> main</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Rationale for each flag:</p>
+<ul>
+<li><code>-W</code> enables write input on the pty. Without this flag the browser session is read-only, which is not useful for the interactive work that motivates the configuration.</li>
+<li><code>-p 7681</code> specifies the TCP listening port. Any unused port is acceptable; 7681 is the <code>ttyd</code> project default and is used here for consistency with upstream documentation.</li>
+<li><code>-i tailscale0</code> binds the listener exclusively to the Tailscale virtual interface. The service is therefore unreachable from physical wired, wireless, or cellular interfaces of the laptop, regardless of which network the laptop is attached to at any given moment. The interface name should be confirmed with <code>ip -br link</code>, as it is nominally fixed but may differ on non-default configurations.</li>
+<li><code>-c user:password</code> enables HTTP basic authentication. The credentials are an application-layer defence-in-depth measure; the primary access control is the Tailscale interface binding, and the basic-auth credentials are an independent safeguard against the scenario in which a tailnet peer is itself compromised.</li>
+<li><code>tmux new -A -s main</code> invokes tmux in a mode that creates the session if it does not exist and attaches to it otherwise. This form is idempotent, which is essential inside a systemd <code>ExecStart</code> directive. It also ensures that every browser connection attaches to the same session, so that shell state persists across client disconnections.</li>
+</ul>
+</section>
+<section id="the-systemd-user-unit" class="level3" data-number="7.0.2">
+<h3 data-number="7.0.2" class="anchored" data-anchor-id="the-systemd-user-unit"><span class="header-section-number">7.0.2</span> The systemd user unit</h3>
+<p>Manual launches do not survive logout. The unit below, saved as <code>~/.config/systemd/user/ttyd.service</code>, runs the service as the logged-in user and restarts on failure.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode ini code-with-copy"><code class="sourceCode ini"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ~/.config/systemd/user/ttyd.service</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Tested on ttyd 1.7.7, Ubuntu 24.04</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">[Unit]</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="dt">Description</span><span class="ot">=</span><span class="st">ttyd terminal over Tailscale</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="dt">After</span><span class="ot">=</span><span class="st">network-online.target tailscaled.service</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="dt">Wants</span><span class="ot">=</span><span class="st">network-online.target</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="kw">[Service]</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="dt">Type</span><span class="ot">=</span><span class="st">simple</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="dt">ExecStart</span><span class="ot">=</span><span class="st">/usr/bin/ttyd -W -p 7681 -i tailscale0 \</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="dt">  -c user:REPLACE_WITH_STRONG_PASSWORD \</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="dt">  /usr/bin/tmux new -A -s main</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="dt">Restart</span><span class="ot">=</span><span class="st">on-failure</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="dt">RestartSec</span><span class="ot">=</span><span class="dv">5</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="kw">[Install]</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="dt">WantedBy</span><span class="ot">=</span><span class="st">default.target</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Enable and start:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> <span class="at">--user</span> daemon-reload</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> <span class="at">--user</span> enable <span class="at">--now</span> ttyd.service</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> <span class="at">--user</span> status ttyd.service</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>To allow the user service to start before the user logs in at the console (so the laptop is reachable after an unattended reboot):</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> loginctl enable-linger <span class="st">"</span><span class="va">$USER</span><span class="st">"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Restrict the unit file permissions so the basic-auth password is not world-readable:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">chmod</span> 600 ~/.config/systemd/user/ttyd.service</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance2.png" class="img-fluid figure-img"></p>
+<figcaption>Editor view of the systemd unit file alongside a browser-based terminal, illustrating the configuration-to-runtime relationship.</figcaption>
+</figure>
+</div>
+</section>
+</section>
+<section id="verification" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Verification</h1>
+<!-- TEMPLATE INSTRUCTION: Smoke test that proves setup works. -->
+<p>Three checks confirm the stack is operating correctly.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Service is running</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> <span class="at">--user</span> is-active ttyd.service</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Expected: active</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Port is bound to the Tailscale interface only</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="ex">ss</span> <span class="at">-ltnp</span> <span class="kw">|</span> <span class="fu">grep</span> 7681</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Expected: LISTEN on 100.x.y.z:7681 (tailnet address),</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="co"># NOT on 0.0.0.0:7681</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. End-to-end reachability from a second tailnet device</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-u</span> user:PASSWORD <span class="at">-I</span> <span class="dt">\</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  http://<span class="va">$(</span><span class="ex">tailscale</span> ip <span class="at">-4</span><span class="va">)</span>:7681</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Expected: HTTP/1.1 200 OK</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>If step 2 shows <code>0.0.0.0:7681</code>, the <code>-i tailscale0</code> flag is not taking effect; the service is exposed to every network the laptop joins and must not be started until fixed.</p>
+</section>
+<section id="connecting-from-the-iphone" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> Connecting from the iPhone</h1>
+<p>The client-side procedure consists of four steps:</p>
+<ol type="1">
+<li><p>Install the Tailscale application from the App Store.</p></li>
+<li><p>Authenticate with the same account used on the laptop and confirm that the laptop appears under <strong>Devices</strong> in the Tailscale client.</p></li>
+<li><p>Enable the Tailscale VPN toggle. iOS will report an active VPN connection in the status bar.</p></li>
+<li><p>In Safari, navigate to the service URL:</p>
+<pre><code>http://laptop.tailnet-name.ts.net:7681</code></pre>
+<p>The MagicDNS name is reported by <code>tailscale status</code> on the laptop. The bare-IP form (<code>http://100.x.y.z:7681</code>) is functionally equivalent and is useful for diagnostic purposes when MagicDNS resolution is suspected to be failing.</p></li>
+<li><p>Supply the basic-authentication credentials. The browser will render an interactive terminal attached to the <code>main</code> tmux session.</p></li>
+</ol>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Tip
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Adding the URL to the iPhone home screen via Safari’s <strong>Share &gt; Add to Home Screen</strong> creates a standalone web-application icon. When launched from that icon, the page runs in a full-screen container without browser chrome, which improves usable display area on a small screen.</p>
+</div>
+</div>
+</section>
+<section id="daily-workflow" class="level1" data-number="10">
+<h1 data-number="10"><span class="header-section-number">10</span> Daily Workflow</h1>
+<!-- TEMPLATE INSTRUCTION: Scannable command table, the most-bookmarked
+element of a setup post. -->
+<p>The table below summarises the commands and gestures that are most frequently required during routine use:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 52%">
+<col style="width: 47%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Command or gesture</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Open home-screen icon</td>
+<td>Attach to <code>main</code> tmux session</td>
+</tr>
+<tr class="even">
+<td><code>Ctrl-b d</code> (within tmux)</td>
+<td>Detach without terminating the session</td>
+</tr>
+<tr class="odd">
+<td><code>Ctrl-b c</code></td>
+<td>Create a new window within the session</td>
+</tr>
+<tr class="even">
+<td><code>Ctrl-b n</code> / <code>Ctrl-b p</code></td>
+<td>Cycle to next / previous tmux window</td>
+</tr>
+<tr class="odd">
+<td><code>systemctl --user restart ttyd.service</code></td>
+<td>Restart the terminal service</td>
+</tr>
+<tr class="even">
+<td><code>journalctl --user -u ttyd.service -f</code></td>
+<td>Follow the service log in real time</td>
+</tr>
+<tr class="odd">
+<td><code>tailscale status</code></td>
+<td>List reachable devices on the tailnet</td>
+</tr>
+<tr class="even">
+<td>Pinch-zoom in Safari</td>
+<td>Adjust terminal font size</td>
+</tr>
+</tbody>
+</table>
+<p>A Bluetooth keyboard paired with the iPhone substantially improves the input ergonomics, to the point that the configuration becomes suitable for sustained interactive work rather than brief observation. Safari forwards the <code>Ctrl</code>, <code>Esc</code>, <code>Tab</code>, and arrow keys to xterm.js without rebinding. A keyboard on which Caps Lock has been remapped to <code>Ctrl</code> (an iOS system setting) reduces hand-position strain during extended tmux use.</p>
+</section>
+<section id="operational-considerations" class="level1" data-number="11">
+<h1 data-number="11"><span class="header-section-number">11</span> Operational Considerations</h1>
+<!-- TEMPLATE INSTRUCTION: REQUIRED for setup posts. 5-7 gotchas, each with
+symptom and fix. -->
+<p>The following issues arise sufficiently often during initial deployment and routine use to warrant explicit documentation. Each is presented with its symptom and its remediation.</p>
+<ol type="1">
+<li><p><strong>Incorrect interface binding.</strong> If <code>ss -ltnp</code> shows <code>0.0.0.0:7681</code> rather than the tailnet address, the <code>-i tailscale0</code> directive has not taken effect. The interface name should be confirmed with <code>ip -br link</code>, as it may differ on systems with non-default Tailscale installations or with systemd-networkd renaming. The service should not be left running until the binding has been verified to be correct, because a listener on <code>0.0.0.0</code> is reachable from every network the laptop attaches to.</p></li>
+<li><p><strong>Lid-close suspension.</strong> A laptop whose power-management policy suspends the system on lid closure is not reachable over the network while suspended. The remediation is one of: physically maintain an open lid; modify the desktop environment’s lid-close behaviour to ‘do nothing’; or, for transient tasks, wrap the command with <code>systemd-inhibit --what=sleep</code> to prevent suspension for the duration of the inhibition.</p></li>
+<li><p><strong>Loss of session persistence.</strong> If closing the browser terminates the shell, the <code>ExecStart</code> directive is launching a bare shell directly rather than attaching to a tmux session. Only the <code>tmux new -A -s main</code> form, with tmux as the terminal’s attached process, delivers persistence across client disconnections.</p></li>
+<li><p><strong>Service termination at logout.</strong> Without <code>loginctl enable-linger &lt;user&gt;</code>, systemd user services are terminated when the user’s last interactive session ends. Lingering must be enabled once per user and, being a system-level setting, requires <code>sudo</code>.</p></li>
+<li><p><strong>Plaintext credentials in the unit file.</strong> The basic-authentication password is stored in plaintext in the <code>ExecStart</code> line of the unit file. The unit permissions must be restricted with <code>chmod 600</code>, and the unit file must not be committed to a shared repository. For higher sensitivity requirements, use a systemd credentials file (<code>LoadCredential=</code>) or migrate to Tailscale Serve as described under Opportunities for Improvement.</p></li>
+<li><p><strong>MagicDNS resolution failures.</strong> Tailnet hostnames must include the full tailnet suffix (for example, <code>laptop.tailnet-name.ts.net</code>). A bare hostname resolves only if MagicDNS is enabled in the Tailscale admin console and if the client has accepted the DNS configuration pushed by the Tailscale daemon; clients that predate the MagicDNS enablement may require a Tailscale toggle cycle to refresh.</p></li>
+<li><p><strong>iOS input autocorrection.</strong> Safari on iOS auto-capitalises the first character entered into a text field by default, which can corrupt the first character of a password or a command. The appropriate remediations are to disable auto-capitalisation under <strong>Settings &gt; General &gt; Keyboard</strong>, or to use a Bluetooth keyboard, which is not subject to the on-screen keyboard’s input transformations.</p></li>
+</ol>
+</section>
+<section id="uninstall-rollback" class="level1" data-number="12">
+<h1 data-number="12"><span class="header-section-number">12</span> Uninstall / Rollback</h1>
+<p>To remove the setup, disable the service and uninstall the packages.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Stop and disable the service</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> <span class="at">--user</span> disable <span class="at">--now</span> ttyd.service</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span> ~/.config/systemd/user/ttyd.service</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> <span class="at">--user</span> daemon-reload</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Disable lingering if no other user service needs it</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> loginctl disable-linger <span class="st">"</span><span class="va">$USER</span><span class="st">"</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Uninstall packages</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt remove <span class="at">--purge</span> <span class="at">-y</span> ttyd</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Leave tmux and tailscale if used elsewhere; otherwise:</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt remove <span class="at">--purge</span> <span class="at">-y</span> tmux</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> tailscale down</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt remove <span class="at">--purge</span> <span class="at">-y</span> tailscale</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Remove the laptop from the tailnet via the Tailscale admin console if the device is being retired.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance3.png" class="img-fluid figure-img"></p>
+<figcaption>Workflow scene: the laptop closed on a desk while a phone shows the same tmux session mid-task, suggesting continuity without co-location.</figcaption>
+</figure>
+</div>
+</section>
+<section id="discussion" class="level1" data-number="13">
+<h1 data-number="13"><span class="header-section-number">13</span> Discussion</h1>
+<section id="observations" class="level2" data-number="13.1">
+<h2 data-number="13.1" class="anchored" data-anchor-id="observations"><span class="header-section-number">13.1</span> Observations</h2>
+<p><strong>Conceptual observations:</strong></p>
+<ul>
+<li>A browser is an adequate terminal client when the network transport is handled by a component specifically engineered for authenticated overlay networking. The SSH daemon is one of several defensible approaches to remote shell access; in this configuration the transport responsibility is relocated from SSH to WireGuard, and the authentication responsibility is distributed across WireGuard, <code>ttyd</code> basic auth, and the interface binding.</li>
+<li>MagicDNS eliminates the operational burden of dynamic DNS, port forwarding, and firewall-rule maintenance for personal-scale remote access. The trade-off is dependence on the Tailscale coordination server for name resolution.</li>
+<li>The interface-binding flag on <code>ttyd</code> is the single most consequential hardening decision in the configuration. A service bound to <code>0.0.0.0</code> with HTTP basic authentication represents a qualitatively different risk profile from a service bound to a WireGuard interface; the former is subject to public-internet scanning, the latter is not.</li>
+<li>Per-user systemd units, combined with <code>loginctl enable-linger</code>, provide a clean abstraction for background services that require user-level file system access without requiring system-level privileges beyond the initial linger enablement.</li>
+</ul>
+<p><strong>Technical observations:</strong></p>
+<ul>
+<li>The <code>tmux new -A -s &lt;name&gt;</code> form is both a creator and an attacher, and is therefore idempotent. This makes it safe to invoke from an <code>ExecStart</code> directive, where a non-idempotent invocation would cause a restart loop.</li>
+<li>The <code>ss -ltnp</code> command is more direct and more precise than <code>netstat -ltnp</code> for determining the interface on which a service is listening, and it is the standard utility on distributions that have replaced <code>net-tools</code> with <code>iproute2</code>.</li>
+<li>The <code>tailscale cert</code> command issues short-lived TLS certificates for MagicDNS hostnames, enabling end-to-end HTTPS without involvement of a public certificate authority. Certificates expire and must be reissued on a schedule, as discussed in Appendix A.</li>
+<li>The Safari <strong>Add to Home Screen</strong> action produces a standalone web-application surface that removes browser chrome and recovers screen area, which materially improves usability on any URL that is accessed with regularity.</li>
+</ul>
+<p><strong>Recurring Pitfalls:</strong></p>
+<ul>
+<li>Omission of the <code>-W</code> flag yields a read-only terminal, which presents as a non-interactive first connection and is easily misdiagnosed as a network or authentication problem.</li>
+<li>Binding to <code>tailscale0</code> without first confirming the interface name (via <code>ip -br link</code>) produces a service that fails to start and logs an interface-not-found error; the service is inert but not obviously so on casual inspection.</li>
+<li>The basic-authentication password is visible both in <code>ps</code> output on the host and in the unit file. It should be classified as a moderate-sensitivity secret: rotated on suspicion of exposure, but not requiring the operational controls appropriate to a high-sensitivity credential such as an SSH private key.</li>
+<li>iOS aggressively reclaims memory from backgrounded Safari tabs. The WebSocket reconnects transparently on tab reactivation, but any command-line input that had been typed but not submitted at the time of backgrounding is lost.</li>
+</ul>
+</section>
+<section id="limitations" class="level2" data-number="13.2">
+<h2 data-number="13.2" class="anchored" data-anchor-id="limitations"><span class="header-section-number">13.2</span> Limitations</h2>
+<p>The configuration has several explicit constraints that should be understood at the outset:</p>
+<ul>
+<li><strong>Single-user scope.</strong> The unit file and basic-authentication credentials are per-user. Multi-user access requires either parallel service instances on distinct ports or a front-end reverse proxy that demultiplexes on authenticated identity.</li>
+<li><strong>Absence of audit logging.</strong> <code>ttyd</code> does not log the commands executed within the pty. Where accountability or forensic capability is required, a separate shell-level or system-level auditing facility (for example, <code>auditd</code> with appropriate rules) must be configured.</li>
+<li><strong>Input ergonomics on a phone-scale device.</strong> Even with a Bluetooth keyboard and the small-screen optimisations, extended authorship of new code on a handheld device remains slower than on a conventional workstation. The configuration is well suited to monitoring, intervention, and short modifications; it is not a substitute for a primary development environment.</li>
+<li><strong>Dependence on Tailscale infrastructure.</strong> New connections require reachability to the Tailscale coordination server for key exchange and peer discovery. Existing WireGuard sessions are unaffected by a coordination-server outage, but reconnection after a client restart requires coordination-server availability.</li>
+<li><strong>Absence of session recording.</strong> The configuration does not record session input or output. Tools such as <code>asciinema</code>, <code>tmux-logging</code>, or <code>script(1)</code> can be added if session provenance is required.</li>
+</ul>
+</section>
+<section id="opportunities-for-improvement" class="level2" data-number="13.3">
+<h2 data-number="13.3" class="anchored" data-anchor-id="opportunities-for-improvement"><span class="header-section-number">13.3</span> Opportunities for Improvement</h2>
+<p>Several extensions would strengthen the configuration without departing from its overall design:</p>
+<ol type="1">
+<li>Adopt end-to-end TLS using <code>tailscale cert</code>, so that an accidental mis-binding of <code>ttyd</code> to a non-Tailscale interface would not expose an unencrypted session. Appendix A documents the procedure.</li>
+<li>Replace HTTP basic authentication with Tailscale Serve or Tailscale Funnel, both of which delegate authentication to the tailnet identity of the client. This removes the need for a shared password and eliminates the associated secret-management burden.</li>
+<li>Deploy the same configuration on an always-on VPS reached through Tailscale. The benefit is session durability across laptop sleep or shutdown; the cost is the VPS itself and the slightly more involved administrative story.</li>
+<li>Instantiate a second, read-only <code>ttyd</code> on a distinct port that runs a scoped command such as <code>htop</code> or a log-tailing command. This provides an observation-only surface suitable for short status checks without opening the full shell.</li>
+<li>Curate a phone-optimised tmux configuration (<code>tmux.conf.phone</code>) with shortened status-bar labels and fewer segments, and load it conditionally when <code>ttyd</code> detects a small-screen client.</li>
+<li>Encapsulate the installation in an idempotent shell script under <code>analysis/configs/</code>, suitable for provisioning identical configurations on additional machines.</li>
+</ol>
+</section>
+</section>
+<section id="conclusion" class="level1" data-number="14">
+<h1 data-number="14"><span class="header-section-number">14</span> Conclusion</h1>
+<p>A terminal served over HTTP and reached through a private WireGuard mesh constitutes a workable mobile surface for a laptop that may be closed, stationed in another room, or physically distant from the operator. The marginal cost is modest: three package installations, a single systemd user unit, and an initial configuration effort of approximately thirty minutes. The benefit is that long-running work on the laptop, including interactive agentic coding sessions that may run for several hours, remains observable and steerable without any exposure of the laptop to the public internet, without dynamic DNS infrastructure, and without reliance on a native SSH client on the mobile device.</p>
+<p>The principal design insight is that a browser is an adequate terminal client when the transport-layer authentication and confidentiality problems are delegated to a component engineered specifically for that purpose. Once Tailscale and <code>ttyd</code> are in place, the same configuration generalises to a cloud-hosted VPS: only the server endpoint changes, and the tailnet membership, the <code>ttyd</code> invocation, and the client-side procedure are invariant.</p>
+<p><strong>Principal conclusions:</strong></p>
+<ul>
+<li>The single most consequential line in the configuration is <code>-i tailscale0</code> on the <code>ttyd</code> invocation. This binding decision is what removes the service from every non-tailnet interface and makes the rest of the security model meaningful.</li>
+<li>A per-user systemd unit combined with <code>loginctl enable-linger</code> provides a logout-safe and reboot-safe service without any system-level privileges beyond the initial <code>linger</code> enablement.</li>
+<li>The <code>tmux new -A -s main</code> argument inside the <code>ExecStart</code> directive is the mechanism that transforms an ephemeral browser tab into a durable working session.</li>
+<li>The Safari <strong>Add to Home Screen</strong> action yields a standalone web-application presentation that recovers enough screen area to make the terminal practically usable on phone-scale displays.</li>
+</ul>
+</section>
+<section id="see-also" class="level1" data-number="15">
+<h1 data-number="15"><span class="header-section-number">15</span> See Also</h1>
+<p><strong>Related posts:</strong></p>
+<ul>
+<li><a href="../47-templatesetup/">Setting up an AWS EC2 server via the CLI</a>: a similar setup post for a cloud workstation that pairs naturally with the configuration here.</li>
+</ul>
+<p><strong>Key resources:</strong></p>
+<ul>
+<li><a href="https://github.com/tsl0922/ttyd">ttyd project page</a></li>
+<li><a href="https://tailscale.com/kb/1347/installation">Tailscale installation guide</a></li>
+<li><a href="https://tailscale.com/kb/1081/magicdns">Tailscale MagicDNS</a></li>
+<li><a href="https://tailscale.com/kb/1153/enabling-https">tailscale cert documentation</a></li>
+<li><a href="https://man.openbsd.org/tmux">tmux manual</a></li>
+<li><a href="https://wiki.archlinux.org/title/Systemd/User">systemd user units</a></li>
+</ul>
+<hr>
+</section>
+<section id="extended-glossary" class="level1" data-number="16">
+<h1 data-number="16"><span class="header-section-number">16</span> Extended Glossary</h1>
+<p>The following terms appear throughout the post. Definitions are compact and operational, prioritising the usage relevant to this configuration over full generality.</p>
+<p><strong>ACL (access control list).</strong> In Tailscale, a declarative policy document that restricts which tailnet members may reach which services on which ports. Default policy is permissive; explicit ACLs tighten the model.</p>
+<p><strong>Basic authentication (HTTP).</strong> The authentication scheme defined by RFC 7617 in which the client sends a header of the form <code>Authorization: Basic base64(user:password)</code> on each request. Sufficient when transport-layer confidentiality is assured by another mechanism; inadequate alone over plaintext HTTP.</p>
+<p><strong>Coordination server (Tailscale).</strong> The central component of the Tailscale control plane, responsible for device authentication, public-key distribution, and ACL enforcement. It does not carry data traffic; user traffic flows peer-to-peer over WireGuard or via DERP relays.</p>
+<p><strong>DERP (Designated Encrypted Relay for Packets).</strong> Tailscale-operated relay servers used when two peers cannot establish a direct WireGuard connection due to symmetric or restrictive NAT. Traffic through a DERP relay remains end-to-end encrypted; the relay cannot read it.</p>
+<p><strong>Dynamic DNS.</strong> A service that updates a DNS A or AAAA record in response to changes in an endpoint’s public IP address. Historically used for home-hosted services but requires an open public port on the host. This configuration deliberately avoids it in favour of MagicDNS over Tailscale.</p>
+<p><strong>ExecStart.</strong> A systemd unit directive that specifies the command line to run when the service is started. Must be an absolute path with no shell interpretation; metacharacters are passed literally to the process.</p>
+<p><strong>HTTP.</strong> The Hypertext Transfer Protocol, as used here in its unencrypted form over a Tailscale-encrypted transport. The <code>ttyd</code> listener speaks HTTP, and the security model delegates confidentiality to the WireGuard layer below it.</p>
+<p><strong>HTTPS.</strong> HTTP over TLS. In this configuration, HTTPS is optional (Appendix A) because the transport is already authenticated and encrypted by Tailscale; adding HTTPS provides defence in depth against an accidental mis-binding of the listener.</p>
+<p><strong>Interface binding.</strong> The act of restricting a listening socket to accept connections only on a named network interface, typically by specifying an interface name or an IP address belonging to that interface. Here, <code>ttyd -i tailscale0</code> binds the listener to the Tailscale virtual interface.</p>
+<p><strong>Linger (systemd).</strong> A setting, enabled per user by <code>loginctl enable-linger &lt;user&gt;</code>, that causes systemd to keep a user’s services running even when no session is active on that user’s behalf. Required for a systemd user unit to persist across logout and reboot.</p>
+<p><strong>MagicDNS.</strong> A Tailscale feature that automatically resolves hostnames of the form <code>&lt;device-name&gt;.&lt;tailnet-name&gt;.ts.net</code> to tailnet IP addresses, with the resolution delivered via the tailnet VPN rather than the system resolver. Eliminates the need for dynamic DNS or manual hosts-file maintenance.</p>
+<p><strong>NAT (network address translation).</strong> The technique by which a router rewrites source or destination addresses in IP packets, commonly used to share a single public IPv4 address among many private hosts. WireGuard and DERP together are responsible for establishing communication across NATs without requiring port forwarding.</p>
+<p><strong>NAT traversal.</strong> The set of techniques used to establish peer-to-peer connectivity between hosts behind NAT devices, including STUN-style discovery and UDP hole punching. Tailscale performs NAT traversal automatically; DERP is the fallback when it fails.</p>
+<p><strong>Overlay network.</strong> A network built logically on top of an underlying physical network, with its own address space and its own forwarding rules. The Tailscale <code>100.x.y.z/10</code> address space is an overlay over the underlying internet.</p>
+<p><strong>Posit Package Manager.</strong> A binary R package mirror (formerly RStudio Package Manager) used by the zzcollab Docker image to accelerate package installation. Not directly relevant to the ttyd configuration, but present in the repository’s reproducibility infrastructure.</p>
+<p><strong>Pseudo-terminal (pty).</strong> A pair of character-device endpoints in the kernel, the master and the slave, that emulates a serial line between a terminal program and a process. <code>ttyd</code> owns the master end; tmux (or another attached process) reads from and writes to the slave end.</p>
+<p><strong>Quarto.</strong> The open-source scientific and technical publishing system used to render this post. Produces HTML, PDF, and other formats from a unified source document. Relevant to the blog infrastructure rather than to the ttyd setup.</p>
+<p><strong>renv.</strong> The R package-version pinning and isolation tool used throughout the zzcollab research framework. Not directly used by the ttyd configuration.</p>
+<p><strong>Rocker.</strong> A family of Docker images providing R and common toolchains; <code>rocker/tidyverse</code> is the base image for this blog’s rendering environment. Again, infrastructure rather than subject matter.</p>
+<p><strong>Session (tmux).</strong> A named, persistent grouping of tmux windows and panes that survives detachment from any client. The <code>main</code> session used here is created by <code>tmux new -A -s main</code> and is attached by all subsequent <code>ttyd</code> connections.</p>
+<p><strong>ss.</strong> A socket-statistics utility from the <code>iproute2</code> suite, preferred over the legacy <code>netstat</code> tool for listing listening sockets. The invocation <code>ss -ltnp</code> lists TCP listeners with their owning process and the bound interface.</p>
+<p><strong>SSH (Secure Shell).</strong> A cryptographic network protocol for remote shell access, defined principally by RFC 4251 through RFC 4254. This configuration deliberately does not use SSH for inbound access, although SSH may still be used for other purposes on the laptop.</p>
+<p><strong>systemd.</strong> The init system and service manager used by most contemporary Linux distributions. Responsible for launching, supervising, and logging long-running services.</p>
+<p><strong>systemd user unit.</strong> A service definition stored under <code>~/.config/systemd/user/</code> and managed with <code>systemctl --user</code>. Runs as the user rather than as root; requires <code>loginctl enable-linger</code> to persist across logout.</p>
+<p><strong>Tailnet.</strong> A private network of devices enrolled in a single Tailscale account. Members are mutually addressable; non-members are not routable to tailnet addresses.</p>
+<p><strong>Tailscale.</strong> A commercial product that builds a peer-to-peer WireGuard mesh between enrolled devices, coupled with a coordination server for authentication and key distribution. The free tier is adequate for personal use.</p>
+<p><strong>Tailscale Funnel.</strong> An optional Tailscale feature that exposes a selected tailnet service to the public internet through a Tailscale-operated reverse proxy, with TLS termination and public-DNS resolution. Not used in this configuration.</p>
+<p><strong>Tailscale Serve.</strong> An optional Tailscale feature that provides TLS termination and routing for tailnet-internal HTTPS services, using certificates issued automatically via <code>tailscale cert</code>. A plausible future replacement for the HTTP + basic-auth configuration described here.</p>
+<p><strong>TLS (Transport Layer Security).</strong> The successor to SSL, and the protocol used to encrypt HTTP into HTTPS. Optional in this configuration because Tailscale already provides confidentiality at the WireGuard layer.</p>
+<p><strong>tmux.</strong> A terminal multiplexer that maintains persistent sessions containing windows and panes. Essential to this configuration because it decouples the shell lifetime from the lifetime of any individual client connection.</p>
+<p><strong>ttyd.</strong> The daemon that is the subject of this post. Serves a terminal over HTTP via WebSocket, using xterm.js on the client side.</p>
+<p><strong>WebSocket.</strong> A protocol (RFC 6455) that upgrades an HTTP connection to a full-duplex, persistent framed-TCP channel, used by <code>ttyd</code> to stream keystrokes and output between the browser and the pty.</p>
+<p><strong>WireGuard.</strong> A modern encrypted tunnel protocol, noted for its small codebase and its use of Curve25519 and ChaCha20-Poly1305. Tailscale builds its overlay on WireGuard but adds a coordination plane, NAT traversal, and identity management on top.</p>
+<p><strong>xterm.js.</strong> A JavaScript terminal emulator library that implements VT100/VT220/xterm escape-sequence handling in the browser. Rendered by <code>ttyd</code> on every client connection.</p>
+<hr>
+</section>
+<section id="reproducibility" class="level1" data-number="17">
+<h1 data-number="17"><span class="header-section-number">17</span> Reproducibility</h1>
+<p><strong>Tested configuration:</strong></p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Component</th>
+<th>Version</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Operating system</td>
+<td>Ubuntu 24.04</td>
+</tr>
+<tr class="even">
+<td>ttyd</td>
+<td>1.7.7</td>
+</tr>
+<tr class="odd">
+<td>Tailscale</td>
+<td>1.64.2</td>
+</tr>
+<tr class="even">
+<td>tmux</td>
+<td>3.4</td>
+</tr>
+<tr class="odd">
+<td>Shell</td>
+<td>zsh 5.9</td>
+</tr>
+<tr class="even">
+<td>Client</td>
+<td>iOS 17.4, Safari</td>
+</tr>
+<tr class="odd">
+<td>Last verified</td>
+<td>2026-04-15</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Configuration files:</strong></p>
+<ul>
+<li><code>analysis/configs/ttyd.service</code>: the full systemd user unit</li>
+<li><code>analysis/configs/install.sh</code>: an idempotent install script covering <code>ttyd</code>, <code>tmux</code>, and Tailscale</li>
+<li><code>analysis/configs/tmux.conf.phone</code>: an optional tmux configuration tuned for small screens</li>
+</ul>
+<p><strong>To reproduce end-to-end:</strong></p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">bash</span> analysis/configs/install.sh</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> tailscale up</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="fu">install</span> <span class="at">-m</span> 600 analysis/configs/ttyd.service <span class="dt">\</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  ~/.config/systemd/user/ttyd.service</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="co"># edit the unit and substitute a real password</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> <span class="at">--user</span> daemon-reload</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> <span class="at">--user</span> enable <span class="at">--now</span> ttyd.service</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> loginctl enable-linger <span class="st">"</span><span class="va">$USER</span><span class="st">"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<hr>
+</section>
+<section id="appendix-a" class="level1" data-number="18">
+<h1 data-number="18"><span class="header-section-number">18</span> Appendix A: TLS with tailscale cert</h1>
+<p>For transport encryption end-to-end (rather than relying on Tailscale’s WireGuard tunnel alone), issue a certificate for the MagicDNS name and point <code>ttyd</code> at it.</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> mkdir <span class="at">-p</span> /etc/ttyd</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /etc/ttyd</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> tailscale cert laptop.tailnet-name.ts.net</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Adjust the unit’s <code>ExecStart</code> to include:</p>
+<pre><code>--ssl \
+--ssl-cert /etc/ttyd/laptop.tailnet-name.ts.net.crt \
+--ssl-key  /etc/ttyd/laptop.tailnet-name.ts.net.key \</code></pre>
+<p>Access the service at <code>https://laptop.tailnet-name.ts.net:7681</code>. Certificates issued by <code>tailscale cert</code> expire; schedule a weekly systemd timer to reissue and reload:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="ex">systemctl</span> <span class="at">--user</span> edit <span class="at">--force</span> <span class="at">--full</span> ttyd-cert-renew.timer</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="appendix-b" class="level1" data-number="19">
+<h1 data-number="19"><span class="header-section-number">19</span> Appendix B: Sample Work Session</h1>
+<p>The following sequence illustrates a representative end-to-end session, under the assumption that the configuration above is complete and the laptop is running.</p>
+<p><strong>Step 1.</strong> At the workstation, open a local terminal and attach to the shared tmux session:</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="ex">tmux</span> attach <span class="at">-t</span> main</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p><strong>Step 2.</strong> Initiate a long-running interactive task (for example, an agentic coding session or a computation that will run for an extended period). Detach from the tmux session with <code>Ctrl-b d</code>. The task continues to execute.</p>
+<p><strong>Step 3.</strong> Depart from the workstation. The laptop remains powered and attached to a network. From any enrolled tailnet device, launch the home-screen icon for the <code>ttyd</code> URL and authenticate with the configured credentials. The browser attaches to the same tmux session, and the task’s current output appears.</p>
+<p><strong>Step 4.</strong> Observe the output, issue intervention commands as required, and close the browser tab when finished. Closing the tab terminates only the WebSocket connection to <code>ttyd</code>; the tmux session and its subprocesses continue to run.</p>
+<p><strong>Step 5.</strong> On return to the workstation, reattach locally with <code>tmux attach -t main</code>. The session state is continuous across the entire sequence; no work is lost at any transition.</p>
+</section>
+<section id="appendix-c" class="level1" data-number="20">
+<h1 data-number="20"><span class="header-section-number">20</span> Appendix C: Teardown (Undo)</h1>
+<p>Full removal in order:</p>
+<ol type="1">
+<li><code>systemctl --user disable --now ttyd.service</code></li>
+<li><code>rm ~/.config/systemd/user/ttyd.service</code></li>
+<li><code>sudo loginctl disable-linger "$USER"</code> (if no other user service needs it)</li>
+<li><code>sudo apt remove --purge -y ttyd tmux</code></li>
+<li><code>sudo tailscale down</code></li>
+<li><code>sudo apt remove --purge -y tailscale</code></li>
+<li>Remove the device from the Tailscale admin console.</li>
+<li>Delete any issued certificates under <code>/etc/ttyd/</code>.</li>
+</ol>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Warning
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>If the laptop is being decommissioned rather than just retired from this workflow, revoke its Tailscale auth key in the admin console. A device removed only locally can reappear on the tailnet if the machine is recovered.</p>
+</div>
+</div>
+<hr>
+</section>
+<section id="contact" class="level1" data-number="21">
+<h1 data-number="21"><span class="header-section-number">21</span> Contact</h1>
+<p><em>Corrections, alternative approaches, and substantive discussion are welcome.</em></p>
+<ul>
+<li><strong>GitHub:</strong> <a href="https://github.com/rgt47">rgt47</a></li>
+<li><strong>Twitter/X:</strong> <a href="https://twitter.com/rgt47"><span class="citation" data-cites="rgt47">@rgt47</span></a></li>
+<li><strong>LinkedIn:</strong> <a href="https://linkedin.com/in/rgthomaslab">Ronald Glenn Thomas</a></li>
+<li><strong>Email:</strong> <a href="https://rgtlab.org/contact">Contact form</a></li>
+</ul>
+<p>Feedback is particularly useful on the following topics:</p>
+<ul>
+<li>Corrections or improvements to any of the configuration or the associated reasoning.</li>
+<li>Client-side experience on platforms other than iOS (Android, Chrome OS, iPadOS tablet use).</li>
+<li>Extensions of the pattern, for example Tailscale Serve, Tailscale Funnel, mutual TLS, or certificate-based client authentication, and the operational trade-offs encountered.</li>
+<li>Reports of deployments of this configuration on a cloud VPS rather than on a mobile laptop.</li>
+</ul>
+<hr>
+<!-- ============================================================================
+PRE-PUBLISH QA CHECKLIST: verify each item BEFORE setting draft: false
+
+[ ] YAML
+    [x] title, subtitle, date, categories, description filled in
+    [ ] image present at media/images/hero.png
+    [x] document-type: 'blog'
+    [ ] draft: false
+
+[ ] Narrative complete (no remaining `[bracketed]` placeholders)
+
+[ ] Configuration artifacts present and tested
+    [x] Full systemd unit shown verbatim
+    [ ] Install script committed under analysis/configs/install.sh
+    [x] Verification commands documented
+    [x] Uninstall / rollback steps documented
+
+[ ] Things to Watch Out For
+    [x] At least 5 gotchas listed
+    [x] Each gotcha has both a symptom AND a fix
+
+[ ] Visual design
+    [ ] 1 hero image (width=80%)
+    [ ] 3 ambiance images (width=100%)
+    [ ] media/images/README.md attributes every image
+
+[ ] Content quality
+    [x] Zero emoji
+    [x] Zero em dashes
+    [x] Single quotes preferred over double quotes in prose
+    [x] Each command interpreted in plain language
+
+[ ] Reproducibility
+    [x] Version matrix table filled in
+    [ ] Config files committed under analysis/configs/
+    [ ] Install script runnable on a clean machine
+
+[ ] Render verification
+    [ ] quarto render index.qmd produces clean HTML
+    [ ] Hero image displays in /blog/ listing card
+    [ ] Internal links resolve
+============================================================================ -->
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp("https:\/\/focusonr\.org");
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<script src="https://giscus.app/client.js" data-repo="rgt47/qblog" data-repo-id="R_kgDOH6TO7A" data-category="General" data-category-id="DIC_kwDOH6TO7M4CXqIi" data-mapping="pathname" data-reactions-enabled="1" data-emit-metadata="0" data-input-position="bottom" data-theme="light" data-lang="en" crossorigin="anonymous" async="">
+</script>
+<input type="hidden" id="giscus-base-theme" value="light">
+<input type="hidden" id="giscus-alt-theme" value="light">
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Copyright 2023-2025, Ronald G. Thomas</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47">
+      <i class="bi bi-github" role="img">
+</i> 
+    </a>
+  </li>  
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47">
+      <i class="bi bi-twitter" role="img">
+</i> 
+    </a>
+  </li>  
+</ul>
+    </div>
+  </div>
+</footer>
+<!-- Fix for Quarto category encoding issue -->
+<script>
+// Fix category encoding for Quarto listing functionality
+(function() {
+  function fixAllCategoryEncoding() {
+    // Only run on pages that have Quarto listings
+    if (!document.querySelector('.quarto-listing')) {
+      return;
+    }
+    
+    // Fix sidebar category data-category attributes
+    const categoryEls = document.querySelectorAll('.quarto-listing-category .category[data-category]');
+    
+    categoryEls.forEach((categoryEl) => {
+      const category = categoryEl.getAttribute('data-category');
+      
+      if (category && category !== '') {
+        // Check if it contains only base64 characters and proper length
+        const isBase64 = /^[A-Za-z0-9+/]*={0,2}$/.test(category) && category.length % 4 === 0;
+        
+        if (isBase64) {
+          try {
+            const decoded = decodeURIComponent(atob(category));
+            // Verify it decoded to something reasonable (no control characters)
+            if (!decoded.match(/^[A-Za-z0-9\s\-,]+$/)) {
+              // Invalid encoding, re-encode from original text
+              const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+              categoryEl.setAttribute('data-category', encodedCategory);
+            }
+          } catch (e) {
+            // Base64 decode failed, re-encode from original text
+            const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+            categoryEl.setAttribute('data-category', encodedCategory);
+          }
+        } else {
+          // Not base64, encode it
+          const encodedCategory = btoa(encodeURIComponent(category));
+          categoryEl.setAttribute('data-category', encodedCategory);
+        }
+      }
+    });
+    
+    // Fix listing item data-categories attributes  
+    const listingItems = document.querySelectorAll('[data-categories]');
+    
+    listingItems.forEach((item) => {
+      const categories = item.getAttribute('data-categories');
+      
+      if (categories && categories !== '') {
+        // Check if it's already base64 encoded
+        try {
+          decodeURIComponent(atob(categories));
+          // Already encoded and valid
+        } catch (e) {
+          // Not encoded, fix it
+          const encodedCategories = btoa(encodeURIComponent(categories));
+          item.setAttribute('data-categories', encodedCategories);
+        }
+      }
+    });
+    
+    // Fix post-specific category tag click handlers
+    const postCategoryTags = document.querySelectorAll('.listing-category[onclick]');
+    
+    postCategoryTags.forEach((tag) => {
+      const categoryText = tag.textContent.trim();
+      
+      // Replace the onclick handler to use encoded category
+      tag.onclick = () => {
+        const encodedCategory = btoa(encodeURIComponent(categoryText));
+        window.quartoListingCategory(encodedCategory);
+        return false;
+      };
+    });
+  }
+  
+  // Run immediately
+  fixAllCategoryEncoding();
+  
+  // Also run when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fixAllCategoryEncoding);
+  }
+})();
+</script>
+
+<!-- PDF view/download button for blog posts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Only add the button on post pages
+  if (window.location.pathname.includes('/posts/') && !window.location.pathname.endsWith('/posts/') && !window.location.pathname.endsWith('/posts/index.html')) {
+    var currentPath = window.location.pathname;
+    // Handle both /posts/name/ and /posts/name/index.html formats
+    var pdfPath;
+    if (currentPath.endsWith('/')) {
+      pdfPath = currentPath + 'index.pdf';
+    } else {
+      pdfPath = currentPath.replace('.html', '.pdf');
+    }
+
+    // Check if PDF exists first
+    fetch(pdfPath, { method: 'HEAD' })
+      .then(function(response) {
+        if (response.ok) {
+          // PDF exists, show download button
+          showDownloadButton(pdfPath);
+        }
+        // If PDF doesn't exist, don't show any button
+      })
+      .catch(function(error) {
+        // Error checking PDF, don't show any button
+      });
+  }
+});
+
+function showDownloadButton(pdfPath) {
+  var downloadBtn = document.createElement('div');
+  downloadBtn.className = 'pdf-download-button';
+
+  // Get file size if possible
+  fetch(pdfPath, { method: 'HEAD' })
+    .then(function(response) {
+      var size = response.headers.get('Content-Length');
+      var sizeText = '';
+
+      if (size) {
+        // Convert to MB or KB
+        var sizeInMB = size / (1024 * 1024);
+        if (sizeInMB >= 1) {
+          sizeText = ' (' + sizeInMB.toFixed(1) + ' MB)';
+        } else {
+          sizeText = ' (' + (size / 1024).toFixed(0) + ' KB)';
+        }
+      }
+
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' + sizeText +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    })
+    .catch(function() {
+      // Basic fallback if we can't get file size
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    });
+
+  // Find where to insert the button (right after the title block)
+  var titleBlock = document.querySelector('.quarto-title-meta');
+  if (titleBlock) {
+    titleBlock.after(downloadBtn);
+  }
+}
+
+
+</script>
+
+<style>
+.pdf-download-button {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+</style>
+
+
+
+
+</body></html>

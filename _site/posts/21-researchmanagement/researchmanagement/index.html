@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.5.45">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ronald G. Thomas">
+<meta name="dcterms.date" content="2025-04-12">
+<meta name="description" content="I did not really know how to keep a consistent daily research log until I combined macOS dictation with ChatGPT summarization and a few short bash scripts. This post walks through the entire workflow from folder structure to searchable, version-controlled notes.">
+
+<title>A Mac Workflow for Tracking Daily Research Progress – Thomas Lab</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../../">
+<script src="../../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": true,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "keyboard-shortcut": [
+    "?",
+    "/"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&amp;family=Open+Sans:ital,wght@0,400;0,600;1,400&amp;family=Fira+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<script src="https://kit.fontawesome.com/0fba9333d8.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+
+<!-- Custom meta tags for social sharing -->
+<meta property="og:site_name" content="Thomas Lab">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@rgt47">
+
+<!-- Add responsive features -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<!-- Add analytics if needed -->
+<!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXX');
+</script> -->
+
+<!-- Add custom javascript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Remove code tools button completely
+  const codeButton = document.querySelector('.code-tools-button');
+  if (codeButton) {
+    codeButton.remove();
+  }
+  
+  // Add any custom JavaScript functionality here
+  
+  // Example: Add smooth scrolling
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      
+      document.querySelector(this.getAttribute('href')).scrollIntoView({
+        behavior: 'smooth'
+      });
+    });
+  });
+  
+  // Make sidebar category items clickable (but not TOC items)
+  const categoryLinks = {
+    'Programming & Development': '/posts/?category=Programming+%26+Development',
+    'Data Analysis & Visualization': '/posts/?category=Data+Analysis+%26+Visualization',
+    'Deployment & Operations': '/posts/?category=Deployment+%26+Operations',
+    'Development Environment': '/posts/?category=Development+Environment',
+    'Shiny Applications': '/posts/?category=Shiny+Applications',
+    'AI & Automation': '/posts/?category=AI+%26+Automation',
+    'System Administration': '/posts/?category=System+Administration'
+  };
+  
+  // Only target sidebar items that are not in the TOC
+  document.querySelectorAll('.sidebar-item-section .sidebar-item-text').forEach(item => {
+    // Skip if this is inside the TOC
+    if (item.closest('#TOC')) return;
+    
+    const text = item.textContent.trim();
+    if (categoryLinks[text]) {
+      item.addEventListener('click', function() {
+        window.location.href = categoryLinks[text];
+      });
+    }
+  });
+});
+</script>
+
+
+<meta property="og:title" content="Thomas Lab - A Mac Workflow for Tracking Daily Research Progress">
+<meta property="og:description" content="I did not really know how to keep a consistent daily research log until I combined macOS dictation with ChatGPT summarization and a few short bash scripts. This post walks through the entire workflow from folder structure to searchable, version-controlled notes.">
+<meta property="og:image" content="https://focusonr.org/posts/21-researchmanagement/researchmanagement/media/images/hero.jpg">
+<meta property="og:site_name" content="Thomas Lab">
+</head>
+
+<body class="nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../../index.html">
+    <span class="navbar-title">Thomas Lab</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../about/index.html"> 
+<span class="menu-text">About</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../blog/index.html"> 
+<span class="menu-text">Blog</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../white-papers/index.html"> 
+<span class="menu-text">White Papers</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../research/index.html"> 
+<span class="menu-text">Research</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../teaching/index.html"> 
+<span class="menu-text">Teaching</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../misc/index.html"> 
+<span class="menu-text">Misc</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47"> <i class="bi bi-twitter" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a>
+  <ul class="collapse">
+  <li><a href="#motivations" id="toc-motivations" class="nav-link" data-scroll-target="#motivations"><span class="header-section-number">1.1</span> Motivations</a></li>
+  <li><a href="#objectives" id="toc-objectives" class="nav-link" data-scroll-target="#objectives"><span class="header-section-number">1.2</span> Objectives</a></li>
+  </ul></li>
+  <li><a href="#prerequisites-and-setup" id="toc-prerequisites-and-setup" class="nav-link" data-scroll-target="#prerequisites-and-setup"><span class="header-section-number">2</span> Prerequisites and Setup</a></li>
+  <li><a href="#what-is-a-chatgpt-assisted-research-log" id="toc-what-is-a-chatgpt-assisted-research-log" class="nav-link" data-scroll-target="#what-is-a-chatgpt-assisted-research-log"><span class="header-section-number">3</span> What is a ChatGPT-Assisted Research Log?</a></li>
+  <li><a href="#getting-started-research-folder-structure" id="toc-getting-started-research-folder-structure" class="nav-link" data-scroll-target="#getting-started-research-folder-structure"><span class="header-section-number">4</span> Getting Started: Research Folder Structure</a></li>
+  <li><a href="#deeper-analysis-the-three-script-workflow" id="toc-deeper-analysis-the-three-script-workflow" class="nav-link" data-scroll-target="#deeper-analysis-the-three-script-workflow"><span class="header-section-number">5</span> Deeper Analysis: The Three-Script Workflow</a>
+  <ul class="collapse">
+  <li><a href="#script-1-the-dictation-prompt-dp" id="toc-script-1-the-dictation-prompt-dp" class="nav-link" data-scroll-target="#script-1-the-dictation-prompt-dp"><span class="header-section-number">5.1</span> Script 1: The Dictation Prompt (<code>dp</code>)</a></li>
+  <li><a href="#the-dictation-process" id="toc-the-dictation-process" class="nav-link" data-scroll-target="#the-dictation-process"><span class="header-section-number">5.2</span> The Dictation Process</a></li>
+  <li><a href="#script-2-append-and-push" id="toc-script-2-append-and-push" class="nav-link" data-scroll-target="#script-2-append-and-push"><span class="header-section-number">5.3</span> Script 2: Append and Push</a></li>
+  <li><a href="#script-3-search-project-sp" id="toc-script-3-search-project-sp" class="nav-link" data-scroll-target="#script-3-search-project-sp"><span class="header-section-number">5.4</span> Script 3: Search Project (<code>sp</code>)</a></li>
+  <li><a href="#things-to-watch-out-for" id="toc-things-to-watch-out-for" class="nav-link" data-scroll-target="#things-to-watch-out-for"><span class="header-section-number">5.5</span> Things to Watch Out For</a></li>
+  </ul></li>
+  <li><a href="#what-did-we-learn" id="toc-what-did-we-learn" class="nav-link" data-scroll-target="#what-did-we-learn"><span class="header-section-number">6</span> What Did We Learn?</a>
+  <ul class="collapse">
+  <li><a href="#lessons-learnt" id="toc-lessons-learnt" class="nav-link" data-scroll-target="#lessons-learnt"><span class="header-section-number">6.1</span> Lessons Learnt</a></li>
+  <li><a href="#limitations" id="toc-limitations" class="nav-link" data-scroll-target="#limitations"><span class="header-section-number">6.2</span> Limitations</a></li>
+  <li><a href="#opportunities-for-improvement" id="toc-opportunities-for-improvement" class="nav-link" data-scroll-target="#opportunities-for-improvement"><span class="header-section-number">6.3</span> Opportunities for Improvement</a></li>
+  </ul></li>
+  <li><a href="#wrapping-up" id="toc-wrapping-up" class="nav-link" data-scroll-target="#wrapping-up"><span class="header-section-number">7</span> Wrapping Up</a></li>
+  <li><a href="#see-also" id="toc-see-also" class="nav-link" data-scroll-target="#see-also"><span class="header-section-number">8</span> See Also</a></li>
+  <li><a href="#reproducibility" id="toc-reproducibility" class="nav-link" data-scroll-target="#reproducibility"><span class="header-section-number">9</span> Reproducibility</a></li>
+  <li><a href="#lets-connect" id="toc-lets-connect" class="nav-link" data-scroll-target="#lets-connect"><span class="header-section-number">10</span> Let’s Connect</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content column-page-left" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><p>A Mac Workflow for Tracking Daily Research Progress</p></h1>
+<p class="subtitle lead"></p><p>Using ChatGPT dictation, bash scripts, and Git to build a searchable research log</p><p></p>
+  <div class="quarto-categories">
+    <div class="quarto-category">workflow</div>
+    <div class="quarto-category">automation</div>
+    <div class="quarto-category">bash</div>
+    <div class="quarto-category">git</div>
+    <div class="quarto-category">macos</div>
+    <div class="quarto-category">research-methodology</div>
+    <div class="quarto-category">academic-productivity</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    <p>I did not really know how to keep a consistent daily research log until I combined macOS dictation with ChatGPT summarization and a few short bash scripts. This post walks through the entire workflow from folder structure to searchable, version-controlled notes.</p>
+  </div>
+</div>
+
+
+<div class="quarto-title-meta column-page-left">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ronald G. Thomas </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">April 12, 2025</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/hero.jpg" class="img-fluid figure-img" style="width:80.0%"></p>
+<figcaption>A well-organized research workspace ready for daily progress tracking</figcaption>
+</figure>
+</div>
+<p><em>Structured workflows turn scattered research notes into a searchable knowledge base.</em></p>
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>I did not really know how to maintain a consistent research log until I started losing track of what I had accomplished across ten concurrent projects. The problem was not motivation; it was friction. Opening a text editor, remembering the right file, formatting the entry, and committing the changes felt like too many steps for something that should take sixty seconds.</p>
+<p>The breakthrough came when I realized that macOS dictation could capture my thoughts hands-free, and ChatGPT could turn rambling voice notes into concise, structured summaries. By wrapping these two capabilities in a few short bash scripts and pushing results to Git, I had a daily research logging system that required almost no manual typing.</p>
+<p>This post documents that workflow from start to finish. It covers the folder structure, the dictation prompt script, the log-appending script, the search script, and the Git integration that ties everything together. The entire system runs from the terminal with three short commands.</p>
+<section id="motivations" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="motivations"><span class="header-section-number">1.1</span> Motivations</h2>
+<ul>
+<li>I was managing ten research projects simultaneously and could not remember which analyses I had run two weeks earlier on any given project.</li>
+<li>Handwritten lab notebooks did not support full-text search, which made retrieval slow and unreliable.</li>
+<li>Existing note-taking applications introduced too many dependencies and did not integrate with my Git-based version control workflow.</li>
+<li>I wanted a system that could produce a structured log entry in under ninety seconds, including the commit and push to a remote repository.</li>
+<li>Voice dictation felt like the lowest-friction input method, but raw dictation output is too messy to store directly.</li>
+<li>I needed per-project search capability so that running a single command from any project directory would surface all related log entries.</li>
+</ul>
+</section>
+<section id="objectives" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="objectives"><span class="header-section-number">1.2</span> Objectives</h2>
+<ol type="1">
+<li>Set up a structured directory layout for managing multiple concurrent research projects.</li>
+<li>Create a bash script (<code>dp</code>) that generates a formatted ChatGPT prompt, priming the model for research note summarization.</li>
+<li>Build an append-and-push script that copies a ChatGPT summary from the clipboard into a centralized daily log and commits the update to Git.</li>
+<li>Write a search script (<code>sp</code>) that retrieves all log entries for the current project using <code>ripgrep</code>.</li>
+</ol>
+<p>I am documenting my learning process here. If you spot errors or have better approaches, please let me know.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/git-logo.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:30.0%"></p>
+</figure>
+</div>
+</section>
+</section>
+<section id="prerequisites-and-setup" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Prerequisites and Setup</h1>
+<p>This workflow assumes a macOS environment with the following tools available:</p>
+<ul>
+<li><strong>Terminal</strong>: Any terminal emulator (iTerm2, Kitty, or the built-in Terminal.app)</li>
+<li><strong>Bash or Zsh</strong>: The scripts use standard POSIX shell features and work in either shell</li>
+<li><strong>Git</strong>: For version control of the daily log repository</li>
+<li><strong>ripgrep</strong> (<code>rg</code>): For fast, project-scoped search across log entries</li>
+<li><strong>pbcopy / pbpaste</strong>: macOS clipboard utilities (built in)</li>
+<li><strong>ChatGPT</strong>: A browser tab or desktop application for dictation summarization</li>
+<li><strong>macOS Dictation</strong>: Enabled in System Settings under Keyboard (press the microphone key or double-tap the Function key)</li>
+</ul>
+<p>No R packages are required for this workflow. The entire system runs through the shell. If you do not have <code>ripgrep</code> installed, you can add it with Homebrew:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">brew</span> install ripgrep</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="what-is-a-chatgpt-assisted-research-log" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> What is a ChatGPT-Assisted Research Log?</h1>
+<p>A ChatGPT-assisted research log is a daily note-taking system where the researcher dictates progress notes using macOS voice input, submits the raw dictation to ChatGPT for summarization and formatting, and stores the resulting structured summary in a version-controlled text file. Think of it as having a research assistant who listens to your stream-of-consciousness update and hands back a clean, dated, project-tagged paragraph.</p>
+<p>The key insight is that the summarization step solves the primary pain point of voice-to-text workflows: raw dictation is verbose and poorly structured, but passing it through a language model produces concise, searchable entries that are suitable for long-term storage. The project-tagging convention (prefixing every line with the directory name) enables per-project retrieval from a single centralized log file.</p>
+</section>
+<section id="getting-started-research-folder-structure" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Getting Started: Research Folder Structure</h1>
+<p>A structured directory keeps research files accessible and prevents clutter. The following command creates a workspace with a central logging directory and ten project folders:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> ~/prj/research_update <span class="dt">\</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  ~/prj/<span class="dt">{X1</span><span class="op">,</span><span class="dt">X2</span><span class="op">,</span><span class="dt">X3</span><span class="op">,</span><span class="dt">X4</span><span class="op">,</span><span class="dt">X5</span><span class="op">,</span><span class="dt">X6</span><span class="op">,</span><span class="dt">X7</span><span class="op">,</span><span class="dt">X8</span><span class="op">,</span><span class="dt">X9</span><span class="op">,</span><span class="dt">X10}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Each project folder should contain a consistent internal structure:</p>
+<ul>
+<li><code>notes.md</code> – Running log of project-specific notes</li>
+<li><code>references.bib</code> – Citation management</li>
+<li><code>data/</code> – Datasets and related files</li>
+<li><code>coding/</code> – Code and analyses</li>
+<li><code>figures/</code> – Graphs and visualizations</li>
+<li><code>tables/</code> – Data summaries</li>
+<li><code>archive/</code> – Storage for non-current files</li>
+</ul>
+<p>The centralized daily log lives at a fixed location that all scripts reference:</p>
+<pre><code>~/prj/research_update/daily_log.md</code></pre>
+<p>This single file accumulates entries from every project. The project-tagging convention described in the next section makes it possible to filter entries by project despite storing everything in one place.</p>
+<p>Initialize the logging repository with Git so that every update is tracked:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ~/prj/research_update</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> init</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> add daily_log.md</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">"Initialize daily research log"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance2.png" class="img-fluid figure-img"></p>
+<figcaption>Workspace tools arranged for a productive research session</figcaption>
+</figure>
+</div>
+</section>
+<section id="deeper-analysis-the-three-script-workflow" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Deeper Analysis: The Three-Script Workflow</h1>
+<p>The entire system consists of three short bash scripts that chain together: <code>dp</code> generates the prompt, the append script commits the result, and <code>sp</code> searches the log. Each script is designed to be run from within a project directory so that the project name is captured automatically.</p>
+<section id="script-1-the-dictation-prompt-dp" class="level2" data-number="5.1">
+<h2 data-number="5.1" class="anchored" data-anchor-id="script-1-the-dictation-prompt-dp"><span class="header-section-number">5.1</span> Script 1: The Dictation Prompt (<code>dp</code>)</h2>
+<p>This script constructs a ChatGPT prompt that includes the current date, time, and project directory name. It copies the prompt to the clipboard so that the researcher can paste it directly into ChatGPT.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">#!/bin/bash</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="va">current_time</span><span class="op">=</span><span class="va">$(</span><span class="fu">date</span> +<span class="st">"%Y-%m-%d %H:%M:%S"</span><span class="va">)</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="va">current_dir</span><span class="op">=</span><span class="va">$(</span><span class="fu">basename</span> <span class="st">"</span><span class="va">$PWD</span><span class="st">"</span><span class="va">)</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="va">prompt</span><span class="op">=</span><span class="st">"I'm an academic biostatistician. I'm working</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="st">on a data analysis project. I'm about to dictate</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="st">daily research progress notes.</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="st">When I'm done, provide a concise summary that</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="st">includes:</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="st">1. The date and time of dictation</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="st">(</span><span class="va">$current_time</span><span class="st">). The line with date and time</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="st">should be the second line of the summary. The</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="st">first line should be blank. The date and time</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="st">line should be enclosed in a box of ascii</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="st">characters to set it apart.</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="st">2. The name of the current research project</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a><span class="st">directory (</span><span class="va">$current_dir</span><span class="st">).</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="st">3. Each line of the summary including the blank</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a><span class="st">line and the date and time line and enclosing</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a><span class="st">box lines should begin with </span><span class="dt">\"</span><span class="va">$current_dir</span><span class="st">:</span><span class="dt">\"</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a><span class="st">so that it can be extracted using ripgrep.</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a><span class="st">The notes start here: "</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="at">-n</span> <span class="st">"</span><span class="va">$prompt</span><span class="st">"</span> <span class="kw">|</span> <span class="ex">pbcopy</span></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"Prompt copied to clipboard."</span></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"Paste it into ChatGPT when ready."</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The project-prefixing instruction in item 3 is the critical design decision. By requiring every line of the summary to begin with the directory name followed by a colon, the <code>sp</code> script can later extract all entries for a given project using a single <code>ripgrep</code> call. The ASCII box around the date and time creates a visual separator between entries when reviewing the raw log file.</p>
+</section>
+<section id="the-dictation-process" class="level2" data-number="5.2">
+<h2 data-number="5.2" class="anchored" data-anchor-id="the-dictation-process"><span class="header-section-number">5.2</span> The Dictation Process</h2>
+<p>After running <code>dp</code>, the workflow proceeds as follows:</p>
+<ol type="1">
+<li>Open ChatGPT in a browser or desktop application.</li>
+<li>Paste the prompt from the clipboard into the ChatGPT input field.</li>
+<li>Submit the prompt so that ChatGPT is primed for summarization.</li>
+<li>Click the ChatGPT microphone icon and dictate your research notes. Speak naturally; there is no need to say “new line” or “period” because ChatGPT will handle formatting.</li>
+<li>Submit the dictated text for summarization.</li>
+<li>Review the summary. Iterate with ChatGPT (either by voice or by typing) to refine the output.</li>
+<li>Copy the final summary to the clipboard.</li>
+</ol>
+</section>
+<section id="script-2-append-and-push" class="level2" data-number="5.3">
+<h2 data-number="5.3" class="anchored" data-anchor-id="script-2-append-and-push"><span class="header-section-number">5.3</span> Script 2: Append and Push</h2>
+<p>This script reads the summary from the clipboard, appends it to the centralized daily log, and pushes the update to the remote Git repository. Save it somewhere on your <code>$PATH</code> (for example, <code>~/bin/append_log</code>).</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co">#!/bin/bash</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="va">current_dir</span><span class="op">=</span><span class="va">$(</span><span class="fu">basename</span> <span class="st">"</span><span class="va">$PWD</span><span class="st">"</span><span class="va">)</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="va">current_time</span><span class="op">=</span><span class="va">$(</span><span class="fu">date</span> +<span class="st">"%Y-%m-%d %H:%M:%S"</span><span class="va">)</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="va">clipboard_content</span><span class="op">=</span><span class="va">$(</span><span class="ex">pbpaste</span><span class="va">)</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"</span><span class="va">$clipboard_content</span><span class="st">"</span> <span class="dt">\</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>  <span class="op">&gt;&gt;</span> ~/prj/research_update/daily_log.md</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">""</span> <span class="op">&gt;&gt;</span> ~/prj/research_update/daily_log.md</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"Update for </span><span class="va">$current_dir</span><span class="st"> appended to"</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"daily_log.md in ~/prj/research_update"</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ~/prj/research_update</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> add .</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-a</span> <span class="dt">\</span></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">-m</span> <span class="st">"Daily log update </span><span class="va">$(</span><span class="fu">date</span> +<span class="st">'%Y-%m-%d'</span><span class="va">)</span><span class="st">"</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> push</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The blank line appended after the clipboard content ensures that consecutive entries are visually separated in the log file.</p>
+</section>
+<section id="script-3-search-project-sp" class="level2" data-number="5.4">
+<h2 data-number="5.4" class="anchored" data-anchor-id="script-3-search-project-sp"><span class="header-section-number">5.4</span> Script 3: Search Project (<code>sp</code>)</h2>
+<p>This script searches the daily log for all entries tagged with the current project directory name. The <code>cut -c6-</code> strips the directory prefix from each line for cleaner output. Adjust the cut range if your project directory names are longer than four characters.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">#!/bin/bash</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="va">current_dir</span><span class="op">=</span><span class="va">$(</span><span class="fu">basename</span> <span class="st">"</span><span class="va">$PWD</span><span class="st">"</span><span class="va">)</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="ex">rg</span> <span class="st">"</span><span class="va">$current_dir</span><span class="st">"</span> <span class="dt">\</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  ~/prj/research_update/daily_log.md <span class="dt">\</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">|</span> <span class="fu">cut</span> <span class="at">-c6-</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Running <code>sp</code> from within <code>~/prj/X3/</code> will display every log entry tagged with <code>X3:</code>, regardless of when it was written. This is the retrieval mechanism that makes the single-file approach practical.</p>
+</section>
+<section id="things-to-watch-out-for" class="level2" data-number="5.5">
+<h2 data-number="5.5" class="anchored" data-anchor-id="things-to-watch-out-for"><span class="header-section-number">5.5</span> Things to Watch Out For</h2>
+<ol type="1">
+<li><p><strong>Clipboard conflicts.</strong> If you copy something else to the clipboard between running <code>dp</code> and pasting into ChatGPT, the prompt is lost. Run <code>dp</code> immediately before switching to ChatGPT.</p></li>
+<li><p><strong>Project directory naming.</strong> The <code>ripgrep</code> search matches on directory name, so avoid names that are substrings of other names. <code>X1</code> will match <code>X10</code> entries. Use names like <code>proj_alpha</code> instead of sequential numbers if you have many projects.</p></li>
+<li><p><strong>Git remote setup.</strong> The append script assumes a remote is configured. Run <code>git remote add origin    &lt;url&gt;</code> in <code>~/prj/research_update/</code> before using the push feature for the first time.</p></li>
+<li><p><strong>Dictation accuracy.</strong> macOS dictation works best in a quiet environment. Technical terms (biostatistics jargon, package names, function names) are often misheard. Review the ChatGPT summary carefully before appending.</p></li>
+<li><p><strong>Cut column offset.</strong> The <code>cut -c6-</code> in the search script assumes a four-character project name plus a colon and space. Adjust this value if your directory names are longer.</p></li>
+</ol>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance3.jpg" class="img-fluid figure-img"></p>
+<figcaption>Organized notes and tools for daily research tracking</figcaption>
+</figure>
+</div>
+</section>
+</section>
+<section id="what-did-we-learn" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> What Did We Learn?</h1>
+<section id="lessons-learnt" class="level2" data-number="6.1">
+<h2 data-number="6.1" class="anchored" data-anchor-id="lessons-learnt"><span class="header-section-number">6.1</span> Lessons Learnt</h2>
+<p><strong>Conceptual Understanding:</strong></p>
+<ul>
+<li>A single centralized log file with project-tagged lines is more practical than per-project log files because it supports cross-project search and provides a chronological record of all research activity.</li>
+<li>Voice dictation followed by language model summarization produces higher-quality log entries than direct typing because the researcher can speak freely without worrying about formatting.</li>
+<li>The project-prefix convention (every line begins with the directory name) is a simple but effective tagging system that enables structured retrieval from an unstructured text file.</li>
+<li>Version-controlling the daily log with Git provides an immutable audit trail that satisfies reproducibility requirements for academic research.</li>
+</ul>
+<p><strong>Technical Skills:</strong></p>
+<ul>
+<li>Using <code>pbcopy</code> and <code>pbpaste</code> to pass data between shell scripts and GUI applications (ChatGPT) through the macOS clipboard.</li>
+<li>Writing bash scripts that extract context automatically (<code>basename "$PWD"</code> for the project name, <code>date</code> for timestamps) to minimize manual input.</li>
+<li>Using <code>ripgrep</code> with simple string patterns for fast retrieval from large text files.</li>
+<li>Chaining <code>git add</code>, <code>git commit</code>, and <code>git push</code> in a single script to reduce version control friction to a single command.</li>
+</ul>
+<p><strong>Gotchas and Pitfalls:</strong></p>
+<ul>
+<li>The clipboard is a shared resource: any copy operation between <code>dp</code> and the paste step will overwrite the prompt. Minimize context switching.</li>
+<li>macOS dictation sometimes fails silently if the microphone permissions are not granted to the active application. Verify in System Settings.</li>
+<li>The <code>cut -c6-</code> column offset in the search script is fragile. If project directory names vary in length, consider using <code>sed</code> to strip the prefix instead: <code>sed "s/^$current_dir: //"</code>.</li>
+<li>If the Git remote is unreachable (network issues), the push will fail but the local commit still succeeds. The log entry is preserved locally; push manually when connectivity returns.</li>
+</ul>
+</section>
+<section id="limitations" class="level2" data-number="6.2">
+<h2 data-number="6.2" class="anchored" data-anchor-id="limitations"><span class="header-section-number">6.2</span> Limitations</h2>
+<ul>
+<li>This workflow is macOS-specific due to its reliance on <code>pbcopy</code>, <code>pbpaste</code>, and macOS dictation. Adapting it to Linux would require <code>xclip</code> or <code>xsel</code> and a different speech-to-text tool.</li>
+<li>The system depends on ChatGPT availability. If the service is down or the API changes, the summarization step fails, though dictated notes can still be appended manually.</li>
+<li>There is no automated backup beyond Git. If the local repository is corrupted and the remote is lost, all log entries are unrecoverable.</li>
+<li>The project-prefix tagging convention does not support hierarchical organization (sub-projects, milestones, or categories within a project).</li>
+<li>The workflow does not handle attachments, images, or structured data. It is text-only by design.</li>
+<li>Long-running projects will accumulate large numbers of entries in a single file. Performance of <code>ripgrep</code> remains excellent at scale, but human readability of the raw file degrades over time.</li>
+</ul>
+</section>
+<section id="opportunities-for-improvement" class="level2" data-number="6.3">
+<h2 data-number="6.3" class="anchored" data-anchor-id="opportunities-for-improvement"><span class="header-section-number">6.3</span> Opportunities for Improvement</h2>
+<ol type="1">
+<li><p><strong>Direct ChatGPT API integration.</strong> In theory, it should be possible to send dictated text directly to the ChatGPT API from a bash script, bypassing the browser entirely. This would reduce the workflow from three manual steps to one command.</p></li>
+<li><p><strong>Whisper for local transcription.</strong> Replacing macOS dictation with OpenAI Whisper running locally would improve transcription accuracy for technical terminology and remove the dependency on macOS-specific features.</p></li>
+<li><p><strong>Structured output format.</strong> Switching the log from plain text to a structured format (JSON or YAML) would enable richer queries, date-range filtering, and integration with analysis dashboards.</p></li>
+<li><p><strong>Automated daily reminders.</strong> A cron job or <code>launchd</code> agent that opens a terminal prompt at a set time each day would reduce the likelihood of forgetting to log.</p></li>
+<li><p><strong>Cross-platform support.</strong> Abstracting the clipboard commands behind environment detection (<code>pbcopy</code> on macOS, <code>xclip</code> on Linux, <code>clip.exe</code> on WSL) would make the scripts portable.</p></li>
+<li><p><strong>Log visualization.</strong> A simple R or Python script that parses the daily log and generates a timeline or heatmap of research activity per project would add a useful retrospective view.</p></li>
+</ol>
+</section>
+</section>
+<section id="wrapping-up" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Wrapping Up</h1>
+<p>This workflow turns daily research logging from a chore into a lightweight habit. The entire process – dictating notes, generating a summary, appending to the log, and pushing to Git – takes under ninety seconds once the scripts are in place.</p>
+<p>What I found most valuable was the reduction in friction. Before this system, I would skip logging on busy days because the overhead felt too high. With voice dictation and automated summarization, the barrier dropped low enough that daily logging became sustainable.</p>
+<p>If you are managing multiple concurrent research projects and struggling to maintain a consistent record of progress, I would encourage you to try this approach. The three scripts are short enough to customize in an afternoon, and the payoff in searchable, version-controlled documentation accumulates rapidly.</p>
+<p><strong>Main takeaways:</strong></p>
+<ul>
+<li>Three bash scripts (<code>dp</code>, append, <code>sp</code>) provide a complete dictation-to-search workflow.</li>
+<li>ChatGPT summarization converts raw voice dictation into concise, structured log entries.</li>
+<li>Project-prefixed lines enable per-project retrieval from a single centralized log file.</li>
+<li>Git integration provides version control and remote backup with no additional effort.</li>
+</ul>
+</section>
+<section id="see-also" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> See Also</h1>
+<p><strong>Related posts:</strong></p>
+<ul>
+<li><a href="../01-configtermzsh/configtermzsh/ analysis/report/">Configure the Command Line for Data Science Development</a> – Terminal and Zsh setup that complements this workflow</li>
+<li><a href="../24-setupdotfilesongithub/setupdotfilesongithub/ analysis/report/">Creating a GitHub Dotfiles Repository</a> – Managing configuration files across machines</li>
+</ul>
+<p><strong>Key resources:</strong></p>
+<ul>
+<li><a href="https://github.com/BurntSushi/ripgrep">ripgrep documentation</a> – The search tool used in the <code>sp</code> script</li>
+<li><a href="https://github.com/openai/whisper">OpenAI Whisper</a> – Local speech-to-text alternative to macOS dictation</li>
+<li><a href="https://git-scm.com/doc">Git documentation</a> – Reference for the version control commands used in the append script</li>
+<li><a href="https://support.apple.com/guide/mac-help/%20use-dictation-mh40584/mac">macOS Dictation guide (Apple Support)</a> – Setup instructions for the built-in dictation feature</li>
+</ul>
+</section>
+<section id="reproducibility" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> Reproducibility</h1>
+<p>This post describes a shell-based workflow with no R analysis pipeline. To reproduce the system, create the three scripts described above and place them on your <code>$PATH</code>:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> ~/bin</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="fu">cp</span> dp.sh ~/bin/dp</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="fu">cp</span> append_log.sh ~/bin/append_log</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="fu">cp</span> sp.sh ~/bin/sp</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="fu">chmod</span> +x ~/bin/dp ~/bin/append_log ~/bin/sp</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">PATH</span><span class="op">=</span><span class="st">"</span><span class="va">$HOME</span><span class="st">/bin:</span><span class="va">$PATH</span><span class="st">"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p><strong>System requirements:</strong></p>
+<ul>
+<li>macOS 13+ (Ventura or later) for reliable dictation</li>
+<li>Git 2.30+</li>
+<li>ripgrep 13.0+</li>
+<li>A ChatGPT account (free tier is sufficient)</li>
+</ul>
+<p><strong>Files in this post:</strong></p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>dp</code></td>
+<td>Generate ChatGPT dictation prompt</td>
+</tr>
+<tr class="even">
+<td><code>append_log</code></td>
+<td>Append summary and push to Git</td>
+</tr>
+<tr class="odd">
+<td><code>sp</code></td>
+<td>Search log by project name</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="lets-connect" class="level1" data-number="10">
+<h1 data-number="10"><span class="header-section-number">10</span> Let’s Connect</h1>
+<ul>
+<li><strong>GitHub:</strong> <a href="https://github.com/rgt47">rgt47</a></li>
+<li><strong>Twitter/X:</strong> <a href="https://twitter.com/rgt47"><span class="citation" data-cites="rgt47">@rgt47</span></a></li>
+<li><strong>LinkedIn:</strong> <a href="https://linkedin.com/in/rgthomaslab">Ronald Glenn Thomas</a></li>
+<li><strong>Email:</strong> <a href="https://rgtlab.org/contact">rgtlab.org/contact</a></li>
+</ul>
+<p>I would enjoy hearing from you if:</p>
+<ul>
+<li>You spot an error or a better approach to any of the code in this post.</li>
+<li>You have suggestions for topics you would like to see covered.</li>
+<li>You want to discuss R programming, data science, or reproducible research.</li>
+<li>You have questions about anything in this tutorial.</li>
+<li>You just want to say hello and connect.</li>
+</ul>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp("https:\/\/focusonr\.org");
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<script src="https://giscus.app/client.js" data-repo="rgt47/qblog" data-repo-id="R_kgDOH6TO7A" data-category="General" data-category-id="DIC_kwDOH6TO7M4CXqIi" data-mapping="pathname" data-reactions-enabled="1" data-emit-metadata="0" data-input-position="bottom" data-theme="light" data-lang="en" crossorigin="anonymous" async="">
+</script>
+<input type="hidden" id="giscus-base-theme" value="light">
+<input type="hidden" id="giscus-alt-theme" value="light">
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Copyright 2023-2025, Ronald G. Thomas</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47">
+      <i class="bi bi-github" role="img">
+</i> 
+    </a>
+  </li>  
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47">
+      <i class="bi bi-twitter" role="img">
+</i> 
+    </a>
+  </li>  
+</ul>
+    </div>
+  </div>
+</footer>
+<!-- Fix for Quarto category encoding issue -->
+<script>
+// Fix category encoding for Quarto listing functionality
+(function() {
+  function fixAllCategoryEncoding() {
+    // Only run on pages that have Quarto listings
+    if (!document.querySelector('.quarto-listing')) {
+      return;
+    }
+    
+    // Fix sidebar category data-category attributes
+    const categoryEls = document.querySelectorAll('.quarto-listing-category .category[data-category]');
+    
+    categoryEls.forEach((categoryEl) => {
+      const category = categoryEl.getAttribute('data-category');
+      
+      if (category && category !== '') {
+        // Check if it contains only base64 characters and proper length
+        const isBase64 = /^[A-Za-z0-9+/]*={0,2}$/.test(category) && category.length % 4 === 0;
+        
+        if (isBase64) {
+          try {
+            const decoded = decodeURIComponent(atob(category));
+            // Verify it decoded to something reasonable (no control characters)
+            if (!decoded.match(/^[A-Za-z0-9\s\-,]+$/)) {
+              // Invalid encoding, re-encode from original text
+              const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+              categoryEl.setAttribute('data-category', encodedCategory);
+            }
+          } catch (e) {
+            // Base64 decode failed, re-encode from original text
+            const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+            categoryEl.setAttribute('data-category', encodedCategory);
+          }
+        } else {
+          // Not base64, encode it
+          const encodedCategory = btoa(encodeURIComponent(category));
+          categoryEl.setAttribute('data-category', encodedCategory);
+        }
+      }
+    });
+    
+    // Fix listing item data-categories attributes  
+    const listingItems = document.querySelectorAll('[data-categories]');
+    
+    listingItems.forEach((item) => {
+      const categories = item.getAttribute('data-categories');
+      
+      if (categories && categories !== '') {
+        // Check if it's already base64 encoded
+        try {
+          decodeURIComponent(atob(categories));
+          // Already encoded and valid
+        } catch (e) {
+          // Not encoded, fix it
+          const encodedCategories = btoa(encodeURIComponent(categories));
+          item.setAttribute('data-categories', encodedCategories);
+        }
+      }
+    });
+    
+    // Fix post-specific category tag click handlers
+    const postCategoryTags = document.querySelectorAll('.listing-category[onclick]');
+    
+    postCategoryTags.forEach((tag) => {
+      const categoryText = tag.textContent.trim();
+      
+      // Replace the onclick handler to use encoded category
+      tag.onclick = () => {
+        const encodedCategory = btoa(encodeURIComponent(categoryText));
+        window.quartoListingCategory(encodedCategory);
+        return false;
+      };
+    });
+  }
+  
+  // Run immediately
+  fixAllCategoryEncoding();
+  
+  // Also run when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fixAllCategoryEncoding);
+  }
+})();
+</script>
+
+<!-- PDF view/download button for blog posts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Only add the button on post pages
+  if (window.location.pathname.includes('/posts/') && !window.location.pathname.endsWith('/posts/') && !window.location.pathname.endsWith('/posts/index.html')) {
+    var currentPath = window.location.pathname;
+    // Handle both /posts/name/ and /posts/name/index.html formats
+    var pdfPath;
+    if (currentPath.endsWith('/')) {
+      pdfPath = currentPath + 'index.pdf';
+    } else {
+      pdfPath = currentPath.replace('.html', '.pdf');
+    }
+
+    // Check if PDF exists first
+    fetch(pdfPath, { method: 'HEAD' })
+      .then(function(response) {
+        if (response.ok) {
+          // PDF exists, show download button
+          showDownloadButton(pdfPath);
+        }
+        // If PDF doesn't exist, don't show any button
+      })
+      .catch(function(error) {
+        // Error checking PDF, don't show any button
+      });
+  }
+});
+
+function showDownloadButton(pdfPath) {
+  var downloadBtn = document.createElement('div');
+  downloadBtn.className = 'pdf-download-button';
+
+  // Get file size if possible
+  fetch(pdfPath, { method: 'HEAD' })
+    .then(function(response) {
+      var size = response.headers.get('Content-Length');
+      var sizeText = '';
+
+      if (size) {
+        // Convert to MB or KB
+        var sizeInMB = size / (1024 * 1024);
+        if (sizeInMB >= 1) {
+          sizeText = ' (' + sizeInMB.toFixed(1) + ' MB)';
+        } else {
+          sizeText = ' (' + (size / 1024).toFixed(0) + ' KB)';
+        }
+      }
+
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' + sizeText +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    })
+    .catch(function() {
+      // Basic fallback if we can't get file size
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    });
+
+  // Find where to insert the button (right after the title block)
+  var titleBlock = document.querySelector('.quarto-title-meta');
+  if (titleBlock) {
+    titleBlock.after(downloadBtn);
+  }
+}
+
+
+</script>
+
+<style>
+.pdf-download-button {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+</style>
+
+
+
+
+</body></html>

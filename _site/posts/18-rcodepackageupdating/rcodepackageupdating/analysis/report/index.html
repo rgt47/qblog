@@ -1,0 +1,1434 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.5.45">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ronald G. Thomas">
+<meta name="dcterms.date" content="2026-02-11">
+<meta name="description" content="I did not really understand the full lifecycle of modifying an R package until I had to push a feature branch through CI/CD and watch it either pass or fail on three operating systems. This post walks through the entire process.">
+
+<title>Updating an R Package: A Complete Development Workflow – Thomas Lab</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../../../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../../../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../../../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../../../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../../../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../../../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../../../../">
+<script src="../../../../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../../../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../../../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../../../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../../../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../../../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../../../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../../../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../../../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": true,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "keyboard-shortcut": [
+    "?",
+    "/"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&amp;family=Open+Sans:ital,wght@0,400;0,600;1,400&amp;family=Fira+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<script src="https://kit.fontawesome.com/0fba9333d8.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+
+<!-- Custom meta tags for social sharing -->
+<meta property="og:site_name" content="Thomas Lab">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@rgt47">
+
+<!-- Add responsive features -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<!-- Add analytics if needed -->
+<!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXX');
+</script> -->
+
+<!-- Add custom javascript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Remove code tools button completely
+  const codeButton = document.querySelector('.code-tools-button');
+  if (codeButton) {
+    codeButton.remove();
+  }
+  
+  // Add any custom JavaScript functionality here
+  
+  // Example: Add smooth scrolling
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      
+      document.querySelector(this.getAttribute('href')).scrollIntoView({
+        behavior: 'smooth'
+      });
+    });
+  });
+  
+  // Make sidebar category items clickable (but not TOC items)
+  const categoryLinks = {
+    'Programming & Development': '/posts/?category=Programming+%26+Development',
+    'Data Analysis & Visualization': '/posts/?category=Data+Analysis+%26+Visualization',
+    'Deployment & Operations': '/posts/?category=Deployment+%26+Operations',
+    'Development Environment': '/posts/?category=Development+Environment',
+    'Shiny Applications': '/posts/?category=Shiny+Applications',
+    'AI & Automation': '/posts/?category=AI+%26+Automation',
+    'System Administration': '/posts/?category=System+Administration'
+  };
+  
+  // Only target sidebar items that are not in the TOC
+  document.querySelectorAll('.sidebar-item-section .sidebar-item-text').forEach(item => {
+    // Skip if this is inside the TOC
+    if (item.closest('#TOC')) return;
+    
+    const text = item.textContent.trim();
+    if (categoryLinks[text]) {
+      item.addEventListener('click', function() {
+        window.location.href = categoryLinks[text];
+      });
+    }
+  });
+});
+</script>
+
+
+<meta property="og:title" content="Thomas Lab - Updating an R Package: A Complete Development Workflow">
+<meta property="og:description" content="I did not really understand the full lifecycle of modifying an R package until I had to push a feature branch through CI/CD and watch it either pass or fail on three operating systems. This post walks through the entire process.">
+<meta property="og:image" content="https://focusonr.org/posts/18-rcodepackageupdating/rcodepackageupdating/analysis/report/media/images/hero.jpg">
+<meta property="og:site_name" content="Thomas Lab">
+</head>
+
+<body class="nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../../../../index.html">
+    <span class="navbar-title">Thomas Lab</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../about/index.html"> 
+<span class="menu-text">About</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../blog/index.html"> 
+<span class="menu-text">Blog</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../white-papers/index.html"> 
+<span class="menu-text">White Papers</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../research/index.html"> 
+<span class="menu-text">Research</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../teaching/index.html"> 
+<span class="menu-text">Teaching</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../misc/index.html"> 
+<span class="menu-text">Misc</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47"> <i class="bi bi-twitter" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a>
+  <ul class="collapse">
+  <li><a href="#motivations" id="toc-motivations" class="nav-link" data-scroll-target="#motivations"><span class="header-section-number">1.1</span> Motivations</a></li>
+  <li><a href="#objectives" id="toc-objectives" class="nav-link" data-scroll-target="#objectives"><span class="header-section-number">1.2</span> Objectives</a></li>
+  </ul></li>
+  <li><a href="#prerequisites-and-setup" id="toc-prerequisites-and-setup" class="nav-link" data-scroll-target="#prerequisites-and-setup"><span class="header-section-number">2</span> Prerequisites and Setup</a></li>
+  <li><a href="#what-is-an-r-package-development-workflow" id="toc-what-is-an-r-package-development-workflow" class="nav-link" data-scroll-target="#what-is-an-r-package-development-workflow"><span class="header-section-number">3</span> What is an R Package Development Workflow?</a></li>
+  <li><a href="#getting-started-creating-a-feature-branch" id="toc-getting-started-creating-a-feature-branch" class="nav-link" data-scroll-target="#getting-started-creating-a-feature-branch"><span class="header-section-number">4</span> Getting Started: Creating a Feature Branch</a>
+  <ul class="collapse">
+  <li><a href="#editing-the-r-code" id="toc-editing-the-r-code" class="nav-link" data-scroll-target="#editing-the-r-code"><span class="header-section-number">4.1</span> Editing the R Code</a></li>
+  <li><a href="#writing-and-running-tests" id="toc-writing-and-running-tests" class="nav-link" data-scroll-target="#writing-and-running-tests"><span class="header-section-number">4.2</span> Writing and Running Tests</a></li>
+  <li><a href="#building-and-checking-the-package" id="toc-building-and-checking-the-package" class="nav-link" data-scroll-target="#building-and-checking-the-package"><span class="header-section-number">4.3</span> Building and Checking the Package</a></li>
+  <li><a href="#updating-the-description-file" id="toc-updating-the-description-file" class="nav-link" data-scroll-target="#updating-the-description-file"><span class="header-section-number">4.4</span> Updating the DESCRIPTION File</a></li>
+  </ul></li>
+  <li><a href="#the-git-and-github-workflow" id="toc-the-git-and-github-workflow" class="nav-link" data-scroll-target="#the-git-and-github-workflow"><span class="header-section-number">5</span> The Git and GitHub Workflow</a>
+  <ul class="collapse">
+  <li><a href="#staging-and-committing" id="toc-staging-and-committing" class="nav-link" data-scroll-target="#staging-and-committing"><span class="header-section-number">5.1</span> Staging and Committing</a></li>
+  <li><a href="#pushing-and-creating-a-pull-request" id="toc-pushing-and-creating-a-pull-request" class="nav-link" data-scroll-target="#pushing-and-creating-a-pull-request"><span class="header-section-number">5.2</span> Pushing and Creating a Pull Request</a></li>
+  <li><a href="#github-actions-automated-cicd" id="toc-github-actions-automated-cicd" class="nav-link" data-scroll-target="#github-actions-automated-cicd"><span class="header-section-number">5.3</span> GitHub Actions: Automated CI/CD</a></li>
+  <li><a href="#setting-up-github-actions" id="toc-setting-up-github-actions" class="nav-link" data-scroll-target="#setting-up-github-actions"><span class="header-section-number">5.4</span> Setting Up GitHub Actions</a></li>
+  <li><a href="#addressing-ci-failures" id="toc-addressing-ci-failures" class="nav-link" data-scroll-target="#addressing-ci-failures"><span class="header-section-number">5.5</span> Addressing CI Failures</a></li>
+  <li><a href="#merging-and-cleaning-up" id="toc-merging-and-cleaning-up" class="nav-link" data-scroll-target="#merging-and-cleaning-up"><span class="header-section-number">5.6</span> Merging and Cleaning Up</a></li>
+  <li><a href="#creating-a-release-optional" id="toc-creating-a-release-optional" class="nav-link" data-scroll-target="#creating-a-release-optional"><span class="header-section-number">5.7</span> Creating a Release (Optional)</a></li>
+  </ul></li>
+  <li><a href="#verification" id="toc-verification" class="nav-link" data-scroll-target="#verification"><span class="header-section-number">6</span> Verification</a></li>
+  <li><a href="#daily-workflow" id="toc-daily-workflow" class="nav-link" data-scroll-target="#daily-workflow"><span class="header-section-number">7</span> Daily Workflow</a>
+  <ul class="collapse">
+  <li><a href="#things-to-watch-out-for" id="toc-things-to-watch-out-for" class="nav-link" data-scroll-target="#things-to-watch-out-for"><span class="header-section-number">7.1</span> Things to Watch Out For</a></li>
+  </ul></li>
+  <li><a href="#uninstall-rollback" id="toc-uninstall-rollback" class="nav-link" data-scroll-target="#uninstall-rollback"><span class="header-section-number">8</span> Uninstall / Rollback</a></li>
+  <li><a href="#what-did-we-learn" id="toc-what-did-we-learn" class="nav-link" data-scroll-target="#what-did-we-learn"><span class="header-section-number">9</span> What Did We Learn?</a>
+  <ul class="collapse">
+  <li><a href="#lessons-learnt" id="toc-lessons-learnt" class="nav-link" data-scroll-target="#lessons-learnt"><span class="header-section-number">9.1</span> Lessons Learnt</a></li>
+  <li><a href="#limitations" id="toc-limitations" class="nav-link" data-scroll-target="#limitations"><span class="header-section-number">9.2</span> Limitations</a></li>
+  <li><a href="#opportunities-for-improvement" id="toc-opportunities-for-improvement" class="nav-link" data-scroll-target="#opportunities-for-improvement"><span class="header-section-number">9.3</span> Opportunities for Improvement</a></li>
+  </ul></li>
+  <li><a href="#wrapping-up" id="toc-wrapping-up" class="nav-link" data-scroll-target="#wrapping-up"><span class="header-section-number">10</span> Wrapping Up</a></li>
+  <li><a href="#see-also" id="toc-see-also" class="nav-link" data-scroll-target="#see-also"><span class="header-section-number">11</span> See Also</a>
+  <ul class="collapse">
+  <li><a href="#related-posts" id="toc-related-posts" class="nav-link" data-scroll-target="#related-posts"><span class="header-section-number">11.0.1</span> Related Posts</a></li>
+  <li><a href="#key-resources" id="toc-key-resources" class="nav-link" data-scroll-target="#key-resources"><span class="header-section-number">11.0.2</span> Key Resources</a></li>
+  </ul></li>
+  <li><a href="#reproducibility" id="toc-reproducibility" class="nav-link" data-scroll-target="#reproducibility"><span class="header-section-number">12</span> Reproducibility</a></li>
+  <li><a href="#lets-connect" id="toc-lets-connect" class="nav-link" data-scroll-target="#lets-connect"><span class="header-section-number">13</span> Let’s Connect</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content column-page-left" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Updating an R Package: A Complete Development Workflow</h1>
+<p class="subtitle lead">From code changes to CI/CD integration using Git, devtools, and GitHub Actions</p>
+  <div class="quarto-categories">
+    <div class="quarto-category">r</div>
+    <div class="quarto-category">package-development</div>
+    <div class="quarto-category">devtools</div>
+    <div class="quarto-category">git</div>
+    <div class="quarto-category">github-actions</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    <p>I did not really understand the full lifecycle of modifying an R package until I had to push a feature branch through CI/CD and watch it either pass or fail on three operating systems. This post walks through the entire process.</p>
+  </div>
+</div>
+
+
+<div class="quarto-title-meta column-page-left">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ronald G. Thomas </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">February 11, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/hero.png" class="img-fluid figure-img" style="width:80.0%"></p>
+<figcaption>Terminal showing an R package build in progress</figcaption>
+</figure>
+</div>
+<p><em>Setting up a reproducible R package development workflow.</em></p>
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>I did not really understand how much discipline goes into modifying an R package until I tried to push a change to one of my own projects and watched CI fail on three platforms simultaneously. It turns out that editing an R file is the easy part; the surrounding workflow of branching, documenting, testing, building, and integrating with GitHub Actions is what separates a quick fix from a reliable contribution.</p>
+<p>The scenario is straightforward: you have an existing R package hosted on GitHub, and you need to add a feature, fix a bug, or improve error handling. The change itself might be small, but the process of getting it safely merged involves a surprising number of steps.</p>
+<p>This post documents the complete workflow I learned while modifying my own package, <code>zzdataframe2graphic</code>. Every step from creating a feature branch to cleaning up after a merge is covered, with the goal of making the process repeatable for future changes.</p>
+<section id="motivations" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="motivations"><span class="header-section-number">1.1</span> Motivations</h2>
+<ul>
+<li>I kept making ad hoc changes to my R packages without a systematic process, and occasionally broke things on other platforms.</li>
+<li>I wanted a clear mental model for the branch-edit-test-merge cycle so I could contribute to open source R projects with confidence.</li>
+<li>I had GitHub Actions YAML files in my repositories but did not fully understand what they did or how to set them up from scratch.</li>
+<li>I needed a reference I could return to each time I make a package change, rather than re-learning the steps every time.</li>
+<li>I wanted to understand how <code>devtools</code>, <code>testthat</code>, and <code>roxygen2</code> fit together in a single coherent workflow.</li>
+</ul>
+</section>
+<section id="objectives" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="objectives"><span class="header-section-number">1.2</span> Objectives</h2>
+<ol type="1">
+<li>Create a feature branch, make code changes, and update roxygen2 documentation in an R package.</li>
+<li>Write and run unit tests locally with <code>testthat</code> and build the package with <code>devtools</code>.</li>
+<li>Set up three GitHub Actions workflows (R-CMD-check, test coverage, pkgdown) and understand what each one does.</li>
+<li>Execute the full pull request lifecycle: push, review, address CI failures, merge, and clean up.</li>
+</ol>
+<p>I am documenting my learning process here. If you spot errors or have better approaches, please let me know.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/placeholder-coffee-02.jpg" class="img-fluid figure-img" style="width:30.0%"></p>
+<figcaption>Settling in for a focused development session.</figcaption>
+</figure>
+</div>
+<p><em>Settling in for a focused development session.</em></p>
+</section>
+</section>
+<section id="prerequisites-and-setup" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Prerequisites and Setup</h1>
+<p>This workflow assumes familiarity with R, basic Git commands, and a GitHub account. The following tools should be installed:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">install.packages</span>(</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">c</span>(<span class="st">"devtools"</span>, <span class="st">"testthat"</span>, <span class="st">"roxygen2"</span>,</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">"rcmdcheck"</span>, <span class="st">"covr"</span>, <span class="st">"pkgdown"</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>You also need Git configured on your system and SSH or HTTPS access to your GitHub repositories. The examples below use a package called <code>zzdataframe2graphic</code>, but the process applies to any R package hosted on GitHub.</p>
+</section>
+<section id="what-is-an-r-package-development-workflow" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> What is an R Package Development Workflow?</h1>
+<p>An R package development workflow is a structured sequence of steps that takes a code change from an idea to a tested, documented, and merged contribution. Think of it as a checklist for responsible software modification: rather than editing a file and hoping for the best, you create an isolated branch, update documentation automatically, run tests on multiple platforms, and only merge when everything passes.</p>
+<p>The key tools in this workflow are <code>devtools</code> (which orchestrates building, testing, and checking), <code>roxygen2</code> (which generates documentation from inline comments), <code>testthat</code> (which provides a structured testing framework), and GitHub Actions (which runs automated checks on every push). Together, they form a safety net that catches problems before they reach production.</p>
+</section>
+<section id="getting-started-creating-a-feature-branch" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Getting Started: Creating a Feature Branch</h1>
+<p>Every change begins with a new branch. This keeps the main branch stable while you work on your modification.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> checkout main</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> pull origin main</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> checkout <span class="at">-b</span> feature-name</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The first two commands ensure you are starting from the latest version of the codebase. The third creates a new branch and switches to it. All subsequent changes happen on this branch, isolated from <code>main</code> until you are ready to merge.</p>
+<section id="editing-the-r-code" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="editing-the-r-code"><span class="header-section-number">4.1</span> Editing the R Code</h2>
+<p>With the branch created, navigate to the relevant source file and make your changes. For an R package, the source files live in the <code>R/</code> directory:</p>
+<ol type="1">
+<li>Open the target file (e.g., <code>R/zzdataframe2graphic.R</code>).</li>
+<li>Make the code changes.</li>
+<li>Update or add roxygen2 comments above any modified or new functions.</li>
+<li>Save the file.</li>
+</ol>
+<p>After editing, regenerate the documentation:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">document</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>This command reads your roxygen2 comments and updates the <code>NAMESPACE</code> file and the <code>man/</code> directory. It is important to run this every time you change function signatures, add parameters, or modify exported functions.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance2.png" class="img-fluid figure-img"></p>
+<figcaption>Code review on a laptop screen</figcaption>
+</figure>
+</div>
+<p><em>Taking a step back to review the changes before testing.</em></p>
+</section>
+<section id="writing-and-running-tests" class="level2" data-number="4.2">
+<h2 data-number="4.2" class="anchored" data-anchor-id="writing-and-running-tests"><span class="header-section-number">4.2</span> Writing and Running Tests</h2>
+<p>Every code change should be accompanied by tests. The <code>testthat</code> framework provides a clean structure for this:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">test_that</span>(<span class="st">"new feature works as expected"</span>, {</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  result <span class="ot">&lt;-</span> <span class="fu">your_function</span>(test_input)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">expect_equal</span>(result, expected_output)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>})</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Add your test cases to the appropriate file in <code>tests/testthat/</code>. Then run the full test suite locally:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">test</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Fix any failures before proceeding. If the change is substantial, consider adding multiple test cases covering edge cases and expected error conditions.</p>
+</section>
+<section id="building-and-checking-the-package" class="level2" data-number="4.3">
+<h2 data-number="4.3" class="anchored" data-anchor-id="building-and-checking-the-package"><span class="header-section-number">4.3</span> Building and Checking the Package</h2>
+<p>Once tests pass, build and check the package:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">build</span>()</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">check</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The <code>check()</code> function runs <code>R CMD check</code>, which is the standard quality gate for R packages. It verifies that documentation is complete, examples run without error, tests pass, and the package can be installed cleanly.</p>
+<p>For more rigorous checking, run against additional platforms:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">check_win_devel</span>()</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">check_mac_release</span>()</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>rcmdcheck<span class="sc">::</span><span class="fu">rcmdcheck</span>(<span class="at">args =</span> <span class="fu">c</span>(<span class="st">"--as-cran"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The <code>--as-cran</code> flag applies the stricter checks that CRAN uses when evaluating package submissions.</p>
+</section>
+<section id="updating-the-description-file" class="level2" data-number="4.4">
+<h2 data-number="4.4" class="anchored" data-anchor-id="updating-the-description-file"><span class="header-section-number">4.4</span> Updating the DESCRIPTION File</h2>
+<p>Before committing, update the package metadata:</p>
+<ol type="1">
+<li>Increment the version number (e.g., from 0.2.0 to 0.2.1).</li>
+<li>Update the <code>Date</code> field.</li>
+<li>Add any new dependencies to <code>Imports</code> or <code>Suggests</code>.</li>
+</ol>
+</section>
+</section>
+<section id="the-git-and-github-workflow" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> The Git and GitHub Workflow</h1>
+<p>With all local checks passing, it is time to commit, push, and open a pull request.</p>
+<section id="staging-and-committing" class="level2" data-number="5.1">
+<h2 data-number="5.1" class="anchored" data-anchor-id="staging-and-committing"><span class="header-section-number">5.1</span> Staging and Committing</h2>
+<div class="sourceCode" id="cb8"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> status</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> add R/zzdataframe2graphic.R</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> add tests/testthat/test-zzdataframe2graphic.R</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> add DESCRIPTION</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> add man/<span class="pp">*</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> add NAMESPACE</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Review the staged changes with <code>git status</code>, then commit with a descriptive message:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">"feat: add error handling to</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="st">  zzdataframe2graphic</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="st">- Added input validation for data frame columns</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="st">- Updated roxygen2 documentation</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="st">- Added unit tests for edge cases"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="pushing-and-creating-a-pull-request" class="level2" data-number="5.2">
+<h2 data-number="5.2" class="anchored" data-anchor-id="pushing-and-creating-a-pull-request"><span class="header-section-number">5.2</span> Pushing and Creating a Pull Request</h2>
+<div class="sourceCode" id="cb10"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> push origin feature-name</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Then create a pull request on GitHub:</p>
+<ol type="1">
+<li>Navigate to the repository on GitHub.</li>
+<li>Click the “Pull requests” tab.</li>
+<li>Click “New pull request.”</li>
+<li>Set base to <code>main</code> and compare to <code>feature-name</code>.</li>
+<li>Fill in the PR description: what changed, why, how to test, and any related issues.</li>
+</ol>
+</section>
+<section id="github-actions-automated-cicd" class="level2" data-number="5.3">
+<h2 data-number="5.3" class="anchored" data-anchor-id="github-actions-automated-cicd"><span class="header-section-number">5.3</span> GitHub Actions: Automated CI/CD</h2>
+<p>GitHub Actions automate the testing process every time you push or open a pull request. A typical R package uses three workflows:</p>
+<p><strong>R-CMD-check</strong> runs <code>R CMD check</code> across multiple operating systems:</p>
+<ul>
+<li>Windows (latest)</li>
+<li>macOS (latest)</li>
+<li>Ubuntu (latest, with R-release, R-devel, and R-oldrel)</li>
+</ul>
+<p>This workflow triggers on pushes and pull requests to the main branch.</p>
+<p><strong>Test coverage</strong> runs all package tests, generates coverage reports, and identifies which parts of the code need additional testing.</p>
+<p><strong>pkgdown</strong> builds the package documentation website and deploys it to GitHub Pages whenever changes are pushed to the main branch.</p>
+</section>
+<section id="setting-up-github-actions" class="level2" data-number="5.4">
+<h2 data-number="5.4" class="anchored" data-anchor-id="setting-up-github-actions"><span class="header-section-number">5.4</span> Setting Up GitHub Actions</h2>
+<p>To add these workflows to a package:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> .github/workflows</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Then add three YAML configuration files:</p>
+<ul>
+<li><code>.github/workflows/R-CMD-check.yaml</code></li>
+<li><code>.github/workflows/test-coverage.yaml</code></li>
+<li><code>.github/workflows/pkgdown.yaml</code></li>
+</ul>
+<p>Configure repository permissions:</p>
+<ol type="1">
+<li>Go to Settings, then Actions, then General.</li>
+<li>Set “Workflow permissions” to “Read and write.”</li>
+<li>Enable GitHub Pages deployment.</li>
+</ol>
+<p>The <code>r-lib/actions</code> repository on GitHub provides standard workflow templates for all three.</p>
+</section>
+<section id="addressing-ci-failures" class="level2" data-number="5.5">
+<h2 data-number="5.5" class="anchored" data-anchor-id="addressing-ci-failures"><span class="header-section-number">5.5</span> Addressing CI Failures</h2>
+<p>If any workflow fails after pushing:</p>
+<ol type="1">
+<li>Check the “Actions” tab on GitHub.</li>
+<li>Review the failure logs for each workflow.</li>
+<li>Fix the issues locally.</li>
+<li>Push the fixes:</li>
+</ol>
+<div class="sourceCode" id="cb12"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> add .</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">"fix: address CI failures"</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> push origin feature-name</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The pull request will automatically re-run the workflows.</p>
+</section>
+<section id="merging-and-cleaning-up" class="level2" data-number="5.6">
+<h2 data-number="5.6" class="anchored" data-anchor-id="merging-and-cleaning-up"><span class="header-section-number">5.6</span> Merging and Cleaning Up</h2>
+<p>Once all checks pass and the PR is approved:</p>
+<ol type="1">
+<li>Choose a merge strategy (usually “Squash and merge”).</li>
+<li>Update the PR title if needed.</li>
+<li>Click “Squash and merge.”</li>
+</ol>
+<p>Then clean up locally:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> checkout main</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> pull origin main</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> branch <span class="at">-d</span> feature-name</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="creating-a-release-optional" class="level2" data-number="5.7">
+<h2 data-number="5.7" class="anchored" data-anchor-id="creating-a-release-optional"><span class="header-section-number">5.7</span> Creating a Release (Optional)</h2>
+<p>For significant changes, create a GitHub release:</p>
+<ol type="1">
+<li>Navigate to the “Releases” section.</li>
+<li>Click “Create new release.”</li>
+<li>Tag the version (e.g., <code>v0.2.1</code>).</li>
+<li>Add release notes summarizing the changes.</li>
+<li>Publish the release.</li>
+</ol>
+</section>
+</section>
+<section id="verification" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Verification</h1>
+<p>After completing the branch-edit-test cycle, confirm that each stage of the pipeline passes.</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">document</span>()</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">test</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">check</span>(<span class="at">args =</span> <span class="fu">c</span>(<span class="st">"--as-cran"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb16"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> log <span class="at">--oneline</span> <span class="at">-5</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>If <code>document()</code> runs without warnings, <code>test()</code> reports no failures, and <code>check()</code> returns 0 errors, 0 warnings, 0 notes, the package is ready to push.</p>
+</section>
+<section id="daily-workflow" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Daily Workflow</h1>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 40%">
+<col style="width: 60%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Task</th>
+<th style="text-align: left;">Command</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Create feature branch</td>
+<td style="text-align: left;"><code>git checkout -b feature-name</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Regenerate docs</td>
+<td style="text-align: left;"><code>devtools::document()</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Run tests</td>
+<td style="text-align: left;"><code>devtools::test()</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Build package</td>
+<td style="text-align: left;"><code>devtools::build()</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Full check</td>
+<td style="text-align: left;"><code>devtools::check(args = c("--as-cran"))</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Push branch</td>
+<td style="text-align: left;"><code>git push origin feature-name</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Clean up after merge</td>
+<td style="text-align: left;"><code>git checkout main &amp;&amp; git pull &amp;&amp; git branch -d feature-name</code></td>
+</tr>
+</tbody>
+</table>
+<section id="things-to-watch-out-for" class="level2" data-number="7.1">
+<h2 data-number="7.1" class="anchored" data-anchor-id="things-to-watch-out-for"><span class="header-section-number">7.1</span> Things to Watch Out For</h2>
+<ol type="1">
+<li><p><strong>Run <code>devtools::document()</code> before committing.</strong> I have forgotten this step more than once, leading to CI failures because the NAMESPACE file was out of date.</p></li>
+<li><p><strong>Stage files explicitly rather than using <code>git add .</code></strong> The R build process creates temporary files that should not be committed. Staging specific files avoids accidental inclusion of build artifacts.</p></li>
+<li><p><strong>Check on multiple platforms.</strong> A package that passes on macOS may fail on Windows due to path separators or system dependency differences. The multi-platform R-CMD-check workflow catches these issues.</p></li>
+<li><p><strong>Keep commits focused.</strong> A PR that changes one function, updates its documentation, and adds its tests is easy to review. A PR that touches fifteen files across unrelated features is difficult to evaluate.</p></li>
+<li><p><strong>Address CI failures immediately.</strong> Letting failures accumulate makes debugging harder. Fix each failure as it appears and push the fix before moving on.</p></li>
+</ol>
+</section>
+</section>
+<section id="uninstall-rollback" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Uninstall / Rollback</h1>
+<p>To revert a package change that has not yet been merged, delete the feature branch locally and on the remote.</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> checkout main</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> branch <span class="at">-D</span> feature-name</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> push origin <span class="at">--delete</span> feature-name</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>If the change has already been merged, revert the merge commit on <code>main</code>:</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> revert <span class="op">&lt;</span>merge-commit-hash<span class="op">&gt;</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> push origin main</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>To remove the development toolchain entirely:</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">remove.packages</span>(<span class="fu">c</span>(</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">"devtools"</span>, <span class="st">"testthat"</span>, <span class="st">"roxygen2"</span>,</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">"rcmdcheck"</span>, <span class="st">"covr"</span>, <span class="st">"pkgdown"</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance3.jpg" class="img-fluid figure-img"></p>
+<figcaption>Books and notes on a research desk</figcaption>
+</figure>
+</div>
+<p><em>Reflecting on the lessons from a full development cycle.</em></p>
+</section>
+<section id="what-did-we-learn" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> What Did We Learn?</h1>
+<section id="lessons-learnt" class="level2" data-number="9.1">
+<h2 data-number="9.1" class="anchored" data-anchor-id="lessons-learnt"><span class="header-section-number">9.1</span> Lessons Learnt</h2>
+<p><strong>Conceptual Understanding:</strong></p>
+<ul>
+<li>The R package structure is not just an organizational convenience; it is a contract that <code>R CMD check</code> enforces across documentation, dependencies, and test coverage.</li>
+<li>Feature branches isolate risk. Working directly on <code>main</code> means every mistake is immediately visible to collaborators and CI systems.</li>
+<li>Automated CI/CD on three operating systems catches platform-specific issues that local testing on a single machine cannot detect.</li>
+<li>The pull request is not just a merge mechanism; it is a documentation artifact that records what changed, why, and what tests confirmed the change works.</li>
+</ul>
+<p><strong>Technical Skills:</strong></p>
+<ul>
+<li><code>devtools::document()</code> regenerates <code>NAMESPACE</code> and <code>man/</code> from roxygen2 comments, eliminating manual documentation maintenance.</li>
+<li><code>devtools::check()</code> with <code>--as-cran</code> applies the strictest quality standards and is worth running before every push.</li>
+<li>The <code>r-lib/actions</code> repository provides ready-to-use GitHub Actions YAML templates for R-CMD-check, test coverage, and pkgdown.</li>
+<li><code>rcmdcheck::rcmdcheck()</code> provides more detailed output than <code>devtools::check()</code> and is useful for diagnosing obscure failures.</li>
+</ul>
+<p><strong>Gotchas and Pitfalls:</strong></p>
+<ul>
+<li>Forgetting to run <code>devtools::document()</code> after changing roxygen2 comments causes NAMESPACE mismatches that fail CI silently.</li>
+<li>Using <code>git add .</code> can accidentally stage build artifacts, <code>.Rhistory</code>, or <code>.DS_Store</code> files that do not belong in the repository.</li>
+<li>GitHub Actions workflows require “Read and write” permissions under repository settings; the default “Read” permission causes pkgdown deployment to fail without a clear error message.</li>
+<li>Test coverage workflows may require LaTeX dependencies for vignette building; missing system dependencies produce cryptic errors that do not mention LaTeX directly.</li>
+</ul>
+</section>
+<section id="limitations" class="level2" data-number="9.2">
+<h2 data-number="9.2" class="anchored" data-anchor-id="limitations"><span class="header-section-number">9.2</span> Limitations</h2>
+<ul>
+<li>This workflow assumes a single-developer context. Multi-contributor projects require additional conventions around code review, branch protection rules, and merge conflict resolution.</li>
+<li>The GitHub Actions templates from <code>r-lib/actions</code> target CRAN-style packages. Packages with non-standard system dependencies may need custom workflow modifications.</li>
+<li>Test coverage reports measure which lines of code are executed during tests, not whether the tests are meaningful. High coverage does not guarantee high quality.</li>
+<li>The <code>--as-cran</code> check is conservative and may flag issues that are acceptable for internal or non-CRAN packages.</li>
+<li>This post does not cover continuous deployment to package repositories (e.g., r-universe or drat) or automated version bumping.</li>
+</ul>
+</section>
+<section id="opportunities-for-improvement" class="level2" data-number="9.3">
+<h2 data-number="9.3" class="anchored" data-anchor-id="opportunities-for-improvement"><span class="header-section-number">9.3</span> Opportunities for Improvement</h2>
+<ol type="1">
+<li>Add pre-commit hooks that run <code>devtools::document()</code> and <code>devtools::test()</code> automatically before each commit.</li>
+<li>Integrate <code>lintr</code> into the CI pipeline to enforce consistent code style across all contributions.</li>
+<li>Set up branch protection rules on <code>main</code> to require passing CI checks before merging.</li>
+<li>Add a <code>NEWS.md</code> file to track user-facing changes with each version increment.</li>
+<li>Explore <code>usethis::use_github_action()</code> to generate workflow files directly from R rather than copying YAML templates manually.</li>
+<li>Consider adding a code coverage badge to the README to make test coverage visible at a glance.</li>
+</ol>
+</section>
+</section>
+<section id="wrapping-up" class="level1" data-number="10">
+<h1 data-number="10"><span class="header-section-number">10</span> Wrapping Up</h1>
+<p>The R package development workflow is more involved than simply editing code and pushing to GitHub, but each step exists for a reason. The branching strategy protects the main branch, the documentation tools keep help files synchronized with code, the testing framework catches regressions, and GitHub Actions verify everything works across platforms.</p>
+<p>What I learned most from going through this process is that the overhead of a proper workflow pays for itself quickly. The first time CI catches a platform-specific bug that I would never have found on my own machine, the entire setup justified its existence.</p>
+<p>For anyone starting out with R package development, my advice is to set up the full workflow once, even for a small package, and then follow it consistently. The steps become automatic after a few iterations.</p>
+<p>Main takeaways:</p>
+<ul>
+<li>Always branch before making changes, and keep each branch focused on a single feature or fix.</li>
+<li>Run <code>devtools::document()</code>, <code>devtools::test()</code>, and <code>devtools::check()</code> locally before pushing.</li>
+<li>Set up R-CMD-check, test coverage, and pkgdown GitHub Actions workflows using the templates from <code>r-lib/actions</code>.</li>
+<li>Treat the pull request as both a merge mechanism and a documentation record.</li>
+</ul>
+</section>
+<section id="see-also" class="level1" data-number="11">
+<h1 data-number="11"><span class="header-section-number">11</span> See Also</h1>
+<section id="related-posts" class="level3" data-number="11.0.1">
+<h3 data-number="11.0.1" class="anchored" data-anchor-id="related-posts"><span class="header-section-number">11.0.1</span> Related Posts</h3>
+<ul>
+<li><a href="../01-configtermzsh/configtermzsh/analysis/report/">Configure the Command Line for Data Science Development</a></li>
+<li><a href="../02-githubarchive/githubarchive/analysis/report/">Setting Up Git for Data Science Projects</a></li>
+</ul>
+</section>
+<section id="key-resources" class="level3" data-number="11.0.2">
+<h3 data-number="11.0.2" class="anchored" data-anchor-id="key-resources"><span class="header-section-number">11.0.2</span> Key Resources</h3>
+<ul>
+<li><a href="https://r-pkgs.org/">R Packages (2e)</a> by Hadley Wickham and Jenny Bryan – the definitive guide to R package development</li>
+<li><a href="https://git-scm.com/book/en/v2">Pro Git Book</a> – comprehensive guide to Git fundamentals</li>
+<li><a href="https://github.com/r-lib/actions">GitHub Actions for R</a> – r-lib’s collection of workflow templates</li>
+<li><a href="https://testthat.r-lib.org/">testthat documentation</a> – the standard testing framework for R</li>
+<li><a href="https://devtools.r-lib.org/">devtools documentation</a> – comprehensive guide to the devtools package</li>
+<li><a href="https://cran.r-project.org/doc/manuals/r-release/R-exts.html">Writing R Extensions</a> – the official R manual for package development</li>
+<li><a href="https://roxygen2.r-lib.org/">roxygen2 documentation</a> – inline documentation system for R</li>
+<li><a href="https://pkgdown.r-lib.org/">pkgdown documentation</a> – building package documentation websites</li>
+<li><a href="https://covr.r-lib.org/">covr documentation</a> – understanding test coverage in R</li>
+<li><a href="https://docs.github.com/en/actions">GitHub Actions Documentation</a> – official reference for CI/CD workflows</li>
+<li><a href="https://skills.github.com/">GitHub Skills</a> – interactive courses for learning GitHub</li>
+<li><a href="https://ohshitgit.com/">Oh Shit, Git!?!</a> – practical solutions for common Git mistakes</li>
+</ul>
+</section>
+</section>
+<section id="reproducibility" class="level1" data-number="12">
+<h1 data-number="12"><span class="header-section-number">12</span> Reproducibility</h1>
+<p>This post describes a workflow rather than an analysis pipeline. To follow along, you need:</p>
+<ul>
+<li>R 4.4 or later</li>
+<li>Git 2.30 or later</li>
+<li>A GitHub account with repository access</li>
+<li>The packages listed in the Prerequisites section</li>
+</ul>
+<p>The key commands in sequence:</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> checkout <span class="at">-b</span> feature-name</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Edit R source files and roxygen2 comments</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">document</span>()</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">test</span>()</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">build</span>()</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">check</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb22"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> add <span class="op">&lt;</span>specific-files<span class="op">&gt;</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">"feat: description of change"</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> push origin feature-name</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Open PR on GitHub, wait for Actions, merge</span></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> checkout main <span class="kw">&amp;&amp;</span> <span class="fu">git</span> pull origin main</span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> branch <span class="at">-d</span> feature-name</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>R version 4.5.3 (2026-03-11)
+Platform: aarch64-apple-darwin25.3.0
+Running under: macOS Tahoe 26.4.1
+
+Matrix products: default
+BLAS:   /opt/homebrew/Cellar/openblas/0.3.32/lib/libopenblasp-r0.3.32.dylib 
+LAPACK: /opt/homebrew/Cellar/r/4.5.3/lib/R/lib/libRlapack.dylib;  LAPACK version 3.12.1
+
+locale:
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+time zone: America/Los_Angeles
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+loaded via a namespace (and not attached):
+ [1] htmlwidgets_1.6.4 compiler_4.5.3    fastmap_1.2.0     cli_3.6.6        
+ [5] tools_4.5.3       htmltools_0.5.8.1 parallel_4.5.3    yaml_2.3.10      
+ [9] rmarkdown_2.29    knitr_1.50        jsonlite_2.0.0    xfun_0.56        
+[13] digest_0.6.37     rlang_1.2.0       evaluate_1.0.5   </code></pre>
+</div>
+</div>
+</section>
+<section id="lets-connect" class="level1" data-number="13">
+<h1 data-number="13"><span class="header-section-number">13</span> Let’s Connect</h1>
+<ul>
+<li><strong>GitHub:</strong> <a href="https://github.com/rgt47">rgt47</a></li>
+<li><strong>Twitter/X:</strong> <a href="https://twitter.com/rgt47"><span class="citation" data-cites="rgt47">@rgt47</span></a></li>
+<li><strong>LinkedIn:</strong> <a href="https://linkedin.com/in/rgthomaslab">Ronald Glenn Thomas</a></li>
+<li><strong>Email:</strong> <a href="https://rgtlab.org/contact">rgtlab.org/contact</a></li>
+</ul>
+<p>I would enjoy hearing from you if:</p>
+<ul>
+<li>You spot an error or a better approach to any of the code in this post.</li>
+<li>You have suggestions for topics you would like to see covered.</li>
+<li>You want to discuss R programming, data science, or reproducible research.</li>
+<li>You have questions about anything in this tutorial.</li>
+<li>You just want to say hello and connect.</li>
+</ul>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp("https:\/\/focusonr\.org");
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<script src="https://giscus.app/client.js" data-repo="rgt47/qblog" data-repo-id="R_kgDOH6TO7A" data-category="General" data-category-id="DIC_kwDOH6TO7M4CXqIi" data-mapping="pathname" data-reactions-enabled="1" data-emit-metadata="0" data-input-position="bottom" data-theme="light" data-lang="en" crossorigin="anonymous" async="">
+</script>
+<input type="hidden" id="giscus-base-theme" value="light">
+<input type="hidden" id="giscus-alt-theme" value="light">
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Copyright 2023-2025, Ronald G. Thomas</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47">
+      <i class="bi bi-github" role="img">
+</i> 
+    </a>
+  </li>  
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47">
+      <i class="bi bi-twitter" role="img">
+</i> 
+    </a>
+  </li>  
+</ul>
+    </div>
+  </div>
+</footer>
+<!-- Fix for Quarto category encoding issue -->
+<script>
+// Fix category encoding for Quarto listing functionality
+(function() {
+  function fixAllCategoryEncoding() {
+    // Only run on pages that have Quarto listings
+    if (!document.querySelector('.quarto-listing')) {
+      return;
+    }
+    
+    // Fix sidebar category data-category attributes
+    const categoryEls = document.querySelectorAll('.quarto-listing-category .category[data-category]');
+    
+    categoryEls.forEach((categoryEl) => {
+      const category = categoryEl.getAttribute('data-category');
+      
+      if (category && category !== '') {
+        // Check if it contains only base64 characters and proper length
+        const isBase64 = /^[A-Za-z0-9+/]*={0,2}$/.test(category) && category.length % 4 === 0;
+        
+        if (isBase64) {
+          try {
+            const decoded = decodeURIComponent(atob(category));
+            // Verify it decoded to something reasonable (no control characters)
+            if (!decoded.match(/^[A-Za-z0-9\s\-,]+$/)) {
+              // Invalid encoding, re-encode from original text
+              const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+              categoryEl.setAttribute('data-category', encodedCategory);
+            }
+          } catch (e) {
+            // Base64 decode failed, re-encode from original text
+            const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+            categoryEl.setAttribute('data-category', encodedCategory);
+          }
+        } else {
+          // Not base64, encode it
+          const encodedCategory = btoa(encodeURIComponent(category));
+          categoryEl.setAttribute('data-category', encodedCategory);
+        }
+      }
+    });
+    
+    // Fix listing item data-categories attributes  
+    const listingItems = document.querySelectorAll('[data-categories]');
+    
+    listingItems.forEach((item) => {
+      const categories = item.getAttribute('data-categories');
+      
+      if (categories && categories !== '') {
+        // Check if it's already base64 encoded
+        try {
+          decodeURIComponent(atob(categories));
+          // Already encoded and valid
+        } catch (e) {
+          // Not encoded, fix it
+          const encodedCategories = btoa(encodeURIComponent(categories));
+          item.setAttribute('data-categories', encodedCategories);
+        }
+      }
+    });
+    
+    // Fix post-specific category tag click handlers
+    const postCategoryTags = document.querySelectorAll('.listing-category[onclick]');
+    
+    postCategoryTags.forEach((tag) => {
+      const categoryText = tag.textContent.trim();
+      
+      // Replace the onclick handler to use encoded category
+      tag.onclick = () => {
+        const encodedCategory = btoa(encodeURIComponent(categoryText));
+        window.quartoListingCategory(encodedCategory);
+        return false;
+      };
+    });
+  }
+  
+  // Run immediately
+  fixAllCategoryEncoding();
+  
+  // Also run when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fixAllCategoryEncoding);
+  }
+})();
+</script>
+
+<!-- PDF view/download button for blog posts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Only add the button on post pages
+  if (window.location.pathname.includes('/posts/') && !window.location.pathname.endsWith('/posts/') && !window.location.pathname.endsWith('/posts/index.html')) {
+    var currentPath = window.location.pathname;
+    // Handle both /posts/name/ and /posts/name/index.html formats
+    var pdfPath;
+    if (currentPath.endsWith('/')) {
+      pdfPath = currentPath + 'index.pdf';
+    } else {
+      pdfPath = currentPath.replace('.html', '.pdf');
+    }
+
+    // Check if PDF exists first
+    fetch(pdfPath, { method: 'HEAD' })
+      .then(function(response) {
+        if (response.ok) {
+          // PDF exists, show download button
+          showDownloadButton(pdfPath);
+        }
+        // If PDF doesn't exist, don't show any button
+      })
+      .catch(function(error) {
+        // Error checking PDF, don't show any button
+      });
+  }
+});
+
+function showDownloadButton(pdfPath) {
+  var downloadBtn = document.createElement('div');
+  downloadBtn.className = 'pdf-download-button';
+
+  // Get file size if possible
+  fetch(pdfPath, { method: 'HEAD' })
+    .then(function(response) {
+      var size = response.headers.get('Content-Length');
+      var sizeText = '';
+
+      if (size) {
+        // Convert to MB or KB
+        var sizeInMB = size / (1024 * 1024);
+        if (sizeInMB >= 1) {
+          sizeText = ' (' + sizeInMB.toFixed(1) + ' MB)';
+        } else {
+          sizeText = ' (' + (size / 1024).toFixed(0) + ' KB)';
+        }
+      }
+
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' + sizeText +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    })
+    .catch(function() {
+      // Basic fallback if we can't get file size
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    });
+
+  // Find where to insert the button (right after the title block)
+  var titleBlock = document.querySelector('.quarto-title-meta');
+  if (titleBlock) {
+    titleBlock.after(downloadBtn);
+  }
+}
+
+
+</script>
+
+<style>
+.pdf-download-button {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+</style>
+
+
+
+
+</body></html>

@@ -1,0 +1,1434 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.5.45">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ronald G. Thomas">
+<meta name="dcterms.date" content="2026-02-11">
+<meta name="description" content="I did not really know how much time I was wasting reconfiguring every new machine until I set up a dotfiles repository on GitHub and watched a four-hour ritual collapse into a single command.">
+
+<title>Creating a GitHub Dotfiles Repository – Thomas Lab</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../../../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../../../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../../../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../../../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../../../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../../../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../../../../">
+<script src="../../../../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../../../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../../../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../../../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../../../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../../../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../../../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../../../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../../../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": true,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "keyboard-shortcut": [
+    "?",
+    "/"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&amp;family=Open+Sans:ital,wght@0,400;0,600;1,400&amp;family=Fira+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<script src="https://kit.fontawesome.com/0fba9333d8.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+
+<!-- Custom meta tags for social sharing -->
+<meta property="og:site_name" content="Thomas Lab">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@rgt47">
+
+<!-- Add responsive features -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<!-- Add analytics if needed -->
+<!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXX');
+</script> -->
+
+<!-- Add custom javascript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Remove code tools button completely
+  const codeButton = document.querySelector('.code-tools-button');
+  if (codeButton) {
+    codeButton.remove();
+  }
+  
+  // Add any custom JavaScript functionality here
+  
+  // Example: Add smooth scrolling
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      
+      document.querySelector(this.getAttribute('href')).scrollIntoView({
+        behavior: 'smooth'
+      });
+    });
+  });
+  
+  // Make sidebar category items clickable (but not TOC items)
+  const categoryLinks = {
+    'Programming & Development': '/posts/?category=Programming+%26+Development',
+    'Data Analysis & Visualization': '/posts/?category=Data+Analysis+%26+Visualization',
+    'Deployment & Operations': '/posts/?category=Deployment+%26+Operations',
+    'Development Environment': '/posts/?category=Development+Environment',
+    'Shiny Applications': '/posts/?category=Shiny+Applications',
+    'AI & Automation': '/posts/?category=AI+%26+Automation',
+    'System Administration': '/posts/?category=System+Administration'
+  };
+  
+  // Only target sidebar items that are not in the TOC
+  document.querySelectorAll('.sidebar-item-section .sidebar-item-text').forEach(item => {
+    // Skip if this is inside the TOC
+    if (item.closest('#TOC')) return;
+    
+    const text = item.textContent.trim();
+    if (categoryLinks[text]) {
+      item.addEventListener('click', function() {
+        window.location.href = categoryLinks[text];
+      });
+    }
+  });
+});
+</script>
+
+
+<meta property="og:title" content="Thomas Lab - Creating a GitHub Dotfiles Repository">
+<meta property="og:description" content="I did not really know how much time I was wasting reconfiguring every new machine until I set up a dotfiles repository on GitHub and watched a four-hour ritual collapse into a single command.">
+<meta property="og:image" content="https://focusonr.org/posts/24-setupdotfilesongithub/setupdotfilesongithub/analysis/report/media/images/hero.png">
+<meta property="og:site_name" content="Thomas Lab">
+<meta property="og:image:height" content="604">
+<meta property="og:image:width" content="810">
+</head>
+
+<body class="nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../../../../index.html">
+    <span class="navbar-title">Thomas Lab</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../about/index.html"> 
+<span class="menu-text">About</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../blog/index.html"> 
+<span class="menu-text">Blog</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../white-papers/index.html"> 
+<span class="menu-text">White Papers</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../research/index.html"> 
+<span class="menu-text">Research</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../teaching/index.html"> 
+<span class="menu-text">Teaching</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../misc/index.html"> 
+<span class="menu-text">Misc</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47"> <i class="bi bi-twitter" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a>
+  <ul class="collapse">
+  <li><a href="#motivations" id="toc-motivations" class="nav-link" data-scroll-target="#motivations"><span class="header-section-number">1.1</span> Motivations</a></li>
+  <li><a href="#objectives" id="toc-objectives" class="nav-link" data-scroll-target="#objectives"><span class="header-section-number">1.2</span> Objectives</a></li>
+  </ul></li>
+  <li><a href="#prerequisites-and-setup" id="toc-prerequisites-and-setup" class="nav-link" data-scroll-target="#prerequisites-and-setup"><span class="header-section-number">2</span> Prerequisites and Setup</a></li>
+  <li><a href="#what-is-a-dotfiles-repository" id="toc-what-is-a-dotfiles-repository" class="nav-link" data-scroll-target="#what-is-a-dotfiles-repository"><span class="header-section-number">3</span> What is a Dotfiles Repository?</a></li>
+  <li><a href="#repository-structure-and-organization" id="toc-repository-structure-and-organization" class="nav-link" data-scroll-target="#repository-structure-and-organization"><span class="header-section-number">4</span> Repository Structure and Organization</a>
+  <ul class="collapse">
+  <li><a href="#creating-the-initial-repository" id="toc-creating-the-initial-repository" class="nav-link" data-scroll-target="#creating-the-initial-repository"><span class="header-section-number">4.1</span> Creating the Initial Repository</a></li>
+  </ul></li>
+  <li><a href="#essential-configuration-files" id="toc-essential-configuration-files" class="nav-link" data-scroll-target="#essential-configuration-files"><span class="header-section-number">5</span> Essential Configuration Files</a>
+  <ul class="collapse">
+  <li><a href="#shell-configuration" id="toc-shell-configuration" class="nav-link" data-scroll-target="#shell-configuration"><span class="header-section-number">5.1</span> Shell Configuration</a></li>
+  <li><a href="#git-configuration" id="toc-git-configuration" class="nav-link" data-scroll-target="#git-configuration"><span class="header-section-number">5.2</span> Git Configuration</a></li>
+  <li><a href="#cross-platform-compatibility" id="toc-cross-platform-compatibility" class="nav-link" data-scroll-target="#cross-platform-compatibility"><span class="header-section-number">5.3</span> Cross-Platform Compatibility</a></li>
+  </ul></li>
+  <li><a href="#automated-installation-scripts" id="toc-automated-installation-scripts" class="nav-link" data-scroll-target="#automated-installation-scripts"><span class="header-section-number">6</span> Automated Installation Scripts</a>
+  <ul class="collapse">
+  <li><a href="#basic-script-structure" id="toc-basic-script-structure" class="nav-link" data-scroll-target="#basic-script-structure"><span class="header-section-number">6.1</span> Basic Script Structure</a></li>
+  <li><a href="#safe-file-linking" id="toc-safe-file-linking" class="nav-link" data-scroll-target="#safe-file-linking"><span class="header-section-number">6.2</span> Safe File Linking</a></li>
+  <li><a href="#installation-logic" id="toc-installation-logic" class="nav-link" data-scroll-target="#installation-logic"><span class="header-section-number">6.3</span> Installation Logic</a></li>
+  </ul></li>
+  <li><a href="#advanced-features-and-security" id="toc-advanced-features-and-security" class="nav-link" data-scroll-target="#advanced-features-and-security"><span class="header-section-number">7</span> Advanced Features and Security</a>
+  <ul class="collapse">
+  <li><a href="#package-management-integration" id="toc-package-management-integration" class="nav-link" data-scroll-target="#package-management-integration"><span class="header-section-number">7.1</span> Package Management Integration</a></li>
+  <li><a href="#secure-configuration-management" id="toc-secure-configuration-management" class="nav-link" data-scroll-target="#secure-configuration-management"><span class="header-section-number">7.2</span> Secure Configuration Management</a></li>
+  <li><a href="#team-collaboration" id="toc-team-collaboration" class="nav-link" data-scroll-target="#team-collaboration"><span class="header-section-number">7.3</span> Team Collaboration</a></li>
+  <li><a href="#things-to-watch-out-for" id="toc-things-to-watch-out-for" class="nav-link" data-scroll-target="#things-to-watch-out-for"><span class="header-section-number">7.4</span> Things to Watch Out For</a></li>
+  </ul></li>
+  <li><a href="#what-did-we-learn" id="toc-what-did-we-learn" class="nav-link" data-scroll-target="#what-did-we-learn"><span class="header-section-number">8</span> What Did We Learn?</a>
+  <ul class="collapse">
+  <li><a href="#lessons-learnt" id="toc-lessons-learnt" class="nav-link" data-scroll-target="#lessons-learnt"><span class="header-section-number">8.1</span> Lessons Learnt</a></li>
+  <li><a href="#limitations" id="toc-limitations" class="nav-link" data-scroll-target="#limitations"><span class="header-section-number">8.2</span> Limitations</a></li>
+  <li><a href="#opportunities-for-improvement" id="toc-opportunities-for-improvement" class="nav-link" data-scroll-target="#opportunities-for-improvement"><span class="header-section-number">8.3</span> Opportunities for Improvement</a></li>
+  </ul></li>
+  <li><a href="#wrapping-up" id="toc-wrapping-up" class="nav-link" data-scroll-target="#wrapping-up"><span class="header-section-number">9</span> Wrapping Up</a></li>
+  <li><a href="#see-also" id="toc-see-also" class="nav-link" data-scroll-target="#see-also"><span class="header-section-number">10</span> See Also</a>
+  <ul class="collapse">
+  <li><a href="#related-posts" id="toc-related-posts" class="nav-link" data-scroll-target="#related-posts"><span class="header-section-number">10.1</span> Related Posts</a></li>
+  <li><a href="#key-resources" id="toc-key-resources" class="nav-link" data-scroll-target="#key-resources"><span class="header-section-number">10.2</span> Key Resources</a></li>
+  </ul></li>
+  <li><a href="#reproducibility" id="toc-reproducibility" class="nav-link" data-scroll-target="#reproducibility"><span class="header-section-number">11</span> Reproducibility</a>
+  <ul class="collapse">
+  <li><a href="#system-requirements" id="toc-system-requirements" class="nav-link" data-scroll-target="#system-requirements"><span class="header-section-number">11.1</span> System Requirements</a></li>
+  <li><a href="#environment-verification" id="toc-environment-verification" class="nav-link" data-scroll-target="#environment-verification"><span class="header-section-number">11.2</span> Environment Verification</a></li>
+  <li><a href="#security-review-checklist" id="toc-security-review-checklist" class="nav-link" data-scroll-target="#security-review-checklist"><span class="header-section-number">11.3</span> Security Review Checklist</a></li>
+  </ul></li>
+  <li><a href="#lets-connect" id="toc-lets-connect" class="nav-link" data-scroll-target="#lets-connect"><span class="header-section-number">12</span> Let’s Connect</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content column-page-left" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Creating a GitHub Dotfiles Repository</h1>
+<p class="subtitle lead">Centralizing shell, git, and editor configurations for portable, version-controlled development environments</p>
+  <div class="quarto-categories">
+    <div class="quarto-category">github</div>
+    <div class="quarto-category">git</div>
+    <div class="quarto-category">bash</div>
+    <div class="quarto-category">configuration</div>
+    <div class="quarto-category">automation</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    <p>I did not really know how much time I was wasting reconfiguring every new machine until I set up a dotfiles repository on GitHub and watched a four-hour ritual collapse into a single command.</p>
+  </div>
+</div>
+
+
+<div class="quarto-title-meta column-page-left">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ronald G. Thomas </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">February 11, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/hero.png" class="img-fluid figure-img" style="width:80.0%"></p>
+<figcaption>Dotfiles repository workflow for managing development environment configurations</figcaption>
+</figure>
+</div>
+<p><em>A dotfiles repository transforms scattered configuration files into a single, version-controlled system.</em></p>
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>I did not really know how fragile my development environment was until the day I sat down at a freshly imaged workstation and realized that none of my shell aliases, git shortcuts, or editor settings had survived the transition. What followed was an afternoon of hunting through old backups and re-typing configurations from memory, a process I had repeated more times than I care to admit.</p>
+<p>The solution turned out to be straightforward: a GitHub repository dedicated to storing, versioning, and automatically deploying the configuration files that define a development environment. These are the so-called “dotfiles,” named for the leading period that hides them from standard directory listings on Unix-like systems. Once centralized in version control, they can be cloned onto any machine and installed with a single script.</p>
+<p>This post walks through the process of creating such a repository from scratch, including the directory layout, the core configuration files, a safe installation script, and the security considerations that come with publishing personal configurations to a public repository.</p>
+<section id="motivations" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="motivations"><span class="header-section-number">1.1</span> Motivations</h2>
+<ul>
+<li>I was tired of spending hours reconfiguring shell aliases, git shortcuts, and editor settings every time I moved to a new machine or re-imaged a workstation.</li>
+<li>My configurations had diverged between my office desktop, my laptop, and a remote server, and I could never remember which machine held the most current version of a given file.</li>
+<li>I wanted a single <code>git clone &amp;&amp; ./install.sh</code> command that could reproduce my working environment on any macOS or Linux system.</li>
+<li>Onboarding a collaborator onto a shared coding style required sending them a patchwork of files by email, which was error-prone and unversioned.</li>
+<li>I needed a reliable backup strategy for configurations that had accumulated years of incremental refinement.</li>
+</ul>
+</section>
+<section id="objectives" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="objectives"><span class="header-section-number">1.2</span> Objectives</h2>
+<ol type="1">
+<li>Build a well-organized dotfiles repository with directories for shell, git, editor, and system configurations.</li>
+<li>Write an automated installation script that creates symbolic links safely, backing up any existing files before overwriting.</li>
+<li>Implement cross-platform detection so the same repository works on both macOS and Linux.</li>
+<li>Establish security practices that prevent credentials, API keys, and private SSH keys from leaking into a public repository.</li>
+</ol>
+<p>I am documenting my learning process here. If you spot errors or have better approaches, please let me know.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/github-logo.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:30.0%"></p>
+</figure>
+</div>
+<p><em>Version control is the foundation of reproducible configuration management.</em></p>
+</section>
+</section>
+<section id="prerequisites-and-setup" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Prerequisites and Setup</h1>
+<p>Before creating a dotfiles repository, ensure you have the following tools available:</p>
+<ul>
+<li><strong>Git</strong> version 2.0 or higher</li>
+<li>A <strong>GitHub account</strong> with an SSH key configured</li>
+<li><strong>Command line access</strong> (Terminal on macOS, any shell on Linux)</li>
+<li>A <strong>text editor</strong> for writing configuration files</li>
+</ul>
+<p>This guide targets macOS and Linux environments. Platform-specific differences are handled through conditional logic in the configuration files themselves.</p>
+<p><strong>Security prerequisites.</strong> Before placing any configuration file in a public repository, understand the distinction between safe and unsafe content:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Safe for public dotfiles repositories</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">bashrc,</span> zshrc            <span class="co"># Shell configuration</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">gitconfig</span>                <span class="co"># Git settings (no creds)</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="ex">vimrc,</span> tmux.conf         <span class="co"># Editor and terminal</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="ex">aliases,</span> functions       <span class="co"># Custom commands</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="ex">Brewfile</span>                 <span class="co"># Package manager lists</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># NEVER include in public repositories</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="ex">id_rsa,</span> id_ed25519       <span class="co"># Private SSH keys</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="ex">aws_credentials</span>          <span class="co"># Cloud credentials</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="ex">env_files</span>                <span class="co"># Secrets in env vars</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="ex">netrc</span>                    <span class="co"># Authentication tokens</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="what-is-a-dotfiles-repository" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> What is a Dotfiles Repository?</h1>
+<p>A dotfiles repository is a version-controlled directory that stores the configuration files governing your shell, editor, git, and other command-line tools. On Unix-like systems, these files are traditionally prefixed with a dot (<code>.bashrc</code>, <code>.gitconfig</code>, <code>.vimrc</code>), which hides them from standard <code>ls</code> output. The repository collects them in one place, tracks changes over time, and provides an installation mechanism to deploy them to any machine.</p>
+<p>The analogy is straightforward: just as <code>renv.lock</code> captures the exact R package versions needed to reproduce an analysis, a dotfiles repository captures the exact environment configurations needed to reproduce a development setup. The difference is that dotfiles span the entire operating system rather than a single project.</p>
+<p>Modern repositories typically store configuration files without their leading dots (e.g., <code>vimrc</code> instead of <code>.vimrc</code>). This improves visibility in file browsers, produces cleaner GitHub displays, and makes the symbolic link mapping in the installation script explicit.</p>
+</section>
+<section id="repository-structure-and-organization" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Repository Structure and Organization</h1>
+<p>The foundation of any successful dotfiles setup is a directory layout that separates configurations by category. A clean structure makes it straightforward to find, edit, and extend individual files as your environment evolves.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">dotfiles/</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> README.md</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> install.sh</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> Makefile</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> .gitignore</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> shell/</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="ex">│</span>   ├── bashrc</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="ex">│</span>   ├── zshrc</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="ex">│</span>   ├── aliases</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="ex">│</span>   └── functions</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> git/</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="ex">│</span>   └── gitconfig</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> editors/</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="ex">│</span>   └── vimrc</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="ex">├──</span> system/</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="ex">│</span>   ├── inputrc</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="ex">│</span>   └── editorconfig</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="ex">└──</span> packages/</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    <span class="ex">├──</span> Brewfile</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    <span class="ex">└──</span> apt-packages.txt</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Notice that the files are stored without their leading dots. The installation script adds the dot prefix when creating symbolic links in <code>$HOME</code>.</p>
+<section id="creating-the-initial-repository" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="creating-the-initial-repository"><span class="header-section-number">4.1</span> Creating the Initial Repository</h2>
+<p>Start by creating the directory structure locally and pushing it to GitHub:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> ~/dotfiles <span class="kw">&amp;&amp;</span> <span class="bu">cd</span> ~/dotfiles</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> init</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> shell git editors system packages</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"# My Dotfiles"</span> <span class="op">&gt;</span> README.md</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"Development environment configurations"</span> <span class="dt">\</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  <span class="op">&gt;&gt;</span> README.md</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+</section>
+<section id="essential-configuration-files" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Essential Configuration Files</h1>
+<p>With the repository structure in place, the next step is populating it with the files that define your development environment. Each file should be portable across machines, well-documented with comments explaining non-obvious choices, and conservative in its defaults.</p>
+<section id="shell-configuration" class="level2" data-number="5.1">
+<h2 data-number="5.1" class="anchored" data-anchor-id="shell-configuration"><span class="header-section-number">5.1</span> Shell Configuration</h2>
+<p>The shell configuration file is the most frequently used dotfile. Here is a minimal <code>zshrc</code> that establishes history management, path modifications, and modular sourcing of additional files:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># shell/zshrc</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="va">HISTSIZE</span><span class="op">=</span>10000</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="va">SAVEHIST</span><span class="op">=</span>10000</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="ex">setopt</span> SHARE_HISTORY</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="ex">setopt</span> HIST_IGNORE_DUPS</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">PATH</span><span class="op">=</span><span class="st">"</span><span class="va">$HOME</span><span class="st">/.local/bin:</span><span class="va">$PATH</span><span class="st">"</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">PATH</span><span class="op">=</span><span class="st">"/opt/homebrew/bin:</span><span class="va">$PATH</span><span class="st">"</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">EDITOR</span><span class="op">=</span><span class="st">"vim"</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">BROWSER</span><span class="op">=</span><span class="st">"open"</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="bu">[</span> <span class="ot">-f</span> ~/.aliases <span class="bu">]</span> <span class="kw">&amp;&amp;</span> <span class="bu">source</span> ~/.aliases</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="bu">[</span> <span class="ot">-f</span> ~/.functions <span class="bu">]</span> <span class="kw">&amp;&amp;</span> <span class="bu">source</span> ~/.functions</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The modular approach of sourcing <code>~/.aliases</code> and <code>~/.functions</code> separately keeps the main <code>zshrc</code> concise while allowing topic-specific files to grow independently.</p>
+</section>
+<section id="git-configuration" class="level2" data-number="5.2">
+<h2 data-number="5.2" class="anchored" data-anchor-id="git-configuration"><span class="header-section-number">5.2</span> Git Configuration</h2>
+<p>The <code>gitconfig</code> file controls git’s behavior across all repositories on the machine. Store it without credentials; configure the email address per repository or via <code>git config --global</code>:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># git/gitconfig</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">[user]</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="ex">name</span> = Your Name</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="ex">[core]</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="ex">editor</span> = vim</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="ex">autocrlf</span> = input</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="ex">excludesfile</span> = ~/.gitignore_global</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="ex">[alias]</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="ex">st</span> = status</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">co</span> = checkout</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    <span class="ex">br</span> = branch</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    <span class="ex">cm</span> = commit <span class="at">-m</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    <span class="ex">lg</span> = log <span class="at">--oneline</span> <span class="at">--graph</span> <span class="at">--decorate</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    <span class="ex">unstage</span> = reset HEAD <span class="at">--</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="ex">[push]</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>    <span class="ex">default</span> = simple</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a><span class="ex">[pull]</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>    <span class="ex">rebase</span> = true</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="cross-platform-compatibility" class="level2" data-number="5.3">
+<h2 data-number="5.3" class="anchored" data-anchor-id="cross-platform-compatibility"><span class="header-section-number">5.3</span> Cross-Platform Compatibility</h2>
+<p>Different operating systems require platform-specific paths and command flags. Use conditional logic so the same dotfiles work on both macOS and Linux without manual editing:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="cf">case</span> <span class="st">"</span><span class="va">$OSTYPE</span><span class="st">"</span> <span class="kw">in</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="ss">darwin</span><span class="pp">*</span><span class="kw">)</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="bu">export</span> <span class="va">BREW_PREFIX</span><span class="op">=</span><span class="st">"/opt/homebrew"</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="bu">alias</span> ls=<span class="st">"ls -G"</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">;;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="ss">linux</span><span class="pp">*</span><span class="kw">)</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    <span class="bu">export</span> <span class="va">BREW_PREFIX</span><span class="op">=</span><span class="st">"/home/linuxbrew/.linuxbrew"</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">alias</span> ls=<span class="st">"ls --color=auto"</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">;;</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="cf">esac</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="bu">[</span> <span class="ot">-f</span> <span class="st">"</span><span class="va">$BREW_PREFIX</span><span class="st">/bin/brew"</span> <span class="bu">]</span> <span class="dt">\</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>  <span class="kw">&amp;&amp;</span> <span class="bu">eval</span> <span class="st">"</span><span class="va">$(</span><span class="st">"</span><span class="va">$BREW_PREFIX</span><span class="st">/bin/brew"</span> shellenv<span class="va">)</span><span class="st">"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>This pattern of using <code>$OSTYPE</code> for platform detection is reliable across Bash and Zsh and avoids the need for separate configuration files per operating system.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance2.png" class="img-fluid figure-img"></p>
+<figcaption>Soft ambiance image representing careful configuration and organization</figcaption>
+</figure>
+</div>
+<p><em>Careful organization of configuration files pays dividends across every machine you touch.</em></p>
+</section>
+</section>
+<section id="automated-installation-scripts" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Automated Installation Scripts</h1>
+<p>The power of a dotfiles repository lies in its installation script, which transforms a bare machine into a fully configured development environment with a single command. A well-designed script creates symbolic links from the repository to the expected locations in <code>$HOME</code>, backing up any existing files before overwriting them.</p>
+<section id="basic-script-structure" class="level2" data-number="6.1">
+<h2 data-number="6.1" class="anchored" data-anchor-id="basic-script-structure"><span class="header-section-number">6.1</span> Basic Script Structure</h2>
+<p>Start with strict error handling and logging functions:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">#!/bin/bash</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span> <span class="at">-e</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="fu">log()</span> <span class="kw">{</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">echo</span> <span class="st">"[INFO] </span><span class="va">$1</span><span class="st">"</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="fu">warn()</span> <span class="kw">{</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    <span class="bu">echo</span> <span class="st">"[WARN] </span><span class="va">$1</span><span class="st">"</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="fu">error()</span> <span class="kw">{</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>    <span class="bu">echo</span> <span class="st">"[ERROR] </span><span class="va">$1</span><span class="st">"</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="safe-file-linking" class="level2" data-number="6.2">
+<h2 data-number="6.2" class="anchored" data-anchor-id="safe-file-linking"><span class="header-section-number">6.2</span> Safe File Linking</h2>
+<p>The core function creates symbolic links while preserving existing configurations:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">link_file()</span> <span class="kw">{</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">local</span> <span class="va">src</span><span class="op">=</span><span class="st">"</span><span class="va">$1</span><span class="st">"</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="bu">local</span> <span class="va">dest</span><span class="op">=</span><span class="st">"</span><span class="va">$2</span><span class="st">"</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="bu">[</span> <span class="ot">-e</span> <span class="st">"</span><span class="va">$dest</span><span class="st">"</span> <span class="bu">]</span><span class="kw">;</span> <span class="cf">then</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>        <span class="ex">warn</span> <span class="st">"</span><span class="va">$dest</span><span class="st"> exists, creating backup"</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>        <span class="fu">mv</span> <span class="st">"</span><span class="va">$dest</span><span class="st">"</span> <span class="dt">\</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>          <span class="st">"</span><span class="va">${dest}</span><span class="st">.backup.</span><span class="va">$(</span><span class="fu">date</span> +%Y%m%d_%H%M%S<span class="va">)</span><span class="st">"</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">fi</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ln</span> <span class="at">-sf</span> <span class="st">"</span><span class="va">$src</span><span class="st">"</span> <span class="st">"</span><span class="va">$dest</span><span class="st">"</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    <span class="ex">log</span> <span class="st">"Linked </span><span class="va">$src</span><span class="st"> -&gt; </span><span class="va">$dest</span><span class="st">"</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The timestamped backup ensures that no existing configuration is lost, even if the script is run multiple times.</p>
+</section>
+<section id="installation-logic" class="level2" data-number="6.3">
+<h2 data-number="6.3" class="anchored" data-anchor-id="installation-logic"><span class="header-section-number">6.3</span> Installation Logic</h2>
+<p>The main function ties everything together:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">install_dotfiles()</span> <span class="kw">{</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">local</span> <span class="va">dir</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="va">dir</span><span class="op">=</span><span class="st">"</span><span class="va">$(</span><span class="bu">cd</span> <span class="st">"</span><span class="va">$(</span><span class="fu">dirname</span> <span class="st">"</span><span class="va">$0</span><span class="st">"</span><span class="va">)</span><span class="st">"</span> <span class="kw">&amp;&amp;</span> <span class="bu">pwd</span><span class="va">)</span><span class="st">"</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    <span class="ex">log</span> <span class="st">"Installing dotfiles from </span><span class="va">$dir</span><span class="st">"</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    <span class="ex">link_file</span> <span class="st">"</span><span class="va">$dir</span><span class="st">/shell/zshrc"</span> <span class="st">"</span><span class="va">$HOME</span><span class="st">/.zshrc"</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    <span class="ex">link_file</span> <span class="st">"</span><span class="va">$dir</span><span class="st">/shell/aliases"</span> <span class="st">"</span><span class="va">$HOME</span><span class="st">/.aliases"</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    <span class="ex">link_file</span> <span class="dt">\</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>      <span class="st">"</span><span class="va">$dir</span><span class="st">/shell/functions"</span> <span class="st">"</span><span class="va">$HOME</span><span class="st">/.functions"</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>    <span class="ex">link_file</span> <span class="dt">\</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>      <span class="st">"</span><span class="va">$dir</span><span class="st">/git/gitconfig"</span> <span class="st">"</span><span class="va">$HOME</span><span class="st">/.gitconfig"</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>    <span class="ex">link_file</span> <span class="st">"</span><span class="va">$dir</span><span class="st">/editors/vimrc"</span> <span class="st">"</span><span class="va">$HOME</span><span class="st">/.vimrc"</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>    <span class="ex">log</span> <span class="st">"Dotfiles installation complete!"</span></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>    <span class="ex">log</span> <span class="st">"Restart your shell or run: source ~/.zshrc"</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a><span class="ex">install_dotfiles</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The script is deliberately simple. Each <code>link_file</code> call is an explicit mapping from the repository path to the expected location in <code>$HOME</code>, making the deployment transparent and easy to audit.</p>
+</section>
+</section>
+<section id="advanced-features-and-security" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Advanced Features and Security</h1>
+<p>With a functional repository and installation script in place, the next step is hardening the setup against the security risks inherent in publishing configuration files to a public repository.</p>
+<section id="package-management-integration" class="level2" data-number="7.1">
+<h2 data-number="7.1" class="anchored" data-anchor-id="package-management-integration"><span class="header-section-number">7.1</span> Package Management Integration</h2>
+<p>Automating software installation alongside configuration deployment creates a complete environment setup:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Brewfile for macOS package management</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ex">brew</span> <span class="st">"git"</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="ex">brew</span> <span class="st">"vim"</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="ex">brew</span> <span class="st">"tmux"</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="ex">brew</span> <span class="st">"python@3.11"</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="ex">cask</span> <span class="st">"visual-studio-code"</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="ex">cask</span> <span class="st">"iterm2"</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="ex">cask</span> <span class="st">"docker"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Run the Brewfile during installation:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ex">brew</span> bundle <span class="at">--file</span><span class="op">=</span>packages/Brewfile</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="secure-configuration-management" class="level2" data-number="7.2">
+<h2 data-number="7.2" class="anchored" data-anchor-id="secure-configuration-management"><span class="header-section-number">7.2</span> Secure Configuration Management</h2>
+<p>Never commit secrets to version control. Instead, use a local environment file that is excluded from git:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># In .zshrc, source a local-only file</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">[</span> <span class="ot">-f</span> ~/.env.local <span class="bu">]</span><span class="kw">;</span> <span class="cf">then</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    <span class="bu">export</span> <span class="va">$(</span><span class="fu">grep</span> <span class="at">-v</span> <span class="st">'^#'</span> ~/.env.local <span class="kw">|</span> <span class="fu">xargs</span><span class="va">)</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="cf">fi</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="co"># ~/.env.local (NOT tracked by git)</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="co"># GITHUB_TOKEN=your_token_here</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="co"># AWS_ACCESS_KEY_ID=your_key_here</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>For teams that need encrypted secrets in git, <code>git-crypt</code> provides transparent encryption:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">git-crypt</span> init</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="ex">git-crypt</span> add-gpg-user your-gpg-key-id</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"secrets/* filter=git-crypt diff=git-crypt"</span> <span class="dt">\</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="op">&gt;&gt;</span> .gitattributes</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="team-collaboration" class="level2" data-number="7.3">
+<h2 data-number="7.3" class="anchored" data-anchor-id="team-collaboration"><span class="header-section-number">7.3</span> Team Collaboration</h2>
+<p>A Makefile provides a standardized interface for common operations, making the repository accessible to team members who may not be familiar with the internal structure:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="ex">.PHONY:</span> install update backup test</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="ex">install:</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    <span class="ex">@echo</span> <span class="st">"Installing dotfiles..."</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>    <span class="ex">./install.sh</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="ex">update:</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>    <span class="ex">@echo</span> <span class="st">"Updating dotfiles..."</span></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">git</span> pull origin main</span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>    <span class="ex">./install.sh</span></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a><span class="ex">backup:</span></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>    <span class="ex">@echo</span> <span class="st">"Backing up current configurations..."</span></span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>    <span class="ex">./scripts/backup.sh</span></span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a><span class="ex">test:</span></span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>    <span class="ex">@echo</span> <span class="st">"Testing dotfiles configuration..."</span></span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>    <span class="ex">./scripts/test.sh</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="things-to-watch-out-for" class="level2" data-number="7.4">
+<h2 data-number="7.4" class="anchored" data-anchor-id="things-to-watch-out-for"><span class="header-section-number">7.4</span> Things to Watch Out For</h2>
+<ol type="1">
+<li><strong>Forgetting <code>.gitignore</code> patterns.</strong> I accidentally committed an <code>.env.local</code> file early on because I had not yet added the ignore rule. Add sensitive patterns to <code>.gitignore</code> before the first commit.</li>
+<li><strong>Stale backups accumulating.</strong> The <code>link_file</code> function creates timestamped backups on every run. Periodically clean <code>$HOME/*.backup.*</code> files to avoid clutter.</li>
+<li><strong>Platform-specific breakage.</strong> A Homebrew path that works on macOS will fail silently on Linux. Always test conditional blocks on both platforms before pushing.</li>
+<li><strong>Symlink confusion in editors.</strong> Some editors follow symlinks differently. If you edit <code>~/.zshrc</code> and the changes do not appear in the repository, confirm that your editor resolves symlinks correctly.</li>
+<li><strong>Public repository exposure.</strong> Running <code>git log -p</code> on a public dotfiles repository reveals the full history, including anything committed and later removed. Use <code>git-filter-repo</code> to scrub leaked secrets from history.</li>
+</ol>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance3.jpg" class="img-fluid figure-img"></p>
+<figcaption>UCSD Geisel Library representing structured knowledge management</figcaption>
+</figure>
+</div>
+<p><em>Systematic organization of development configurations mirrors the structured approach of academic research.</em></p>
+</section>
+</section>
+<section id="what-did-we-learn" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> What Did We Learn?</h1>
+<section id="lessons-learnt" class="level2" data-number="8.1">
+<h2 data-number="8.1" class="anchored" data-anchor-id="lessons-learnt"><span class="header-section-number">8.1</span> Lessons Learnt</h2>
+<p><strong>Conceptual Understanding:</strong></p>
+<ul>
+<li>A dotfiles repository is fundamentally a backup and deployment system for the implicit knowledge embedded in configuration files that accumulate over years of daily use.</li>
+<li>The symbolic link model preserves a single source of truth in the repository while allowing tools to read files from their expected locations in <code>$HOME</code>.</li>
+<li>Storing files without leading dots is a modern convention that improves visibility and makes the link mapping explicit in the installation script.</li>
+<li>Security is not an afterthought; the <code>.gitignore</code> and the separation of secrets into untracked <code>.env.local</code> files must be established before any content is committed.</li>
+</ul>
+<p><strong>Technical Skills:</strong></p>
+<ul>
+<li>Writing a portable <code>install.sh</code> that handles backup, linking, and platform detection in under 50 lines of Bash.</li>
+<li>Using <code>$OSTYPE</code> case statements for cross-platform conditional logic that works across both Bash and Zsh.</li>
+<li>Structuring a Brewfile to automate macOS application installation alongside command-line tool provisioning.</li>
+<li>Configuring <code>git-crypt</code> for transparent encryption of sensitive files within a public repository.</li>
+</ul>
+<p><strong>Gotchas and Pitfalls:</strong></p>
+<ul>
+<li>Running the install script without first adding <code>.gitignore</code> rules can expose secrets in the very first commit.</li>
+<li>Homebrew paths differ between Intel macOS (<code>/usr/local</code>) and Apple Silicon (<code>/opt/homebrew</code>), requiring explicit detection.</li>
+<li>The <code>set -e</code> flag in installation scripts will abort on the first error, which is desirable but can mask the root cause if logging is insufficient.</li>
+<li>Automated backups create a growing collection of timestamped files in <code>$HOME</code> that require periodic manual cleanup.</li>
+</ul>
+</section>
+<section id="limitations" class="level2" data-number="8.2">
+<h2 data-number="8.2" class="anchored" data-anchor-id="limitations"><span class="header-section-number">8.2</span> Limitations</h2>
+<ul>
+<li>Public repositories expose all committed content, including deleted files that remain in git history, which creates a permanent security risk if credentials are ever committed by mistake.</li>
+<li>SSH keys must be generated per machine and cannot be safely distributed through a dotfiles repository, limiting the scope of automation.</li>
+<li>Cross-platform scripts require testing on every target platform; a configuration that works on macOS may fail on Ubuntu, Fedora, or Arch Linux due to differences in installed tools and paths.</li>
+<li>Personal preferences embedded in dotfiles may conflict with team or organizational coding standards, requiring separate personal and shared repositories.</li>
+<li>The installation script assumes a standard <code>$HOME</code> directory structure and may not work correctly in non-standard environments such as containers, NixOS, or enterprise-managed workstations.</li>
+</ul>
+</section>
+<section id="opportunities-for-improvement" class="level2" data-number="8.3">
+<h2 data-number="8.3" class="anchored" data-anchor-id="opportunities-for-improvement"><span class="header-section-number">8.3</span> Opportunities for Improvement</h2>
+<ol type="1">
+<li>Add a CI/CD pipeline using GitHub Actions that tests the installation script on both macOS and Ubuntu runners after every push.</li>
+<li>Integrate with Docker or Podman to create a containerized development environment that combines the dotfiles with a complete software stack.</li>
+<li>Implement a <code>--dry-run</code> flag in the installation script that reports what changes would be made without creating any links or backups.</li>
+<li>Add a Makefile target that runs ShellCheck on all Bash scripts to catch portability and syntax issues automatically.</li>
+<li>Create a <code>diff</code> command that compares deployed configurations in <code>$HOME</code> against the repository versions to detect local drift.</li>
+<li>Explore Ansible or Chezmoi as declarative alternatives to hand-written installation scripts for managing complex multi-machine setups.</li>
+</ol>
+</section>
+</section>
+<section id="wrapping-up" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> Wrapping Up</h1>
+<p>A GitHub dotfiles repository transforms the error-prone ritual of manual environment configuration into a version-controlled, automated process. The core idea is simple: store your configuration files in a git repository, write an installation script that creates symbolic links, and never configure a machine by hand again.</p>
+<p>The main takeaways from this exercise:</p>
+<ul>
+<li>New machine setup drops from 4-6 hours of manual configuration to roughly 15-30 minutes with an automated install script.</li>
+<li>A single repository provides complete version history of every configuration change, with the ability to roll back problematic updates.</li>
+<li>Cross-platform conditional logic in shell files allows the same repository to serve macOS and Linux without forking into separate branches.</li>
+<li>Security requires active discipline: secrets must be separated into untracked files from the start, not removed after the fact.</li>
+</ul>
+<p>I would encourage starting small, with just your shell configuration and git aliases, and growing the repository incrementally as you identify more files worth tracking. The community repositories listed below provide excellent models for advanced techniques.</p>
+</section>
+<section id="see-also" class="level1" data-number="10">
+<h1 data-number="10"><span class="header-section-number">10</span> See Also</h1>
+<section id="related-posts" class="level2" data-number="10.1">
+<h2 data-number="10.1" class="anchored" data-anchor-id="related-posts"><span class="header-section-number">10.1</span> Related Posts</h2>
+<ul>
+<li><a href="../01-configtermzsh/configtermzsh/analysis/report/">Configure the Command Line for Data Science Development</a> – Terminal and Zsh shell configuration</li>
+<li><a href="../02-setupgit/">Set Up Git for Version Control</a> – Git installation and initial configuration</li>
+</ul>
+</section>
+<section id="key-resources" class="level2" data-number="10.2">
+<h2 data-number="10.2" class="anchored" data-anchor-id="key-resources"><span class="header-section-number">10.2</span> Key Resources</h2>
+<ul>
+<li><a href="https://dotfiles.github.io/">Dotfiles Community Guide</a> – Curated showcase of popular dotfiles repositories and frameworks</li>
+<li><a href="https://zachholman.com/2010/08/dotfiles-are-meant-to-be-forked/">Holman, Z. (2014). “Dotfiles Are Meant to Be Forked”</a> – Influential essay on dotfiles philosophy</li>
+<li><a href="https://www.anishathalye.com/2014/02/15/managing-your-dotfiles/">Athalye, A. “Managing Your Dotfiles”</a> – Practical guide from the creator of Dotbot</li>
+<li><a href="https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html">OWASP Secrets Management Cheat Sheet</a> – Security best practices for credential handling</li>
+<li><a href="https://www.atlassian.com/git/tutorials/dotfiles">Atlassian: “The Best Way to Store Your Dotfiles”</a> – Alternative approach using bare git repositories</li>
+</ul>
+</section>
+</section>
+<section id="reproducibility" class="level1" data-number="11">
+<h1 data-number="11"><span class="header-section-number">11</span> Reproducibility</h1>
+<section id="system-requirements" class="level2" data-number="11.1">
+<h2 data-number="11.1" class="anchored" data-anchor-id="system-requirements"><span class="header-section-number">11.1</span> System Requirements</h2>
+<ul>
+<li><strong>Git</strong>: Version 2.0 or higher</li>
+<li><strong>Shell</strong>: Bash 4.0+ or Zsh 5.0+</li>
+<li><strong>GitHub Account</strong>: For repository hosting</li>
+<li><strong>Platform</strong>: macOS 12+ or Ubuntu 20.04+</li>
+</ul>
+</section>
+<section id="environment-verification" class="level2" data-number="11.2">
+<h2 data-number="11.2" class="anchored" data-anchor-id="environment-verification"><span class="header-section-number">11.2</span> Environment Verification</h2>
+<div class="sourceCode" id="cb15"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> <span class="at">--version</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="va">$SHELL</span> <span class="at">--version</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="fu">uname</span> <span class="at">-a</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="va">$HOME</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="security-review-checklist" class="level2" data-number="11.3">
+<h2 data-number="11.3" class="anchored" data-anchor-id="security-review-checklist"><span class="header-section-number">11.3</span> Security Review Checklist</h2>
+<p>Before publishing, verify:</p>
+<ul>
+<li>No SSH private keys (<code>id_rsa</code>, <code>id_ed25519</code>)</li>
+<li>No API tokens or credentials</li>
+<li>No hardcoded passwords or personal information</li>
+<li><code>.gitignore</code> includes all sensitive file patterns</li>
+<li>Environment variables externalized to <code>.env.local</code></li>
+</ul>
+</section>
+</section>
+<section id="lets-connect" class="level1" data-number="12">
+<h1 data-number="12"><span class="header-section-number">12</span> Let’s Connect</h1>
+<ul>
+<li><strong>GitHub:</strong> <a href="https://github.com/rgt47">rgt47</a></li>
+<li><strong>Twitter/X:</strong> <a href="https://twitter.com/rgt47"><span class="citation" data-cites="rgt47">@rgt47</span></a></li>
+<li><strong>LinkedIn:</strong> <a href="https://linkedin.com/in/rgthomaslab">Ronald Glenn Thomas</a></li>
+<li><strong>Email:</strong> <a href="https://rgtlab.org/contact">rgtlab.org/contact</a></li>
+</ul>
+<p>I would enjoy hearing from you if:</p>
+<ul>
+<li>You spot an error or a better approach to any of the code in this post.</li>
+<li>You have suggestions for topics you would like to see covered.</li>
+<li>You want to discuss R programming, data science, or reproducible research.</li>
+<li>You have questions about anything in this tutorial.</li>
+<li>You just want to say hello and connect.</li>
+</ul>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp("https:\/\/focusonr\.org");
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<script src="https://giscus.app/client.js" data-repo="rgt47/qblog" data-repo-id="R_kgDOH6TO7A" data-category="General" data-category-id="DIC_kwDOH6TO7M4CXqIi" data-mapping="pathname" data-reactions-enabled="1" data-emit-metadata="0" data-input-position="bottom" data-theme="light" data-lang="en" crossorigin="anonymous" async="">
+</script>
+<input type="hidden" id="giscus-base-theme" value="light">
+<input type="hidden" id="giscus-alt-theme" value="light">
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Copyright 2023-2025, Ronald G. Thomas</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47">
+      <i class="bi bi-github" role="img">
+</i> 
+    </a>
+  </li>  
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47">
+      <i class="bi bi-twitter" role="img">
+</i> 
+    </a>
+  </li>  
+</ul>
+    </div>
+  </div>
+</footer>
+<!-- Fix for Quarto category encoding issue -->
+<script>
+// Fix category encoding for Quarto listing functionality
+(function() {
+  function fixAllCategoryEncoding() {
+    // Only run on pages that have Quarto listings
+    if (!document.querySelector('.quarto-listing')) {
+      return;
+    }
+    
+    // Fix sidebar category data-category attributes
+    const categoryEls = document.querySelectorAll('.quarto-listing-category .category[data-category]');
+    
+    categoryEls.forEach((categoryEl) => {
+      const category = categoryEl.getAttribute('data-category');
+      
+      if (category && category !== '') {
+        // Check if it contains only base64 characters and proper length
+        const isBase64 = /^[A-Za-z0-9+/]*={0,2}$/.test(category) && category.length % 4 === 0;
+        
+        if (isBase64) {
+          try {
+            const decoded = decodeURIComponent(atob(category));
+            // Verify it decoded to something reasonable (no control characters)
+            if (!decoded.match(/^[A-Za-z0-9\s\-,]+$/)) {
+              // Invalid encoding, re-encode from original text
+              const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+              categoryEl.setAttribute('data-category', encodedCategory);
+            }
+          } catch (e) {
+            // Base64 decode failed, re-encode from original text
+            const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+            categoryEl.setAttribute('data-category', encodedCategory);
+          }
+        } else {
+          // Not base64, encode it
+          const encodedCategory = btoa(encodeURIComponent(category));
+          categoryEl.setAttribute('data-category', encodedCategory);
+        }
+      }
+    });
+    
+    // Fix listing item data-categories attributes  
+    const listingItems = document.querySelectorAll('[data-categories]');
+    
+    listingItems.forEach((item) => {
+      const categories = item.getAttribute('data-categories');
+      
+      if (categories && categories !== '') {
+        // Check if it's already base64 encoded
+        try {
+          decodeURIComponent(atob(categories));
+          // Already encoded and valid
+        } catch (e) {
+          // Not encoded, fix it
+          const encodedCategories = btoa(encodeURIComponent(categories));
+          item.setAttribute('data-categories', encodedCategories);
+        }
+      }
+    });
+    
+    // Fix post-specific category tag click handlers
+    const postCategoryTags = document.querySelectorAll('.listing-category[onclick]');
+    
+    postCategoryTags.forEach((tag) => {
+      const categoryText = tag.textContent.trim();
+      
+      // Replace the onclick handler to use encoded category
+      tag.onclick = () => {
+        const encodedCategory = btoa(encodeURIComponent(categoryText));
+        window.quartoListingCategory(encodedCategory);
+        return false;
+      };
+    });
+  }
+  
+  // Run immediately
+  fixAllCategoryEncoding();
+  
+  // Also run when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fixAllCategoryEncoding);
+  }
+})();
+</script>
+
+<!-- PDF view/download button for blog posts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Only add the button on post pages
+  if (window.location.pathname.includes('/posts/') && !window.location.pathname.endsWith('/posts/') && !window.location.pathname.endsWith('/posts/index.html')) {
+    var currentPath = window.location.pathname;
+    // Handle both /posts/name/ and /posts/name/index.html formats
+    var pdfPath;
+    if (currentPath.endsWith('/')) {
+      pdfPath = currentPath + 'index.pdf';
+    } else {
+      pdfPath = currentPath.replace('.html', '.pdf');
+    }
+
+    // Check if PDF exists first
+    fetch(pdfPath, { method: 'HEAD' })
+      .then(function(response) {
+        if (response.ok) {
+          // PDF exists, show download button
+          showDownloadButton(pdfPath);
+        }
+        // If PDF doesn't exist, don't show any button
+      })
+      .catch(function(error) {
+        // Error checking PDF, don't show any button
+      });
+  }
+});
+
+function showDownloadButton(pdfPath) {
+  var downloadBtn = document.createElement('div');
+  downloadBtn.className = 'pdf-download-button';
+
+  // Get file size if possible
+  fetch(pdfPath, { method: 'HEAD' })
+    .then(function(response) {
+      var size = response.headers.get('Content-Length');
+      var sizeText = '';
+
+      if (size) {
+        // Convert to MB or KB
+        var sizeInMB = size / (1024 * 1024);
+        if (sizeInMB >= 1) {
+          sizeText = ' (' + sizeInMB.toFixed(1) + ' MB)';
+        } else {
+          sizeText = ' (' + (size / 1024).toFixed(0) + ' KB)';
+        }
+      }
+
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' + sizeText +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    })
+    .catch(function() {
+      // Basic fallback if we can't get file size
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    });
+
+  // Find where to insert the button (right after the title block)
+  var titleBlock = document.querySelector('.quarto-title-meta');
+  if (titleBlock) {
+    titleBlock.after(downloadBtn);
+  }
+}
+
+
+</script>
+
+<style>
+.pdf-download-button {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+</style>
+
+
+
+
+</body></html>

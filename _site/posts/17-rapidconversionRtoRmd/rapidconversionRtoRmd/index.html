@@ -1,0 +1,1491 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.5.45">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ronald G. Thomas">
+<meta name="dcterms.date" content="2026-04-21">
+<meta name="description" content="I did not really know how to quickly convert a working R script into a presentable report until I discovered knitr::spin() and a few supporting workflows that changed how I share analytical results.">
+
+<title>Rapid Conversion of Draft R Scripts to Formal Rmd Reports – Thomas Lab</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../../">
+<script src="../../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": true,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "keyboard-shortcut": [
+    "?",
+    "/"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&amp;family=Open+Sans:ital,wght@0,400;0,600;1,400&amp;family=Fira+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<script src="https://kit.fontawesome.com/0fba9333d8.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+
+<!-- Custom meta tags for social sharing -->
+<meta property="og:site_name" content="Thomas Lab">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@rgt47">
+
+<!-- Add responsive features -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<!-- Add analytics if needed -->
+<!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXX');
+</script> -->
+
+<!-- Add custom javascript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Remove code tools button completely
+  const codeButton = document.querySelector('.code-tools-button');
+  if (codeButton) {
+    codeButton.remove();
+  }
+  
+  // Add any custom JavaScript functionality here
+  
+  // Example: Add smooth scrolling
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      
+      document.querySelector(this.getAttribute('href')).scrollIntoView({
+        behavior: 'smooth'
+      });
+    });
+  });
+  
+  // Make sidebar category items clickable (but not TOC items)
+  const categoryLinks = {
+    'Programming & Development': '/posts/?category=Programming+%26+Development',
+    'Data Analysis & Visualization': '/posts/?category=Data+Analysis+%26+Visualization',
+    'Deployment & Operations': '/posts/?category=Deployment+%26+Operations',
+    'Development Environment': '/posts/?category=Development+Environment',
+    'Shiny Applications': '/posts/?category=Shiny+Applications',
+    'AI & Automation': '/posts/?category=AI+%26+Automation',
+    'System Administration': '/posts/?category=System+Administration'
+  };
+  
+  // Only target sidebar items that are not in the TOC
+  document.querySelectorAll('.sidebar-item-section .sidebar-item-text').forEach(item => {
+    // Skip if this is inside the TOC
+    if (item.closest('#TOC')) return;
+    
+    const text = item.textContent.trim();
+    if (categoryLinks[text]) {
+      item.addEventListener('click', function() {
+        window.location.href = categoryLinks[text];
+      });
+    }
+  });
+});
+</script>
+
+
+<meta property="og:title" content="Thomas Lab - Rapid Conversion of Draft R Scripts to Formal Rmd Reports">
+<meta property="og:description" content="I did not really know how to quickly convert a working R script into a presentable report until I discovered knitr::spin() and a few supporting workflows that changed how I share analytical results.">
+<meta property="og:image" content="https://focusonr.org/posts/17-rapidconversionRtoRmd/rapidconversionRtoRmd/media/images/hero.jpg">
+<meta property="og:site_name" content="Thomas Lab">
+</head>
+
+<body class="nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../../index.html">
+    <span class="navbar-title">Thomas Lab</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../about/index.html"> 
+<span class="menu-text">About</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../blog/index.html"> 
+<span class="menu-text">Blog</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../white-papers/index.html"> 
+<span class="menu-text">White Papers</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../research/index.html"> 
+<span class="menu-text">Research</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../teaching/index.html"> 
+<span class="menu-text">Teaching</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../misc/index.html"> 
+<span class="menu-text">Misc</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47"> <i class="bi bi-twitter" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a>
+  <ul class="collapse">
+  <li><a href="#motivations" id="toc-motivations" class="nav-link" data-scroll-target="#motivations"><span class="header-section-number">1.1</span> Motivations</a></li>
+  <li><a href="#objectives" id="toc-objectives" class="nav-link" data-scroll-target="#objectives"><span class="header-section-number">1.2</span> Objectives</a></li>
+  </ul></li>
+  <li><a href="#prerequisites-and-setup" id="toc-prerequisites-and-setup" class="nav-link" data-scroll-target="#prerequisites-and-setup"><span class="header-section-number">2</span> Prerequisites and Setup</a></li>
+  <li><a href="#what-is-script-to-report-conversion" id="toc-what-is-script-to-report-conversion" class="nav-link" data-scroll-target="#what-is-script-to-report-conversion"><span class="header-section-number">3</span> What is Script-to-Report Conversion?</a></li>
+  <li><a href="#getting-started-the-problem-with-raw-scripts" id="toc-getting-started-the-problem-with-raw-scripts" class="nav-link" data-scroll-target="#getting-started-the-problem-with-raw-scripts"><span class="header-section-number">4</span> Getting Started: The Problem with Raw Scripts</a></li>
+  <li><a href="#approach-1-knitrspin-the-fastest-path" id="toc-approach-1-knitrspin-the-fastest-path" class="nav-link" data-scroll-target="#approach-1-knitrspin-the-fastest-path"><span class="header-section-number">5</span> Approach 1: <code>knitr::spin()</code> – The Fastest Path</a>
+  <ul class="collapse">
+  <li><a href="#how-spin-annotation-works" id="toc-how-spin-annotation-works" class="nav-link" data-scroll-target="#how-spin-annotation-works"><span class="header-section-number">5.1</span> How spin() Annotation Works</a></li>
+  <li><a href="#annotating-an-existing-script" id="toc-annotating-an-existing-script" class="nav-link" data-scroll-target="#annotating-an-existing-script"><span class="header-section-number">5.2</span> Annotating an Existing Script</a></li>
+  <li><a href="#running-spin" id="toc-running-spin" class="nav-link" data-scroll-target="#running-spin"><span class="header-section-number">5.3</span> Running spin()</a></li>
+  </ul></li>
+  <li><a href="#approach-2-manual-conversion" id="toc-approach-2-manual-conversion" class="nav-link" data-scroll-target="#approach-2-manual-conversion"><span class="header-section-number">6</span> Approach 2: Manual Conversion</a>
+  <ul class="collapse">
+  <li><a href="#the-conversion-steps" id="toc-the-conversion-steps" class="nav-link" data-scroll-target="#the-conversion-steps"><span class="header-section-number">6.1</span> The Conversion Steps</a></li>
+  <li><a href="#a-minimal-template-for-manual-conversion" id="toc-a-minimal-template-for-manual-conversion" class="nav-link" data-scroll-target="#a-minimal-template-for-manual-conversion"><span class="header-section-number">6.2</span> A Minimal Template for Manual Conversion</a></li>
+  <li><a href="#when-manual-conversion-makes-sense" id="toc-when-manual-conversion-makes-sense" class="nav-link" data-scroll-target="#when-manual-conversion-makes-sense"><span class="header-section-number">6.3</span> When Manual Conversion Makes Sense</a></li>
+  </ul></li>
+  <li><a href="#approach-3-rstudios-compile-report" id="toc-approach-3-rstudios-compile-report" class="nav-link" data-scroll-target="#approach-3-rstudios-compile-report"><span class="header-section-number">7</span> Approach 3: RStudio’s “Compile Report”</a>
+  <ul class="collapse">
+  <li><a href="#how-to-use-it" id="toc-how-to-use-it" class="nav-link" data-scroll-target="#how-to-use-it"><span class="header-section-number">7.1</span> How to Use It</a></li>
+  <li><a href="#practical-considerations" id="toc-practical-considerations" class="nav-link" data-scroll-target="#practical-considerations"><span class="header-section-number">7.2</span> Practical Considerations</a></li>
+  </ul></li>
+  <li><a href="#verification" id="toc-verification" class="nav-link" data-scroll-target="#verification"><span class="header-section-number">8</span> Verification</a></li>
+  <li><a href="#daily-workflow" id="toc-daily-workflow" class="nav-link" data-scroll-target="#daily-workflow"><span class="header-section-number">9</span> Daily Workflow</a>
+  <ul class="collapse">
+  <li><a href="#things-to-watch-out-for" id="toc-things-to-watch-out-for" class="nav-link" data-scroll-target="#things-to-watch-out-for"><span class="header-section-number">9.1</span> Things to Watch Out For</a></li>
+  </ul></li>
+  <li><a href="#comparing-the-three-approaches" id="toc-comparing-the-three-approaches" class="nav-link" data-scroll-target="#comparing-the-three-approaches"><span class="header-section-number">10</span> Comparing the Three Approaches</a></li>
+  <li><a href="#uninstall-rollback" id="toc-uninstall-rollback" class="nav-link" data-scroll-target="#uninstall-rollback"><span class="header-section-number">11</span> Uninstall / Rollback</a></li>
+  <li><a href="#what-did-we-learn" id="toc-what-did-we-learn" class="nav-link" data-scroll-target="#what-did-we-learn"><span class="header-section-number">12</span> What Did We Learn?</a>
+  <ul class="collapse">
+  <li><a href="#lessons-learnt" id="toc-lessons-learnt" class="nav-link" data-scroll-target="#lessons-learnt"><span class="header-section-number">12.1</span> Lessons Learnt</a></li>
+  <li><a href="#limitations" id="toc-limitations" class="nav-link" data-scroll-target="#limitations"><span class="header-section-number">12.2</span> Limitations</a></li>
+  <li><a href="#opportunities-for-improvement" id="toc-opportunities-for-improvement" class="nav-link" data-scroll-target="#opportunities-for-improvement"><span class="header-section-number">12.3</span> Opportunities for Improvement</a></li>
+  </ul></li>
+  <li><a href="#wrapping-up" id="toc-wrapping-up" class="nav-link" data-scroll-target="#wrapping-up"><span class="header-section-number">13</span> Wrapping Up</a></li>
+  <li><a href="#see-also" id="toc-see-also" class="nav-link" data-scroll-target="#see-also"><span class="header-section-number">14</span> See Also</a></li>
+  <li><a href="#reproducibility" id="toc-reproducibility" class="nav-link" data-scroll-target="#reproducibility"><span class="header-section-number">15</span> Reproducibility</a></li>
+  <li><a href="#lets-connect" id="toc-lets-connect" class="nav-link" data-scroll-target="#lets-connect"><span class="header-section-number">16</span> Let’s Connect</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content column-page-left" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Rapid Conversion of Draft R Scripts to Formal Rmd Reports</h1>
+<p class="subtitle lead">A practical workflow for turning working R files into presentation-quality documents</p>
+  <div class="quarto-categories">
+    <div class="quarto-category">r</div>
+    <div class="quarto-category">rmarkdown</div>
+    <div class="quarto-category">knitr</div>
+    <div class="quarto-category">reproducibility</div>
+    <div class="quarto-category">literate-programming</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    I did not really know how to quickly convert a working R script into a presentable report until I discovered knitr::spin() and a few supporting workflows that changed how I share analytical results.
+  </div>
+</div>
+
+
+<div class="quarto-title-meta column-page-left">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ronald G. Thomas </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">April 21, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/hero.png" class="img-fluid figure-img" style="width:80.0%"></p>
+<figcaption>A structured workflow transforms messy R scripts into polished analytical reports</figcaption>
+</figure>
+</div>
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>I did not really know how to quickly convert a working R script into a presentable report until I ran into a situation where a collaborator needed results the same afternoon. The analysis was complete, the code was tested, but the output was a tangled mix of console printouts and saved PNG files scattered across a directory. Assembling those fragments into a coherent document took longer than the analysis itself.</p>
+<p>Three things many R developers are often reluctant to tackle: code documentation, testing, and report preparation. Of these, report preparation tends to be the most urgent. When a supervisor or reviewer asks for results, they rarely want a raw R script. They want tables, figures, narrative context, and a document they can read without opening RStudio.</p>
+<p>This post walks through several approaches to bridging the gap between a working R script and a finished R Markdown report. The goal is practical: reduce the friction between “my code works” and “here is a document someone can read.”</p>
+<section id="motivations" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="motivations"><span class="header-section-number">1.1</span> Motivations</h2>
+<ul>
+<li>I had a folder of working R scripts that produced correct results but existed only as console output and disconnected figure files.</li>
+<li>Collaborators asked for formatted reports repeatedly, and each time I rebuilt the narrative from scratch rather than converting what already existed.</li>
+<li>I wanted a systematic approach that would take minutes, not hours, to move from script to document.</li>
+<li>I needed to preserve the exact code that generated the results, not rewrite it for presentation purposes.</li>
+<li>I was curious whether <code>knitr::spin()</code> could genuinely replace manual chunk insertion for simple analytical scripts.</li>
+</ul>
+</section>
+<section id="objectives" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="objectives"><span class="header-section-number">1.2</span> Objectives</h2>
+<ol type="1">
+<li>Understand the <code>knitr::spin()</code> function and how it converts annotated R scripts directly into R Markdown documents.</li>
+<li>Compare the <code>spin()</code> approach against manual conversion (adding YAML headers and wrapping code in chunks by hand).</li>
+<li>Use RStudio’s built-in “Compile Report” feature to generate quick reports without modifying the original script.</li>
+<li>Develop a reusable template workflow for consistent formatting across multiple script-to-report conversions.</li>
+</ol>
+<p>I am documenting my learning process here. If you spot errors or have better approaches, please let me know.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/placeholder-coffee-01.jpg" class="img-fluid figure-img" style="width:30.0%"></p>
+<figcaption>Settling in for a focused coding session.</figcaption>
+</figure>
+</div>
+</section>
+</section>
+<section id="prerequisites-and-setup" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Prerequisites and Setup</h1>
+<p>The techniques in this post require a standard R installation with the <code>knitr</code> and <code>rmarkdown</code> packages. RStudio is recommended for the “Compile Report” feature but is not strictly necessary for the command-line workflows.</p>
+<p><strong>Background:</strong> This post assumes familiarity with writing R scripts and a basic understanding of what R Markdown documents look like. No prior experience with <code>knitr::spin()</code> is needed.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="fu">c</span>(<span class="st">"knitr"</span>, <span class="st">"rmarkdown"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(knitr)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(rmarkdown)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="what-is-script-to-report-conversion" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> What is Script-to-Report Conversion?</h1>
+<p>Script-to-report conversion is the process of transforming a plain R script – a <code>.R</code> file containing code, comments, and possibly some inline output – into a formatted document that weaves together code, results, and narrative text. The output is typically an HTML page, PDF, or Word document that a non-programmer can read without needing to run any code.</p>
+<p>Think of it as the reverse of the usual R Markdown workflow. Instead of starting with a <code>.qmd</code> or <code>.Rmd</code> file and embedding code chunks, you start with a working <code>.R</code> file and add just enough structure to produce a readable report. The key insight is that your existing comments can serve as the narrative, and your existing code already produces the figures and tables you need.</p>
+</section>
+<section id="getting-started-the-problem-with-raw-scripts" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Getting Started: The Problem with Raw Scripts</h1>
+<p>Consider a typical analytical R script. It loads data, fits a model, prints a summary, and saves a plot. The code works perfectly, but the output is fragmented: summary statistics appear in the console, the plot is saved to disk, and there is no unified document tying them together.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(mtcars)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>mtcars<span class="sc">$</span>cyl <span class="ot">&lt;-</span> <span class="fu">as.factor</span>(mtcars<span class="sc">$</span>cyl)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(mtcars[, <span class="fu">c</span>(<span class="st">"mpg"</span>, <span class="st">"wt"</span>, <span class="st">"hp"</span>)])</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">lm</span>(mpg <span class="sc">~</span> wt <span class="sc">+</span> hp, <span class="at">data =</span> mtcars)</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(model)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(mtcars, <span class="fu">aes</span>(<span class="at">x =</span> wt, <span class="at">y =</span> mpg, <span class="at">color =</span> cyl)) <span class="sc">+</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">size =</span> <span class="dv">3</span>) <span class="sc">+</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">"lm"</span>, <span class="at">se =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Fuel Efficiency by Weight"</span>,</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Weight (1000 lbs)"</span>,</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Miles per Gallon"</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(<span class="st">"mpg_by_weight.png"</span>, <span class="at">width =</span> <span class="dv">8</span>, <span class="at">height =</span> <span class="dv">5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>This script runs correctly, but sharing its results requires manually assembling the console output, the saved figure, and some written context into a separate document. The three approaches described below solve this problem at different levels of effort and control.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance2.png" class="img-fluid figure-img"></p>
+<figcaption>Transitioning from raw scripts to structured reports</figcaption>
+</figure>
+</div>
+</section>
+<section id="approach-1-knitrspin-the-fastest-path" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Approach 1: <code>knitr::spin()</code> – The Fastest Path</h1>
+<p>The <code>knitr::spin()</code> function converts a specially annotated R script directly into an R Markdown document (and optionally renders it in one step). The key is a lightweight annotation syntax that uses R comments to embed narrative text and chunk options without restructuring the script.</p>
+<section id="how-spin-annotation-works" class="level2" data-number="5.1">
+<h2 data-number="5.1" class="anchored" data-anchor-id="how-spin-annotation-works"><span class="header-section-number">5.1</span> How spin() Annotation Works</h2>
+<p>In a spin-compatible R script, three comment styles carry special meaning:</p>
+<ul>
+<li><code>#'</code> (hash-apostrophe) marks lines as narrative Markdown text.</li>
+<li><code>#-</code> (hash-hyphen) starts a new unnamed code chunk.</li>
+<li><code>#+ label, option=value</code> (hash-plus) starts a named chunk with explicit options.</li>
+</ul>
+<p>Everything else is treated as R code inside the current chunk. This means you can annotate an existing script with minimal changes.</p>
+</section>
+<section id="annotating-an-existing-script" class="level2" data-number="5.2">
+<h2 data-number="5.2" class="anchored" data-anchor-id="annotating-an-existing-script"><span class="header-section-number">5.2</span> Annotating an Existing Script</h2>
+<p>Here is the same analysis script rewritten with spin annotations. The original code is unchanged; only comments have been modified.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">#' ---</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co">#' title: "Fuel Efficiency Analysis"</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co">#' author: "Ronald G. Thomas"</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co">#' date: today</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co">#' output: html_document</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co">#' ---</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co">#'</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="co">#' # Overview</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="co">#'</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co">#' This report examines the relationship between</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="co">#' vehicle weight, horsepower, and fuel efficiency</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="co">#' using the mtcars dataset.</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="co">#+ setup, message=FALSE</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="co">#' # Data Preparation</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(mtcars)</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>mtcars<span class="sc">$</span>cyl <span class="ot">&lt;-</span> <span class="fu">as.factor</span>(mtcars<span class="sc">$</span>cyl)</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a><span class="co">#' # Summary Statistics</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a><span class="co">#'</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="co">#' The dataset contains 32 observations across</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a><span class="co">#' three engine configurations.</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(mtcars[, <span class="fu">c</span>(<span class="st">"mpg"</span>, <span class="st">"wt"</span>, <span class="st">"hp"</span>)])</span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a><span class="co">#' # Linear Model</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a><span class="co">#'</span></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a><span class="co">#' We fit a multiple regression predicting miles</span></span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a><span class="co">#' per gallon from weight and horsepower.</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">lm</span>(mpg <span class="sc">~</span> wt <span class="sc">+</span> hp, <span class="at">data =</span> mtcars)</span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(model)</span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a><span class="co">#' # Visualization</span></span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a><span class="co">#'</span></span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a><span class="co">#' The scatterplot below shows the relationship</span></span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a><span class="co">#' between weight and fuel efficiency, colored</span></span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a><span class="co">#' by cylinder count.</span></span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a><span class="co">#+ fig-mpg, fig.width=8, fig.height=5</span></span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(mtcars, <span class="fu">aes</span>(<span class="at">x =</span> wt, <span class="at">y =</span> mpg, <span class="at">color =</span> cyl)) <span class="sc">+</span></span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">size =</span> <span class="dv">3</span>) <span class="sc">+</span></span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">"lm"</span>, <span class="at">se =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Fuel Efficiency by Weight"</span>,</span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Weight (1000 lbs)"</span>,</span>
+<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Miles per Gallon"</span></span>
+<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="running-spin" class="level2" data-number="5.3">
+<h2 data-number="5.3" class="anchored" data-anchor-id="running-spin"><span class="header-section-number">5.3</span> Running spin()</h2>
+<p>To convert and render in one step:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">spin</span>(<span class="st">"analysis_script.R"</span>, <span class="at">knit =</span> <span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Setting <code>knit = FALSE</code> produces the <code>.Rmd</code> file without rendering it, which is useful when you want to inspect or edit the intermediate Markdown before producing the final document. To generate the report directly:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">spin</span>(<span class="st">"analysis_script.R"</span>, <span class="at">knit =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The function also accepts a <code>format</code> argument for producing different output types:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>rmarkdown<span class="sc">::</span><span class="fu">render</span>(</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  knitr<span class="sc">::</span><span class="fu">spin</span>(<span class="st">"analysis_script.R"</span>, <span class="at">knit =</span> <span class="cn">FALSE</span>),</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_format =</span> <span class="st">"pdf_document"</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+</section>
+<section id="approach-2-manual-conversion" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Approach 2: Manual Conversion</h1>
+<p>Manual conversion involves creating a new <code>.Rmd</code> file and migrating code from the R script into fenced code chunks. This approach provides the most control over document structure but requires the most effort.</p>
+<section id="the-conversion-steps" class="level2" data-number="6.1">
+<h2 data-number="6.1" class="anchored" data-anchor-id="the-conversion-steps"><span class="header-section-number">6.1</span> The Conversion Steps</h2>
+<p>The process follows a predictable sequence:</p>
+<ol type="1">
+<li>Create a new <code>.Rmd</code> file with a YAML header.</li>
+<li>Copy code from the <code>.R</code> file into fenced code chunks (<code>```{r} ... ```</code>).</li>
+<li>Convert existing comments into narrative Markdown text outside the chunks.</li>
+<li>Add chunk options for figure sizing, echo control, and caching.</li>
+<li>Render the document with <code>rmarkdown::render()</code> or the RStudio Knit button.</li>
+</ol>
+</section>
+<section id="a-minimal-template-for-manual-conversion" class="level2" data-number="6.2">
+<h2 data-number="6.2" class="anchored" data-anchor-id="a-minimal-template-for-manual-conversion"><span class="header-section-number">6.2</span> A Minimal Template for Manual Conversion</h2>
+<p>The following template provides a starting point that covers the most common needs:</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Rmd template structure</summary>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># The YAML header goes at the top of the .Rmd file:</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="co"># ---</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co"># title: "Analysis Report"</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="co"># author: "Your Name"</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="co"># date: "`r Sys.Date()`"</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="co"># output:</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="co">#   html_document:</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="co">#     toc: true</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a><span class="co">#     toc_float: true</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a><span class="co">#     code_folding: hide</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="co"># ---</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Then structure content as:</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a><span class="co"># # Section Heading</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Narrative text explaining what comes next.</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a><span class="co"># ```{r chunk-name, fig.width=8, fig.height=5}</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a><span class="co"># your_code_here()</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a><span class="co"># ```</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a><span class="co"># Interpretation of the output above.</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+</section>
+<section id="when-manual-conversion-makes-sense" class="level2" data-number="6.3">
+<h2 data-number="6.3" class="anchored" data-anchor-id="when-manual-conversion-makes-sense"><span class="header-section-number">6.3</span> When Manual Conversion Makes Sense</h2>
+<p>Manual conversion is preferable when the R script contains code that should not appear in the report (data cleaning steps, debugging statements, exploratory tangents). The conversion process naturally forces you to curate what the reader sees, which often improves the document.</p>
+</section>
+</section>
+<section id="approach-3-rstudios-compile-report" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Approach 3: RStudio’s “Compile Report”</h1>
+<p>RStudio includes a “Compile Report” feature that converts any R script into a report without modifying the file at all. This is the zero-effort option.</p>
+<section id="how-to-use-it" class="level2" data-number="7.1">
+<h2 data-number="7.1" class="anchored" data-anchor-id="how-to-use-it"><span class="header-section-number">7.1</span> How to Use It</h2>
+<ol type="1">
+<li>Open an <code>.R</code> file in RStudio.</li>
+<li>Click the notebook icon in the editor toolbar (or use <code>Ctrl+Shift+K</code> / <code>Cmd+Shift+K</code>).</li>
+<li>Select the output format (HTML, PDF, or Word).</li>
+<li>RStudio runs <code>knitr::spin()</code> behind the scenes and renders the result.</li>
+</ol>
+<p>The feature interprets <code>#'</code> comments as Markdown, just like <code>spin()</code>. If the script has no special annotations, all code and standard comments appear in the output as a simple code listing with results.</p>
+</section>
+<section id="practical-considerations" class="level2" data-number="7.2">
+<h2 data-number="7.2" class="anchored" data-anchor-id="practical-considerations"><span class="header-section-number">7.2</span> Practical Considerations</h2>
+<p>The “Compile Report” approach works well for quick sharing within a team but has limitations. The output format options are restricted to what <code>rmarkdown</code> supports natively. There is no opportunity to edit the intermediate <code>.Rmd</code> before rendering. And the feature does not support Quarto-specific options like <code>code-fold</code> or cross-references.</p>
+<p>For scripts that already use <code>#'</code> annotations, this feature provides the fastest possible path from code to document. For scripts without annotations, the output is functional but visually plain.</p>
+</section>
+</section>
+<section id="verification" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Verification</h1>
+<p>After annotating a script and running <code>spin()</code>, confirm that the conversion and rendering pipeline works end to end.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">spin</span>(<span class="st">"analysis_script.R"</span>, <span class="at">knit =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">file.exists</span>(<span class="st">"analysis_script.Rmd"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>rmarkdown<span class="sc">::</span><span class="fu">render</span>(<span class="st">"analysis_script.Rmd"</span>)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="fu">file.exists</span>(<span class="st">"analysis_script.html"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">readLines</span>(<span class="st">"analysis_script.Rmd"</span>, <span class="at">n =</span> <span class="dv">5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>If all three checks return <code>TRUE</code> or display the expected YAML header, the spin pipeline is working correctly.</p>
+</section>
+<section id="daily-workflow" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> Daily Workflow</h1>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 40%">
+<col style="width: 60%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Task</th>
+<th style="text-align: left;">Command</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Annotate script</td>
+<td style="text-align: left;">Add <code>#'</code>, <code>#+</code>, <code>#-</code> comments to <code>.R</code> file</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Convert to Rmd</td>
+<td style="text-align: left;"><code>knitr::spin("script.R", knit = FALSE)</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Inspect intermediate</td>
+<td style="text-align: left;"><code>file.edit("script.Rmd")</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Render to HTML</td>
+<td style="text-align: left;"><code>rmarkdown::render("script.Rmd")</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Render to PDF</td>
+<td style="text-align: left;"><code>rmarkdown::render("script.Rmd", output_format = "pdf_document")</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Quick report (RStudio)</td>
+<td style="text-align: left;"><code>Ctrl+Shift+K</code> on open <code>.R</code> file</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Batch convert</td>
+<td style="text-align: left;"><code>lapply(list.files(pattern = "\\.R$"), knitr::spin, knit = FALSE)</code></td>
+</tr>
+</tbody>
+</table>
+<section id="things-to-watch-out-for" class="level2" data-number="9.1">
+<h2 data-number="9.1" class="anchored" data-anchor-id="things-to-watch-out-for"><span class="header-section-number">9.1</span> Things to Watch Out For</h2>
+<ol type="1">
+<li><p><strong>Chunk boundaries matter in spin().</strong> Every line of code between <code>#'</code> blocks becomes a single chunk. If you need separate chunks for different options (such as hiding one block while showing another), insert a <code>#+</code> line to start a new chunk explicitly.</p></li>
+<li><p><strong>YAML must be exact.</strong> The <code>#' ---</code> lines in a spin-annotated script must follow YAML syntax precisely. A missing space after a colon or an incorrect indentation level will cause the render to fail with an uninformative error message.</p></li>
+<li><p><strong>Figure paths can conflict.</strong> When <code>spin()</code> runs, it creates a figures directory based on the script name. If two scripts share a name in different directories, the figure directories may collide. Use explicit <code>fig.path</code> chunk options to avoid this.</p></li>
+<li><p><strong>Encoding issues on Windows.</strong> Scripts with non-ASCII characters (accented names, special symbols) may fail during the spin conversion. Ensure the script is saved with UTF-8 encoding before running <code>spin()</code>.</p></li>
+<li><p><strong>The “Compile Report” button uses the global R environment.</strong> If your script depends on objects created in a previous session, the report will fail when rendered in a clean session. Always test with <code>rmarkdown::render()</code> in a fresh R session to catch environment dependencies.</p></li>
+</ol>
+</section>
+</section>
+<section id="comparing-the-three-approaches" class="level1" data-number="10">
+<h1 data-number="10"><span class="header-section-number">10</span> Comparing the Three Approaches</h1>
+<p>The choice between <code>spin()</code>, manual conversion, and “Compile Report” depends on the complexity of the script and the quality expectations for the output.</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Criterion</th>
+<th style="text-align: left;"><code>spin()</code></th>
+<th style="text-align: left;">Manual</th>
+<th style="text-align: left;">Compile Report</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Setup time</td>
+<td style="text-align: left;">5-15 min</td>
+<td style="text-align: left;">20-60 min</td>
+<td style="text-align: left;">0 min</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Output control</td>
+<td style="text-align: left;">Moderate</td>
+<td style="text-align: left;">Full</td>
+<td style="text-align: left;">Limited</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Preserves original script</td>
+<td style="text-align: left;">Yes</td>
+<td style="text-align: left;">No (new file)</td>
+<td style="text-align: left;">Yes</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Supports Quarto</td>
+<td style="text-align: left;">No</td>
+<td style="text-align: left;">Yes</td>
+<td style="text-align: left;">No</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Chunk-level options</td>
+<td style="text-align: left;">Yes (<code>#+</code>)</td>
+<td style="text-align: left;">Yes</td>
+<td style="text-align: left;">Yes (<code>#+</code>)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Narrative quality</td>
+<td style="text-align: left;">Good</td>
+<td style="text-align: left;">Best</td>
+<td style="text-align: left;">Basic</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Suitable for publication</td>
+<td style="text-align: left;">Sometimes</td>
+<td style="text-align: left;">Yes</td>
+<td style="text-align: left;">Rarely</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Learning curve</td>
+<td style="text-align: left;">Low</td>
+<td style="text-align: left;">Low</td>
+<td style="text-align: left;">None</td>
+</tr>
+</tbody>
+</table>
+<p>For quick internal sharing, “Compile Report” or <code>spin()</code> with minimal annotations is sufficient. For external-facing documents, grant proposals, or publications, manual conversion into a <code>.qmd</code> or <code>.Rmd</code> file provides the control needed for professional formatting.</p>
+</section>
+<section id="uninstall-rollback" class="level1" data-number="11">
+<h1 data-number="11"><span class="header-section-number">11</span> Uninstall / Rollback</h1>
+<p>The spin workflow does not modify system configuration. To revert, delete the generated intermediate and output files.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">file.remove</span>(<span class="st">"analysis_script.Rmd"</span>)</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="fu">file.remove</span>(<span class="st">"analysis_script.html"</span>)</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="fu">unlink</span>(<span class="st">"analysis_script_files"</span>, <span class="at">recursive =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The original <code>.R</code> script remains unchanged because <code>spin()</code> reads from it without modifying it. No packages need to be uninstalled; <code>knitr</code> and <code>rmarkdown</code> are standard components of any R installation.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance3.jpg" class="img-fluid figure-img"></p>
+<figcaption>Refining the workflow from draft to polished report</figcaption>
+</figure>
+</div>
+</section>
+<section id="what-did-we-learn" class="level1" data-number="12">
+<h1 data-number="12"><span class="header-section-number">12</span> What Did We Learn?</h1>
+<section id="lessons-learnt" class="level2" data-number="12.1">
+<h2 data-number="12.1" class="anchored" data-anchor-id="lessons-learnt"><span class="header-section-number">12.1</span> Lessons Learnt</h2>
+<p><strong>Conceptual Understanding:</strong></p>
+<ul>
+<li>The distinction between a script and a report is primarily about narrative structure, not about code correctness. The same analysis can be either, depending on how comments and output are organized.</li>
+<li><code>spin()</code> treats R comments as a lightweight markup language. Understanding the three annotation styles (<code>#'</code>, <code>#-</code>, <code>#+</code>) is sufficient to convert most analytical scripts.</li>
+<li>Report generation works best when the original script is already well-commented. Poorly commented code requires substantial editing regardless of the conversion method.</li>
+<li>The intermediate <code>.Rmd</code> produced by <code>spin()</code> is a standard R Markdown file that can be further edited, making the spin-then-edit workflow a practical middle ground.</li>
+</ul>
+<p><strong>Technical Skills:</strong></p>
+<ul>
+<li><code>knitr::spin()</code> with <code>knit = FALSE</code> is the most useful invocation because it produces an editable intermediate file.</li>
+<li>RStudio’s “Compile Report” calls <code>spin()</code> internally, so learning spin annotation syntax benefits both workflows.</li>
+<li>Wrapping <code>spin()</code> output in <code>rmarkdown::render()</code> enables programmatic control over output format, parameters, and rendering options.</li>
+<li>For Quarto-based projects, manual conversion remains necessary because <code>spin()</code> produces <code>.Rmd</code> files, not <code>.qmd</code> files.</li>
+</ul>
+<p><strong>Gotchas and Pitfalls:</strong></p>
+<ul>
+<li>Forgetting the space after <code>#'</code> causes the line to be treated as a code comment rather than narrative text.</li>
+<li>Scripts that modify the working directory with <code>setwd()</code> inside the file will break the spin rendering process because <code>knitr</code> manages the working directory itself.</li>
+<li>Large scripts with many plots can produce extremely long reports. Consider splitting into focused analytical sections before converting.</li>
+<li>The <code>spin()</code> YAML block must start and end with <code>#' ---</code> on its own line. Inline YAML after other content on the same line fails silently.</li>
+</ul>
+</section>
+<section id="limitations" class="level2" data-number="12.2">
+<h2 data-number="12.2" class="anchored" data-anchor-id="limitations"><span class="header-section-number">12.2</span> Limitations</h2>
+<ul>
+<li><code>knitr::spin()</code> produces R Markdown (<code>.Rmd</code>) output only. It does not generate Quarto (<code>.qmd</code>) files, which limits access to Quarto-specific features such as cross-references, callouts, and multi-format rendering.</li>
+<li>The annotation syntax (<code>#'</code>, <code>#+</code>, <code>#-</code>) is specific to the <code>knitr</code> package. Scripts annotated for <code>spin()</code> will not render correctly with other literate programming tools.</li>
+<li>“Compile Report” is an RStudio-specific feature. VS Code, Positron, and terminal-based workflows do not have an equivalent one-click option (though calling <code>spin()</code> from the command line achieves the same result).</li>
+<li>None of these approaches handle multi-file analyses well. If the analysis spans several scripts that must run in sequence, a proper R Markdown or Quarto document with sourced scripts is more appropriate.</li>
+<li>The formatting produced by <code>spin()</code> is functional but not publication-ready. Figures lack captions and cross-references unless manually added in a post-processing step.</li>
+</ul>
+</section>
+<section id="opportunities-for-improvement" class="level2" data-number="12.3">
+<h2 data-number="12.3" class="anchored" data-anchor-id="opportunities-for-improvement"><span class="header-section-number">12.3</span> Opportunities for Improvement</h2>
+<ol type="1">
+<li>Write a wrapper function that runs <code>spin()</code> and then performs automated post-processing: adding figure captions, inserting a table of contents, and converting the output to <code>.qmd</code> format.</li>
+<li>Develop a standard annotation template for R scripts that includes placeholders for YAML, section headers, and figure captions, reducing the cognitive load of adding annotations.</li>
+<li>Explore the <code>litr</code> package, which takes the opposite approach: generating R packages from R Markdown documents, providing a complementary perspective on the code-document relationship.</li>
+<li>Build a Makefile or shell script that batch-converts all <code>.R</code> files in a project directory, producing a set of HTML reports with consistent styling.</li>
+<li>Investigate whether a custom <code>knitr</code> output hook could translate <code>spin()</code> output directly into Quarto <code>.qmd</code> syntax, bypassing the <code>.Rmd</code> intermediate step.</li>
+</ol>
+</section>
+</section>
+<section id="wrapping-up" class="level1" data-number="13">
+<h1 data-number="13"><span class="header-section-number">13</span> Wrapping Up</h1>
+<p>Converting R scripts to formatted reports does not need to be a time-consuming process. The <code>knitr::spin()</code> function provides a lightweight path that preserves the original script while adding just enough structure to produce a readable document. For situations requiring more control, manual conversion into R Markdown or Quarto gives full access to formatting, cross-references, and publication-quality output.</p>
+<p>What I found most useful in practice was the spin-then-edit workflow: run <code>spin()</code> with <code>knit = FALSE</code> to generate the <code>.Rmd</code> skeleton, then spend a few minutes refining the narrative and chunk options before rendering. This consistently took less than fifteen minutes for a typical analytical script, compared to forty-five minutes or more for a from- scratch manual conversion.</p>
+<p><strong>Main takeaways:</strong></p>
+<ul>
+<li><code>knitr::spin()</code> converts annotated <code>.R</code> scripts to <code>.Rmd</code> with three comment styles: <code>#'</code>, <code>#+</code>, <code>#-</code>.</li>
+<li>RStudio’s “Compile Report” runs <code>spin()</code> behind the scenes with zero setup.</li>
+<li>Manual conversion provides full control and is necessary for Quarto-based projects.</li>
+<li>The spin-then-edit workflow balances speed with document quality.</li>
+</ul>
+<p>If you have R scripts sitting in a project folder producing results that no one else can easily read, try running <code>knitr::spin("your_script.R", knit = FALSE)</code> and see what comes out. The result is often closer to a finished report than you would expect.</p>
+</section>
+<section id="see-also" class="level1" data-number="14">
+<h1 data-number="14"><span class="header-section-number">14</span> See Also</h1>
+<p><strong>Related resources:</strong></p>
+<ul>
+<li><a href="https://yihui.org/knitr/demo/stitch/">knitr::spin() documentation</a> – Yihui Xie’s official documentation and examples for the spin function.</li>
+<li><a href="https://bookdown.org/yihui/rmarkdown/">R Markdown: The Definitive Guide</a> – Comprehensive reference covering all aspects of R Markdown document creation.</li>
+<li><a href="https://quarto.org/docs/get-started/">Quarto documentation</a> – Official guide for Quarto, the next-generation publishing system for R, Python, and Julia.</li>
+<li><a href="https://kbroman.org/knitr_knutshell/">knitr in a knutshell</a> – Karl Broman’s concise tutorial on knitr, including spin usage patterns.</li>
+<li><a href="https://r4ds.hadley.nz/">R for Data Science, 2nd edition</a> – Hadley Wickham and colleagues’ guide to modern R workflows, including communication and reporting chapters.</li>
+</ul>
+</section>
+<section id="reproducibility" class="level1" data-number="15">
+<h1 data-number="15"><span class="header-section-number">15</span> Reproducibility</h1>
+<p>This post describes workflow patterns rather than a specific analysis pipeline. The code examples use base R, <code>knitr</code>, <code>rmarkdown</code>, and <code>ggplot2</code>. To test the spin workflow on your own machine:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Save the annotated script as analysis_script.R,</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="co"># then run:</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">spin</span>(<span class="st">"analysis_script.R"</span>, <span class="at">knit =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Inspect the generated .Rmd file:</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="fu">file.edit</span>(<span class="st">"analysis_script.Rmd"</span>)</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Render to HTML:</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>rmarkdown<span class="sc">::</span><span class="fu">render</span>(<span class="st">"analysis_script.Rmd"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><strong>Session information:</strong></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><strong>Key package versions:</strong></p>
+<ul>
+<li>R: 4.4+</li>
+<li>knitr: 1.45+</li>
+<li>rmarkdown: 2.25+</li>
+<li>ggplot2: 3.5+ (for figure examples)</li>
+</ul>
+</section>
+<section id="lets-connect" class="level1" data-number="16">
+<h1 data-number="16"><span class="header-section-number">16</span> Let’s Connect</h1>
+<ul>
+<li><strong>GitHub:</strong> <a href="https://github.com/rgt47">rgt47</a></li>
+<li><strong>Twitter/X:</strong> <a href="https://twitter.com/rgt47"><span class="citation" data-cites="rgt47">@rgt47</span></a></li>
+<li><strong>LinkedIn:</strong> <a href="https://linkedin.com/in/rgthomaslab">Ronald Glenn Thomas</a></li>
+<li><strong>Email:</strong> <a href="https://rgtlab.org/contact">rgtlab.org/contact</a></li>
+</ul>
+<p>I would enjoy hearing from you if:</p>
+<ul>
+<li>You spot an error or a better approach to any of the code in this post.</li>
+<li>You have suggestions for topics you would like to see covered.</li>
+<li>You want to discuss R programming, data science, or reproducible research.</li>
+<li>You have questions about anything in this tutorial.</li>
+<li>You just want to say hello and connect.</li>
+</ul>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp("https:\/\/focusonr\.org");
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<script src="https://giscus.app/client.js" data-repo="rgt47/qblog" data-repo-id="R_kgDOH6TO7A" data-category="General" data-category-id="DIC_kwDOH6TO7M4CXqIi" data-mapping="pathname" data-reactions-enabled="1" data-emit-metadata="0" data-input-position="bottom" data-theme="light" data-lang="en" crossorigin="anonymous" async="">
+</script>
+<input type="hidden" id="giscus-base-theme" value="light">
+<input type="hidden" id="giscus-alt-theme" value="light">
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Copyright 2023-2025, Ronald G. Thomas</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47">
+      <i class="bi bi-github" role="img">
+</i> 
+    </a>
+  </li>  
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47">
+      <i class="bi bi-twitter" role="img">
+</i> 
+    </a>
+  </li>  
+</ul>
+    </div>
+  </div>
+</footer>
+<!-- Fix for Quarto category encoding issue -->
+<script>
+// Fix category encoding for Quarto listing functionality
+(function() {
+  function fixAllCategoryEncoding() {
+    // Only run on pages that have Quarto listings
+    if (!document.querySelector('.quarto-listing')) {
+      return;
+    }
+    
+    // Fix sidebar category data-category attributes
+    const categoryEls = document.querySelectorAll('.quarto-listing-category .category[data-category]');
+    
+    categoryEls.forEach((categoryEl) => {
+      const category = categoryEl.getAttribute('data-category');
+      
+      if (category && category !== '') {
+        // Check if it contains only base64 characters and proper length
+        const isBase64 = /^[A-Za-z0-9+/]*={0,2}$/.test(category) && category.length % 4 === 0;
+        
+        if (isBase64) {
+          try {
+            const decoded = decodeURIComponent(atob(category));
+            // Verify it decoded to something reasonable (no control characters)
+            if (!decoded.match(/^[A-Za-z0-9\s\-,]+$/)) {
+              // Invalid encoding, re-encode from original text
+              const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+              categoryEl.setAttribute('data-category', encodedCategory);
+            }
+          } catch (e) {
+            // Base64 decode failed, re-encode from original text
+            const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+            categoryEl.setAttribute('data-category', encodedCategory);
+          }
+        } else {
+          // Not base64, encode it
+          const encodedCategory = btoa(encodeURIComponent(category));
+          categoryEl.setAttribute('data-category', encodedCategory);
+        }
+      }
+    });
+    
+    // Fix listing item data-categories attributes  
+    const listingItems = document.querySelectorAll('[data-categories]');
+    
+    listingItems.forEach((item) => {
+      const categories = item.getAttribute('data-categories');
+      
+      if (categories && categories !== '') {
+        // Check if it's already base64 encoded
+        try {
+          decodeURIComponent(atob(categories));
+          // Already encoded and valid
+        } catch (e) {
+          // Not encoded, fix it
+          const encodedCategories = btoa(encodeURIComponent(categories));
+          item.setAttribute('data-categories', encodedCategories);
+        }
+      }
+    });
+    
+    // Fix post-specific category tag click handlers
+    const postCategoryTags = document.querySelectorAll('.listing-category[onclick]');
+    
+    postCategoryTags.forEach((tag) => {
+      const categoryText = tag.textContent.trim();
+      
+      // Replace the onclick handler to use encoded category
+      tag.onclick = () => {
+        const encodedCategory = btoa(encodeURIComponent(categoryText));
+        window.quartoListingCategory(encodedCategory);
+        return false;
+      };
+    });
+  }
+  
+  // Run immediately
+  fixAllCategoryEncoding();
+  
+  // Also run when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fixAllCategoryEncoding);
+  }
+})();
+</script>
+
+<!-- PDF view/download button for blog posts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Only add the button on post pages
+  if (window.location.pathname.includes('/posts/') && !window.location.pathname.endsWith('/posts/') && !window.location.pathname.endsWith('/posts/index.html')) {
+    var currentPath = window.location.pathname;
+    // Handle both /posts/name/ and /posts/name/index.html formats
+    var pdfPath;
+    if (currentPath.endsWith('/')) {
+      pdfPath = currentPath + 'index.pdf';
+    } else {
+      pdfPath = currentPath.replace('.html', '.pdf');
+    }
+
+    // Check if PDF exists first
+    fetch(pdfPath, { method: 'HEAD' })
+      .then(function(response) {
+        if (response.ok) {
+          // PDF exists, show download button
+          showDownloadButton(pdfPath);
+        }
+        // If PDF doesn't exist, don't show any button
+      })
+      .catch(function(error) {
+        // Error checking PDF, don't show any button
+      });
+  }
+});
+
+function showDownloadButton(pdfPath) {
+  var downloadBtn = document.createElement('div');
+  downloadBtn.className = 'pdf-download-button';
+
+  // Get file size if possible
+  fetch(pdfPath, { method: 'HEAD' })
+    .then(function(response) {
+      var size = response.headers.get('Content-Length');
+      var sizeText = '';
+
+      if (size) {
+        // Convert to MB or KB
+        var sizeInMB = size / (1024 * 1024);
+        if (sizeInMB >= 1) {
+          sizeText = ' (' + sizeInMB.toFixed(1) + ' MB)';
+        } else {
+          sizeText = ' (' + (size / 1024).toFixed(0) + ' KB)';
+        }
+      }
+
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' + sizeText +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    })
+    .catch(function() {
+      // Basic fallback if we can't get file size
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    });
+
+  // Find where to insert the button (right after the title block)
+  var titleBlock = document.querySelector('.quarto-title-meta');
+  if (titleBlock) {
+    titleBlock.after(downloadBtn);
+  }
+}
+
+
+</script>
+
+<style>
+.pdf-download-button {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+</style>
+
+
+
+
+</body></html>
