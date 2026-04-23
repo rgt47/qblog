@@ -320,13 +320,15 @@ Working through the design and implementation surfaced a set of lessons grouped 
 
 - **`emulate -L zsh` inside a plugin function is worthwhile.** It resets the option set to zsh defaults for the duration of the function call, insulating the plugin from user customisations such as `KSH_ARRAYS` or `NO_UNSET`. The overhead is negligible; the robustness gain is substantial for a plugin intended for broad distribution.
 
+- **`gitleaks` emits only a summary count by default; `-v` is required to display findings.** Without the `-v` flag, `gitleaks git --staged` prints a line like `WRN leaks found: 2` to stderr and nothing else. The per-finding details (file, line, rule ID, fingerprint, redacted secret) that make remediation actionable require `-v`. A pre-commit gate that refuses on findings but does not display them leaves the user with nothing to act on: the remediation paths printed below the (invisible) scan output refer to "the fingerprint reported by gitleaks" which the user cannot see. The failure is silent in the sense that it does not produce an error, only an unhelpful refusal.
+
 ### Gotcha-shaped
 
 - **`git status --porcelain` column widths differ on renames.** The first two columns plus a space yield the filename column starting at position four for most entries, but rename entries (`R  old -> new`) break the simple `awk '{print substr($0, 4)}'` pattern. Using `git diff --name-only` plus `git ls-files --others --exclude-standard` as separate sources avoids the issue.
 
 - **`head -30` on a piped `git diff --cached` closes the pipe and raises `SIGPIPE` on the producer.** Harmless in interactive zsh but visible in a `set -e` context and in error-handling scripts. `awk 'NR<=30'` reads the entire stream without triggering the pipe close.
 
-- **`git rev-parse --abbrev-ref HEAD` returns `HEAD` in detached-HEAD state.** A naive protected-branch check that compares against `main` and `master` will therefore silently skip the guard in exactly the scenarios where the branch state is unusual. The mitigation is to either add `HEAD` to the protected list or to accept that detached-HEAD pushes will be caught by git itself.
+- **`git rev-parse --abbrev-ref HEAD` returns the literal string `HEAD` in two distinct states: detached HEAD, and an unborn branch (repository initialised but with no commits yet).** The unborn-branch case additionally emits `fatal: ambiguous argument 'HEAD'` to stderr and exits 128, but the captured stdout is still the bare string `HEAD`. A naive protected-branch check that compares against `main` or `master` therefore silently no-ops on first-commit pushes, which is precisely when the branch is most likely to be the default and the guard most needed. The fix is to prefer `git symbolic-ref --short HEAD`, which resolves the symbolic reference to the branch name even on an unborn branch, and to fall back to `rev-parse` only for the detached-HEAD case.
 
 - **Globs in zsh `case` statements match path separators by default.** `*.env` matches `.env`, `foo.env`, and `path/to/.env` in a single pattern because `*` is greedy across `/`. This is the desired behaviour for filename matching but is worth stating explicitly, as it differs from the behaviour of some other shells.
 
@@ -397,7 +399,7 @@ The configuration was developed and verified on the following software stack:
 | Operating system | macOS 15 (Sequoia) | Linux equivalents in package repositories |
 | Shell | zsh 5.9 | minimum 5.0 |
 | Version control | git 2.43 | minimum 2.0 |
-| Plugin version | zzgit 0.1.0 | tagged release |
+| Plugin version | zzgit 0.1.1 | tagged release |
 | `fzf` | 0.46.1 | optional; 0.30+ supported |
 | `gitleaks` | 8.21.2 | optional; 8.0+ supported, pre-8.21 uses `protect` subcommand |
 | Plugin manager | oh-my-zsh 2026-04 | zinit / antidote / manual source also tested |
