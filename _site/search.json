@@ -9966,5 +9966,138 @@
     "title": "Building a statistical computing textbook in the Age of AI",
     "section": "11.3 Opportunities for Improvement",
     "text": "11.3 Opportunities for Improvement\n\nPort the remaining 19 content chapters’ speaker notes, slide code, and dynamic Q&A fragments into chapter bodies following the bootstrap chapter’s workflow.\nImplement the four named callouts (Note / Verification / Pitfall / LLM prompt) consistently, migrating existing prose callouts as each chapter is touched.\nMigrate the ‘Check your understanding’ Q&A fragments from untitled callout-tip collapse='true' to the named callout-tip title='Check' form so they pattern-match across chapters.\nAdd a colophon page to each book documenting the build environment, theme, and font choices.\nSource hero and portrait images (Efron, Bates, Bryan, Wickham, Marwick) and drop them at images/cover.png and images/portraits/*.jpg.\nPush the two book repositories to GitHub (rgt47/scai, rgt47/practicum) so the code-tools ‘view source’ chevrons resolve.\nConfigure Netlify deploys at rgtlab.org/scai and rgtlab.org/practicum via a path-based proxy from the main site."
+  },
+  {
+    "objectID": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html",
+    "href": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html",
+    "title": "Refactoring a Personal Toolbox: Scripts versus Shell Functions",
+    "section": "",
+    "text": "A workshop pegboard, organised so that each tool sits in its own labelled outline.\nA personal toolbox earns its keep when each helper sits in the place that fits its job, with no doubt about which drawer to open."
+  },
+  {
+    "objectID": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#motivations",
+    "href": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#motivations",
+    "title": "Refactoring a Personal Toolbox: Scripts versus Shell Functions",
+    "section": "1.1 Motivations",
+    "text": "1.1 Motivations\n\nTo establish a single rule that decides, for any helper, whether it belongs in ~/bin or in shell config.\nTo remove from .zshrc the logic that has no business mutating the current shell, lowering startup time and improving auditability.\nTo bring versioned scripts under a linter (shellcheck) so that legacy quoting bugs surface before they bite.\nTo eliminate microscripts that exist purely because the author did not realise the shell already has a primitive for them (the alias).\nTo make the toolbox legible to future-self and to collaborators who inherit it during onboarding or Sabbatical handoff."
+  },
+  {
+    "objectID": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#objectives",
+    "href": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#objectives",
+    "title": "Refactoring a Personal Toolbox: Scripts versus Shell Functions",
+    "section": "1.2 Objectives",
+    "text": "1.2 Objectives\n\nState a guiding principle that resolves the function-versus-script question in every encountered case.\nProvide a categorisation matrix so that an existing toolbox can be triaged in a single sitting.\nSequence the refactor into seven small phases, each independently shippable and reversible.\nDocument the gotchas that only surface when scripts are extracted out of a long-lived shell environment.\n\nErrors and better approaches are welcome; see the Feedback section at the end.\n\n\n\nA second monitor displaying terminal panes during an active refactor session."
+  },
+  {
+    "objectID": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#a-familiar-analogy-r-functions-and-rscript-files",
+    "href": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#a-familiar-analogy-r-functions-and-rscript-files",
+    "title": "Refactoring a Personal Toolbox: Scripts versus Shell Functions",
+    "section": "3.1 A familiar analogy: R functions and Rscript files",
+    "text": "3.1 A familiar analogy: R functions and Rscript files\nR users have lived with the same boundary for years without naming it. A pure helper that takes inputs, returns a value, and has no side effects is written as a function, often grouped with related functions in an R package. A one-shot batch job that loads a dataset, fits a model, writes a .rds, and emits a PDF is written as a script, run with Rscript or knit through Quarto. Nobody seriously proposes to put the entire batch pipeline inside .Rprofile, even though .Rprofile is technically capable of executing it. The pipeline does not need access to the interactive session’s namespace, and burying it there would slow every R session to a crawl, hide it from version control review, and prevent any tooling from analysing it as a unit.\nThe shell case is the same boundary at a different scale. A shell function is the equivalent of a function loaded into the user’s current R session: it can see and change that session’s globals. A shell script is the equivalent of Rscript invoked from the command line: it gets fresh state, returns through stdout and an exit code, and finishes. Conflating the two in shell-land has the same costs as it would have in R-land, except that shell-land has historically been more tolerant of the conflation."
+  },
+  {
+    "objectID": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#scope-in-four-lines",
+    "href": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#scope-in-four-lines",
+    "title": "Refactoring a Personal Toolbox: Scripts versus Shell Functions",
+    "section": "3.2 Scope, in four lines",
+    "text": "3.2 Scope, in four lines\nConcretely, a helper must be a function when it does any of the following in a way that should outlast the helper’s run:\n\nChange the working directory.\nExport, set, or unset shell variables.\nModify aliases, options, key bindings, completion definitions.\nManipulate the directory stack, history, or job table.\n\nAnything outside that list (running a program, reading or writing files, formatting output, fetching from a URL, calling git, calling make, calling a database, parsing JSON) is a script’s job, full stop. The rule scales: a function that both runs a long pipeline and needs to cd at the end is two helpers, one calling the other."
+  },
+  {
+    "objectID": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#why-the-inversion-is-expensive",
+    "href": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#why-the-inversion-is-expensive",
+    "title": "Refactoring a Personal Toolbox: Scripts versus Shell Functions",
+    "section": "3.3 Why the inversion is expensive",
+    "text": "3.3 Why the inversion is expensive\nA long shell function in .zshrc carries five hidden costs that biostatisticians, with their habits around renv, package versioning, and unit testing, will recognise immediately.\nStartup latency. A function in .zshrc is parsed every time the shell starts. A script is parsed only when invoked. A two-hundred- line zsh function that the user calls a few times a day is re-parsed dozens of times for each one execution. The latency cost is the same shape as library() calls in .Rprofile: convenient on the surface, expensive in aggregate.\nLint and static analysis. shellcheck reads scripts; it does not introspect functions buried in dotfiles. Quoting bugs, unset variables, and incorrect test predicates that would be caught immediately in a script silently survive in a .zshrc function. The R parallel is lintr against package code versus lintr against ad-hoc chunks in .Rprofile.\nVersion control granularity. A script is a file. Its diffs are local, its history is local, blame is meaningful, and its commits do not interact with unrelated config changes. A function in a shared .zshrc competes with PATH exports, plugin lines, keybindings, and PROMPT changes for git history attention. Any non-trivial helper deserves its own git history, the same way a non-trivial R helper deserves its own R/foo.R.\nTestability. A script can be invoked under a controlled environment with arguments, redirected I/O, and a captured exit code. The same logic embedded in a .zshrc function can only be tested by sourcing the dotfile and calling the function in a live shell, which is roughly as defensible as testing R code by copy-pasting it into the console.\nReuse across hosts and contexts. Scripts in ~/bin are picked up by anything that respects PATH: cron, launchd, Make rules, Docker containers that mount the home directory, HPC submission scripts, scheduled GitHub Actions runners that source the toolbox. Functions are visible only to interactive zsh sessions. A research-backup helper hidden in .zshrc cannot be wired to a launchd job; the same logic in ~/bin can be scheduled in seconds. This boundary maps almost exactly to the line between ‘helpers exported by a package’ and ‘helpers defined inline in a notebook’ in R work."
+  },
+  {
+    "objectID": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#why-the-inversion-happens",
+    "href": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#why-the-inversion-happens",
+    "title": "Refactoring a Personal Toolbox: Scripts versus Shell Functions",
+    "section": "3.4 Why the inversion happens",
+    "text": "3.4 Why the inversion happens\nA second pattern to notice: the inversions are not random. Helpers that grow up as one-liners (cd somewhere && open something) are written as scripts because the author did not yet know about aliases. Helpers that grow up gradually (a git workflow that started as a snippet, then accreted secret-scanning, then commit- message templating, then a confirmation prompt) end up as functions because they were edited each time a new shell was open and .zshrc was already in the editor. The forces driving each inversion are completely different, but the symptom (a toolbox where category does not predict location) is identical.\nRecognising both forces matters because the corrective for each is different. The microscript that should have been an alias becomes an alias and disappears. The accumulated function that should have been a script becomes a script and gets the full hardening treatment: shebang, set -euo pipefail, quoted variables, a -h/--help flag, a shellcheck pass, and a place in version history."
+  },
+  {
+    "objectID": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#when-the-rule-cuts-the-other-way",
+    "href": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#when-the-rule-cuts-the-other-way",
+    "title": "Refactoring a Personal Toolbox: Scripts versus Shell Functions",
+    "section": "3.5 When the rule cuts the other way",
+    "text": "3.5 When the rule cuts the other way\nFor completeness, the rule does sometimes route a current script into the function form. A helper that the author scripted but that genuinely needs to leave the user in a different directory is mis-categorised as a script. The give-away symptom: ‘why does my shell not stay in the project directory after I run this?’. That helper’s logic should move to a function, or, more cleanly, the script should be retained for non-interactive callers (cron, make) and a thin shell function should call it and apply the final cd."
+  },
+  {
+    "objectID": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#what-the-rule-is-not",
+    "href": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#what-the-rule-is-not",
+    "title": "Refactoring a Personal Toolbox: Scripts versus Shell Functions",
+    "section": "3.6 What the rule is not",
+    "text": "3.6 What the rule is not\nThe rule is not ‘all logic must leave .zshrc’. The dirstack helpers, the ff fzf-then-cd shortcut, the navigation jumps to project subdirectories: all are legitimately functions, because they exist precisely to mutate the calling shell. The point is to keep the function tier narrow and obviously appropriate, so that when a future reader sees a function in .zshrc, the existence of that function is itself evidence that it had to be one."
+  },
+  {
+    "objectID": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#phase-1-extract-the-largest-function",
+    "href": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#phase-1-extract-the-largest-function",
+    "title": "Refactoring a Personal Toolbox: Scripts versus Shell Functions",
+    "section": "6.1 Phase 1: extract the largest function",
+    "text": "6.1 Phase 1: extract the largest function\nIn every toolbox the author has examined, a single function dominates by line count. Often it is a custom git commit workflow or a research-notes capture pipeline that grew over the years. That function alone typically contains 30 to 70 percent of the non-config bulk in .zshrc.\nThe extraction is mechanical:\n\nCreate a new file in ~/bin named after the helper. Mark it executable.\nAdd a shebang that matches the syntax in use. Functions written with zsh-only constructs (${(f)...}, ${array:#}, setopt semantics) require #!/usr/bin/env zsh; do not assume bash will parse them.\nApply standard hardening: set -u always, set -e if the function does not deliberately tolerate failure, set -o pipefail if any command piping is involved.\nDecide on helpers. Sub-functions called only by the extracted helper can move with it (inline, or in a lib/ directory the helper sources). External helpers used by other functions stay in shell config.\nDelete the original function from the shell startup file.\nVerify by exercising the helper end-to-end on a scratch workspace, including any failure paths.\n\nThis phase alone is usually responsible for a measurable shell startup speedup and for moving the largest single block of code under linting."
+  },
+  {
+    "objectID": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#phase-2-extract-the-small-functions",
+    "href": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#phase-2-extract-the-small-functions",
+    "title": "Refactoring a Personal Toolbox: Scripts versus Shell Functions",
+    "section": "6.2 Phase 2: extract the small functions",
+    "text": "6.2 Phase 2: extract the small functions\nAfter the large extraction, several smaller functions remain that also fail the principle: a Mathematica wrapper, a fuzzy file finder that calls vim, a make invocation that runs from any subdirectory. Each is a one-file extraction at most. Time per helper is small; the cumulative effect is roughly another fifty to eighty lines out of .zshrc."
+  },
+  {
+    "objectID": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#phase-3-convert-microscripts-to-aliases",
+    "href": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#phase-3-convert-microscripts-to-aliases",
+    "title": "Refactoring a Personal Toolbox: Scripts versus Shell Functions",
+    "section": "6.3 Phase 3: convert microscripts to aliases",
+    "text": "6.3 Phase 3: convert microscripts to aliases\nInspect every script under fifteen lines in ~/bin. Any whose body reduces to a single command pipeline (with no flag parsing, no branching, no output processing) is more honestly expressed as an alias. Examples that look exactly like aliases when written inline:\nnohup /Applications/Ghostty.app/Contents/MacOS/ghostty \\\n  &gt;/dev/null 2&gt;&1 &\nPromote each such script to an alias in shell config and delete the file. The benefit is twofold: the helper now appears in alias output (so it is discoverable by listing aliases), and the toolbox shrinks by one file per promotion."
+  },
+  {
+    "objectID": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#phase-4-standardise-the-rest",
+    "href": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#phase-4-standardise-the-rest",
+    "title": "Refactoring a Personal Toolbox: Scripts versus Shell Functions",
+    "section": "6.4 Phase 4: standardise the rest",
+    "text": "6.4 Phase 4: standardise the rest\nThe remaining scripts in ~/bin are correctly scripts. They typically need light hardening:\n\nAdd a shebang, #!/usr/bin/env bash for bash-portable scripts.\nAdd set -euo pipefail unless the script explicitly chooses a more permissive policy and documents why.\nReplace backticks with $(...).\nQuote variable expansions: \"$1\", \"$PWD\", and so on.\nResolve shellcheck warnings, or annotate with a disable comment that names a reason.\nAdd a -h/--help flag for any script over thirty lines.\nDecide an extension policy and apply it consistently; standard Unix practice is to drop .sh from executables and reserve the extension for files that are explicitly sourced. Confirm that any scheduler entries (launchd, systemd, cron) referring to the script by name are updated together.\n\nThis is the long-tail phase. It can be done one helper at a time, amortised over normal work."
+  },
+  {
+    "objectID": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#phase-5-optional-autoload-remaining-functions",
+    "href": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#phase-5-optional-autoload-remaining-functions",
+    "title": "Refactoring a Personal Toolbox: Scripts versus Shell Functions",
+    "section": "6.5 Phase 5 (optional): autoload remaining functions",
+    "text": "6.5 Phase 5 (optional): autoload remaining functions\nFor shell startup files that still feel heavy after phases 1 to 4, move the remaining functions out of the startup file into a function directory and autoload them:\nfpath=(~/.zsh/functions $fpath)\nautoload -Uz d ff za zw zy zf zt zs zp zr z0 zm ze zo zc zg\nEach function lives in its own file under the function path. They load on first call, not on shell start. Skip this phase if the remaining functions are few or if having their bodies visible in the startup file is more valuable than the small startup cost."
+  },
+  {
+    "objectID": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#phase-6-install-a-guardrail",
+    "href": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#phase-6-install-a-guardrail",
+    "title": "Refactoring a Personal Toolbox: Scripts versus Shell Functions",
+    "section": "6.6 Phase 6: install a guardrail",
+    "text": "6.6 Phase 6: install a guardrail\nAdd a shellcheck pre-commit hook scoped to ~/bin/*, excluding binaries, R scripts, Python scripts, and any archive/ directory. The point is not to catch a flood of issues at install time (phase 4 already handled those) but to prevent regressions as the toolbox continues to evolve. A single Make target, make lint, that runs shellcheck over every executable is sufficient."
+  },
+  {
+    "objectID": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#phase-7-decommission",
+    "href": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#phase-7-decommission",
+    "title": "Refactoring a Personal Toolbox: Scripts versus Shell Functions",
+    "section": "6.7 Phase 7: decommission",
+    "text": "6.7 Phase 7: decommission\nTriage each remaining helper for redundancy. Common findings: two clipboard-to-notes helpers that do roughly the same thing under different names, a PDF viewer launcher that exists in two versions because the author once wanted to try a different viewer, an installer left behind from a tool that was removed years ago. Pick one of each, retire the rest. Git history preserves the removed code; the working tree should not.\n\n\n\nA clean desk after the refactor; the same tools are present, but each sits where it belongs."
+  },
+  {
+    "objectID": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#lessons-learnt",
+    "href": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#lessons-learnt",
+    "title": "Refactoring a Personal Toolbox: Scripts versus Shell Functions",
+    "section": "9.1 Lessons learnt",
+    "text": "9.1 Lessons learnt\nConceptual:\n\nThe function-versus-script question reduces to a single test: does the helper need to mutate the calling shell? Almost every other consideration follows from that one decision.\nThe forces that produce inversions in each direction are different. Microscripts grow up because the author did not know about aliases; oversized functions grow up because the startup file is the file that happens to be open.\nA mature toolbox is mostly scripts, a small set of legitimate functions, and a layer of aliases. Any other distribution is evidence of accumulated misalignment.\n\nTechnical:\n\nA long zsh function may not be portable to bash, even when the prose-level intent looks generic. Confirm the shebang against the syntactic features actually in use.\nshellcheck is the highest-leverage tool to apply at the end of an extraction. It catches more than half of the latent quoting and unset-variable bugs in legacy scripts.\nNaming and extension conventions only need to be applied consistently within a toolbox. The choice of .sh versus no extension matters less than the absence of a third option appearing for no reason.\n\nGotchas:\n\nRenaming a script that a scheduler refers to silently breaks the schedule. Always grep for the file name across launchd/, systemd/, Makefile, and any related repositories before renaming.\nFunctions that depend on shell-specific syntax cannot be blindly retitled with a bash shebang. Prefer the zsh shebang unless the syntax has been explicitly portabilised."
+  },
+  {
+    "objectID": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#limitations",
+    "href": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#limitations",
+    "title": "Refactoring a Personal Toolbox: Scripts versus Shell Functions",
+    "section": "9.2 Limitations",
+    "text": "9.2 Limitations\nThe refactor described here addresses helpers in shell-land specifically. It does not:\n\nAddress Python, R, or other-language helpers whose execution model differs from shell scripts.\nReplace a real configuration management system. Tools such as Ansible, Nix, or chezmoi solve a larger problem and may be appropriate when the personal toolbox grows past a few dozen files or needs to be deployed to multiple machines.\nProvide automated migration. Each helper still needs a human to read it, classify it, and verify the extraction.\nCompose with shell frameworks that load logic from many files (Oh My Zsh, prezto). Those frameworks have their own conventions; the rule still applies, but the implementation details change."
+  },
+  {
+    "objectID": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#opportunities-for-improvement",
+    "href": "posts/51-scripts-vs-functions/scripts-vs-functions/index.html#opportunities-for-improvement",
+    "title": "Refactoring a Personal Toolbox: Scripts versus Shell Functions",
+    "section": "9.3 Opportunities for improvement",
+    "text": "9.3 Opportunities for improvement\n\nEncode the rule as a small linter that scans .zshrc for functions and flags any whose body never references shell state. This would surface candidates for extraction over time rather than at one big-bang refactor.\nAdd a CI workflow that runs shellcheck over ~/bin on every push to the dotfiles repository.\nGenerate ~/bin/nav (a navigation cheat sheet) from the autoloaded function metadata, so adding a new shortcut automatically updates the help output.\nBuild a thin packaging layer around shared helpers so they can be installed on collaborator machines without copying files by hand. A simple Make target plus a manifest is usually sufficient.\nTrack helper invocation frequency via the shell’s precmd hook for one week per year, and use the result to prune helpers nobody actually calls."
   }
 ]

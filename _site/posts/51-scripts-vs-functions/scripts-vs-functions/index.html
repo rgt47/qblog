@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.37">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ronald ‘Ryy’ G. Thomas">
+<meta name="dcterms.date" content="2026-04-25">
+<meta name="description" content="Personal toolboxes accumulate helpers across years of small fixes: some end up as shell functions in ‘.zshrc’, some as scripts in ‘~/bin’, often with no consistent rule for which goes where. A principled split (function only when shell state must change, versioned script otherwise) removes hundreds of lines of logic from the average dotfile, makes every helper shellcheck-able, and reduces shell startup time.">
+
+<title>Refactoring a Personal Toolbox: Scripts versus Shell Functions – Thomas Lab</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../../">
+<script src="../../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../../site_libs/quarto-html/quarto-syntax-highlighting-7f8f88aac4f3542376d5c11b86a4c14d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../../site_libs/bootstrap/bootstrap-6ad90c6c42fc9ba0d1bed9226462a238.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": true,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "keyboard-shortcut": [
+    "?",
+    "/"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&amp;family=Open+Sans:ital,wght@0,400;0,600;1,400&amp;family=Fira+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<script src="https://kit.fontawesome.com/0fba9333d8.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+
+<!-- Custom meta tags for social sharing -->
+<meta property="og:site_name" content="Thomas Lab">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@rgt47">
+
+<!-- Add responsive features -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<!-- Add analytics if needed -->
+<!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXX');
+</script> -->
+
+<!-- Add custom javascript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Remove code tools button completely
+  const codeButton = document.querySelector('.code-tools-button');
+  if (codeButton) {
+    codeButton.remove();
+  }
+  
+  // Add any custom JavaScript functionality here
+  
+  // Example: Add smooth scrolling
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      
+      document.querySelector(this.getAttribute('href')).scrollIntoView({
+        behavior: 'smooth'
+      });
+    });
+  });
+  
+  // Make sidebar category items clickable (but not TOC items)
+  const categoryLinks = {
+    'Programming & Development': '/posts/?category=Programming+%26+Development',
+    'Data Analysis & Visualization': '/posts/?category=Data+Analysis+%26+Visualization',
+    'Deployment & Operations': '/posts/?category=Deployment+%26+Operations',
+    'Development Environment': '/posts/?category=Development+Environment',
+    'Shiny Applications': '/posts/?category=Shiny+Applications',
+    'AI & Automation': '/posts/?category=AI+%26+Automation',
+    'System Administration': '/posts/?category=System+Administration'
+  };
+  
+  // Only target sidebar items that are not in the TOC
+  document.querySelectorAll('.sidebar-item-section .sidebar-item-text').forEach(item => {
+    // Skip if this is inside the TOC
+    if (item.closest('#TOC')) return;
+    
+    const text = item.textContent.trim();
+    if (categoryLinks[text]) {
+      item.addEventListener('click', function() {
+        window.location.href = categoryLinks[text];
+      });
+    }
+  });
+});
+</script>
+
+
+<meta property="og:title" content="Refactoring a Personal Toolbox: Scripts versus Shell Functions – Thomas Lab">
+<meta property="og:description" content="Personal toolboxes accumulate helpers across years of small fixes: some end up as shell functions in ‘.zshrc’, some as scripts in ‘~/bin’, often with no consistent rule for which goes where. A principled split (function only when shell state must change, versioned script otherwise) removes hundreds of lines of logic from the average dotfile, makes every helper shellcheck-able, and reduces shell startup time.">
+<meta property="og:image" content="https://focusonr.org/posts/51-scripts-vs-functions/scripts-vs-functions/media/images/hero.png">
+<meta property="og:site_name" content="Thomas Lab">
+<meta property="og:image:height" content="669">
+<meta property="og:image:width" content="1200">
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../../index.html">
+    <span class="navbar-title">Thomas Lab</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../about/index.html"> 
+<span class="menu-text">About</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../blog/index.html"> 
+<span class="menu-text">Blog</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../white-papers/index.html"> 
+<span class="menu-text">White Papers</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../research/index.html"> 
+<span class="menu-text">Research</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../teaching/index.html"> 
+<span class="menu-text">Teaching</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../misc/index.html"> 
+<span class="menu-text">Misc</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47"> <i class="bi bi-twitter" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a>
+  <ul class="collapse">
+  <li><a href="#motivations" id="toc-motivations" class="nav-link" data-scroll-target="#motivations"><span class="header-section-number">1.1</span> Motivations</a></li>
+  <li><a href="#objectives" id="toc-objectives" class="nav-link" data-scroll-target="#objectives"><span class="header-section-number">1.2</span> Objectives</a></li>
+  </ul></li>
+  <li><a href="#background-function-or-script" id="toc-background-function-or-script" class="nav-link" data-scroll-target="#background-function-or-script"><span class="header-section-number">2</span> Background: function or script?</a></li>
+  <li><a href="#guiding-principle" id="toc-guiding-principle" class="nav-link" data-scroll-target="#guiding-principle"><span class="header-section-number">3</span> Guiding principle</a>
+  <ul class="collapse">
+  <li><a href="#a-familiar-analogy-r-functions-and-rscript-files" id="toc-a-familiar-analogy-r-functions-and-rscript-files" class="nav-link" data-scroll-target="#a-familiar-analogy-r-functions-and-rscript-files"><span class="header-section-number">3.1</span> A familiar analogy: R functions and Rscript files</a></li>
+  <li><a href="#scope-in-four-lines" id="toc-scope-in-four-lines" class="nav-link" data-scroll-target="#scope-in-four-lines"><span class="header-section-number">3.2</span> Scope, in four lines</a></li>
+  <li><a href="#why-the-inversion-is-expensive" id="toc-why-the-inversion-is-expensive" class="nav-link" data-scroll-target="#why-the-inversion-is-expensive"><span class="header-section-number">3.3</span> Why the inversion is expensive</a></li>
+  <li><a href="#why-the-inversion-happens" id="toc-why-the-inversion-happens" class="nav-link" data-scroll-target="#why-the-inversion-happens"><span class="header-section-number">3.4</span> Why the inversion happens</a></li>
+  <li><a href="#when-the-rule-cuts-the-other-way" id="toc-when-the-rule-cuts-the-other-way" class="nav-link" data-scroll-target="#when-the-rule-cuts-the-other-way"><span class="header-section-number">3.5</span> When the rule cuts the other way</a></li>
+  <li><a href="#what-the-rule-is-not" id="toc-what-the-rule-is-not" class="nav-link" data-scroll-target="#what-the-rule-is-not"><span class="header-section-number">3.6</span> What the rule is not</a></li>
+  </ul></li>
+  <li><a href="#symptoms-of-an-unaligned-toolbox" id="toc-symptoms-of-an-unaligned-toolbox" class="nav-link" data-scroll-target="#symptoms-of-an-unaligned-toolbox"><span class="header-section-number">4</span> Symptoms of an unaligned toolbox</a></li>
+  <li><a href="#a-categorisation-matrix" id="toc-a-categorisation-matrix" class="nav-link" data-scroll-target="#a-categorisation-matrix"><span class="header-section-number">5</span> A categorisation matrix</a></li>
+  <li><a href="#a-seven-phase-refactor" id="toc-a-seven-phase-refactor" class="nav-link" data-scroll-target="#a-seven-phase-refactor"><span class="header-section-number">6</span> A seven-phase refactor</a>
+  <ul class="collapse">
+  <li><a href="#phase-1-extract-the-largest-function" id="toc-phase-1-extract-the-largest-function" class="nav-link" data-scroll-target="#phase-1-extract-the-largest-function"><span class="header-section-number">6.1</span> Phase 1: extract the largest function</a></li>
+  <li><a href="#phase-2-extract-the-small-functions" id="toc-phase-2-extract-the-small-functions" class="nav-link" data-scroll-target="#phase-2-extract-the-small-functions"><span class="header-section-number">6.2</span> Phase 2: extract the small functions</a></li>
+  <li><a href="#phase-3-convert-microscripts-to-aliases" id="toc-phase-3-convert-microscripts-to-aliases" class="nav-link" data-scroll-target="#phase-3-convert-microscripts-to-aliases"><span class="header-section-number">6.3</span> Phase 3: convert microscripts to aliases</a></li>
+  <li><a href="#phase-4-standardise-the-rest" id="toc-phase-4-standardise-the-rest" class="nav-link" data-scroll-target="#phase-4-standardise-the-rest"><span class="header-section-number">6.4</span> Phase 4: standardise the rest</a></li>
+  <li><a href="#phase-5-optional-autoload-remaining-functions" id="toc-phase-5-optional-autoload-remaining-functions" class="nav-link" data-scroll-target="#phase-5-optional-autoload-remaining-functions"><span class="header-section-number">6.5</span> Phase 5 (optional): autoload remaining functions</a></li>
+  <li><a href="#phase-6-install-a-guardrail" id="toc-phase-6-install-a-guardrail" class="nav-link" data-scroll-target="#phase-6-install-a-guardrail"><span class="header-section-number">6.6</span> Phase 6: install a guardrail</a></li>
+  <li><a href="#phase-7-decommission" id="toc-phase-7-decommission" class="nav-link" data-scroll-target="#phase-7-decommission"><span class="header-section-number">6.7</span> Phase 7: decommission</a></li>
+  </ul></li>
+  <li><a href="#things-to-watch-out-for" id="toc-things-to-watch-out-for" class="nav-link" data-scroll-target="#things-to-watch-out-for"><span class="header-section-number">7</span> Things to watch out for</a></li>
+  <li><a href="#daily-workflow-after-the-refactor" id="toc-daily-workflow-after-the-refactor" class="nav-link" data-scroll-target="#daily-workflow-after-the-refactor"><span class="header-section-number">8</span> Daily workflow after the refactor</a></li>
+  <li><a href="#what-did-we-learn" id="toc-what-did-we-learn" class="nav-link" data-scroll-target="#what-did-we-learn"><span class="header-section-number">9</span> What did we learn?</a>
+  <ul class="collapse">
+  <li><a href="#lessons-learnt" id="toc-lessons-learnt" class="nav-link" data-scroll-target="#lessons-learnt"><span class="header-section-number">9.1</span> Lessons learnt</a></li>
+  <li><a href="#limitations" id="toc-limitations" class="nav-link" data-scroll-target="#limitations"><span class="header-section-number">9.2</span> Limitations</a></li>
+  <li><a href="#opportunities-for-improvement" id="toc-opportunities-for-improvement" class="nav-link" data-scroll-target="#opportunities-for-improvement"><span class="header-section-number">9.3</span> Opportunities for improvement</a></li>
+  </ul></li>
+  <li><a href="#wrapping-up" id="toc-wrapping-up" class="nav-link" data-scroll-target="#wrapping-up"><span class="header-section-number">10</span> Wrapping up</a></li>
+  <li><a href="#see-also" id="toc-see-also" class="nav-link" data-scroll-target="#see-also"><span class="header-section-number">11</span> See Also</a></li>
+  <li><a href="#reproducibility" id="toc-reproducibility" class="nav-link" data-scroll-target="#reproducibility"><span class="header-section-number">12</span> Reproducibility</a></li>
+  <li><a href="#feedback" id="toc-feedback" class="nav-link" data-scroll-target="#feedback"><span class="header-section-number">13</span> Feedback</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content column-page-left" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Refactoring a Personal Toolbox: Scripts versus Shell Functions</h1>
+<p class="subtitle lead">A principled split for accumulated helpers in dotfiles and ~/bin</p>
+  <div class="quarto-categories">
+    <div class="quarto-category">workflow</div>
+    <div class="quarto-category">tooling</div>
+    <div class="quarto-category">shell</div>
+    <div class="quarto-category">zsh</div>
+    <div class="quarto-category">refactoring</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    <p>Personal toolboxes accumulate helpers across years of small fixes: some end up as shell functions in ‘.zshrc’, some as scripts in ‘~/bin’, often with no consistent rule for which goes where. A principled split (function only when shell state must change, versioned script otherwise) removes hundreds of lines of logic from the average dotfile, makes every helper shellcheck-able, and reduces shell startup time.</p>
+  </div>
+</div>
+
+
+<div class="quarto-title-meta column-page-left">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ronald ‘Ryy’ G. Thomas </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">April 25, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/hero.png" class="img-fluid figure-img" style="width:80.0%"></p>
+<figcaption>A workshop pegboard, organised so that each tool sits in its own labelled outline.</figcaption>
+</figure>
+</div>
+<p><em>A personal toolbox earns its keep when each helper sits in the place that fits its job, with no doubt about which drawer to open.</em></p>
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>Most quantitative researchers carry a personal toolbox. It usually takes the form of a <code>~/bin</code> directory full of small shell scripts and a <code>.zshrc</code> (or <code>.bashrc</code>) file thick with custom aliases and functions. The contents accrue gradually: a one-liner that solved a particular irritation in 2019, a research-notes capture script written during a manuscript push in 2022, a git workflow function hammered out the week a co-author pushed a secret to GitHub.</p>
+<p>Two years on, the toolbox works, but the boundary between ‘script in <code>~/bin</code>’ and ‘function in <code>.zshrc</code>’ has eroded. Some scripts in <code>~/bin</code> are aliases in disguise (a single <code>cd</code> plus <code>vim</code>). Some functions in <code>.zshrc</code> are two-hundred-line programs that have nothing to do with shell state. The toolbox still gets used, but it has become hard to reason about, hard to audit for security, and slow to load on shell start.</p>
+<p>This post documents a principled refactor of such a toolbox. The worked example is biased toward a biostatistician’s workflow (reproducible R analyses, Docker-based research compendia, frequent git commits, occasional HPC submission), but the rule that drives the refactor applies to any Unix-flavoured personal workspace.</p>
+<p>A companion plan that operationalises the rule, with a concrete phase sequence and effort estimates, is referenced under <a href="#see-also">See Also</a>.</p>
+<section id="motivations" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="motivations"><span class="header-section-number">1.1</span> Motivations</h2>
+<ul>
+<li>To establish a single rule that decides, for any helper, whether it belongs in <code>~/bin</code> or in shell config.</li>
+<li>To remove from <code>.zshrc</code> the logic that has no business mutating the current shell, lowering startup time and improving auditability.</li>
+<li>To bring versioned scripts under a linter (<code>shellcheck</code>) so that legacy quoting bugs surface before they bite.</li>
+<li>To eliminate microscripts that exist purely because the author did not realise the shell already has a primitive for them (the alias).</li>
+<li>To make the toolbox legible to future-self and to collaborators who inherit it during onboarding or Sabbatical handoff.</li>
+</ul>
+</section>
+<section id="objectives" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="objectives"><span class="header-section-number">1.2</span> Objectives</h2>
+<ol type="1">
+<li>State a guiding principle that resolves the function-versus-script question in every encountered case.</li>
+<li>Provide a categorisation matrix so that an existing toolbox can be triaged in a single sitting.</li>
+<li>Sequence the refactor into seven small phases, each independently shippable and reversible.</li>
+<li>Document the gotchas that only surface when scripts are extracted out of a long-lived shell environment.</li>
+</ol>
+<p>Errors and better approaches are welcome; see the Feedback section at the end.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance1.png" class="img-fluid figure-img"></p>
+<figcaption>A second monitor displaying terminal panes during an active refactor session.</figcaption>
+</figure>
+</div>
+</section>
+</section>
+<section id="background-function-or-script" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Background: function or script?</h1>
+<p>A shell function is a named block of code that runs in the <em>current</em> shell process. It can read and modify the calling environment: change the working directory, export variables, edit the history, manipulate the dirstack, set or unset aliases. Functions live wherever they are sourced from, most commonly the interactive shell startup file.</p>
+<p>A shell script is a file with execute permission that runs in a <em>new</em> process spawned from the current shell. It cannot, by design, mutate the calling shell’s state. It receives arguments, environment, and file descriptors at launch; it returns an exit code; anything it prints flows back to the parent only via standard streams.</p>
+<p>These two categories are not interchangeable. Some helpers genuinely require the function form (for example, a wrapper around <code>cd</code> that must affect the user’s shell). Others fit equally in either form, but the choice has consequences for testability, auditability, startup performance, and the reader’s experience.</p>
+<p>A toolbox that has drifted out of alignment shows two kinds of inversion: scripts that should have been aliases, and functions that should have been scripts. The next section defines the rule that resolves both.</p>
+</section>
+<section id="guiding-principle" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Guiding principle</h1>
+<p>The rule is short:</p>
+<blockquote class="blockquote">
+<p>A helper should be a shell function only when it must mutate the calling shell. Otherwise it should be a versioned, executable script in <code>~/bin</code>.</p>
+</blockquote>
+<p>The remainder of this section unpacks the rule for an audience used to thinking carefully about scope, reproducibility, and the boundaries between processes: namely, computer-literate biostatisticians.</p>
+<section id="a-familiar-analogy-r-functions-and-rscript-files" class="level2" data-number="3.1">
+<h2 data-number="3.1" class="anchored" data-anchor-id="a-familiar-analogy-r-functions-and-rscript-files"><span class="header-section-number">3.1</span> A familiar analogy: R functions and Rscript files</h2>
+<p>R users have lived with the same boundary for years without naming it. A pure helper that takes inputs, returns a value, and has no side effects is written as a function, often grouped with related functions in an R package. A one-shot batch job that loads a dataset, fits a model, writes a <code>.rds</code>, and emits a PDF is written as a script, run with <code>Rscript</code> or knit through Quarto. Nobody seriously proposes to put the entire batch pipeline inside <code>.Rprofile</code>, even though <code>.Rprofile</code> is technically capable of executing it. The pipeline does not need access to the interactive session’s namespace, and burying it there would slow every R session to a crawl, hide it from version control review, and prevent any tooling from analysing it as a unit.</p>
+<p>The shell case is the same boundary at a different scale. A shell function is the equivalent of a function loaded into the user’s current R session: it can see and change that session’s globals. A shell script is the equivalent of <code>Rscript</code> invoked from the command line: it gets fresh state, returns through stdout and an exit code, and finishes. Conflating the two in shell-land has the same costs as it would have in R-land, except that shell-land has historically been more tolerant of the conflation.</p>
+</section>
+<section id="scope-in-four-lines" class="level2" data-number="3.2">
+<h2 data-number="3.2" class="anchored" data-anchor-id="scope-in-four-lines"><span class="header-section-number">3.2</span> Scope, in four lines</h2>
+<p>Concretely, a helper <em>must</em> be a function when it does any of the following in a way that should outlast the helper’s run:</p>
+<ul>
+<li>Change the working directory.</li>
+<li>Export, set, or unset shell variables.</li>
+<li>Modify aliases, options, key bindings, completion definitions.</li>
+<li>Manipulate the directory stack, history, or job table.</li>
+</ul>
+<p>Anything outside that list (running a program, reading or writing files, formatting output, fetching from a URL, calling git, calling make, calling a database, parsing JSON) is a script’s job, full stop. The rule scales: a function that <em>both</em> runs a long pipeline <em>and</em> needs to <code>cd</code> at the end is two helpers, one calling the other.</p>
+</section>
+<section id="why-the-inversion-is-expensive" class="level2" data-number="3.3">
+<h2 data-number="3.3" class="anchored" data-anchor-id="why-the-inversion-is-expensive"><span class="header-section-number">3.3</span> Why the inversion is expensive</h2>
+<p>A long shell function in <code>.zshrc</code> carries five hidden costs that biostatisticians, with their habits around <code>renv</code>, package versioning, and unit testing, will recognise immediately.</p>
+<p><strong>Startup latency.</strong> A function in <code>.zshrc</code> is parsed every time the shell starts. A script is parsed only when invoked. A two-hundred- line zsh function that the user calls a few times a day is re-parsed dozens of times for each one execution. The latency cost is the same shape as <code>library()</code> calls in <code>.Rprofile</code>: convenient on the surface, expensive in aggregate.</p>
+<p><strong>Lint and static analysis.</strong> <code>shellcheck</code> reads scripts; it does not introspect functions buried in dotfiles. Quoting bugs, unset variables, and incorrect test predicates that would be caught immediately in a script silently survive in a <code>.zshrc</code> function. The R parallel is <code>lintr</code> against package code versus <code>lintr</code> against ad-hoc chunks in <code>.Rprofile</code>.</p>
+<p><strong>Version control granularity.</strong> A script is a file. Its diffs are local, its history is local, blame is meaningful, and its commits do not interact with unrelated config changes. A function in a shared <code>.zshrc</code> competes with <code>PATH</code> exports, plugin lines, keybindings, and PROMPT changes for git history attention. Any non-trivial helper deserves its own git history, the same way a non-trivial R helper deserves its own <code>R/foo.R</code>.</p>
+<p><strong>Testability.</strong> A script can be invoked under a controlled environment with arguments, redirected I/O, and a captured exit code. The same logic embedded in a <code>.zshrc</code> function can only be tested by sourcing the dotfile and calling the function in a live shell, which is roughly as defensible as testing R code by copy-pasting it into the console.</p>
+<p><strong>Reuse across hosts and contexts.</strong> Scripts in <code>~/bin</code> are picked up by anything that respects <code>PATH</code>: cron, launchd, Make rules, Docker containers that mount the home directory, HPC submission scripts, scheduled GitHub Actions runners that source the toolbox. Functions are visible only to interactive zsh sessions. A research-backup helper hidden in <code>.zshrc</code> cannot be wired to a launchd job; the same logic in <code>~/bin</code> can be scheduled in seconds. This boundary maps almost exactly to the line between ‘helpers exported by a package’ and ‘helpers defined inline in a notebook’ in R work.</p>
+</section>
+<section id="why-the-inversion-happens" class="level2" data-number="3.4">
+<h2 data-number="3.4" class="anchored" data-anchor-id="why-the-inversion-happens"><span class="header-section-number">3.4</span> Why the inversion happens</h2>
+<p>A second pattern to notice: the inversions are not random. Helpers that grow up as one-liners (<code>cd somewhere &amp;&amp; open something</code>) are written as scripts because the author did not yet know about aliases. Helpers that grow up gradually (a git workflow that started as a snippet, then accreted secret-scanning, then commit- message templating, then a confirmation prompt) end up as functions because they were edited each time a new shell was open and <code>.zshrc</code> was already in the editor. The forces driving each inversion are completely different, but the symptom (a toolbox where category does not predict location) is identical.</p>
+<p>Recognising both forces matters because the corrective for each is different. The microscript that should have been an alias becomes an alias and disappears. The accumulated function that should have been a script becomes a script and gets the full hardening treatment: shebang, <code>set -euo pipefail</code>, quoted variables, a <code>-h</code>/<code>--help</code> flag, a <code>shellcheck</code> pass, and a place in version history.</p>
+</section>
+<section id="when-the-rule-cuts-the-other-way" class="level2" data-number="3.5">
+<h2 data-number="3.5" class="anchored" data-anchor-id="when-the-rule-cuts-the-other-way"><span class="header-section-number">3.5</span> When the rule cuts the other way</h2>
+<p>For completeness, the rule does sometimes route a current script <em>into</em> the function form. A helper that the author scripted but that genuinely needs to leave the user in a different directory is mis-categorised as a script. The give-away symptom: ‘why does my shell not stay in the project directory after I run this?’. That helper’s logic should move to a function, or, more cleanly, the script should be retained for non-interactive callers (cron, make) and a thin shell function should call it and apply the final <code>cd</code>.</p>
+</section>
+<section id="what-the-rule-is-not" class="level2" data-number="3.6">
+<h2 data-number="3.6" class="anchored" data-anchor-id="what-the-rule-is-not"><span class="header-section-number">3.6</span> What the rule is not</h2>
+<p>The rule is not ‘all logic must leave <code>.zshrc</code>’. The dirstack helpers, the <code>ff</code> fzf-then-cd shortcut, the navigation jumps to project subdirectories: all are legitimately functions, because they exist precisely to mutate the calling shell. The point is to keep the function tier narrow and obviously appropriate, so that when a future reader sees a function in <code>.zshrc</code>, the existence of that function is itself evidence that it had to be one.</p>
+</section>
+</section>
+<section id="symptoms-of-an-unaligned-toolbox" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Symptoms of an unaligned toolbox</h1>
+<p>Three signs reliably indicate that a toolbox needs a refactor along these lines.</p>
+<p><strong>The shell startup file has crossed a thousand lines.</strong> Most of the bulk is unlikely to be configuration. It will be logic that should have been extracted long ago.</p>
+<p><strong>Microscripts in <code>~/bin</code> outnumber non-trivial scripts.</strong> A directory with thirty entries, half of which are under five lines, is mostly aliases waiting to be promoted.</p>
+<p><strong>At least one shell function imports a non-trivial external program.</strong> A <code>.zshrc</code> function that calls <code>gitleaks</code>, <code>aws</code>, <code>pandoc</code>, or <code>jq</code> is almost certainly mis-located. External programs imply a real workflow, and real workflows belong in versioned files.</p>
+</section>
+<section id="a-categorisation-matrix" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> A categorisation matrix</h1>
+<p>The matrix below sorts every helper a typical toolbox will contain into one of five fates. Triaging an existing toolbox is a single-sitting exercise: read each helper, ask the four questions in the principle, and place it.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 28%">
+<col style="width: 71%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Fate</th>
+<th>Trigger</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Keep as function</td>
+<td>Helper must <code>cd</code>, <code>export</code>, modify aliases or history</td>
+</tr>
+<tr class="even">
+<td>Move from function to script</td>
+<td>Function does no shell-state work; it just runs a program</td>
+</tr>
+<tr class="odd">
+<td>Convert script to alias</td>
+<td>Script is a single command line with no real argument parsing</td>
+</tr>
+<tr class="even">
+<td>Keep as script (harden)</td>
+<td>Script is correctly placed but lacks shebang, quoting, lint</td>
+</tr>
+<tr class="odd">
+<td>Decommission</td>
+<td>Helper duplicates another, is referenced nowhere, or is dead</td>
+</tr>
+</tbody>
+</table>
+<p>The first row is the smallest in any toolbox the author has inspected, typically four to twenty helpers. The remaining rows absorb everything else.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance2.png" class="img-fluid figure-img"></p>
+<figcaption>Editor showing a shell function being lifted into its own file under ‘~/bin’.</figcaption>
+</figure>
+</div>
+</section>
+<section id="a-seven-phase-refactor" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> A seven-phase refactor</h1>
+<p>Each phase below is independently shippable and reversible. The ordering is by leverage: the early phases produce most of the visible improvement.</p>
+<section id="phase-1-extract-the-largest-function" class="level2" data-number="6.1">
+<h2 data-number="6.1" class="anchored" data-anchor-id="phase-1-extract-the-largest-function"><span class="header-section-number">6.1</span> Phase 1: extract the largest function</h2>
+<p>In every toolbox the author has examined, a single function dominates by line count. Often it is a custom git commit workflow or a research-notes capture pipeline that grew over the years. That function alone typically contains 30 to 70 percent of the non-config bulk in <code>.zshrc</code>.</p>
+<p>The extraction is mechanical:</p>
+<ul>
+<li>Create a new file in <code>~/bin</code> named after the helper. Mark it executable.</li>
+<li>Add a shebang that matches the syntax in use. Functions written with zsh-only constructs (<code>${(f)...}</code>, <code>${array:#}</code>, <code>setopt</code> semantics) require <code>#!/usr/bin/env zsh</code>; do not assume bash will parse them.</li>
+<li>Apply standard hardening: <code>set -u</code> always, <code>set -e</code> if the function does not deliberately tolerate failure, <code>set -o pipefail</code> if any command piping is involved.</li>
+<li>Decide on helpers. Sub-functions called only by the extracted helper can move with it (inline, or in a <code>lib/</code> directory the helper sources). External helpers used by other functions stay in shell config.</li>
+<li>Delete the original function from the shell startup file.</li>
+<li>Verify by exercising the helper end-to-end on a scratch workspace, including any failure paths.</li>
+</ul>
+<p>This phase alone is usually responsible for a measurable shell startup speedup and for moving the largest single block of code under linting.</p>
+</section>
+<section id="phase-2-extract-the-small-functions" class="level2" data-number="6.2">
+<h2 data-number="6.2" class="anchored" data-anchor-id="phase-2-extract-the-small-functions"><span class="header-section-number">6.2</span> Phase 2: extract the small functions</h2>
+<p>After the large extraction, several smaller functions remain that also fail the principle: a Mathematica wrapper, a fuzzy file finder that calls vim, a make invocation that runs from any subdirectory. Each is a one-file extraction at most. Time per helper is small; the cumulative effect is roughly another fifty to eighty lines out of <code>.zshrc</code>.</p>
+</section>
+<section id="phase-3-convert-microscripts-to-aliases" class="level2" data-number="6.3">
+<h2 data-number="6.3" class="anchored" data-anchor-id="phase-3-convert-microscripts-to-aliases"><span class="header-section-number">6.3</span> Phase 3: convert microscripts to aliases</h2>
+<p>Inspect every script under fifteen lines in <code>~/bin</code>. Any whose body reduces to a single command pipeline (with no flag parsing, no branching, no output processing) is more honestly expressed as an alias. Examples that look exactly like aliases when written inline:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">nohup</span> /Applications/Ghostty.app/Contents/MacOS/ghostty <span class="dt">\</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="op">&gt;</span>/dev/null <span class="dv">2</span><span class="op">&gt;&amp;</span><span class="dv">1</span> <span class="kw">&amp;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Promote each such script to an alias in shell config and delete the file. The benefit is twofold: the helper now appears in <code>alias</code> output (so it is discoverable by listing aliases), and the toolbox shrinks by one file per promotion.</p>
+</section>
+<section id="phase-4-standardise-the-rest" class="level2" data-number="6.4">
+<h2 data-number="6.4" class="anchored" data-anchor-id="phase-4-standardise-the-rest"><span class="header-section-number">6.4</span> Phase 4: standardise the rest</h2>
+<p>The remaining scripts in <code>~/bin</code> are correctly scripts. They typically need light hardening:</p>
+<ul>
+<li>Add a shebang, <code>#!/usr/bin/env bash</code> for bash-portable scripts.</li>
+<li>Add <code>set -euo pipefail</code> unless the script explicitly chooses a more permissive policy and documents why.</li>
+<li>Replace backticks with <code>$(...)</code>.</li>
+<li>Quote variable expansions: <code>"$1"</code>, <code>"$PWD"</code>, and so on.</li>
+<li>Resolve <code>shellcheck</code> warnings, or annotate with a <code>disable</code> comment that names a reason.</li>
+<li>Add a <code>-h</code>/<code>--help</code> flag for any script over thirty lines.</li>
+<li>Decide an extension policy and apply it consistently; standard Unix practice is to drop <code>.sh</code> from executables and reserve the extension for files that are explicitly sourced. Confirm that any scheduler entries (launchd, systemd, cron) referring to the script by name are updated together.</li>
+</ul>
+<p>This is the long-tail phase. It can be done one helper at a time, amortised over normal work.</p>
+</section>
+<section id="phase-5-optional-autoload-remaining-functions" class="level2" data-number="6.5">
+<h2 data-number="6.5" class="anchored" data-anchor-id="phase-5-optional-autoload-remaining-functions"><span class="header-section-number">6.5</span> Phase 5 (optional): autoload remaining functions</h2>
+<p>For shell startup files that still feel heavy after phases 1 to 4, move the remaining functions out of the startup file into a function directory and <code>autoload</code> them:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode zsh code-with-copy"><code class="sourceCode zsh"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="va">fpath</span><span class="op">=</span><span class="va">(</span>~/.zsh/functions <span class="va">$fpath)</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="bu">autoload</span> <span class="at">-Uz</span> d ff za zw zy zf zt zs zp zr z0 zm ze zo zc zg</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Each function lives in its own file under the function path. They load on first call, not on shell start. Skip this phase if the remaining functions are few or if having their bodies visible in the startup file is more valuable than the small startup cost.</p>
+</section>
+<section id="phase-6-install-a-guardrail" class="level2" data-number="6.6">
+<h2 data-number="6.6" class="anchored" data-anchor-id="phase-6-install-a-guardrail"><span class="header-section-number">6.6</span> Phase 6: install a guardrail</h2>
+<p>Add a <code>shellcheck</code> pre-commit hook scoped to <code>~/bin/*</code>, excluding binaries, R scripts, Python scripts, and any <code>archive/</code> directory. The point is not to catch a flood of issues at install time (phase 4 already handled those) but to prevent regressions as the toolbox continues to evolve. A single Make target, <code>make lint</code>, that runs <code>shellcheck</code> over every executable is sufficient.</p>
+</section>
+<section id="phase-7-decommission" class="level2" data-number="6.7">
+<h2 data-number="6.7" class="anchored" data-anchor-id="phase-7-decommission"><span class="header-section-number">6.7</span> Phase 7: decommission</h2>
+<p>Triage each remaining helper for redundancy. Common findings: two clipboard-to-notes helpers that do roughly the same thing under different names, a PDF viewer launcher that exists in two versions because the author once wanted to try a different viewer, an installer left behind from a tool that was removed years ago. Pick one of each, retire the rest. Git history preserves the removed code; the working tree should not.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance3.png" class="img-fluid figure-img"></p>
+<figcaption>A clean desk after the refactor; the same tools are present, but each sits where it belongs.</figcaption>
+</figure>
+</div>
+</section>
+</section>
+<section id="things-to-watch-out-for" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Things to watch out for</h1>
+<p>These pitfalls are easy to underestimate before starting and easy to recognise once seen.</p>
+<ol type="1">
+<li><p><strong>Zsh-only constructs.</strong> Many shell functions accumulate zsh conveniences that bash will not parse: <code>${(f)var}</code> for newline splitting, <code>(s::)</code> for string-splitting flags, parameter modifiers like <code>${var:#}</code>. When extracting such a function to a script, the shebang must match the syntax. A bash shebang on a zsh function will fail in unhelpful ways.</p></li>
+<li><p><strong>Schedulers refer to file names.</strong> If <code>~/bin/foo.sh</code> is referenced by a launchd plist, a systemd unit, a cron entry, or a Makefile, renaming to <code>~/bin/foo</code> will silently break the scheduler. Search for every occurrence before renaming, and land both changes in the same commit.</p></li>
+<li><p><strong><code>PATH</code> ordering.</strong> A script extracted from a function inherits <code>PATH</code> from the calling shell, which is usually fine. The exception is when the function previously ran inside a block that prepended a directory to <code>PATH</code>. The new script needs to do its own <code>PATH</code> adjustment or use absolute paths.</p></li>
+<li><p><strong>Working directory at invocation.</strong> A function inherits the caller’s <code>$PWD</code>. A script does too, but if the script was previously a function that called itself recursively or that <code>cd</code>’d for its own purposes, that behaviour is now subprocess-local and may surprise the parent.</p></li>
+<li><p><strong>History and dirstack contamination.</strong> A function that previously ran <code>pushd</code>/<code>popd</code> to navigate around silently lost that capability when extracted to a script. If the helper genuinely needed the navigation, the helper was mis-classified and the rule routes it back to the function tier.</p></li>
+<li><p><strong><code>shellcheck</code> false positives.</strong> External programs called with computed arguments (<code>"${args[@]}"</code>) sometimes trigger <code>SC2068</code>, <code>SC2086</code>, or <code>SC2154</code>. Disable per line with a comment that names the reason; do not blanket-disable the warning across the project.</p></li>
+<li><p><strong>Secrets in extracted code.</strong> A function previously sourced from <code>.zshrc</code> may have benefited from environment variables set elsewhere in the same file. The extracted script does not have that benefit. Either source the relevant env file explicitly inside the script, or read secrets via a tool such as <code>pass</code> or a credential helper.</p></li>
+</ol>
+</section>
+<section id="daily-workflow-after-the-refactor" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Daily workflow after the refactor</h1>
+<p>The refactor pays back every day in three ways.</p>
+<p><strong>Discoverability.</strong> A new helper added to <code>~/bin</code> shows up under tab completion against <code>$PATH</code>. A new function added to the shell config shows up only in the current session and only after a reload.</p>
+<p><strong>Auditability.</strong> Every helper in <code>~/bin</code> is one <code>git log</code> away from full history; one <code>shellcheck</code> away from lint; one <code>cat</code> away from a complete reading. A helper buried in a thousand-line startup file requires the reader to first locate it.</p>
+<p><strong>Composability.</strong> Scripts in <code>~/bin</code> can be called from anything that respects <code>PATH</code>: Make rules, scheduled jobs, Docker containers mounted with the home directory, HPC submission scripts, peer collaborators who cloned the dotfiles repository. Functions can only be called from interactive shells that have sourced them. The composability gain is the most important long-term return on the refactor.</p>
+</section>
+<section id="what-did-we-learn" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> What did we learn?</h1>
+<section id="lessons-learnt" class="level2" data-number="9.1">
+<h2 data-number="9.1" class="anchored" data-anchor-id="lessons-learnt"><span class="header-section-number">9.1</span> Lessons learnt</h2>
+<p><strong>Conceptual:</strong></p>
+<ul>
+<li>The function-versus-script question reduces to a single test: does the helper need to mutate the calling shell? Almost every other consideration follows from that one decision.</li>
+<li>The forces that produce inversions in each direction are different. Microscripts grow up because the author did not know about aliases; oversized functions grow up because the startup file is the file that happens to be open.</li>
+<li>A mature toolbox is mostly scripts, a small set of legitimate functions, and a layer of aliases. Any other distribution is evidence of accumulated misalignment.</li>
+</ul>
+<p><strong>Technical:</strong></p>
+<ul>
+<li>A long zsh function may not be portable to bash, even when the prose-level intent looks generic. Confirm the shebang against the syntactic features actually in use.</li>
+<li><code>shellcheck</code> is the highest-leverage tool to apply at the end of an extraction. It catches more than half of the latent quoting and unset-variable bugs in legacy scripts.</li>
+<li>Naming and extension conventions only need to be applied consistently within a toolbox. The choice of <code>.sh</code> versus no extension matters less than the absence of a third option appearing for no reason.</li>
+</ul>
+<p><strong>Gotchas:</strong></p>
+<ul>
+<li>Renaming a script that a scheduler refers to silently breaks the schedule. Always grep for the file name across <code>launchd/</code>, <code>systemd/</code>, <code>Makefile</code>, and any related repositories before renaming.</li>
+<li>Functions that depend on shell-specific syntax cannot be blindly retitled with a bash shebang. Prefer the zsh shebang unless the syntax has been explicitly portabilised.</li>
+</ul>
+</section>
+<section id="limitations" class="level2" data-number="9.2">
+<h2 data-number="9.2" class="anchored" data-anchor-id="limitations"><span class="header-section-number">9.2</span> Limitations</h2>
+<p>The refactor described here addresses helpers in shell-land specifically. It does not:</p>
+<ul>
+<li>Address Python, R, or other-language helpers whose execution model differs from shell scripts.</li>
+<li>Replace a real configuration management system. Tools such as Ansible, Nix, or chezmoi solve a larger problem and may be appropriate when the personal toolbox grows past a few dozen files or needs to be deployed to multiple machines.</li>
+<li>Provide automated migration. Each helper still needs a human to read it, classify it, and verify the extraction.</li>
+<li>Compose with shell frameworks that load logic from many files (Oh My Zsh, prezto). Those frameworks have their own conventions; the rule still applies, but the implementation details change.</li>
+</ul>
+</section>
+<section id="opportunities-for-improvement" class="level2" data-number="9.3">
+<h2 data-number="9.3" class="anchored" data-anchor-id="opportunities-for-improvement"><span class="header-section-number">9.3</span> Opportunities for improvement</h2>
+<ol type="1">
+<li>Encode the rule as a small linter that scans <code>.zshrc</code> for functions and flags any whose body never references shell state. This would surface candidates for extraction over time rather than at one big-bang refactor.</li>
+<li>Add a CI workflow that runs <code>shellcheck</code> over <code>~/bin</code> on every push to the dotfiles repository.</li>
+<li>Generate <code>~/bin/nav</code> (a navigation cheat sheet) from the <code>autoload</code>ed function metadata, so adding a new shortcut automatically updates the help output.</li>
+<li>Build a thin packaging layer around shared helpers so they can be installed on collaborator machines without copying files by hand. A simple Make target plus a manifest is usually sufficient.</li>
+<li>Track helper invocation frequency via the shell’s <code>precmd</code> hook for one week per year, and use the result to prune helpers nobody actually calls.</li>
+</ol>
+</section>
+</section>
+<section id="wrapping-up" class="level1" data-number="10">
+<h1 data-number="10"><span class="header-section-number">10</span> Wrapping up</h1>
+<p>A personal toolbox is software, even when it is small, even when it is private, even when it grew organically. Treating it as software (with a rule for how it is structured, lint applied to the parts that should be linted, version control applied to the parts that change, and a maintenance pass when the bulk crosses some threshold) pays back every day for the next decade.</p>
+<p>The rule that drives the refactor is short enough to remember: function only when shell state must change, script otherwise. The work to apply it is finite, ordered, and reversible. A single afternoon, divided across the seven phases above, is enough to move a toolbox from accumulated drift back into alignment.</p>
+<p><strong>Main takeaways:</strong></p>
+<ul>
+<li>The rule reduces every helper-placement decision to a single question about shell state.</li>
+<li>The largest single win is extracting the dominant function out of the shell startup file and into <code>~/bin</code>.</li>
+<li>Microscripts that read like one-liners belong as aliases, not files.</li>
+<li>A <code>shellcheck</code> guardrail prevents the same drift from re-accumulating.</li>
+</ul>
+</section>
+<section id="see-also" class="level1" data-number="11">
+<h1 data-number="11"><span class="header-section-number">11</span> See Also</h1>
+<p><strong>Related posts:</strong></p>
+<ul>
+<li><a href="https://focusonr.org/posts/setupdotfilesongithub/">Setting up dotfiles on GitHub</a>: versioning the shell startup file alongside the rest of the configuration.</li>
+<li><a href="https://focusonr.org/posts/researchbackupsystem/">A research backup system</a>: a worked example of a helper that belongs as a script invoked from a scheduler, not as a function in a shell.</li>
+</ul>
+<p><strong>Key resources:</strong></p>
+<ul>
+<li><a href="https://www.shellcheck.net/">shellcheck</a>: static analyser for shell scripts.</li>
+<li><a href="https://zsh.sourceforge.io/Doc/Release/Expansion.html">zsh manual: parameter expansion</a>: authoritative reference for zsh-only constructs encountered during extraction.</li>
+<li><a href="https://wiki.bash-hackers.org/scripting/nonportable">Bash hackers wiki: portable shell</a>: inventory of constructs that fail to port between shells.</li>
+<li><a href="https://12factor.net/">The twelve-factor app</a>: the configuration discipline that the rule echoes for shell environments.</li>
+</ul>
+<hr>
+</section>
+<section id="reproducibility" class="level1" data-number="12">
+<h1 data-number="12"><span class="header-section-number">12</span> Reproducibility</h1>
+<p><strong>Tested configuration:</strong></p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Component</th>
+<th>Version</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Operating system</td>
+<td>macOS 15.4</td>
+</tr>
+<tr class="even">
+<td>Shell</td>
+<td>zsh 5.9</td>
+</tr>
+<tr class="odd">
+<td>shellcheck</td>
+<td>0.10.0</td>
+</tr>
+<tr class="even">
+<td>Last verified</td>
+<td>2026-04-25</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Configuration files:</strong></p>
+<ul>
+<li><code>analysis/configs/refactor_plan.md</code>: the seven-phase plan in the format used to drive the worked refactor.</li>
+</ul>
+<hr>
+</section>
+<section id="feedback" class="level1" data-number="13">
+<h1 data-number="13"><span class="header-section-number">13</span> Feedback</h1>
+<p>Corrections, suggestions, and questions are welcome. Please open an issue or pull request on the <a href="https://github.com/mygit">GitHub repository</a> or send an email to user@example.com.</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/focusonr\.org");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<input type="hidden" id="giscus-base-theme" value="light">
+<input type="hidden" id="giscus-alt-theme" value="light">
+<script>
+  function loadGiscus() {
+    // Function to get the theme based on body class
+    const getTheme = () => {
+      let baseTheme = document.getElementById('giscus-base-theme').value;
+      let altTheme = document.getElementById('giscus-alt-theme').value;
+      return document.body.classList.contains('quarto-dark') ? altTheme : baseTheme;
+    };
+    const script = document.createElement("script");
+    script.src = "https://giscus.app/client.js";
+    script.async = true;
+    script.dataset.repo = "rgt47/qblog";
+    script.dataset.repoId = "R_kgDOH6TO7A";
+    script.dataset.category = "General";
+    script.dataset.categoryId = "DIC_kwDOH6TO7M4CXqIi";
+    script.dataset.mapping = "pathname";
+    script.dataset.reactionsEnabled = "1";
+    script.dataset.emitMetadata = "0";
+    script.dataset.inputPosition = "bottom";
+    script.dataset.theme = getTheme();
+    script.dataset.lang = "en";
+    script.crossOrigin = "anonymous";
+    // Append the script to the desired div instead of at the end of the body
+    document.getElementById("quarto-content").appendChild(script);
+  }
+  loadGiscus();
+</script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Copyright 2023-2025, Ronald G. Thomas</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47">
+      <i class="bi bi-github" role="img">
+</i> 
+    </a>
+  </li>  
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47">
+      <i class="bi bi-twitter" role="img">
+</i> 
+    </a>
+  </li>  
+</ul>
+    </div>
+  </div>
+</footer>
+<!-- Fix for Quarto category encoding issue -->
+<script>
+// Fix category encoding for Quarto listing functionality
+(function() {
+  function fixAllCategoryEncoding() {
+    // Only run on pages that have Quarto listings
+    if (!document.querySelector('.quarto-listing')) {
+      return;
+    }
+    
+    // Fix sidebar category data-category attributes
+    const categoryEls = document.querySelectorAll('.quarto-listing-category .category[data-category]');
+    
+    categoryEls.forEach((categoryEl) => {
+      const category = categoryEl.getAttribute('data-category');
+      
+      if (category && category !== '') {
+        // Check if it contains only base64 characters and proper length
+        const isBase64 = /^[A-Za-z0-9+/]*={0,2}$/.test(category) && category.length % 4 === 0;
+        
+        if (isBase64) {
+          try {
+            const decoded = decodeURIComponent(atob(category));
+            // Verify it decoded to something reasonable (no control characters)
+            if (!decoded.match(/^[A-Za-z0-9\s\-,]+$/)) {
+              // Invalid encoding, re-encode from original text
+              const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+              categoryEl.setAttribute('data-category', encodedCategory);
+            }
+          } catch (e) {
+            // Base64 decode failed, re-encode from original text
+            const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+            categoryEl.setAttribute('data-category', encodedCategory);
+          }
+        } else {
+          // Not base64, encode it
+          const encodedCategory = btoa(encodeURIComponent(category));
+          categoryEl.setAttribute('data-category', encodedCategory);
+        }
+      }
+    });
+    
+    // Fix listing item data-categories attributes  
+    const listingItems = document.querySelectorAll('[data-categories]');
+    
+    listingItems.forEach((item) => {
+      const categories = item.getAttribute('data-categories');
+      
+      if (categories && categories !== '') {
+        // Check if it's already base64 encoded
+        try {
+          decodeURIComponent(atob(categories));
+          // Already encoded and valid
+        } catch (e) {
+          // Not encoded, fix it
+          const encodedCategories = btoa(encodeURIComponent(categories));
+          item.setAttribute('data-categories', encodedCategories);
+        }
+      }
+    });
+    
+    // Fix post-specific category tag click handlers
+    const postCategoryTags = document.querySelectorAll('.listing-category[onclick]');
+    
+    postCategoryTags.forEach((tag) => {
+      const categoryText = tag.textContent.trim();
+      
+      // Replace the onclick handler to use encoded category
+      tag.onclick = () => {
+        const encodedCategory = btoa(encodeURIComponent(categoryText));
+        window.quartoListingCategory(encodedCategory);
+        return false;
+      };
+    });
+  }
+  
+  // Run immediately
+  fixAllCategoryEncoding();
+  
+  // Also run when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fixAllCategoryEncoding);
+  }
+})();
+</script>
+
+<!-- PDF view/download button for blog posts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Only add the button on post pages
+  if (window.location.pathname.includes('/posts/') && !window.location.pathname.endsWith('/posts/') && !window.location.pathname.endsWith('/posts/index.html')) {
+    var currentPath = window.location.pathname;
+    // Handle both /posts/name/ and /posts/name/index.html formats
+    var pdfPath;
+    if (currentPath.endsWith('/')) {
+      pdfPath = currentPath + 'index.pdf';
+    } else {
+      pdfPath = currentPath.replace('.html', '.pdf');
+    }
+
+    // Check if PDF exists first
+    fetch(pdfPath, { method: 'HEAD' })
+      .then(function(response) {
+        if (response.ok) {
+          // PDF exists, show download button
+          showDownloadButton(pdfPath);
+        }
+        // If PDF doesn't exist, don't show any button
+      })
+      .catch(function(error) {
+        // Error checking PDF, don't show any button
+      });
+  }
+});
+
+function showDownloadButton(pdfPath) {
+  var downloadBtn = document.createElement('div');
+  downloadBtn.className = 'pdf-download-button';
+
+  // Get file size if possible
+  fetch(pdfPath, { method: 'HEAD' })
+    .then(function(response) {
+      var size = response.headers.get('Content-Length');
+      var sizeText = '';
+
+      if (size) {
+        // Convert to MB or KB
+        var sizeInMB = size / (1024 * 1024);
+        if (sizeInMB >= 1) {
+          sizeText = ' (' + sizeInMB.toFixed(1) + ' MB)';
+        } else {
+          sizeText = ' (' + (size / 1024).toFixed(0) + ' KB)';
+        }
+      }
+
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' + sizeText +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    })
+    .catch(function() {
+      // Basic fallback if we can't get file size
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    });
+
+  // Find where to insert the button (right after the title block)
+  var titleBlock = document.querySelector('.quarto-title-meta');
+  if (titleBlock) {
+    titleBlock.after(downloadBtn);
+  }
+}
+
+
+</script>
+
+<style>
+.pdf-download-button {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+</style>
+
+
+
+
+</body></html>
