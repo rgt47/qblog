@@ -413,6 +413,36 @@ lifestyle photography, 50mm lens, shallow depth of field,
 photographic realism, no text, no logos, no people.
 ```
 
+### Post 52 -- A Workflow Construct for the Modern Data Scientist [DONE]
+
+```
+Generate a 16:9 landscape image with the following description:
+
+Editorial photograph of a closed silver laptop on a dark
+walnut desk, with a stack of vintage transparent overlay
+sheets fanned out alongside in the manner of an old anatomy
+atlas: five translucent vellum pages, each printed in fine
+sepia ink with a different schematic diagram (illegible
+hairline annotations, abstract block-and-line markings),
+partially overlapping so the bottom sheet shows through the
+upper ones and the layered composite reveals more structure
+than any single sheet conveys. A brass paperweight pins the
+corner of the topmost sheet; a fountain pen rests alongside.
+Warm directional lighting from the upper left casts soft
+shadows between the layers. Muted palette: cream vellum,
+sepia ink, brushed aluminium, dark walnut, aged brass.
+Metaphor: a research workflow as a stack of thin,
+individually replaceable layers whose composition is the
+construct itself. Style: editorial still-life photography,
+three-quarter overhead angle, 50mm lens, shallow depth of
+field, photographic realism, no readable text, no logos, no
+people.
+```
+
+Generated 2026-04-26 via Gemini (Imagen 3). Processed with
+`magick -resize 1600x -strip -quality 85`. Final dimensions
+1600 by 893.
+
 ---
 
 ## Batch 4: Docker / reproducibility / Shiny
@@ -588,3 +618,4 @@ hero.jpg -- Generated with Google Imagen 3 via Gemini, YYYY-MM-DD.
 | 43 | Dynamic Column Names | TODO |
 | 47 | Setup Template | KEEP |
 | 48 | ttyd Terminal | TODO |
+| 52 | Workflow Construct | DONE |
