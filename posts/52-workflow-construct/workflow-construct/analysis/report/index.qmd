@@ -183,6 +183,106 @@ cloning the repository, running `make r`, and starting work; without
 them, the same task requires a sequence of guesses about which
 package versions matched which paper.
 
+# Theoretical Framing
+
+The informal definition above is sufficient for daily use, but
+the construct is best understood as a special case of several
+recognised software-engineering frameworks. Naming the
+generalisations clarifies which design decisions are
+construct-specific and which are inherited from the underlying
+patterns, and identifies the rigorous formal counterparts to
+which the present hand-rolled instantiation could be migrated.
+
+The construct generalises along five axes.
+
+### Reference Architecture (layered / n-tier)
+
+A reference architecture, in the sense used by Bass, Clements,
+and Kazman in *Software Architecture in Practice* (4th edition,
+2021) and codified in TOGAF and ISO/IEC/IEEE 42010, is a
+documented blueprint that prescribes the layers of a system and
+the permitted couplings between them, without prescribing the
+implementing tools. The classical layered architecture pattern
+(Buschmann, Meunier, Rohnert, Sommerlad, and Stal,
+*Pattern-Oriented Software Architecture* vol. 1, 1996) is the
+variant in which each layer depends only on the layer
+immediately below it. The Workflow Construct is a personal-scope
+reference architecture in this sense: the technical section
+below is the blueprint, and each row names a layer whose tools
+can be substituted without disturbing the rows above.
+
+### Infrastructure as Code, applied at the workstation level
+
+Infrastructure as Code, as articulated by Morris in
+*Infrastructure as Code* (2nd edition, 2020), treats the
+configuration of computing infrastructure as a versioned,
+declarative artefact that can be applied repeatedly to produce
+a reproducible state. The construct's dotfiles repository,
+`Dockerfile`, and `renv.lock` together form a hand-rolled IaC
+instance scoped to a single workstation. The emerging term
+**Development Environment as Code** (DEaC) names this pattern
+specifically for developer workstations rather than for
+production infrastructure. The most rigorous formal counterpart
+is **Nix Home Manager / NixOS**, which replaces the construct's
+`install.sh` with a verified-reproducible build closure; the
+trade-off is that Nix is closer to all-or-nothing adoption,
+whereas the present construct admits incremental migration.
+
+### Reproducible Research Compendium (project tier)
+
+Gentleman and Temple Lang (2007, *Journal of Computational and
+Graphical Statistics*) introduced the term 'research compendium'
+for a dynamically-generated document bundled with its data,
+code, and dependency manifest. Marwick, Boettiger, and Mullen
+('Packaging Data Analytical Work Reproducibly Using R (and
+Friends)', *The American Statistician*, 2018) operationalised
+the pattern as an R package with `data/`, `R/`, and
+`vignettes/` directories plus a Dockerfile. The zzcollab
+framework implements this at the project level. The Workflow
+Construct sits one tier above the compendium: the compendium
+pins what an analysis depends on, the construct pins what the
+analyst's environment depends on, and together they form a
+two-tier reproducibility stack.
+
+### Internal Developer Platform and Golden Path (team tier)
+
+The Platform Engineering discipline (Spotify's Backstage and
+Golden Path artefacts from 2020 onward; the CNCF Platform
+Working Group white paper from 2022 onward) defines an
+**Internal Developer Platform** as an opinionated, supported,
+paved-road set of conventions followed by default. The
+construct, scoped to a team rather than a single user, is a
+personal IDP. A team-scope construct with a published
+`install.sh` and shared scripts is structurally
+indistinguishable from a small-organisation Golden Path; the
+distinction is one of governance, not of architecture.
+
+### Dev Container specification and Software Bill of Materials
+
+Two narrower industry standards formalise specific subsets of
+the construct. The `devcontainer.json` specification
+([containers.dev](https://containers.dev/)) defines a
+schema-validated, portable record of the editor, runtime, and
+toolchain layers, suitable for use across IDEs, GitHub
+Codespaces, and CI runners. The Software Bill of Materials
+formats SPDX (ISO/IEC 5962:2021) and CycloneDX (Ecma TC54)
+formalise the version-matrix row of the construct's
+Reproducibility section as a machine-readable inventory of
+component versions and provenance.
+
+### Summary positioning
+
+Taken together, the Workflow Construct is most precisely
+described as a layered Reference Architecture for a single-user
+research workstation, instantiated as ad hoc Infrastructure as
+Code, with the project tier following the Reproducible Research
+Compendium pattern. Adopting one of the formal counterparts
+(Nix Home Manager for the IaC layer, a `devcontainer.json` for
+the editor and toolchain layers, an SPDX SBOM for the version
+matrix) is a refinement, not a replacement; the layered
+architecture itself is unchanged. The technical realisation
+follows in the next section.
+
 # Prerequisites
 
 The construct documented below assumes the following:
@@ -213,12 +313,19 @@ exclusively, Emacs) can still extract value from the structure,
 but several of the rows will need substitution rather than
 adoption.
 
-# The Construct as a Layered Reference
+# The Layered Architecture
 
-The following table reproduces the handwritten outline as a
-typed reference, with two columns added: a brief rationale and
-the set of related qblog posts that document the layer in detail.
-Lines have been wrapped at 78 characters for portability.
+This section is the technical realisation of the layered
+Reference Architecture introduced in the Theoretical Framing
+above. The thirteen rows of the construct correspond to thirteen
+layers in the architecture; each row names a single tool or
+convention that occupies the layer, with the understanding that
+the tool is replaceable while the layer is not. The table
+reproduces the handwritten outline as a typed reference, with
+two columns added: a brief rationale for each layer's tool
+choice, and the set of related qblog posts that document each
+layer in detail. Lines have been wrapped at 78 characters for
+portability.
 
 | Layer | Choice | Rationale | Related posts |
 |---|---|---|---|
@@ -890,6 +997,41 @@ discoverable, reviewable, and reversible.
     ([https://duckdb.org/](https://duckdb.org/)),
     Apache Arrow ([https://arrow.apache.org/](https://arrow.apache.org/)),
     Polars ([https://pola.rs/](https://pola.rs/)).
+
+- Canonical references for the Theoretical Framing:
+  - Bass, L., Clements, P., and Kazman, R. (2021).
+    *Software Architecture in Practice*, 4th edition.
+    Addison-Wesley. (Reference architecture; layered pattern.)
+  - Buschmann, F., Meunier, R., Rohnert, H., Sommerlad, P., and
+    Stal, M. (1996). *Pattern-Oriented Software Architecture,
+    Volume 1: A System of Patterns*. Wiley. (The 'Layers'
+    architectural pattern.)
+  - ISO/IEC/IEEE 42010:2022, 'Software, systems and enterprise:
+    Architecture description.'
+  - Morris, K. (2020). *Infrastructure as Code: Dynamic Systems
+    for the Cloud Age*, 2nd edition. O'Reilly. (Definitive IaC
+    treatment; the workstation analogue is direct.)
+  - Gentleman, R., and Temple Lang, D. (2007). 'Statistical
+    Analyses and Reproducible Research.' *Journal of
+    Computational and Graphical Statistics* 16(1): 1 to 23.
+    (Original 'research compendium' formulation.)
+  - Marwick, B., Boettiger, C., and Mullen, L. (2018).
+    'Packaging Data Analytical Work Reproducibly Using R (and
+    Friends).' *The American Statistician* 72(1): 80 to 88.
+    (Operational compendium pattern; basis for zzcollab.)
+  - CNCF Platform Working Group white paper, 'Platforms'
+    ([https://tag-app-delivery.cncf.io/whitepapers/platforms/](https://tag-app-delivery.cncf.io/whitepapers/platforms/)).
+    (Internal Developer Platform definition.)
+  - Spotify Engineering, 'How We Use Backstage and the Golden
+    Path to Pave the Road for Engineers'
+    ([https://engineering.atspotify.com/](https://engineering.atspotify.com/)).
+  - SPDX (ISO/IEC 5962:2021):
+    [https://spdx.dev/](https://spdx.dev/). CycloneDX (Ecma
+    TC54): [https://cyclonedx.org/](https://cyclonedx.org/).
+  - Nix and Home Manager: [https://nixos.org/](https://nixos.org/);
+    Home Manager
+    ([https://nix-community.github.io/home-manager/](https://nix-community.github.io/home-manager/)).
+    (Verified-reproducible counterpart to ad hoc IaC.)
 
 # Reproducibility
 
