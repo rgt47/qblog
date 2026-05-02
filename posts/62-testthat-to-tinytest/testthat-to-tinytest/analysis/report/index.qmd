@@ -1,0 +1,793 @@
+---
+title: "Setup Post Template (worked example: AWS CLI provisioning)"
+subtitle: "A reproducible installation and configuration walkthrough"
+author: "Ronald 'Ryy' G. Thomas"
+date: "2025-01-01"
+categories: [aws, shell, reproducibility]
+description: "I did not really appreciate how tedious it was to click through the EC2 console until I automated the whole process with four short bash scripts and the AWS CLI."
+image: "media/images/hero.png"
+document-type: "blog"
+draft: false
+execute:
+  echo: true
+  warning: false
+  message: false
+format:
+  html:
+    code-fold: false
+    code-tools: false
+
+---
+
+<!-- ============================================================================
+AUTHOR PROVIDES — concrete inputs the blogger must supply
+
+Every item below maps to a placeholder in the body. Fill in this checklist
+FIRST, then paste your answers into the matching `[bracketed]` slots. Do not
+publish until every box is ticked.
+
+YAML FRONT MATTER (lines 1-20)
+  [ ] title           — '[Tool]' replaced with actual tool name, < 70 chars
+  [ ] subtitle        — one-line elaboration of what the post sets up
+  [ ] date            — YYYY-MM-DD of intended publication
+  [ ] categories      — include `setup`, the tool name, and host OS
+  [ ] description     — 1-2 sentences for blog listing card
+  [ ] image           — path to hero image (relative to this .qmd)
+  [ ] draft: false    — flip when ready
+
+NARRATIVE INPUTS
+  [ ] Hook sentence   — 'I didn't know how to configure [tool] until [trigger]'
+  [ ] Pain point      — the specific friction the tool removes
+  [ ] Motivations     — exactly 4-5 bullets (workflow gap, frustration, curiosity, learning)
+  [ ] Objectives      — exactly 4 numbered, verifiable end states
+  [ ] What is [Tool]? — 1-sentence definition + 1 analogy + 1 concrete example
+  [ ] Daily-workflow paragraph — how this tool fits into your routine after setup
+  [ ] Things to Watch Out For — 5-7 gotchas (required; setup posts need this)
+  [ ] Lessons Learnt  — 4 conceptual + 4 technical + 4 gotcha bullets
+  [ ] Limitations     — 4-6 bullets (what this setup does NOT solve)
+  [ ] Opportunities for Improvement — 5-6 numbered next-step extensions
+  [ ] Wrapping Up     — 2-3 paragraph conclusion + 'Main takeaways'
+  [ ] See Also        — 3-5 links (official docs + 1-2 related blog posts)
+
+CONFIGURATION DELIVERABLES (real, working artifacts, not snippets)
+  [ ] Prerequisites list — OS version, hardware, prior knowledge, dependent tools
+  [ ] Installation block — exact bash commands, tested on a clean machine
+  [ ] Complete config file(s) — verbatim, copy-pasteable, with inline comments
+        Place under: analysis/configs/<filename>
+  [ ] Verification commands — `<tool> --version` plus 1-2 functional smoke tests
+  [ ] Optional keybinding/command reference table — markdown table for daily use
+  [ ] Uninstall / rollback steps — how the reader undoes what you just did
+  [ ] Optional appendices — credential setup, sample session, teardown procedure
+
+VERSION MATRIX (Reproducibility section)
+  [ ] OS + version tested        (e.g., macOS 15.4, Ubuntu 24.04)
+  [ ] Tool version pinned        (e.g., aws-cli 2.15)
+  [ ] Dependency versions        (e.g., homebrew 4.2, jq 1.7)
+  [ ] Date of last verification
+
+IMAGES (4 total: hero + 3 ambiance, all in media/images/)
+  [ ] Hero image (80% width)        — workspace/tool logo, sets tone
+  [ ] Ambiance image 1 (100% width) — after Objectives (workspace shot)
+  [ ] Ambiance image 2 (100% width) — after Configuration (terminal/editor)
+  [ ] Ambiance image 3 (100% width) — before Lessons Learnt (workflow scene)
+  [ ] media/images/README.md        — sources + attribution for every image
+
+CONTACT & METADATA
+  [ ] Author name in YAML matches site author
+  [ ] Social links in 'Let's Connect' updated (or removed)
+  [ ] Giscus comments enabled (inherited from _quarto.yml)
+
+============================================================================ -->
+
+<!-- ============================================================================
+EXEMPLAR SETUP / TOOLING POST TEMPLATE
+
+This is the configuration-centric counterpart to post 39 (data analysis).
+The narrative below is filled in with a concrete worked example (AWS CLI
+provisioning, drawn from post 22) so that future authors see what each
+section looks like when complete. To use this template:
+
+  1. Copy this entire directory to posts/NN-yourtopic/yourtopic/
+  2. Replace the AWS-CLI worked example with your own tool
+  3. Keep the AUTHOR PROVIDES and PRE-PUBLISH QA comment blocks
+  4. Tick every box in AUTHOR PROVIDES before flipping draft: false
+
+Key differences from the data-analysis template:
+  - No analysis pipeline (no 01_prepare_data.R, etc.)
+  - Configuration files replace CSV / .rds artifacts
+  - 'Things to Watch Out For' is REQUIRED, not optional (5-7 gotchas)
+  - Verification commands replace summary statistics tables
+  - Reproducibility section pins OS and tool versions, not R session info
+  - Optional appendices for credential setup, sample sessions, teardown
+
+============================================================================ -->
+
+<!-- ============================================================================
+HERO IMAGE
+============================================================================ -->
+
+![A cloud server rack symbolising the automation of virtual infrastructure through command-line scripting.](media/images/hero.png){.img-fluid width=80%}
+
+*Automating cloud infrastructure removes repetitive manual steps and lets you focus on the work that matters.*
+
+# Introduction
+
+<!-- TEMPLATE INSTRUCTION: Hook with the 'I did not really appreciate X until Y'
+narrative. Establish yourself as the reader's peer, not their teacher.
+
+Three short paragraphs:
+  1. The 'until' moment, the day you first felt the friction
+  2. What you discovered that resolved it
+  3. What this post will walk through (transition to Motivations)
+
+Cross-reference any companion posts (e.g., a manual-console version of the
+same task) so the reader can choose the path that fits their needs.
+-->
+
+I did not really appreciate how much time I was spending clicking through the AWS EC2 console until I tried to spin up the same configuration for the third time in a month. Each launch required navigating a dozen screens, selecting the same AMI, the same instance type, the same security group settings, and the same key pair, all by hand.
+
+The turning point came when I discovered that the AWS Command Line Interface (CLI) exposes every console action as a terminal command. Four short bash scripts later, I could reproduce an identical server environment in under two minutes. This post documents those scripts and the environment variables that drive them.
+
+In a separate post ([here](https://focusonr.org/posts/setupaws/)) I address the same task using the interactive EC2 dashboard. That walkthrough is instructive for understanding the components, but it becomes tedious after the first few repetitions. The scripts presented here replace that manual workflow entirely.
+
+## Motivations
+
+<!-- TEMPLATE INSTRUCTION: Be specific. Generic motivations ('productivity!')
+do not earn the reader's trust. Tie each bullet to a concrete pain point. -->
+
+- I needed a reliable way to launch identical EC2 instances for hosting Shiny applications without re-entering the same parameters each time.
+- Clicking through the EC2 console is error-prone: a wrong subnet or missing port rule can waste an hour of debugging.
+- Scripted provisioning makes it possible to version control the entire server setup alongside application code.
+- I wanted a teardown procedure that is as quick and systematic as the setup, reducing the risk of orphaned resources accumulating charges.
+- Learning the AWS CLI seemed like a transferable skill that would pay dividends beyond this single use case.
+
+## Objectives
+
+<!-- TEMPLATE INSTRUCTION: Each objective should be VERIFIABLE. After
+following the post, the reader should be able to answer 'did I achieve
+objective N? yes / no.' -->
+
+1. Install and configure the AWS CLI on a macOS workstation, including IAM credential setup.
+2. Define eight environment variables that parameterise all subsequent scripts.
+3. Write four bash scripts that create a security group, generate a key pair, launch an EC2 instance, and bootstrap server software.
+4. Walk through a complete sample work session from scratch and document the teardown (undo) procedure.
+
+I am documenting my learning process here. If you spot errors or have better approaches, please let me know.
+
+![Workspace ambiance image: a desk with terminal windows in active use.](media/images/ambiance1.png){.img-fluid}
+
+# What is the AWS CLI?
+
+<!-- TEMPLATE INSTRUCTION: One sentence definition. One analogy. One concrete
+example. Do not lecture; readers who need the deep dive will follow links. -->
+
+The AWS Command Line Interface is a unified tool that provides a consistent interface for interacting with all parts of Amazon Web Services from a terminal. Think of it as the scriptable equivalent of the EC2 web console: every button click in the browser corresponds to an `aws` subcommand.
+
+The key benefit is repeatability. A bash script that calls `aws ec2 run-instances` will produce the same result every time, whereas a manual console session depends on the operator selecting the correct options from dozens of dropdown menus.
+
+# Prerequisites
+
+<!-- TEMPLATE INSTRUCTION: Front-load every assumption. The reader should
+know within 30 seconds whether this post applies to them. -->
+
+This post assumes:
+
+- **Operating system:** macOS 13+ or a Linux distribution with bash 5+
+- **Hardware:** any (Apple Silicon and x86_64 both work)
+- **Already installed:** Homebrew (macOS) or apt (Debian/Ubuntu), plus `jq` for JSON parsing
+- **Background knowledge:** comfort editing dotfiles and running shell commands; familiarity with the AWS console at a basic level
+- **AWS account:** an active account with permission to create IAM users
+- **Time required:** about 30 minutes for install, configuration, and a first launch
+
+If any of the above does not apply, the steps below may need adaptation.
+
+# Installation
+
+<!-- TEMPLATE INSTRUCTION: Show the command. Show the expected output. Keep
+prose between blocks under three sentences. -->
+
+On macOS, Homebrew provides the simplest installation path. The `aws configure` command then prompts for your IAM credentials, default region, and output format.
+
+```sh
+brew install awscli jq
+aws configure
+```
+
+The `aws configure` command will ask for four values:
+
+- **AWS Access Key ID** and **AWS Secret Access Key**: obtained from your IAM credentials CSV (see [Appendix A: IAM Credential Setup](#appendix-a) below).
+- **Default region**: for example, `us-west-1`.
+- **Default output format**: `json` is recommended.
+
+::: {.callout-note}
+Instructions to install the Homebrew software management system on macOS can be found at [brew.sh](https://brew.sh/). Additional installation paths (Linux, Windows) are documented in the [official AWS CLI guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
+:::
+
+Confirm the install succeeded:
+
+```sh
+aws --version
+# Expected output: aws-cli/2.15.x Python/3.11.x Darwin/...
+```
+
+# Configuration
+
+<!-- TEMPLATE INSTRUCTION: Show the FULL config file, not snippets. Readers
+copy-paste; partial files force them to guess. Add inline comments explaining
+the WHY of non-obvious settings. Place real config files under
+analysis/configs/<filename> and either include them with knitr or paste
+verbatim. -->
+
+Nine parameters (including a project name) are required for automated instance generation via the AWS API. The first eight are likely to remain static across launches. Store them as environment variables in your shell configuration file so that every script can reference them without hardcoded values.
+
+Add the following to your `.zshrc` (or equivalent):
+
+```sh
+# ~/.zshrc — AWS provisioning environment
+# Tested on aws-cli 2.15, macOS 15.4
+
+# 1-2. VPC and subnet (find in EC2 dashboard)
+export vpc_id="vpc-14814b73"
+export subnet_id="subnet-f02c90ab"
+
+# 3-5. AMI, instance type, storage size (GB)
+export ami_id="ami-014d05e6b24240371"      # Ubuntu 22.04 LTS, us-west-1
+export instance_type="t2.micro"            # 1 vCPU, 1 GB RAM
+export storage_size="30"
+
+# 6-7. Key pair name, security group ID
+export key_name="power1_app"
+export security_grp="sg-0fef542d93849669c"
+
+# 8. Static (Elastic) IP
+export static_ip="13.57.139.31"
+```
+
+A ninth parameter, `proj_name`, is supplied at the time each script is called via the `-p` flag.
+
+![Editor or terminal showing the AWS CLI in action.](media/images/ambiance2.png){.img-fluid}
+
+# The Four Provisioning Scripts
+
+The provisioning workflow consists of four scripts executed in sequence:
+
+1. **Create a security group**: define firewall rules (which ports to open).
+2. **Create a key pair**: generate an SSH key for encrypted communication.
+3. **Launch the instance**: provision the server with all parameters.
+4. **Bootstrap software**: install Docker and supporting tools on first boot.
+
+## Script 1: Create Security Group
+
+This script creates a security group (firewall) and opens specified ports. The `-n` flag sets the group name and the `-p` flag adds a port. The default behavior opens ports 22 (SSH) and 443 (HTTPS) only.
+
+```sh
+# Example usage
+aws_create_security_group.sh -n power1_app -p 22 -p 80 -p 443
+```
+
+```sh
+#!/usr/bin/env bash
+Help() {
+  echo "Generates a new security group."
+  echo "  -n  group name (defaults to current dir name)"
+  echo "  -p  port to open (repeatable; e.g., -p 22 -p 443)"
+  echo "Reads vpc_id from environment variables."
+}
+
+sg_grp_name=$(basename "$PWD")
+while getopts ":hp:n:" opt; do
+  case $opt in
+    p ) ports+=("$OPTARG") ;;
+    n ) sg_grp_name=$OPTARG ;;
+    h ) Help; exit ;;
+    * ) echo 'error in command line parsing' >&2; exit 1 ;;
+  esac
+done
+
+aws ec2 create-security-group \
+  --group-name "$sg_grp_name" \
+  --description "security group" \
+  --tag-specifications \
+    "ResourceType=security-group,Tags=[{Key=Name,Value=$sg_grp_name}]" \
+  --vpc-id "$vpc_id" > temp.txt
+
+security_grp=$(jq -r .GroupId temp.txt)
+echo "security group ID = $security_grp"
+
+for i in "${ports[@]}"; do
+  aws ec2 authorize-security-group-ingress \
+    --group-id "$security_grp" \
+    --protocol tcp \
+    --port "${i}" \
+    --cidr "0.0.0.0/0" > /dev/null
+done
+```
+
+## Script 2: Create Key Pair
+
+This script generates an SSH key pair and stores the private key in `~/.ssh/`. The `-k` flag sets the key pair name; if omitted, the current directory name is used.
+
+```sh
+# Example usage
+aws_create_keypair.sh -k power1_app
+```
+
+```sh
+#!/usr/bin/env bash
+Help() {
+  echo "Generates a new SSH key pair."
+  echo "  -k  key pair name (defaults to current dir name)"
+  echo "Stores the .pem file under ~/.ssh/ with mode 400."
+}
+
+while getopts 'hk:' flag; do
+  case "${flag}" in
+    h) Help; exit ;;
+    k) key_pair_name=${OPTARG} ;;
+  esac
+done
+
+: "${key_pair_name:=$(basename "$PWD")}"
+echo "key_pair_name is $key_pair_name"
+
+rm -f "$HOME/.ssh/$key_pair_name.pem"
+aws ec2 create-key-pair \
+  --key-name "$key_pair_name" \
+  --query 'KeyMaterial' \
+  --output text > "$HOME/.ssh/$key_pair_name.pem"
+
+chmod 400 "$HOME/.ssh/$key_pair_name.pem"
+```
+
+## Script 3: Launch the EC2 Instance
+
+This is the core script. It reads all eight environment variables, launches the instance, and associates the Elastic IP. The `-p` flag sets the project name used for tagging.
+
+```sh
+# Example usage
+aws_create_instance.sh -p power1_app
+```
+
+```sh
+#!/usr/bin/env bash
+Help() {
+  echo "Launches an EC2 instance with the configured parameters."
+  echo "  -p  project name (used for tagging)"
+  echo "Prerequisites: security group + key pair must already exist."
+}
+
+while getopts 'hp:' flag; do
+  case "${flag}" in
+    h) Help; exit ;;
+    p) proj_name=${OPTARG} ;;
+  esac
+done
+
+: "${proj_name:=$(basename "$PWD")}"
+
+aws ec2 run-instances \
+  --image-id "$ami_id" \
+  --count 1 \
+  --instance-type "$instance_type" \
+  --key-name "$key_name" \
+  --security-group-ids "$security_grp" \
+  --subnet-id "$subnet_id" \
+  --block-device-mappings \
+    "[{\"DeviceName\":\"/dev/sda1\",\"Ebs\":{\"VolumeSize\":$storage_size}}]" \
+  --tag-specifications \
+    "ResourceType=instance,Tags=[{Key=Name,Value=$proj_name}]" \
+  --user-data file://~/Dropbox/prj/c060/aws_startup_code.sh
+
+iid=$(aws ec2 describe-instances \
+  --filters "Name=tag:Name,Values=$proj_name" | \
+  jq -r '.Reservations[].Instances[].InstanceId')
+
+aws ec2 associate-address \
+  --public-ip "$static_ip" \
+  --instance-id "$iid"
+```
+
+## Script 4: Startup Bootstrap
+
+This user-data script runs automatically on first boot. It installs Docker and Docker Compose on the new Ubuntu instance, then adds the default `ubuntu` user to the `docker` group.
+
+```sh
+#!/bin/bash
+apt update
+apt-get install -y curl gnupg ca-certificates lsb-release
+
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
+  gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+chmod a+r /etc/apt/keyrings/docker.gpg
+
+echo "deb [arch=$(dpkg --print-architecture) \
+  signed-by=/etc/apt/keyrings/docker.gpg] \
+  https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
+  | tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+apt-get update
+apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+usermod -aG docker ubuntu
+```
+
+# Verification
+
+<!-- TEMPLATE INSTRUCTION: Give the reader a smoke test that proves the
+setup is working. 'It runs' is not enough; demonstrate at least one
+configured behavior. -->
+
+Run the following to verify the configuration loaded correctly:
+
+```sh
+# 1. Version check
+aws --version
+
+# 2. Configuration introspection
+aws configure list
+echo "vpc_id=$vpc_id"   # should print your VPC ID
+
+# 3. Functional smoke test (lists instances in the configured region)
+aws ec2 describe-instances --query 'Reservations[].Instances[].InstanceId'
+```
+
+If step 3 returns a JSON array (empty or populated), the credentials and region are configured correctly.
+
+# Daily Workflow
+
+<!-- TEMPLATE INSTRUCTION: A keybinding / command reference table is the
+single most-bookmarked element of a setup post. Make it scannable. -->
+
+The configuration above enables the following daily-use commands:
+
+| Command                                     | Action                                  |
+|---------------------------------------------|-----------------------------------------|
+| `aws_create_security_group.sh -n NAME -p P` | Create firewall, open port `P`          |
+| `aws_create_keypair.sh -k NAME`             | Generate `.pem` key under `~/.ssh/`     |
+| `aws_create_instance.sh -p NAME`            | Launch tagged EC2 instance              |
+| `ssh rgtlab.org`                            | Connect to the running instance         |
+| `aws ec2 describe-instances`                | List all instances in current region    |
+| `aws ec2 terminate-instances --instance-ids ID` | Terminate by ID                     |
+
+After two or three provisioning cycles these become muscle memory and the productivity gain compounds.
+
+## Connecting to the New Server
+
+For convenience, construct a `config` file in `~/.ssh/` so that you can connect with a simple hostname rather than remembering the IP address and key path:
+
+```sh
+Host rgtlab.org
+  HostName 13.57.139.31
+  User ubuntu
+  Port 22
+  IdentityFile ~/.ssh/power1_app.pem
+```
+
+Then connect with:
+
+```sh
+ssh rgtlab.org
+```
+
+::: {.callout-tip}
+Set the private key permissions to 600 for additional security: `chmod 600 ~/.ssh/power1_app.pem`.
+:::
+
+# Things to Watch Out For
+
+<!-- TEMPLATE INSTRUCTION: REQUIRED for setup posts. List every gotcha,
+edge case, and platform-specific surprise you hit. The reader will trust
+the post more, not less, when you are honest about pitfalls. Aim for 5-7. -->
+
+1. **Security group names must be unique within a VPC.** If a group with the same name already exists, the create script will fail. Check the EC2 console or use `aws ec2 describe-security-groups` before running the script.
+
+2. **Key pair names must also be unique.** A duplicate name causes a CLI error. Delete the old pair first if you need to regenerate.
+
+3. **The Elastic IP must be allocated before association.** If you have not yet allocated a static IP through the console, the associate command in Script 3 will fail silently.
+
+4. **User-data scripts run as root on first boot only.** If the bootstrap script has an error, you must terminate the instance and launch a new one; there is no way to re-run user-data on an existing instance.
+
+5. **Environment variables are session-scoped.** If you open a new terminal without sourcing `.zshrc`, the scripts will fail because the variables are not set. Verify with `echo $vpc_id` before running any script.
+
+6. **AWS CLI commands are region-specific.** Ensure your `aws configure` region matches the region where you allocated your VPC and Elastic IP, or commands will appear to succeed but operate on the wrong region.
+
+# Uninstall / Rollback
+
+<!-- TEMPLATE INSTRUCTION: A trustworthy setup post tells the reader how
+to undo the changes if they decide the tool is not for them. The full
+teardown for this AWS workflow lives in Appendix C; here we cover the
+local CLI removal. -->
+
+To remove the AWS CLI from your workstation:
+
+```sh
+# 1. Remove the configuration
+rm -i ~/.aws/credentials ~/.aws/config
+
+# 2. Uninstall the CLI
+brew uninstall awscli   # macOS
+sudo apt remove awscli  # Ubuntu / Debian
+```
+
+For full AWS resource teardown (instance, security group, key pair, Elastic IP), see [Appendix C](#appendix-c).
+
+![Workflow scene: a calm post-setup environment with the new server in use.](media/images/ambiance3.jpg){.img-fluid}
+
+# What Did We Learn?
+
+## Lessons Learnt
+
+**Conceptual Understanding:**
+
+- The EC2 console and the AWS CLI are two interfaces to the same API; anything clickable in the browser has a corresponding `aws ec2` subcommand.
+- A security group is a stateful firewall that operates at the instance level, not the subnet level; each rule opens a single port to a specified CIDR range.
+- Elastic IPs are free while associated with a running instance but incur charges when allocated but unused.
+- User-data scripts provide a one-shot bootstrap mechanism; for ongoing configuration management, tools such as Ansible or cloud-init are more appropriate.
+
+**Technical Skills:**
+
+- Writing bash scripts with `getopts` for flag parsing produces reusable, self-documenting CLI tools.
+- The `jq` utility is essential for extracting fields from the JSON responses returned by AWS CLI commands.
+- Storing infrastructure parameters as environment variables decouples configuration from code, following the twelve-factor app methodology.
+- The `--user-data file://` directive in `aws ec2 run-instances` enables automatic software installation on instance launch.
+
+**Gotchas and Pitfalls:**
+
+- Forgetting to `chmod 400` the PEM file will cause SSH to reject the connection with a permissions error.
+- The `--cidr "0.0.0.0/0"` rule opens a port to the entire internet; restrict this to your own IP in production environments.
+- If you delete a security group while an instance references it, the deletion will fail; terminate the instance first.
+- AWS CLI commands are region-specific; ensure your `aws configure` region matches the region where you allocated your VPC and Elastic IP.
+
+## Limitations
+
+This setup has constraints worth naming up front:
+
+- **Single-instance scope:** These scripts assume a single-instance deployment and do not address auto-scaling groups, load balancers, or multi-AZ redundancy.
+- **Permissive firewall:** The security group rules open ports to all IPv4 addresses (`0.0.0.0/0`), which is acceptable for development but inappropriate for production.
+- **No application-layer security:** The bootstrap script installs Docker but does not configure TLS certificates, reverse proxies, or application-level security.
+- **Long-lived credentials:** IAM credentials stored in `~/.aws/credentials` are long-lived; rotating to short-lived credentials via IAM roles would be more secure.
+- **No rollback logic:** The scripts do not include error recovery; a failure mid-sequence can leave orphaned resources.
+- **Single region:** All commands target one AWS region; multi-region deployments would require additional parameterisation.
+
+## Opportunities for Improvement
+
+If I had more time, here is what I would explore next:
+
+1. Replace long-lived IAM credentials with IAM roles attached directly to the EC2 instance profile.
+2. Add `set -euo pipefail` to each script for stricter error handling and automatic failure on undefined variables.
+3. Migrate the bootstrap script to a cloud-init configuration file for better logging and idempotency.
+4. Restrict security group ingress rules to the operator's current public IP rather than `0.0.0.0/0`.
+5. Wrap all four scripts in a single orchestration script with a `--teardown` flag to reverse the entire setup.
+6. Explore AWS CloudFormation or Terraform for declarative infrastructure definitions that can be version controlled and reviewed.
+
+# Wrapping Up
+
+Automating EC2 provisioning with the AWS CLI reduced what was a fifteen-minute, error-prone console session to a two-minute, reproducible bash workflow. The four scripts presented here (security group creation, key pair generation, instance launch, and software bootstrap) cover the essential steps for getting a Docker-ready Ubuntu server online.
+
+The most valuable lesson was that the AWS console and the CLI are two windows into the same API. Once that relationship became clear, every new console action suggested a corresponding scriptable command, and the scope for automation expanded considerably.
+
+**Main takeaways:**
+
+- Four bash scripts replace the entire EC2 console provisioning workflow.
+- Eight environment variables parameterise the scripts, making them reusable across projects.
+- The teardown procedure (Appendix C) is equally important; orphaned resources accumulate charges.
+- The AWS CLI is a transferable skill applicable to S3, RDS, Lambda, and every other AWS service.
+
+# See Also
+
+**Related posts:**
+
+- [Setting Up an AWS EC2 Server via the Console](https://focusonr.org/posts/setupaws/): the manual equivalent of this workflow.
+
+**Key resources:**
+
+- [AWS CLI Command Reference: EC2](https://docs.aws.amazon.com/cli/latest/reference/ec2/)
+- [AWS CLI Getting Started Guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+- [Docker Installation on Ubuntu](https://docs.docker.com/engine/install/ubuntu/)
+- [jq Manual](https://jqlang.github.io/jq/manual/)
+
+---
+
+# Reproducibility
+
+<!-- TEMPLATE INSTRUCTION: For setup posts, reproducibility means PINNED
+VERSIONS, not sessionInfo(). State exactly what was tested. -->
+
+**Tested configuration:**
+
+| Component        | Version              |
+|------------------|----------------------|
+| Operating system | macOS 15.4           |
+| AWS CLI          | 2.15.30              |
+| Shell            | zsh 5.9              |
+| jq               | 1.7.1                |
+| Homebrew         | 4.2.x                |
+| Last verified    | 2025-01-01           |
+
+**Configuration files:**
+
+- `analysis/configs/aws_create_security_group.sh`: full Script 1 source
+- `analysis/configs/aws_create_keypair.sh`: full Script 2 source
+- `analysis/configs/aws_create_instance.sh`: full Script 3 source
+- `analysis/configs/aws_startup_code.sh`: full Script 4 (user-data)
+- `analysis/configs/zshrc_aws_block.sh`: the eight environment variable exports
+
+**To reproduce end-to-end:**
+
+```sh
+brew install awscli jq
+aws configure                                              # supply IAM credentials
+source analysis/configs/zshrc_aws_block.sh                 # set environment vars
+bash analysis/configs/aws_create_security_group.sh \
+  -n power1_app -p 22 -p 80 -p 443
+bash analysis/configs/aws_create_keypair.sh -k power1_app
+bash analysis/configs/aws_create_instance.sh -p power1_app
+```
+
+---
+
+# Appendix A: IAM Credential Setup {#appendix-a}
+
+This appendix explains how to create IAM credentials for use with the AWS CLI.
+
+1. Log into the AWS console.
+2. Search for the **IAM** service and navigate to the IAM dashboard.
+3. Select **User groups** and create a group based on the Power User profile. Name it `admin` and include your IAM user in the group.
+4. Select **Users** in the left panel, then click **Create User**.
+5. Enter a username (e.g., `zenn`) and click **Next**, then **Create User**.
+6. Click on the new username. Select the **Security Credentials** tab.
+7. Under the **Access Keys** panel, click **Create access key**.
+8. Select **Command Line Interface (CLI)** and check the acknowledgement box at the bottom.
+9. Click **Create access key** and then **Download .csv file**.
+10. Save the CSV to your local `~/.aws/` directory.
+
+Now configure the CLI:
+
+```sh
+aws configure
+```
+
+Paste the **Access Key ID** and **Secret Access Key** from the downloaded CSV. When prompted, enter your region (e.g., `us-west-1`) and output format (`json`).
+
+::: {.callout-note}
+AWS Identity and Access Management (IAM) is a web service that helps you securely control access to AWS resources. Treat your credentials like passwords: never commit them to version control.
+:::
+
+# Appendix B: Sample Work Session {#appendix-b}
+
+This appendix walks through a complete provisioning session starting from scratch, assuming only that `aws configure` has been run and that VPC and subnet IDs are stored as environment variables.
+
+**Assumptions:**
+
+1. AWS CLI is configured.
+2. No security group has been defined.
+3. No key pair has been generated.
+4. `vpc_id` and `subnet_id` are known.
+5. Project name is `power1_app`.
+
+The session will spin up an Ubuntu server with type `t2.micro` (1 vCPU, 1 GB memory) and a 30 GB hard drive.
+
+**Step 1.** Generate a security group:
+
+```sh
+aws_create_security_group.sh -n power1_app -p 22 -p 80 -p 443
+```
+
+**Step 2.** Create the key pair:
+
+```sh
+aws_create_keypair.sh -k power1_app
+```
+
+**Step 3.** Allocate a new Elastic IP and update shell configuration. If the new IP is `204.236.167.50`:
+
+```sh
+sed -i '.bak' '/static/d'   ~/.config/zsh/.zsh_export
+sed -i '.bak' '/security/d' ~/.config/zsh/.zsh_export
+echo "export static_ip='204.236.167.50'"            >> ~/.config/zsh/.zsh_export
+echo "export security_grp='sg-0fda72c2879d6b2ad'"   >> ~/.config/zsh/.zsh_export
+```
+
+**Step 4.** Launch the instance:
+
+```sh
+aws_create_instance.sh -p power1_app
+```
+
+**Step 5.** Update SSH config with the new IP:
+
+```sh
+cd ~/.ssh
+sed -i '.bak' '/HostName/d' config
+echo "  HostName 204.236.167.50" >> config
+```
+
+# Appendix C: Teardown (Undo) {#appendix-c}
+
+To remove all AWS resources associated with a project, follow these steps in order:
+
+1. **Terminate the instance.** In the EC2 console, select the instance and choose *Instance state > Terminate*.
+2. **Delete the security group.** Under *Network & Security > Security Groups*, select the group and choose *Actions > Delete*.
+3. **Release the Elastic IP.** Under *Network & Security > Elastic IPs*, select the address and choose *Actions > Release*.
+4. **Delete the SSH key pair.** Under *Network & Security > Key Pairs*, select the pair and choose *Actions > Delete*.
+5. **Clean up any project repositories** if applicable.
+
+::: {.callout-warning}
+Orphaned Elastic IPs and unused EBS volumes continue to accrue charges. Always run the full teardown when a project is complete.
+:::
+
+---
+
+# Let's Connect
+
+*Have questions, suggestions, or spot an error? Let me know.*
+
+- **GitHub:** [rgt47](https://github.com/rgt47)
+- **Twitter/X:** [@rgt47](https://twitter.com/rgt47)
+- **LinkedIn:** [Ronald Glenn Thomas](https://linkedin.com/in/rgthomaslab)
+- **Email:** [Contact form](https://rgtlab.org/contact)
+
+I would enjoy hearing from you if:
+
+- You spot an error or a better approach to any of the code in this post.
+- You have suggestions for topics you would like to see covered.
+- You use a different OS and want to compare notes.
+- You just want to say hello and connect.
+
+---
+
+<!-- ============================================================================
+PRE-PUBLISH QA CHECKLIST: verify each item BEFORE setting draft: false
+
+This is the verification pass that mirrors the AUTHOR PROVIDES list at the
+top of this file. If anything below is unchecked, the post is not ready.
+
+[ ] YAML
+    [ ] title, subtitle, date, categories, description, image filled in
+    [ ] document-type: 'blog'
+    [ ] draft: false
+
+[ ] Narrative complete (no remaining `[bracketed]` placeholders)
+    [ ] grep '\[' index.qmd returns only legitimate code/links
+
+[ ] Configuration artifacts present and tested
+    [ ] Full config file shown verbatim, not snippets
+    [ ] Install commands tested on a clean machine (or VM)
+    [ ] Verification commands produce the documented output
+    [ ] Uninstall / rollback steps documented
+
+[ ] Things to Watch Out For
+    [ ] At least 5 gotchas listed (setup posts require this)
+    [ ] Each gotcha has both a symptom AND a fix
+
+[ ] Visual design
+    [ ] 1 hero image (width=80%) immediately after AUTHOR PROVIDES block
+    [ ] Exactly 3 ambiance images ({.img-fluid} only, no width=NN%,
+        no fig-align): after Objectives, after Configuration, before
+        Lessons Learnt
+    [ ] Hero and ambiance captions describe the actual image (not a
+        placeholder description)
+    [ ] No hand-coded "Download PDF" link in body. The site auto-injects
+        one via _includes/after-body.html for any post with format: pdf
+        in YAML.
+    [ ] media/images/README.md attributes every image
+
+[ ] Content quality
+    [ ] Learner voice: author positioned as peer, not expert
+    [ ] Zero emoji anywhere (narrative, comments, captions)
+    [ ] Zero em dashes (forbidden per house style; use parens or commas)
+    [ ] Single quotes preferred over double quotes in prose
+    [ ] Each command and config setting interpreted in plain language
+
+[ ] Reproducibility
+    [ ] Version matrix table filled in (OS, tool, dependencies, date)
+    [ ] Config files committed under analysis/configs/
+    [ ] Install script (if provided) is runnable on a clean machine
+
+[ ] Render verification
+    [ ] quarto render index.qmd produces clean HTML with no warnings
+    [ ] Hero image displays in /blog/ listing card
+    [ ] Internal links resolve
+
+============================================================================ -->

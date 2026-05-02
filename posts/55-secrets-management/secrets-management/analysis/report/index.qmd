@@ -1,0 +1,974 @@
+---
+title: 'Secrets Management for the Workflow Construct'
+subtitle: 'A three-tier scheme using pass (GPG-encrypted text files) for API keys, AWS IAM Identity Center for AWS credentials, and gitleaks at staging time as the residual safety net'
+author: "Ronald 'Ryy' G. Thomas"
+date: '2026-04-28'
+categories: [setup, security, secrets, cloud, aws]
+description: >
+  An open-source secrets-management scheme for the Workflow
+  Construct. The post documents the installation and
+  configuration of pass (the Unix password store), the AWS
+  IAM Identity Center workflow that replaces plaintext
+  credentials, and the secret-injection patterns that keep
+  API keys and tokens out of dotfiles, shell history, and
+  the working tree. Open-source alternatives (gopass,
+  bitwarden-cli with vaultwarden) are presented as
+  conditional substitutes; the proprietary 1Password CLI is
+  noted for users already paying for it but is not the
+  recommended path.
+image: 'media/images/hero.jpg'
+document-type: 'blog'
+draft: true
+execute:
+  echo: true
+  warning: false
+  message: false
+format:
+  html:
+    code-fold: false
+    code-tools: false
+---
+
+![A row of small brass keys hanging from labelled hooks on
+a wooden board, each hook engraved with a single illegible
+word. Beside the board, a closed strongbox with a worn
+brass keyhole. The image evokes the idea that secrets are
+state, that the state must be inventoried and labelled, and
+that the inventory belongs in a different physical location
+from the locks it
+opens.](media/images/hero.jpg){.img-fluid width=80%}
+
+*Secrets are state. They deserve the same backup, audit, and
+recovery discipline as any other state in the workflow
+construct.*
+
+# Introduction
+
+A working data scientist's laptop accumulates secrets the
+way a cluttered desk accumulates pens: silently, in
+multiple drawers, with no inventory of what is where. By
+the time the laptop is two years old it holds an AWS
+access-key pair in `~/.aws/credentials`, an Anthropic API
+key in `~/.zshrc` exported as a shell variable, an
+OpenAI key in a project-specific `.env` file, a Zotero API
+token in a Quarto YAML, a GitHub personal-access token in
+the keyring, an institutional VPN certificate in
+`~/.vpn/`, and one or two SSH private keys in `~/.ssh/`.
+Each was placed there in good faith by a past version of
+the operator who had a specific task to complete and no
+inclination to engineer a generic solution. The
+accumulated state has no inventory, no rotation schedule,
+no recovery plan if the laptop is lost, and no shared
+abstraction across the construct's other layers.
+
+The cost of this state of affairs is paid in three
+predictable failure modes. First, secrets leak: an API key
+exported in `.zshrc` is sourced into every subshell,
+including the ones that scrape `env` for diagnostics, and
+eventually a stack trace or a verbose-logging script
+prints the variable verbatim. Second, secrets rot: a
+long-lived AWS access key issued in 2023 is still in
+`credentials` in 2026, with no automation reminding the
+operator to rotate it, and no audit trail of which scripts
+have used it in the meantime. Third, secrets are lost when
+the laptop is: a fresh machine has no `~/.zshrc`, no
+`~/.aws/credentials`, and no `~/.env` until the operator
+manually reconstructs each from memory or from another
+machine that has not yet been wiped.
+
+This post documents an open-source three-tier secrets
+scheme that addresses all three failure modes. The first
+tier is a single encrypted store (`pass`, the Unix password
+store) for long-lived API keys and tokens, synchronised
+across machines via a private git remote. The second tier
+is short-lived credentials for AWS, obtained via AWS IAM
+Identity Center (formerly SSO), expiring automatically
+without operator action. The third tier is the residual
+safety net of `gitleaks`-at-staging, documented in
+[post 49](/posts/49-zzgit/), which catches the cases where
+the first two tiers have already failed.
+
+More formally, this post documents an extension to the
+Cloud and File-system layers of the Workflow Construct
+described in [post 52](/posts/52-workflow-construct/),
+specifically the secrets-management concern that cuts
+across both. The construct's other layers all assume that
+secrets are reachable when needed but invisible when not;
+the scheme documented here is the operative artefact that
+makes the assumption true. The recommendation is
+deliberately open-source: the construct's other layers are
+auditable down to the source, and the secrets layer should
+be too. A non-open-source alternative (the proprietary
+1Password CLI) is documented in an appendix for users who
+already pay for it, but it is not the recommended path.
+
+## Motivations
+
+The pain points that motivated documenting this scheme are
+specific:
+
+- The laptop's `~/.aws/credentials` file holds the
+  long-lived access keys for an IAM user with substantial
+  permissions. The keys do not expire. If the laptop is
+  stolen, the recovery procedure is not 'log into AWS and
+  rotate', because the operator no longer has the laptop
+  to log in from; it is 'log into AWS from a different
+  machine, panic, rotate everything, audit the logs for
+  unauthorised use'.
+- API keys exported in `.zshrc` are visible to every
+  process the user starts. A diagnostic script that runs
+  `env | sort` will print the keys to its log; a
+  collaborator who joins a screen-shared session will see
+  them in `printenv` output; a CI runner that inherits the
+  shell environment will receive them by accident.
+- Multi-machine work (laptop, ThinkPad, EC2 instance, HPC
+  cluster) creates pressure to copy `.aws/credentials`
+  across machines, which doubles or triples the
+  blast-radius of a single key compromise.
+- The `zzgit` secret scanner ([post 49](/posts/49-zzgit/))
+  catches accidentally-committed secrets at staging time,
+  which is necessary but not sufficient: it depends on the
+  user actually running `zzgit` rather than `git commit
+  -am`, and it does not address the secrets that are
+  correctly stored in the working tree's dotfiles but
+  should not be there at all.
+- The construct's other layers are open-source and
+  auditable. A proprietary CLI for the secrets layer would
+  be a foreign body in an otherwise transparent stack;
+  particularly so given that the trust requirement on a
+  secrets binary is exceptionally high: a single
+  subverted code path could compromise every system the
+  operator authenticates to.
+
+## Objectives
+
+This post sets out to deliver:
+
+1. A reproducible installation and configuration of `pass`
+   (the Unix password store) for non-AWS API keys and
+   tokens, synchronised across machines via a private git
+   remote.
+2. A walk-through of AWS IAM Identity Center (SSO)
+   configuration that replaces the long-lived
+   `~/.aws/credentials` file with short-lived
+   tokens obtained via `aws sso login`.
+3. A small set of secret-injection patterns that move
+   secrets from environment variables (visible to every
+   process) to per-process injection (visible only to the
+   process that needs them).
+4. A failure-mode catalogue covering GPG-key loss,
+   sync-conflict resolution, and the macOS-Keychain /
+   gpg-agent interaction, plus a documented recovery
+   procedure for a lost laptop.
+
+The reader should be able to install and configure the
+scheme in approximately two hours: thirty minutes for `pass`
+and GPG, thirty minutes for AWS IAM Identity Center
+configuration at the AWS-account level (one-time, requires
+admin access), and an hour for the per-tool migrations and
+verification.
+
+![Placeholder ambiance image (coffee, Unsplash free
+licence). To be replaced with a screenshot of `pass ls`
+output showing a small organised hierarchy of API keys
+under category headings (anthropic/, openai/, github/,
+etc.).](media/images/placeholder-coffee-02.jpg){.img-fluid}
+
+# What Is the Scheme?
+
+The scheme has three tiers, distinguished by the
+characteristics of the secrets they hold:
+
+## Tier 1: long-lived API keys and tokens (`pass`)
+
+Most non-AWS secrets are long-lived API keys: the
+Anthropic key issued at signup, the OpenAI key minted from
+the dashboard, the GitHub personal-access token created
+last quarter for a CI pipeline, the Zotero API token
+copied from the user-preferences page. They have no
+automatic expiration, are reissued infrequently, and are
+re-used across multiple invocations.
+
+The `pass` store, also known as the Unix password store,
+is the canonical open-source home for them. It is a thin
+shell wrapper around GPG: each secret is a small text
+file encrypted with a user GPG key, stored in
+`~/.password-store/`, and optionally synchronised to a
+private git remote. The interface is a small set of
+verbs: `pass insert anthropic/api-key` to add, `pass
+anthropic/api-key` to retrieve, `pass git push` to sync.
+The implementation is approximately 700 lines of bash; the
+audit surface is small and the behaviour is predictable.
+
+## Tier 2: short-lived cloud credentials (AWS IAM Identity Center)
+
+AWS credentials are different in kind from API keys: they
+authorise broad permissions and are best replaced rather
+than guarded. AWS IAM Identity Center (the service
+formerly known as AWS SSO) issues short-lived tokens by
+default, configurable per-user, with eight-hour sessions
+as the conventional default. The tokens are obtained via
+`aws sso login` and stored under
+`~/.aws/sso/cache/` rather than in `~/.aws/credentials`;
+they expire automatically and re-authentication is a
+single command.
+
+The construct treats AWS as the canonical example of this
+tier; other cloud providers (Google Cloud, Azure) have
+analogous short-lived-credential mechanisms which are not
+covered here but follow the same shape.
+
+## Tier 3: residual safety net (`gitleaks` at staging)
+
+Tiers 1 and 2 prevent the most common ways secrets reach
+the working tree: API keys go to `pass`, AWS credentials
+go to short-lived caches, neither is exported in
+`.zshrc`. Despite this, secrets occasionally slip through:
+a credential pasted into a notebook output cell, an SSH
+private key copied into a project directory for testing,
+a `.env` file that was supposed to be gitignored but was
+not. The `gitleaks`-at-staging integration documented in
+[post 49](/posts/49-zzgit/) is the residual safety net
+that catches these. It is a separate post and is not
+documented here beyond cross-reference; the present post's
+contribution is the upstream prevention work that reduces
+the volume of cases that reach the safety net.
+
+# Prerequisites
+
+The scheme assumes:
+
+- **GPG key.** A user GPG key is required for `pass`. Users
+  who already sign git commits with GPG can reuse the
+  existing key; users without one can generate a fresh key
+  during installation. The key is the single point of
+  failure for the entire encrypted store and warrants
+  careful backup (see Things to Watch Out For below).
+- **AWS account with IAM Identity Center enabled.** The
+  identity-center configuration is a one-time, AWS
+  account-level setup that requires admin permissions. For
+  personal AWS accounts the setup is straightforward; for
+  institutional accounts the user may need to coordinate
+  with an administrator.
+- **Existing construct setup.** The dotfiles repository
+  ([post 24](/posts/24-setupdotfilesongithub/)) and the
+  zsh setup ([post 01](/posts/01-configtermzsh/)) should
+  be in place. The scheme adds a small block to `.zshrc`
+  and a `~/.password-store/` directory.
+- **Private git remote for `pass` sync.** A private
+  repository on GitHub, GitLab, or a self-hosted
+  forge. The pass-store contents are GPG-encrypted before
+  being committed, but the existence of an inventory of
+  encrypted secrets is itself sometimes a privacy concern
+  worth keeping behind authentication.
+- **Time investment.** Approximately two hours for the
+  full setup, dominated by the AWS IAM Identity Center
+  configuration (one-time, ~30 minutes) and the migration
+  of existing secrets from `.zshrc` and `.env` files into
+  `pass` (~60 minutes for a moderate-sized inventory).
+
+# Installation
+
+## Tier 1: `pass` and GPG
+
+The `pass` binary is small (a single bash script plus a
+manpage) and available in every major package manager.
+
+```sh
+# macOS
+brew install pass gnupg
+
+# Debian-derived Linux
+sudo apt install pass gnupg
+
+# Confirm both are present
+pass version
+gpg --version | head -1
+```
+
+If a GPG key already exists (for git commit signing or
+otherwise), reuse it; the long-form key ID is the input
+to `pass init`:
+
+```sh
+gpg --list-secret-keys --keyid-format=long
+# /Users/zenn/.gnupg/pubring.kbx
+# ------------------------------
+# sec   rsa4096/ABCD1234EFGH5678 2024-01-15 [SC]
+#       FULL-FINGERPRINT-HERE
+# uid           [ultimate] Ronald 'Ryy' G. Thomas <user@example.com>
+# ssb   rsa4096/9876ZYXW5432VUTS 2024-01-15 [E]
+
+pass init ABCD1234EFGH5678
+# mkdir: created directory '/Users/zenn/.password-store/'
+# Password store initialized for ABCD1234EFGH5678
+```
+
+If no GPG key exists, generate one before initialising
+`pass`:
+
+```sh
+gpg --full-generate-key
+# Choose: (1) RSA and RSA, 4096 bits, no expiration, real name,
+# email matching git config, comment optional, strong passphrase.
+# After generation:
+gpg --list-secret-keys --keyid-format=long
+pass init <new-key-id>
+```
+
+Initialise the git remote for cross-machine sync. The
+remote should be a private repository because it contains
+the encrypted-secret filenames (the contents are
+encrypted, but the inventory is metadata):
+
+```sh
+cd ~/.password-store
+pass git init
+pass git remote add origin git@github.com:mygit/password-store.git
+pass git push -u origin master
+```
+
+## Tier 2: AWS IAM Identity Center
+
+The IAM Identity Center setup is a one-time AWS-account
+operation. The high-level steps are:
+
+1. In the AWS console, enable IAM Identity Center for the
+   account.
+2. Create a permission set (the named bundle of
+   permissions a session will receive).
+3. Assign the permission set to the user (the operator's
+   identity) for the appropriate AWS account.
+
+These three steps are AWS-console-only and depend on the
+account's current state; AWS's documentation (see See
+Also) is the canonical reference. After the AWS-side setup
+is complete, the laptop-side configuration is a single
+command:
+
+```sh
+aws configure sso
+# SSO start URL: https://my-org.awsapps.com/start
+# SSO Region: us-west-1
+# (a browser window opens; the operator authenticates;
+#  the CLI receives a session token)
+# CLI default client Region [None]: us-west-1
+# CLI default output format [None]: json
+# CLI profile name [123456789012_PowerUser]: my-profile
+```
+
+Subsequent re-authentication is one command:
+
+```sh
+aws sso login --profile my-profile
+# (browser opens; operator authenticates; new token is cached)
+```
+
+The legacy `~/.aws/credentials` file should be deleted
+after IAM Identity Center is configured and verified, so
+that the long-lived access keys are no longer reachable:
+
+```sh
+mv ~/.aws/credentials ~/.aws/credentials.legacy.bak
+# After verifying that all scripts work via the SSO profile,
+# rotate the legacy keys via the AWS console and remove the
+# backup:
+# rm ~/.aws/credentials.legacy.bak
+```
+
+# Configuration
+
+## `pass` daily use
+
+The `.zshrc` block to make `pass`-stored secrets reachable
+on demand is small. The construct convention is to inject
+secrets at process-start time rather than to export them
+into the shell environment, so that they are visible only
+to the process that needs them.
+
+```zsh
+# ============================================================
+# Secrets injection helpers (post 55)
+# ============================================================
+
+# Inject a single pass-stored secret as an environment
+# variable for the duration of one command. Usage:
+#   with-secret VAR_NAME pass/path command...
+# Example:
+#   with-secret ANTHROPIC_API_KEY anthropic/api-key claude
+with-secret() {
+  local var_name="$1"
+  local pass_path="$2"
+  shift 2
+  local value
+  value="$(pass "$pass_path")" || {
+    echo "with-secret: pass lookup failed for '$pass_path'" >&2
+    return 1
+  }
+  env "$var_name=$value" "$@"
+}
+
+# Convenience wrappers for the most-used secret-bearing tools.
+# Each wraps the underlying tool with with-secret so the
+# operator does not have to remember the pass path.
+claude() {
+  with-secret ANTHROPIC_API_KEY anthropic/api-key \
+    command claude "$@"
+}
+
+# Add similar wrappers for openai, gh, etc., as needed.
+```
+
+The `with-secret` pattern is preferred over exporting:
+
+```zsh
+# WRONG: visible to every subprocess for the rest of the session
+export ANTHROPIC_API_KEY=$(pass anthropic/api-key)
+claude
+
+# RIGHT: visible only to the wrapped command
+with-secret ANTHROPIC_API_KEY anthropic/api-key claude
+```
+
+## GPG agent caching
+
+`pass` invokes `gpg` for each retrieval, which prompts for
+the GPG-key passphrase. Caching the passphrase in
+`gpg-agent` avoids the repeated prompt while limiting
+exposure to a configurable cache lifetime.
+
+The `~/.gnupg/gpg-agent.conf` file:
+
+```ini
+# ~/.gnupg/gpg-agent.conf
+default-cache-ttl 3600    # 1 hour
+max-cache-ttl 28800       # 8 hours
+pinentry-program /opt/homebrew/bin/pinentry-mac   # macOS
+# pinentry-program /usr/bin/pinentry-curses       # Linux
+```
+
+After editing the config, reload the agent:
+
+```sh
+gpg-connect-agent reloadagent /bye
+```
+
+## AWS IAM Identity Center: profile usage
+
+Once configured, the SSO profile is used the same way as
+any AWS profile:
+
+```sh
+# Single command via profile
+aws s3 ls --profile my-profile
+
+# Or set the profile for the session
+export AWS_PROFILE=my-profile
+aws s3 ls
+
+# Or per-script via env
+AWS_PROFILE=my-profile aws s3 ls
+```
+
+The token is cached at `~/.aws/sso/cache/` and refreshed
+automatically by the SDK as long as the cached token is
+not yet expired. When it expires, the next AWS CLI call
+emits an authentication error and the operator runs
+`aws sso login --profile my-profile` to refresh.
+
+# Verification
+
+```sh
+# Tier 1: pass
+pass version
+pass init                                  # confirms a key is set
+pass ls                                    # lists current store contents
+echo 'verify-only' | pass insert -m verify-temp/test
+pass verify-temp/test                      # should print 'verify-only'
+pass rm verify-temp/test
+pass git status                            # confirms remote sync state
+
+# Tier 2: AWS SSO
+aws sts get-caller-identity --profile my-profile
+# Should return the assumed-role ARN, not an IAM user ARN
+
+ls -la ~/.aws/credentials 2>&1
+# Should error 'No such file or directory' after migration
+
+# Tier 3: gitleaks (cross-reference post 49)
+gitleaks version
+which gz                                   # the construct's git wizard
+```
+
+A green pass on all four blocks indicates the scheme is
+materialised. A failure on `pass git status` localises to
+a sync issue; a failure on `aws sts get-caller-identity`
+localises to a token expiration (run `aws sso login`); a
+failure on `gitleaks` is the residual-safety-net concern
+addressed in post 49.
+
+# Daily Workflow
+
+| Task | Command | Notes |
+|---|---|---|
+| Add a new API key | `pass insert anthropic/api-key` | Prompts for the value (not echoed) |
+| Add a multi-line secret (e.g., a private key) | `pass insert -m ssh/research-key` | Use `-m` for multi-line input |
+| Retrieve a secret to stdout | `pass anthropic/api-key` | Avoid in pipelines that log; prefer `with-secret` |
+| Inject into a command | `with-secret VAR pass/path command` | Visible only to `command`'s process tree |
+| List current store | `pass ls` | Shows hierarchy of stored secrets |
+| Search by name | `pass find anthropic` | Greps the store names |
+| Sync to remote | `pass git push` | Encrypted; safe over public network |
+| Pull from remote (new machine) | `pass git pull` | Requires the GPG private key already present |
+| AWS session refresh | `aws sso login --profile my-profile` | Browser-based; fast |
+| AWS-using command | `AWS_PROFILE=my-profile aws ...` | Token resolved automatically |
+
+The `with-secret` wrapper is the load-bearing daily-use
+verb. Once the construct is installed, almost every
+secret-bearing command (Claude Code, the GitHub CLI, the
+OpenAI CLI, custom Python or R scripts) is invoked via
+`with-secret`; the underlying secret never leaves
+`~/.password-store/` decrypted on disk for longer than the
+process's lifetime.
+
+![Placeholder ambiance image (coffee, Unsplash free
+licence). To be replaced with a screenshot of `aws sso
+login` opening a browser, with the CLI showing the
+'Successfully logged in' message after the browser
+flow.](media/images/placeholder-coffee-03.jpg){.img-fluid}
+
+# Things to Watch Out For
+
+Six gotchas dominate the failure modes of this scheme.
+Each is small in isolation; in aggregation they are the
+reasons users abandon `pass` in the first month.
+
+- **The GPG private key is the single point of failure for
+  the entire pass store.** If the key is lost, every
+  encrypted secret in `~/.password-store/` is permanently
+  unreadable. Back up the GPG key to two physical locations
+  (one off-site) before adding any secret of consequence.
+  The backup procedure is `gpg --export-secret-keys
+  --armor <key-id> > gpg-private-key.asc`; store the
+  resulting file on an encrypted USB drive in a locked
+  drawer and a second copy with a trusted off-site party
+  (or a safe-deposit box).
+- **The `pass` git remote contains encrypted secrets but a
+  plain-text inventory of names.** Pushing the store to a
+  public repository would expose to the world that the
+  operator has, for example, an `internal-systems/db-prod-
+  password` entry. The contents are encrypted and the name
+  is metadata, but the metadata is itself sensitive in
+  some contexts. The remote should be a private
+  repository, ideally on a forge that enforces
+  authentication for both reads and writes.
+- **macOS Keychain and `gpg-agent` can fight over
+  `pinentry`.** Symptom: a passphrase prompt appears as a
+  Keychain dialog rather than a `gpg-agent` prompt, or
+  vice versa, and the wrong one captures the input. Fix:
+  set `pinentry-program /opt/homebrew/bin/pinentry-mac` in
+  `~/.gnupg/gpg-agent.conf`, restart the agent, and ensure
+  `GPG_TTY=$(tty)` is exported in `.zshrc` so terminal-
+  driven `gpg` commands route to the right pinentry.
+- **AWS SSO sessions expire silently from the CLI's
+  perspective.** A long-running script that issues an AWS
+  call after the cached token has expired sees an
+  authentication error rather than a refresh prompt. The
+  fix is operational: scripts that run for longer than the
+  configured session duration (default eight hours) should
+  either chunk their work into per-token batches or use a
+  `--role-session-name` and assume-role chain that the
+  SDK can refresh transparently.
+- **Empty store after fresh install.** A first `pass ls`
+  on a freshly-cloned `~/.password-store` reports nothing
+  even when the operator expects content. The cause is
+  usually that the new machine does not yet have the GPG
+  private key imported; `pass` silently skips entries it
+  cannot decrypt rather than warning. Run `gpg --list-
+  secret-keys` to confirm the key is present; import via
+  `gpg --import gpg-private-key.asc` if not.
+- **Secrets exported in `.zshrc` continue to work even
+  after `pass` is set up.** A migration that adds `pass`
+  but does not remove the legacy `export FOO=...` lines
+  results in two copies of each secret coexisting, with
+  `.zshrc` taking precedence because it runs first. Audit
+  `.zshrc` for `export.*KEY|export.*TOKEN|export.*SECRET`
+  patterns and replace each with a `with-secret` wrapper
+  before considering the migration complete.
+
+# Uninstall / Rollback
+
+```sh
+# Tier 1: remove pass
+brew uninstall pass               # macOS
+# or apt remove pass              # Debian
+rm -rf ~/.password-store          # CAUTION: irrecoverable
+
+# Tier 2: revert to long-lived AWS credentials
+mv ~/.aws/credentials.legacy.bak ~/.aws/credentials
+# Remove the SSO profile from ~/.aws/config
+
+# .zshrc: remove the with-secret block and any wrapper
+# functions added (claude, openai, etc.). Restore any legacy
+# 'export FOO=...' lines from version control.
+
+# GPG: optional; leave intact if used for git commit signing
+```
+
+The migration is reversible per tier, but Tier 1's
+removal step (`rm -rf ~/.password-store`) is destructive
+and irreversible without the GPG-key backup. If the goal
+is to stop using `pass` while preserving the secrets,
+export them first via `pass git push` (to ensure the
+remote is current), then archive the local store
+(`mv ~/.password-store ~/password-store-archive-2026-04-28`)
+rather than deleting outright.
+
+![Placeholder ambiance image (coffee, Unsplash free
+licence). To be replaced with a screenshot of a `with-
+secret` wrapper invocation showing the secret being
+injected and the command output, with no trace of the
+secret in `env` or shell
+history.](media/images/placeholder-coffee-04.jpg){.img-fluid}
+
+# Lessons Learnt
+
+The migration on three machines (the construct's MacBook,
+the ThinkPad with Linux Mint, and a clean EC2 Ubuntu
+instance) surfaced lessons grouped into three buckets.
+
+### Conceptual
+
+- **Secrets are state, with the same lifecycle concerns as
+  any other state.** They have an authoritative source,
+  they need backup, they require recovery procedures, and
+  they should not be silently duplicated. Treating them as
+  state rather than as configuration is the conceptual
+  shift that this scheme operationalises.
+- **Short-lived credentials are strictly preferable to
+  long-lived ones, where the issuer supports them.** AWS
+  IAM Identity Center is the canonical example: an
+  eight-hour token that re-authenticates from a SAML
+  identity provider has a smaller blast-radius than a
+  long-lived access key, and the user-experience cost of
+  re-authentication is small once the workflow is
+  habitual.
+- **Open-source primitives are appropriate for the secrets
+  layer.** The construct's other layers are auditable down
+  to the source. The secrets layer holds the keys to
+  every other system the operator relies on, which makes
+  it the layer where source-code transparency matters
+  most. Adopting a proprietary CLI here would be a
+  category mismatch.
+- **Per-process injection beats environment-variable
+  export.** A secret exported in `.zshrc` is visible to
+  every subprocess for the session's lifetime; a secret
+  injected via `with-secret` is visible only to the
+  wrapped command's process tree. The user-experience
+  difference is negligible (a four-character prefix per
+  command); the security difference is meaningful.
+
+### Technical
+
+- **`pass` is a thin wrapper over GPG, and the limits of
+  the wrapper are the limits of GPG.** Multi-recipient
+  encryption (sharing a secret with a collaborator) works
+  but requires both parties' GPG keys; key rotation
+  (re-encrypting the store with a new key) is a documented
+  but non-trivial operation; offline access requires a
+  GPG-agent cache, not just `pass` itself. None of this is
+  surprising; it is worth knowing before adoption.
+- **The pass-store git history is itself an audit log.**
+  `pass git log` reveals when each secret was added or
+  changed, which is occasionally useful for debugging
+  ('why did this script start failing?' becomes 'when did
+  the API key change?'). The audit log is not tamper-
+  evident, but it is a reasonable starting point.
+- **AWS IAM Identity Center sessions can be extended.**
+  The default eight-hour session is configurable up to
+  twelve hours per the AWS documentation, with longer
+  sessions requiring a session-policy condition. For
+  long-running batch jobs, the right pattern is an
+  assume-role chain rather than a single long session.
+- **`gpg-agent`'s caching behaviour differs subtly between
+  macOS and Linux.** macOS with `pinentry-mac` integrates
+  with the Keychain for the pinentry passphrase entry;
+  Linux with `pinentry-curses` or `pinentry-gtk` does not.
+  The construct's per-platform `.zshrc` block (post 01)
+  should select the appropriate pinentry program.
+
+### Gotcha-shaped
+
+- **`pass git push` after `pass insert` does not happen
+  automatically.** Each new secret must be explicitly
+  pushed to the remote, or the new-machine recovery will
+  miss the most recent additions. Adding an alias `alias
+  passp='pass git push'` and developing the muscle memory
+  is the simplest mitigation; an `insert`-then-`push`
+  hook is possible but adds complexity.
+- **`with-secret` does not pass through stdin
+  transparently.** If the wrapped command reads from
+  stdin, the redirection works as expected because
+  `with-secret` is a shell function, not a wrapper
+  process. However, `with-secret` does not pass through
+  `tty` settings, which means commands that detect 'is my
+  stdin a terminal?' may behave differently inside the
+  wrapper. The cases are rare but real; a `claude --no-
+  pager` analogue may be needed.
+- **AWS IAM Identity Center's session cache is per-CLI-
+  install, not per-OS-user.** A second CLI installation
+  (e.g., a Homebrew-managed `awscli` plus a Python venv
+  `awscli`) will maintain separate caches at different
+  paths and a `login` against one will not authenticate
+  the other. The fix is to standardise on one CLI install
+  per machine.
+
+# Limitations
+
+The scheme as documented has the following honest
+limitations:
+
+- **It depends on GPG, which has its own complexity.**
+  GPG-key generation, backup, rotation, and revocation
+  are non-trivial topics, and `pass`'s usability is
+  upper-bounded by GPG's. Users who find GPG operationally
+  burdensome will find `pass` operationally burdensome by
+  inheritance; the alternatives section below discusses
+  this.
+- **AWS IAM Identity Center requires admin access to
+  configure at the account level.** Personal AWS accounts
+  are easy; institutional accounts may require a
+  conversation with an administrator who is unfamiliar
+  with the construct's needs.
+- **No hardware-token integration in this revision.**
+  YubiKey-mediated GPG smart-card mode (the GPG key lives
+  on the YubiKey rather than the laptop) is supported by
+  GPG and `pass` but is a non-trivial setup that warrants
+  its own follow-up post.
+- **No coverage of TOTP / 2FA codes.** `pass-otp` is a
+  popular extension that stores TOTP seeds alongside
+  passwords; the present post does not cover it but the
+  pattern is straightforward and is on the opportunities
+  list below.
+- **The recovery procedure for a lost laptop assumes the
+  GPG-key backup is reachable.** If both the laptop and
+  the USB-encrypted backup are lost simultaneously (e.g.,
+  the laptop bag contains both), the recovery path is
+  long: contact each issuer, prove identity, request a key
+  rotation. The off-site backup mitigation in Things to
+  Watch Out For is the principal defence.
+- **The scheme is single-user.** Team-scope secret sharing
+  (where a collaborator should be able to read a subset of
+  the store) is supported by `pass` via multi-recipient
+  encryption but is not covered here. The team-scope case
+  is addressed by `gopass` (covered in the alternatives
+  section) and by enterprise tools (Vault, Doppler) that
+  are out of scope for the construct's single-user
+  framing.
+
+# Alternatives
+
+`pass` is the recommended primary, but three alternatives
+deserve mention.
+
+## `gopass`: a `pass`-compatible Go reimplementation
+
+`gopass` is a drop-in replacement for `pass` written in Go
+rather than bash. It accepts the same `~/.password-store/`
+layout, uses the same GPG-encryption pattern, and is
+command-line compatible. The case for `gopass` over `pass`
+is multi-store support (separate stores per team, per
+client, etc.) and a slightly faster start-up time. The
+case against is the larger binary footprint and the loss
+of the `pass`-as-bash-script auditability that some users
+value. For solo use, `pass` is sufficient; for users
+already managing multiple `pass`-compatible stores,
+`gopass` is a reasonable upgrade.
+
+## `bitwarden-cli` against self-hosted `vaultwarden`
+
+The Bitwarden ecosystem includes an open-source CLI
+(`bw`) and an open-source server reimplementation
+(Vaultwarden, formerly `bitwarden_rs`). The combination
+gives a 1Password-like UX (web interface, browser
+extension, mobile apps) without the proprietary
+dependency: the server runs on the construct's own EC2
+instance or local network, and the CLI is open-source. The
+case for this path over `pass` is the user-experience
+quality of the browser extensions and the multi-device
+support; the case against is the operational cost of
+running a server (backups, TLS, updates) and the larger
+trust surface relative to `pass`'s small bash script.
+
+## 1Password CLI (proprietary)
+
+The 1Password CLI (`op`) is a closed-source binary
+distributed by AgileBits under a commercial subscription.
+For users already paying for 1Password and using its
+desktop application, `op` integrates with the existing
+vault and provides a comparable injection pattern (`op
+run` is structurally similar to `with-secret`). The
+construct does not recommend `op` as the primary because:
+
+1. The binary is closed-source. The trust surface for the
+   secrets layer warrants source-code visibility, which
+   `op` does not provide.
+2. The dependency is a paid subscription. The construct's
+   other layers are zero-cost; secrets management should
+   be too.
+3. The data is held in AgileBits's hosted vault by
+   default. Self-hosted alternatives exist but are not
+   the canonical 1Password configuration.
+
+For users who already pay for 1Password and accept the
+above trade-offs, `op run -- command` is the
+`with-secret`-equivalent invocation pattern. The migration
+from `op` to `pass` is straightforward (`op item list` plus
+a script that pipes each into `pass insert`), and is worth
+considering if the proprietary dependency becomes
+problematic.
+
+# Opportunities for Improvement
+
+Several extensions are plausible for subsequent revisions:
+
+1. **`pass-otp` for TOTP integration.** The `pass-otp`
+   extension stores TOTP seeds alongside passwords, with a
+   `pass otp service-name` invocation that produces a
+   current six-digit code. Eliminates the dependency on a
+   separate authenticator app for services that the
+   construct uses programmatically.
+2. **YubiKey-mediated GPG smart-card mode.** Moves the GPG
+   private key from `~/.gnupg/` to the YubiKey, so that
+   `pass` decryption requires the physical token. Defends
+   against laptop theft at the cost of token-loss
+   recovery procedure complexity.
+3. **`pass-import` for migration from other stores.**
+   Imports from 1Password, LastPass, KeePass, Bitwarden,
+   and others. Useful for users adopting `pass` after
+   accumulating secrets in another tool.
+4. **A construct-aware secrets recovery script.** A
+   `~/bin/recover-secrets.sh` that walks a fresh laptop
+   through GPG-key import, `pass git clone`, and the AWS
+   SSO setup in sequence, with explicit checkpoints and
+   rollback paths.
+5. **A team-scope `gopass` follow-up.** Documents the
+   multi-store, multi-recipient pattern for secrets that
+   a small team needs to share, with explicit rotation
+   procedures for when a member leaves.
+6. **Hardware-token-backed AWS IAM Identity Center.**
+   Configures IAM Identity Center to require a YubiKey-
+   produced WebAuthn credential at login, rather than a
+   password plus TOTP. Reduces the credential-phishing
+   blast-radius for the AWS layer specifically.
+
+# Wrapping Up
+
+A laptop accumulates secrets the way a desk accumulates
+pens: silently, in multiple drawers, with no inventory.
+The accumulated state is the proximate cause of most
+real-world credential incidents, not because individual
+secrets are stored insecurely but because the operator
+loses track of which secrets are where, and consequently
+neither rotates them on schedule nor revokes them on
+laptop loss.
+
+The three-tier scheme documented here addresses the
+inventory problem directly: an encrypted, GPG-keyed,
+git-synchronised store (`pass`) for long-lived API keys;
+short-lived tokens via AWS IAM Identity Center for cloud
+credentials; and `gitleaks`-at-staging as the residual
+safety net. Each tier has a small, auditable
+implementation; each is built on open-source primitives;
+each is reversible without losing the underlying secrets.
+
+The recommendation against the proprietary 1Password CLI
+is not a judgement of 1Password's product quality, which
+is high. It is a judgement of category fit: the secrets
+layer is the layer where source-code transparency matters
+most, because the trust requirement is roughly 'I bet my
+entire research programme on this'. The construct is built
+on auditable primitives at every other layer, and the
+secrets layer should not be the exception.
+
+### Main takeaways
+
+- **Treat secrets as state.** Inventory, backup, rotate,
+  recover. The same disciplines that apply to research
+  data apply to the keys that unlock the systems holding
+  the data.
+- **Prefer short-lived credentials where the issuer
+  supports them.** AWS IAM Identity Center is the
+  canonical example; the same pattern applies to other
+  cloud providers.
+- **Inject per-process; do not export.** A secret in
+  `.zshrc` is visible to every subprocess. A secret
+  injected via `with-secret` is visible only to the
+  command that needs it.
+- **Choose open-source primitives at the secrets layer.**
+  The trust requirement is high enough that source
+  visibility is load-bearing.
+
+# See Also
+
+- Posts in this repository at adjacent layers:
+  - [post 22](/posts/22-serversetupawscli/): the AWS CLI
+    setup that this post complements (and that requires
+    revision once IAM Identity Center is in place).
+  - [post 23](/posts/23-serversetupawsconsole/): the AWS
+    console walkthrough; same revision note as 22.
+  - [post 24](/posts/24-setupdotfilesongithub/): the
+    workstation-IaC keystone where the `with-secret`
+    helper and any wrapper functions live.
+  - [post 25](/posts/25-setupgit/): the version-control
+    layer that GPG commit signing lives alongside.
+  - [post 49](/posts/49-zzgit/): the staging-time
+    secret scanner that complements the prevention work
+    documented here.
+  - [post 52](/posts/52-workflow-construct/): the
+    construct framing that names the secrets-management
+    concern this post addresses.
+
+- Project repositories and references:
+  - `pass`: [https://www.passwordstore.org/](https://www.passwordstore.org/)
+  - `gopass`: [https://github.com/gopasspw/gopass](https://github.com/gopasspw/gopass)
+  - `bitwarden-cli`: [https://bitwarden.com/help/cli/](https://bitwarden.com/help/cli/)
+  - Vaultwarden: [https://github.com/dani-garcia/vaultwarden](https://github.com/dani-garcia/vaultwarden)
+  - `pass-otp`: [https://github.com/tadfisher/pass-otp](https://github.com/tadfisher/pass-otp)
+  - GnuPG: [https://gnupg.org/](https://gnupg.org/)
+  - AWS IAM Identity Center user guide:
+    [https://docs.aws.amazon.com/singlesignon/](https://docs.aws.amazon.com/singlesignon/)
+  - AWS CLI v2 SSO configuration:
+    [https://docs.aws.amazon.com/cli/latest/userguide/sso-configure-profile-token.html](https://docs.aws.amazon.com/cli/latest/userguide/sso-configure-profile-token.html)
+
+# Reproducibility
+
+The configuration was developed and verified on the
+following software stack:
+
+| Component | Version | Notes |
+|---|---|---|
+| Operating system | macOS 15 (Sequoia) | primary daily driver |
+| Operating system | Linux Mint 22 (Wilma) | secondary verification |
+| Operating system | Ubuntu 24.04 LTS (EC2) | clean-room verification |
+| Shell | zsh 5.9 | minimum 5.0 |
+| `pass` | 1.7.4 | minimum 1.7 |
+| GnuPG | 2.4.5 | minimum 2.2 |
+| `pinentry-mac` | 1.3.0 | macOS only |
+| AWS CLI | 2.18 | minimum 2.13 for SSO token-cache changes |
+| Optional | `gopass` 1.15 | conditional alternative |
+| Optional | `bitwarden-cli` 2024.10 | conditional alternative |
+| Optional | `vaultwarden` 1.32 | self-hosted Bitwarden server |
+| Recommended companion | `gitleaks` 8.21 | post 49 staging scanner |
+
+Date of last verification: 2026-04-28.
+
+# Feedback
+
+Corrections, suggestions, and questions are welcome. Please
+open an issue or pull request on the
+[GitHub repository](https://github.com/mygit) or send an
+email to user@example.com. The most useful contributions
+are platform-specific deviations (the GPG-agent
+configuration on freshly-installed Linux distributions
+varies more than the post's verification matrix captures)
+and migration recipes from other stores into `pass`.

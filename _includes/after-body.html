@@ -1,0 +1,170 @@
+<!-- Fix for Quarto category encoding issue -->
+<script>
+// Fix category encoding for Quarto listing functionality
+(function() {
+  function fixAllCategoryEncoding() {
+    // Only run on pages that have Quarto listings
+    if (!document.querySelector('.quarto-listing')) {
+      return;
+    }
+    
+    // Fix sidebar category data-category attributes
+    const categoryEls = document.querySelectorAll('.quarto-listing-category .category[data-category]');
+    
+    categoryEls.forEach((categoryEl) => {
+      const category = categoryEl.getAttribute('data-category');
+      
+      if (category && category !== '') {
+        // Check if it contains only base64 characters and proper length
+        const isBase64 = /^[A-Za-z0-9+/]*={0,2}$/.test(category) && category.length % 4 === 0;
+        
+        if (isBase64) {
+          try {
+            const decoded = decodeURIComponent(atob(category));
+            // Verify it decoded to something reasonable (no control characters)
+            if (!decoded.match(/^[A-Za-z0-9\s\-,]+$/)) {
+              // Invalid encoding, re-encode from original text
+              const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+              categoryEl.setAttribute('data-category', encodedCategory);
+            }
+          } catch (e) {
+            // Base64 decode failed, re-encode from original text
+            const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+            categoryEl.setAttribute('data-category', encodedCategory);
+          }
+        } else {
+          // Not base64, encode it
+          const encodedCategory = btoa(encodeURIComponent(category));
+          categoryEl.setAttribute('data-category', encodedCategory);
+        }
+      }
+    });
+    
+    // Fix listing item data-categories attributes  
+    const listingItems = document.querySelectorAll('[data-categories]');
+    
+    listingItems.forEach((item) => {
+      const categories = item.getAttribute('data-categories');
+      
+      if (categories && categories !== '') {
+        // Check if it's already base64 encoded
+        try {
+          decodeURIComponent(atob(categories));
+          // Already encoded and valid
+        } catch (e) {
+          // Not encoded, fix it
+          const encodedCategories = btoa(encodeURIComponent(categories));
+          item.setAttribute('data-categories', encodedCategories);
+        }
+      }
+    });
+    
+    // Fix post-specific category tag click handlers
+    const postCategoryTags = document.querySelectorAll('.listing-category[onclick]');
+    
+    postCategoryTags.forEach((tag) => {
+      const categoryText = tag.textContent.trim();
+      
+      // Replace the onclick handler to use encoded category
+      tag.onclick = () => {
+        const encodedCategory = btoa(encodeURIComponent(categoryText));
+        window.quartoListingCategory(encodedCategory);
+        return false;
+      };
+    });
+  }
+  
+  // Run immediately
+  fixAllCategoryEncoding();
+  
+  // Also run when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fixAllCategoryEncoding);
+  }
+})();
+</script>
+
+<!-- PDF view/download button for blog posts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Only add the button on post pages
+  if (window.location.pathname.includes('/posts/') && !window.location.pathname.endsWith('/posts/') && !window.location.pathname.endsWith('/posts/index.html')) {
+    var currentPath = window.location.pathname;
+    // Handle both /posts/name/ and /posts/name/index.html formats
+    var pdfPath;
+    if (currentPath.endsWith('/')) {
+      pdfPath = currentPath + 'index.pdf';
+    } else {
+      pdfPath = currentPath.replace('.html', '.pdf');
+    }
+
+    // Check if PDF exists first
+    fetch(pdfPath, { method: 'HEAD' })
+      .then(function(response) {
+        if (response.ok) {
+          // PDF exists, show download button
+          showDownloadButton(pdfPath);
+        }
+        // If PDF doesn't exist, don't show any button
+      })
+      .catch(function(error) {
+        // Error checking PDF, don't show any button
+      });
+  }
+});
+
+function showDownloadButton(pdfPath) {
+  var downloadBtn = document.createElement('div');
+  downloadBtn.className = 'pdf-download-button';
+
+  // Get file size if possible
+  fetch(pdfPath, { method: 'HEAD' })
+    .then(function(response) {
+      var size = response.headers.get('Content-Length');
+      var sizeText = '';
+
+      if (size) {
+        // Convert to MB or KB
+        var sizeInMB = size / (1024 * 1024);
+        if (sizeInMB >= 1) {
+          sizeText = ' (' + sizeInMB.toFixed(1) + ' MB)';
+        } else {
+          sizeText = ' (' + (size / 1024).toFixed(0) + ' KB)';
+        }
+      }
+
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' + sizeText +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    })
+    .catch(function() {
+      // Basic fallback if we can't get file size
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    });
+
+  // Find where to insert the button (right after the title block)
+  var titleBlock = document.querySelector('.quarto-title-meta');
+  if (titleBlock) {
+    titleBlock.after(downloadBtn);
+  }
+}
+
+
+</script>
+
+<style>
+.pdf-download-button {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+</style>
