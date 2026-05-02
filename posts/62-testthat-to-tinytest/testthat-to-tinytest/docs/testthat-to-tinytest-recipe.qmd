@@ -335,7 +335,124 @@ where `testthat` uses `expect_output` for both stdout and
 condition messages. Migration requires deciding which output
 stream the test was actually checking.
 
-## 12. local_edition and edition_get
+## 12. Assertions in testthat but not in tinytest
+
+A class of patterns the original draft of this recipe missed.
+A real migration on `zzpower` (10 files, 602 assertions)
+turned up four `testthat` 3 functions whose names tinytest
+does not export: `expect_s3_class`, `expect_type`,
+`expect_named`, and `expect_no_error`. Each requires manual
+substitution. The substitutes are mechanical but worth
+naming explicitly because forgetting them produces a
+deceptively-passing migration: when `pkgload::load_all()`
+auto-attaches the testthat namespace from `Suggests`, the
+testthat versions silently resolve, and the tinytest run
+reports no errors but undercounts assertions.
+
+### `expect_s3_class`
+
+```r
+# testthat
+expect_s3_class(x, 'data.frame')
+expect_s3_class(ui_obj, 'shiny.tag.list')
+```
+
+```r
+# tinytest
+expect_inherits(x, 'data.frame')
+expect_inherits(ui_obj, 'shiny.tag.list')
+```
+
+`expect_inherits()` is a tinytest-native assertion with the
+same semantics as `expect_s3_class()`.
+
+### `expect_type`
+
+```r
+# testthat
+expect_type(server_func, 'closure')
+expect_type(x, 'double')
+expect_type(y, 'character')
+```
+
+```r
+# tinytest
+expect_true(is.function(server_func))
+expect_equal(typeof(x), 'double')
+expect_equal(typeof(y), 'character')
+```
+
+For the 'closure' case, `is.function()` is more semantic. For
+other type checks, comparing `typeof()` to a literal string
+preserves the testthat assertion verbatim.
+
+### `expect_named`
+
+```r
+# testthat
+expect_named(results_df, c('effect_size', 'cohens_d', 'power'))
+```
+
+```r
+# tinytest
+expect_equal(sort(names(results_df)),
+             sort(c('effect_size', 'cohens_d', 'power')))
+```
+
+The `sort()` is necessary because `expect_named()` defaults to
+order-insensitive matching. If the testthat call passed
+`ignore.order = FALSE`, drop the `sort()` calls on both sides.
+
+### `expect_no_error`
+
+```r
+# testthat
+expect_no_error({
+  result <- some_function(...)
+  expect_true(is.character(result))
+  expect_true(nchar(result) > 0)
+})
+```
+
+```r
+# tinytest
+result <- some_function(...)
+expect_true(is.character(result))
+expect_true(nchar(result) > 0)
+```
+
+`expect_no_error()` is a wrapper that asserts the block
+neither errors nor returns a particular value. Since any
+uncaught error in a tinytest file fails the file by default,
+the wrapper is redundant: simply unwrap the block. The inner
+`expect_*` calls remain as direct assertions. Note that
+removing the outer `expect_no_error()` also removes one
+assertion from the count for each block; this is the
+expected behaviour, not a regression.
+
+### Detection
+
+Before the first dry-run, grep for these four patterns:
+
+```sh
+grep -hoE 'expect_(s3_class|type|named|no_error)' \
+  inst/tinytest/*.R | sort | uniq -c
+```
+
+If the count is non-zero, fix them before running the suite.
+A pkgload-based dry run will report 'all ok' even when these
+calls are present, because pkgload auto-attaches testthat.
+The cleaner verification is to run with testthat detached:
+
+```r
+suppressMessages(pkgload::load_all('.', quiet = TRUE))
+if ('testthat' %in% .packages()) {
+  detach('package:testthat', unload = TRUE)
+}
+tinytest::run_test_dir('inst/tinytest', verbose = 0)
+```
+
+## 13. local_edition and edition_get
 
 `testthat` 3 introduced editions to manage breaking changes.
 `tinytest` has no equivalent. Calls to `local_edition()`,
@@ -343,7 +460,7 @@ stream the test was actually checking.
 removed entirely; the resulting tests run under whatever
 semantics `tinytest::expect_*()` provides.
 
-## 13. Parameterised tests
+## 14. Parameterised tests
 
 ### Before (testthat with patrick)
 
@@ -376,7 +493,7 @@ expect_equal(results, c(1, 1, 0, Inf))
 The for-loop variant lacks `patrick`'s test-name interpolation,
 so a failing iteration is identified only by line number.
 
-## 14. tolerance defaults
+## 15. tolerance defaults
 
 A subtle compatibility issue: `tinytest::expect_equal()` uses
 a `tolerance` of `sqrt(.Machine$double.eps)`, matching
@@ -398,7 +515,7 @@ To assert numeric equality with a custom tolerance:
 expect_equal(x, y, tolerance = 1e-10)
 ```
 
-## 15. DESCRIPTION
+## 16. DESCRIPTION
 
 ### Before
 
@@ -424,7 +541,7 @@ Three changes: replace `testthat (>= 3.0.0)` with
 do not add a version pin (`tinytest`'s API is stable enough
 that a floor is rarely needed).
 
-## 16. Continuous integration
+## 17. Continuous integration
 
 ### Before (GitHub Actions, standard r-lib)
 
@@ -449,7 +566,7 @@ This step writes a per-assertion data frame to the action log,
 which makes failures easier to diagnose than the default
 `R CMD check` summary.
 
-## 17. Coverage reporting
+## 18. Coverage reporting
 
 Both frameworks support `covr` without configuration:
 
@@ -460,7 +577,7 @@ covr::package_coverage()
 `covr` instruments source files, not test files, so the choice
 of test framework does not affect coverage measurement.
 
-## 18. Running tests interactively
+## 19. Running tests interactively
 
 | Action                              | testthat                       | tinytest                                       |
 |-------------------------------------|--------------------------------|------------------------------------------------|
@@ -470,7 +587,84 @@ of test framework does not affect coverage measurement.
 | Continuous mode                     | `testthat::auto_test_package()` | (none; use `entr` or similar)                 |
 | Test the installed package          | `testthat::test_package('mypkg')` | `tinytest::test_package('mypkg')`           |
 
-## 19. Migration order
+## 20. Visibility of non-exported package objects
+
+A structural difference between the two frameworks that the
+mechanical conversion does not surface until the migrated
+suite is exercised by `R CMD check` against an installed
+package. This section was added after the recipe was used on
+the `zzpower` package and the issue showed up.
+
+testthat's `test_check(pkg)` runs each test file with the
+package's internal namespace exposed. A test file can
+reference non-exported objects (helper functions, package
+constants, internal S3 methods) by their bare names, and
+they resolve correctly. tinytest's `test_package(pkg)` calls
+`library(pkg)`, which only attaches exports. The same bare
+reference in a tinytest file fails with 'object not found'.
+
+A common pattern in testthat suites is to assert the
+existence of a package-internal constant:
+
+```r
+# tests/testthat/test-constants.R
+test_that('constants are defined', {
+  expect_true(exists('PKG_CONSTANTS'))
+  consts <- PKG_CONSTANTS
+  expect_equal(consts$THRESHOLD, 0.05)
+})
+```
+
+Mechanically converted to tinytest:
+
+```r
+# inst/tinytest/test_constants.R
+expect_true(exists('PKG_CONSTANTS'))
+consts <- PKG_CONSTANTS
+expect_equal(consts$THRESHOLD, 0.05)
+```
+
+If `PKG_CONSTANTS` is non-exported, the converted file
+passes under `pkgload::load_all() + tinytest::run_test_dir()`
+(because pkgload exposes the namespace) but fails under
+`R CMD check` (which uses `tinytest::test_package()` against
+the installed package, exposing only exports).
+
+Three remediations, in increasing order of intrusiveness on
+the package itself:
+
+1. **Qualify the reference in the test file.** Replace bare
+   names with `getFromNamespace()`:
+
+   ```r
+   consts <- getFromNamespace('PKG_CONSTANTS', 'pkg')
+   expect_equal(consts$THRESHOLD, 0.05)
+   ```
+
+   This works without any change to the package and is the
+   recommended fix when the object should remain internal.
+
+2. **Use the `pkg:::name` triple-colon operator.** Slightly
+   shorter than `getFromNamespace`:
+
+   ```r
+   expect_equal(pkg:::PKG_CONSTANTS$THRESHOLD, 0.05)
+   ```
+
+   `R CMD check` warns about `:::` use in package code but
+   not in test files.
+
+3. **Export the object.** Add an `@export` roxygen tag to
+   the source declaration and regenerate NAMESPACE. Use
+   only when the object is genuinely part of the public API.
+
+The diagnostic that distinguishes this issue from a real
+test bug: under `pkgload::load_all() + tinytest::run_test_dir()`
+the suite passes; under `R CMD check` (or
+`tinytest::build_install_test()`) the suite fails with
+'object not found' for one or more package-internal names.
+
+## 21. Migration order
 
 A practical sequence:
 
@@ -492,7 +686,7 @@ If the migration stalls (snapshot tests, IDE dependency,
 parallelisation), revert the branch. The original suite is
 preserved on `main`.
 
-## 20. When not to convert
+## 22. When not to convert
 
 - Snapshot-heavy suites (more than five `expect_snapshot_*()`
   calls). The manual reference-file pattern is workable but

@@ -121,6 +121,181 @@ concluded that staying on `testthat` was the right call. The
 companion deliverable, a side-by-side conversion recipe, lives at
 `docs/testthat-to-tinytest-recipe.qmd` in this post's compendium.
 
+## Pros and cons at a glance
+
+Before getting into the mechanical details, a level-set on what
+each framework does well and where it asks something of the
+package author. This is an extended summary so that readers can
+calibrate whether the conversion is worth their afternoon.
+
+### What `testthat` does well
+
+- **A mature ecosystem.** The framework is the de-facto standard
+  on CRAN, which means the largest body of Stack Overflow
+  answers, blog posts, and worked examples points at testthat
+  idioms. Onboarding contributors who already write R is faster
+  with testthat than with anything else.
+- **Snapshot testing.** `expect_snapshot()`,
+  `expect_snapshot_value()`, and `expect_snapshot_file()`
+  cover text, structured-data, and binary outputs respectively,
+  with automatic regeneration on review. This is genuinely
+  useful for packages whose output is a formatted table, a
+  printed object, or a plot.
+- **Rich diff output.** Failed assertions are reported through
+  `waldo`, which produces a side-by-side diff for vectors,
+  lists, and data frames. The diff often points directly at the
+  responsible value, where a bare 'not equal' message would not.
+- **IDE integration.** RStudio's test pane reports per-test
+  pass/fail status with one-click navigation. `Ctrl-Shift-T`
+  runs the suite from the editor.
+- **Parallel test execution.** `testthat` 3.0+ runs tests in
+  parallel with `parallel = TRUE` in `testthat::test_local()`
+  or `Config/testthat/parallel: true` in DESCRIPTION. For
+  suites with long per-file fixtures, the speed-up is
+  noticeable.
+- **Editions for managing breaking changes.** The
+  `Config/testthat/edition: 3` declaration locks the package
+  to a specific behavioural contract, which makes upgrades
+  predictable. testthat 4 will likely use the same mechanism.
+- **A wider assertion surface.** `expect_s3_class`,
+  `expect_s4_class`, `expect_type`, `expect_named`,
+  `expect_no_error`, `expect_no_warning`, `expect_no_message`,
+  `expect_setequal`, `expect_mapequal`, and
+  `expect_invisible` all have semantics that read clearly at
+  the call site.
+- **`test_check()` exposes the package internal namespace.**
+  Test files reference non-exported helpers and constants by
+  their bare names. For internal-heavy packages, this removes
+  a layer of `getFromNamespace()` ceremony.
+- **Helper files auto-sourced.** Files matching
+  `tests/testthat/helper-*.R` are sourced before each test
+  file, providing implicit fixture setup.
+- **Skip helpers for environment conditions.**
+  `skip_on_cran()`, `skip_on_os()`, `skip_if_offline()`,
+  `skip_if_not_installed()` are concise and read like the
+  intent they encode.
+
+### Where `testthat` asks something of the author
+
+- **A heavy dependency surface.** Installing `testthat`
+  pulls in `waldo`, `brio`, `desc`, `pkgload`, `processx`,
+  `cli`, `digest`, `evaluate`, `R6`, `rlang`, and roughly two
+  dozen transitive dependencies. For toy packages or small
+  internal tools, this is most of the package's install
+  footprint.
+- **Slower CI.** A `R CMD check` of an empty `testthat` suite
+  takes longer than the same check with `tinytest` because
+  the framework itself takes time to load and dispatch.
+- **The framework itself depends on third-party packages.**
+  This is a philosophical concern more than a practical one,
+  but it does mean a bug or breaking change in any of the
+  transitive dependencies can affect the test suite.
+- **Edition complexity.** Editions are useful but add a layer
+  of indirection. Tests that pass under edition 2 may fail
+  under edition 3 (and vice versa). Diagnosing these
+  edition-driven regressions is rare but bewildering when it
+  happens.
+- **Per-test ceremony.** Every assertion lives inside a
+  `test_that('description', { ... })` block. The description
+  string is sometimes informative and sometimes ceremonial.
+
+### What `tinytest` does well
+
+- **Zero `Imports`.** `tinytest` is a single source file with
+  no third-party dependencies. The framework is itself
+  testable from a fresh R installation.
+- **Faster `R CMD check`.** The framework loads in
+  milliseconds. For a small package with a few hundred
+  assertions, the wall-clock saving over `testthat` is on the
+  order of seconds, not minutes, but it compounds across a
+  CI fleet.
+- **File-as-test-unit.** Each `inst/tinytest/test_*.R` file
+  is the unit. The natural one-to-one map between an R/
+  source file and a test file makes the suite easy to
+  navigate. Tests inside a file are top-level, not nested.
+- **Tests installed with the package.** Because tests live in
+  `inst/tinytest/`, they ship with the installed package and
+  remain runnable via `tinytest::test_package('pkg')` after
+  install. Users can verify their installation; this is
+  useful for compiled-code packages and packages with system
+  dependencies.
+- **A smaller cognitive surface.** No editions, no fixture
+  caching, no helper auto-sourcing, no description strings.
+  When a test fails, the failure mode is straightforward.
+  When it passes, you know it passed for the reason you
+  intended.
+- **Predictable behaviour across R versions.** With no
+  third-party dependencies, `tinytest` is unaffected by
+  changes in the broader package ecosystem. A test suite
+  written against `tinytest` 1.4 in 2024 will still run
+  unchanged in 2030.
+- **Self-evident diagnostics.** A `tinytest` failure reports
+  the file, line, expected value, and actual value with no
+  framework noise. The diagnostic surface is small enough to
+  read at a glance.
+
+### Where `tinytest` asks something of the author
+
+- **No snapshot testing.** This is the largest functional
+  gap. Manual reference-file comparison via `capture.output()`
+  + `expect_equal()` works but is ergonomically distant from
+  `expect_snapshot()`.
+- **No parallel execution by default.** A `cl` argument to
+  `test_all()` accepts a `parallel` cluster, but the default
+  is serial.
+- **No RStudio test-pane integration.** Tests run under
+  `R CMD check` and the console; the IDE's 'Run Tests'
+  button does not populate `tinytest` results.
+- **A smaller user community.** Searches for specific
+  assertion patterns yield fewer results, and answers are
+  sometimes outdated. The CRAN vignette is the most reliable
+  reference.
+- **A narrower assertion surface.** No `expect_s3_class`,
+  `expect_type`, `expect_named`, or `expect_no_error`. Tests
+  using these need manual rewriting; the recipe section 12
+  documents the substitutions.
+- **`test_package()` only sees exports.** Tests that
+  reference non-exported package internals must qualify the
+  reference (`getFromNamespace()` or `pkg:::name`) or the
+  package must export the object. Recipe section 20 has the
+  detail.
+- **No `helper-*.R` auto-sourcing.** Shared fixtures require
+  explicit `source('helper_X.R', local = TRUE)` at the top of
+  each consumer file.
+- **No `skip_on_os`, `skip_on_ci`, `skip_if_offline`
+  helpers.** The substitutes (`if (... condition ...)
+  exit_file('reason')` at file scope) are equally clear but
+  more verbose at the use site.
+- **No `patrick`-style parameterised tests.** Plain `for`
+  loops work, but the failing-iteration identifier is the
+  line number rather than a parameter label.
+- **Less informative diff output.** Without `waldo`, large
+  vector or list comparisons report 'not equal' without the
+  side-by-side diff. For complex objects, this lengthens
+  debugging time.
+
+### Decision matrix
+
+| If your package...                         | Likely better fit |
+|--------------------------------------------|-------------------|
+| Has more than five `expect_snapshot_*()` calls | testthat |
+| Is developed primarily in RStudio with the test pane | testthat |
+| Uses `parallel = TRUE` for acceptable CI time | testthat |
+| Has a large team unfamiliar with `tinytest` | testthat |
+| Is a small utility with no snapshots         | tinytest |
+| Is tested mainly in CI rather than interactively | tinytest |
+| Wants minimal install footprint              | tinytest |
+| Ships compiled code that needs post-install verification | tinytest |
+| Has tests that primarily reference exported functions | either |
+| Is greenfield                                 | either |
+
+The matrix is not exhaustive, and most packages have at least
+one row pulling each direction. The recommendation is not to
+choose by majority vote but to identify the row that costs the
+most under the wrong choice. For a package whose CI is too
+slow, that row is the install-footprint one. For a package
+whose IDE workflow is critical, the test-pane row dominates.
+
 ## Motivations
 
 - Reading the `testthat` source after a debugging session and
@@ -163,7 +338,7 @@ By the end of the conversion, the package should have:
 AMBIANCE IMAGE 1: placed after Objectives (workspace shot)
 ============================================================================ -->
 
-![A wooden desk with an open laptop, an R reference card, and a printed package index in soft natural light.](media/images/ambiance1.png){.img-fluid}
+![A cappuccino in a dark cup resting on an open paper planner, lit by a shaft of light from a window above. Placeholder ambiance image; will be replaced with subject-specific imagery before publication.](media/images/ambiance1.jpg){.img-fluid}
 
 # What is tinytest?
 
@@ -505,7 +680,7 @@ likely contained more `expect_*` calls than the rewrite captured.
 AMBIANCE IMAGE 2: placed mid-body (terminal/editor)
 ============================================================================ -->
 
-![A laptop screen showing a side-by-side editor view, two test files of clearly different lengths displayed in muted contrast.](media/images/ambiance2.png){.img-fluid}
+![An espresso cup viewed from above on a wide hardwood floor, low-key lighting, single subject in deep shadow. Placeholder ambiance image; will be replaced with subject-specific imagery before publication.](media/images/ambiance2.jpg){.img-fluid}
 
 # Things to Watch Out For
 
@@ -554,6 +729,58 @@ artefacts of the migration rather than the framework itself.
    accepts a `cl` argument for a `parallel` cluster. Suites
    with long-running per-file setup may run noticeably slower
    in serial.
+8. **Four `testthat` 3 assertion functions silently resolve
+   via `pkgload`.** A real conversion of the `zzpower` package
+   surfaced this: `expect_s3_class`, `expect_type`,
+   `expect_named`, and `expect_no_error` are exported by
+   `testthat` but not by `tinytest`. When a developer runs the
+   converted suite via `pkgload::load_all()` followed by
+   `tinytest::run_test_dir()`, `pkgload` auto-attaches every
+   package in `Suggests`, including `testthat`. The four
+   testthat assertions then resolve against the testthat
+   namespace, the run reports 'all ok', and the migration
+   appears complete. Symptom: the tinytest assertion count
+   silently undercounts the testthat baseline. Fix: detach
+   `testthat` before running the suite, or grep the converted
+   files for these four function names and replace them with
+   tinytest equivalents (`expect_inherits`,
+   `expect_true(is.function(...))`, `expect_equal(sort(names(x)),
+   sort(...))`, and unwrapping the `expect_no_error` block).
+   Recipe section 12 has the full mapping.
+9. **Non-exported objects are invisible to
+   `tinytest::test_package()`.** `testthat::test_check()` runs
+   tests with the package's internal namespace exposed, so
+   test files can reference non-exported helpers, constants,
+   and S3 methods by their bare names. `tinytest::test_package()`
+   calls `library(pkg)`, which only attaches exports. A test
+   file that worked under testthat with
+   `expect_true(exists('MY_CONST'))` will fail under tinytest
+   with 'object 'MY_CONST' not found', even though the
+   original suite passed. Symptom: under
+   `pkgload::load_all() + tinytest::run_test_dir()`, tests
+   pass; under `R CMD check` (which uses
+   `tinytest::test_package()` against the installed package),
+   the same tests fail. Fix: either export the object via
+   roxygen2 (`#' @export`) and re-run `devtools::document()`,
+   or qualify the reference in the test using
+   `getFromNamespace('MY_CONST', 'pkg')` or `pkg:::MY_CONST`.
+   The qualified-reference variant is the safer choice for
+   objects that should remain internal.
+10. **`R CMD check` on a source directory does not auto-derive
+    `Author` and `Maintainer` from `Authors@R`.** Under R 4.5.3
+    on macOS, `R CMD check <directory>` fails with 'Required
+    fields missing or empty: Author Maintainer' when the
+    DESCRIPTION declares only `Authors@R`. The same DESCRIPTION
+    passes when checked via `R CMD build` followed by
+    `R CMD check <tarball>`. The cause is in
+    `tools:::.read_description()`, which reads the DCF file
+    without injecting derived fields. Symptom: a check that
+    was working last month suddenly errors at the very first
+    step. Fix: prefer the canonical workflow
+    (`R CMD build .` then `R CMD check pkg_X.Y.Z.tar.gz`); if
+    direct source-dir checking is required, add explicit
+    `Author:` and `Maintainer:` lines to DESCRIPTION alongside
+    `Authors@R`.
 
 # Uninstall / Rollback
 
@@ -583,7 +810,7 @@ the migration to `main`.
 AMBIANCE IMAGE 3: placed before Lessons Learnt (workflow scene)
 ============================================================================ -->
 
-![A workbench with two stacks of paper of unequal height, the smaller stack labelled with a single hand-written tag, suggesting deliberate reduction.](media/images/ambiance3.jpg){.img-fluid}
+![A close-up of a single espresso drip falling from a machine into a grey ceramic mug. Placeholder ambiance image; will be replaced with subject-specific imagery before publication.](media/images/ambiance3.jpg){.img-fluid}
 
 # What Did We Learn?
 
@@ -786,19 +1013,113 @@ compendium.
 | `expect_null(x)`                      | `expect_null(x)`                          |
 | `expect_silent(f())`                  | `expect_silent(f())`                      |
 | `expect_snapshot(x)`                  | (no direct equivalent; see pattern 5)     |
+| `expect_s3_class(x, 'cls')`           | `expect_inherits(x, 'cls')`               |
+| `expect_type(x, 'closure')`           | `expect_true(is.function(x))`             |
+| `expect_type(x, 'double')`            | `expect_equal(typeof(x), 'double')`       |
+| `expect_named(x, c(...))`             | `expect_equal(sort(names(x)), sort(c(...)))` |
+| `expect_no_error({block})`            | (unwrap; inner assertions stand on their own) |
 | `skip_on_cran()`                      | `if (!nzchar(Sys.getenv('NOT_CRAN'))) exit_file('CRAN')` |
 | `skip_if_not_installed('pkg')`        | `if (!requireNamespace('pkg', quietly = TRUE)) exit_file('pkg missing')` |
 | `helper-foo.R` (auto-sourced)         | `source('helper_foo.R', local = TRUE)`    |
 
-# Appendix B: A Real Migration {#appendix-b}
+# Appendix B: A Real Migration on `zzpower` {#appendix-b}
 
-[PLACEHOLDER: link to a commit that performs this conversion on
-one of the small in-repo packages (`zztable1`, `zzpower`,
-`zzlongplot`, or `zzrenvcheck`). The commit should land before
-this post is flipped from `draft: true` to `draft: false`. Once
-the commit exists, replace this placeholder with a one-paragraph
-summary of what was converted, what was retired, and the
-before-and-after line counts.]
+The recipe was validated on `zzpower` v0.3.0, an interactive
+Shiny power-analysis package, on branch
+`testthat-to-tinytest`. Pre-migration: 10 testthat files,
+1,734 LOC, 602 expectations passing under
+`testthat::test_dir()`. Post-migration: 10 tinytest files,
+1,625 LOC, 600 assertions passing under
+`tinytest::run_test_dir()` with `testthat` detached.
+
+The 6% line-count reduction (109 lines) came almost entirely
+from removing `test_that()` wrappers and de-indenting bodies
+by two spaces. The 2-assertion delta is exactly the two
+`expect_no_error()` outer-wrapper counts that no longer count
+as assertions in their own right; the inner expectations they
+guarded are still counted.
+
+The migration was not entirely mechanical. Four `testthat` 3
+assertion functions had no direct port and required manual
+substitution: `expect_s3_class` (9 calls; replaced with
+`expect_inherits`), `expect_type` (3 calls; replaced with
+`expect_true(is.function(...))` for the closure case and
+`expect_equal(typeof(...), ...)` otherwise), `expect_named`
+(1 call; replaced with `expect_equal(sort(names(x)), ...)`),
+and `expect_no_error` (2 calls; the wrapper was removed).
+These four patterns were not in the recipe's first draft,
+because the conversion script (which wrapped a textual
+brace-aware transform around `test_that()` calls) preserved
+them verbatim. The 'Things to Watch Out For' section now
+includes these patterns as gotcha 8, and the recipe has a
+new section 12 with paired examples.
+
+A subtler trap surfaced during dry-running. `pkgload::load_all()`
+auto-attaches every package in `Suggests`, which means the
+testthat namespace becomes available even after the migration
+removes testthat from the bootstrap. The four testthat-only
+assertion functions then resolve silently against testthat's
+exports, the run reports 'all ok', and the migration appears
+complete. The honest dry-run requires either detaching
+testthat explicitly or removing it from `Suggests` before
+verification. Only after `tinytest::run_test_dir()` reports a
+result count consistent with the testthat baseline (less the
+known `expect_no_error` deltas) is the migration validated.
+
+`R CMD check` was attempted in two configurations and
+surfaced two more issues, neither in the recipe's first
+draft.
+
+The first configuration, `R CMD check <source-directory>`,
+failed at the very first step with 'Required fields missing
+or empty: Author Maintainer'. Investigation showed that this
+is not a parsing issue but a behavioural one:
+`tools:::.read_description()`, which `R CMD check` calls to
+load the DESCRIPTION, does not auto-derive `Author` and
+`Maintainer` from `Authors@R`. The same DESCRIPTION passes
+when checked via the canonical `R CMD build .` followed by
+`R CMD check pkg_X.Y.Z.tar.gz`. The lesson generalises:
+prefer the build-then-check workflow; if direct
+source-directory checks are required, declare `Author` and
+`Maintainer` explicitly. Recipe section 17 and gotcha 10 now
+document this.
+
+The second configuration, `R CMD check <tarball>`, passed
+the DESCRIPTION step but failed during `tests/tinytest.R`
+with 'object ZZPOWER_CONSTANTS not found'. The cause is
+that `tinytest::test_package('zzpower')` calls
+`library('zzpower')`, which only attaches exported objects.
+zzpower's tests reference `ZZPOWER_CONSTANTS` (a non-exported
+constant) by its bare name, which works under
+`testthat::test_check()` but not under tinytest. This is a
+real structural difference between the two frameworks and
+cannot be papered over with a textual rewrite; the test
+files need to either qualify the reference
+(`getFromNamespace('ZZPOWER_CONSTANTS', 'zzpower')`) or the
+package needs to export the constant. Recipe section 20 and
+gotcha 9 now document this.
+
+Neither issue invalidates the recipe; both refine it. The
+total cost of using `zzpower` as the validation case study
+was higher than expected (roughly four hours rather than the
+'half a day to a day' my pre-migration estimate had) because
+each unanticipated failure required tracing R-internal code
+to diagnose. The pay-off is that the recipe has been
+hardened against three real failure modes (the four
+testthat-only assertion functions, the pkgload-namespace
+contamination, and the `library` vs `loadNamespace` test-
+visibility difference) before any reader attempts the
+migration on their own package.
+
+The migration commit and follow-up commits are on branch
+`testthat-to-tinytest` of the zzpower repository.
+
+Time spent: roughly two hours, including writing the
+brace-aware conversion script (about 30 lines of R), running
+two dry-runs to surface the testthat-namespace contamination
+issue, and patching the recipe with the four newly-discovered
+patterns. The migration commit and follow-up commits are on
+branch `testthat-to-tinytest` of the zzpower repository.
 
 ---
 
