@@ -1085,26 +1085,43 @@ source-directory checks are required, declare `Author` and
 document this.
 
 The second configuration, `R CMD check <tarball>`, passed
-the DESCRIPTION step but failed during `tests/tinytest.R`
-with 'object ZZPOWER_CONSTANTS not found'. The cause is
-that `tinytest::test_package('zzpower')` calls
+the DESCRIPTION step but failed inside `tests/tinytest.R`
+with 'could not find function "build_sample_size_inputs"'.
+The cause is that `tinytest::test_package('zzpower')` calls
 `library('zzpower')`, which only attaches exported objects.
-zzpower's tests reference `ZZPOWER_CONSTANTS` (a non-exported
-constant) by its bare name, which works under
-`testthat::test_check()` but not under tinytest. This is a
-real structural difference between the two frameworks and
-cannot be papered over with a textual rewrite; the test
-files need to either qualify the reference
-(`getFromNamespace('ZZPOWER_CONSTANTS', 'zzpower')`) or the
-package needs to export the constant. Recipe section 20 and
-gotcha 9 now document this.
+zzpower's `test_framework.R` referenced six non-exported
+helpers (`build_advanced_settings`,
+`build_effect_size_inputs`, `build_sample_size_inputs`,
+`get_effect_size_range`, `logrank_power`, `trend_power`) by
+their bare names, which worked under `testthat::test_check()`
+but not under tinytest. The fix added six
+`getFromNamespace()` assignments at the top of
+`test_framework.R`, bringing the helpers into the test file's
+scope without modifying the package's NAMESPACE. After the
+fix, `R CMD check` reported `Status: OK` on the resulting
+tarball. Recipe section 20 and gotcha 9 document the
+diagnostic and the fix.
+
+Note that `ZZPOWER_CONSTANTS`, which my first investigation
+identified as the offender, is in fact exported (`export(ZZPOWER_CONSTANTS)`
+in the generated NAMESPACE) and accessible through the
+search path after `library('zzpower')`. The earlier failure
+was a misdiagnosis from a stale install. The lesson here is
+operational: when an earlier check-run leaves a stale binary
+in the test library, its NAMESPACE may not match the source.
+Always rebuild and reinstall when chasing 'object not found'
+errors that contradict a current `getNamespaceExports()`
+inspection.
 
 Neither issue invalidates the recipe; both refine it. The
-total cost of using `zzpower` as the validation case study
-was higher than expected (roughly four hours rather than the
-'half a day to a day' my pre-migration estimate had) because
-each unanticipated failure required tracing R-internal code
-to diagnose. The pay-off is that the recipe has been
+final state on the validation branch: `R CMD check
+zzpower_0.4.0.tar.gz` returns `Status: OK`, with all
+non-skipped checks passing. The total cost of using
+`zzpower` as the validation case study was higher than
+expected (roughly four hours rather than the 'half a day to
+a day' my pre-migration estimate had) because each
+unanticipated failure required tracing R-internal code to
+diagnose. The pay-off is that the recipe has been
 hardened against three real failure modes (the four
 testthat-only assertion functions, the pkgload-namespace
 contamination, and the `library` vs `loadNamespace` test-

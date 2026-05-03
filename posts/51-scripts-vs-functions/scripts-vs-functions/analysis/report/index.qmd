@@ -46,30 +46,35 @@ that fits its job, with no doubt about which drawer to open.*
 
 # Introduction
 
-Most quantitative researchers carry a personal toolbox. It usually
-takes the form of a `~/bin` directory full of small shell scripts and
-a `.zshrc` (or `.bashrc`) file thick with custom aliases and
-functions. The contents accrue gradually: a one-liner that solved a
-particular irritation in 2019, a research-notes capture script
-written during a manuscript push in 2022, a git workflow function
-hammered out the week a co-author pushed a secret to GitHub.
+Most quantitative researchers maintain a personal toolbox of small
+shell helpers. It generally takes two forms: a `~/bin` directory
+populated with executable scripts, and a `.zshrc` (or `.bashrc`)
+file containing a layer of custom aliases and functions sourced
+into every interactive session. The contents accumulate gradually
+over years of incremental work, each entry typically introduced in
+response to a specific irritation: a one-liner written to bypass
+an awkward pipeline, a research-notes capture script drafted
+during a manuscript revision, a `git` workflow function codified
+after a co-author inadvertently committed a secret.
 
-Two years on, the toolbox works, but the boundary between 'script in
-`~/bin`' and 'function in `.zshrc`' has eroded. Some scripts in
-`~/bin` are aliases in disguise (a single `cd` plus `vim`). Some
-functions in `.zshrc` are two-hundred-line programs that have nothing
-to do with shell state. The toolbox still gets used, but it has
-become hard to reason about, hard to audit for security, and slow to
-load on shell start.
+After several years of accretion, the toolbox remains functional
+but the boundary between 'script in `~/bin`' and 'function in
+`.zshrc`' has eroded. Some scripts in `~/bin` are aliases in
+disguise (a single `cd` followed by the launch of an editor).
+Some functions in `.zshrc` span hundreds of lines of program
+logic that have no need for the calling shell's state. The
+toolbox remains serviceable, but it has become difficult to
+reason about, difficult to audit for security, and noticeably
+slow to load on shell startup.
 
 This post documents a principled refactor of such a toolbox. The
-worked example is biased toward a biostatistician's workflow
-(reproducible R analyses, Docker-based research compendia, frequent
-git commits, occasional HPC submission), but the rule that drives the
-refactor applies to any Unix-flavoured personal workspace.
+worked example is drawn from a biostatistician's workflow
+(reproducible R analyses, Docker-based research compendia,
+frequent `git` commits, occasional HPC submission), but the
+underlying rule applies to any Unix-flavoured personal workspace.
 
-A companion plan that operationalises the rule, with a concrete phase
-sequence and effort estimates, is referenced under
+A companion plan that operationalises the rule, with a concrete
+phase sequence and effort estimates, is referenced under
 [See Also](#see-also).
 
 ## Motivations
@@ -104,28 +109,212 @@ refactor session.](media/images/ambiance1.jpg){.img-fluid}
 
 # Background: function or script?
 
-A shell function is a named block of code that runs in the *current*
-shell process. It can read and modify the calling environment:
-change the working directory, export variables, edit the history,
-manipulate the dirstack, set or unset aliases. Functions live wherever
-they are sourced from, most commonly the interactive shell startup
-file.
+The function-versus-script rule developed here rests on a small
+set of recurring terms (process, state, namespace, scope,
+testing, reproducibility). Each is defined briefly below before
+the substantive discussion begins, so that the later prose can
+be read against a fixed vocabulary.
 
-A shell script is a file with execute permission that runs in a *new*
-process spawned from the current shell. It cannot, by design, mutate
-the calling shell's state. It receives arguments, environment, and
-file descriptors at launch; it returns an exit code; anything it
-prints flows back to the parent only via standard streams.
+## Terminology
 
-These two categories are not interchangeable. Some helpers genuinely
-require the function form (for example, a wrapper around `cd` that
-must affect the user's shell). Others fit equally in either form, but
-the choice has consequences for testability, auditability, startup
-performance, and the reader's experience.
+**Process.** An operating-system execution unit with its own
+memory, environment, file descriptors, and a unique process
+identifier (PID). Every running program is a process. A shell,
+an editor, a script, and a database server are each a separate
+process; the operating system isolates them so that one cannot
+directly read or write another's memory. Communication between
+processes is restricted to explicit channels: arguments and
+environment passed at launch, file descriptors, signals, and
+exit codes.
 
-A toolbox that has drifted out of alignment shows two kinds of
-inversion: scripts that should have been aliases, and functions that
-should have been scripts. The next section defines the rule that
+**State.** The information a process holds in memory at a given
+moment. For a shell process, the state includes the current
+working directory, the values of environment and local
+variables, the defined aliases and functions, the shell
+options, the history list, the directory stack, and the job
+table. State is what distinguishes one interactive shell
+session from another, and it is what makes the
+function-versus-script question consequential at all: a
+function can read and write the calling shell's state, whereas
+a script cannot.
+
+**Namespace.** The set of names (variables, functions, aliases)
+visible to a particular execution context. The interactive
+shell maintains one namespace; a child process launched from it
+receives a copy of the exported portion and nothing else. Two
+processes can hold variables of the same name without collision
+because each has its own namespace. The R analogy below uses
+the term in the same sense: an R session has a namespace into
+which `library()` calls bind names.
+
+**Scope.** The region of code in which a given name is defined
+and accessible. Shell functions and scripts have distinct
+scopes by construction: a variable set inside a script is
+visible only within that script's process unless explicitly
+exported to children, while a variable set inside an
+interactive function (without `local`) is visible to the entire
+shell session. Scope is the language-level property that
+follows from process boundaries and namespace rules.
+
+**Testing.** Exercising code in a controlled environment with
+known inputs and asserting that the observed outputs match
+expectations. In shell work, testing typically means invoking a
+script with prepared arguments, capturing its `stdout`,
+`stderr`, and exit code, and comparing them against reference
+values; static analysers such as `shellcheck` address a
+complementary class of issues without execution. A helper that
+cannot be invoked with a controlled input set, in isolation
+from a live interactive session, cannot be tested in this
+sense.
+
+**Reproducibility.** The property that re-running the same code
+on the same inputs in the same environment yields the same
+outputs. Reproducibility requires both that the code be
+captured (version control, an executable file at a stable
+location) and that the execution environment be characterised
+(declared dependencies, pinned versions, an explicit shebang).
+A helper defined inline in a personal startup file fails the
+first requirement; a script in `~/bin` under `git` satisfies
+it.
+
+## How the shell executes code
+
+To classify a helper sensibly, it helps to begin with how the
+shell actually executes code.
+
+When a user opens a terminal, the shell launches as a long-lived
+process. It reads a startup file (`.zshrc`, `.bashrc`, or
+similar), constructs its environment (exported variables, defined
+aliases and functions, the current working directory, the history
+file, the directory stack, key bindings, completion definitions),
+and then waits for input at a prompt. Every command the user
+enters is interpreted in the context of that single process and
+the in-memory state it carries.
+
+Within this model, a helper can run in one of two fundamentally
+different ways: inside the same process as the interactive shell,
+or inside a new process spawned from it. The distinction is
+mechanical and unambiguous, and it determines what the helper is
+permitted to change.
+
+## Functions: code in the current process
+
+A shell function is a named block of code, defined as `name() {
+... }` (or `function name { ... }`), that executes in the
+*current* shell process. Because it runs there, it has direct
+access to that process's state. It can:
+
+- Change the working directory via `cd`, with the change
+  persisting for subsequent commands at the same prompt.
+- `export`, set, or unset environment variables that future
+  commands in the session will inherit.
+- Define or redefine aliases, options (`setopt`), key bindings,
+  and completion functions.
+- Manipulate the directory stack (`pushd`, `popd`), the command
+  history, and the job table.
+
+Functions are most commonly defined in a startup file so that
+they are available in every interactive session. The cost is
+borne by every shell invocation: each function is parsed in full
+before the prompt appears, regardless of whether it is ever
+called.
+
+## Scripts: code in a child process
+
+A shell script is a file with execute permission that the shell
+runs by spawning a *child process*. The mechanism is the standard
+Unix `fork` and `execve` pair: the parent shell calls `fork`,
+which produces a near-identical copy of the shell process (the
+child), and the child then calls `execve` to replace its own
+program image with the interpreter named in the script's shebang
+line (`#!/usr/bin/env bash`, `#!/usr/bin/env zsh`, and so on).
+The parent typically waits for the child to finish; the child
+runs the script and eventually exits.
+
+### The parent-child relationship
+
+From the operating system's perspective the parent and child are
+two distinct processes. Each has its own process identifier
+(PID), its own address space (a private region of memory neither
+process can read from the other), its own working directory, its
+own copy of the environment, and its own file descriptor table.
+At the moment of `fork`, the child receives a snapshot of the
+parent's exported environment, the parent's open file descriptors
+(`stdin`, `stdout`, `stderr`), the command-line arguments passed
+at invocation, and a copy of the parent's working directory.
+That snapshot is the entirety of what crosses the boundary.
+After the fork, the two processes are independent: state changes
+the child makes are invisible to the parent, and state changes
+the parent makes are invisible to the child. When the child
+exits, the parent collects three pieces of information and
+nothing else: the bytes the child wrote to `stdout`, the bytes
+the child wrote to `stderr`, and the integer exit code returned
+by the child's final instruction.
+
+### What this means for `cd` (and everything like it)
+
+The practical consequence is that a script cannot mutate the
+state of the shell that invoked it. The point is precise enough
+to deserve a careful statement: a script *can* call `cd`, and
+the call succeeds. The child process moves to the new directory
+and any subsequent commands in the script run from there. What
+the script cannot do is `cd` the *parent shell*, because the
+parent and child each hold their own working directory, and the
+child's was a copy from the start. A common source of early
+confusion is the user who places `cd /some/project` inside a
+script, executes it, and is puzzled to find the prompt
+unchanged. The script ran, the child process did `cd`, the child
+exited, and the parent shell, never having shared a working
+directory with the child, remained where it was.
+
+The same argument applies to environment variables, aliases,
+shell options, the directory stack, and every other element of
+shell state: a script can change them inside its own process,
+but the changes are discarded the moment that process
+terminates. This is the same process isolation that allows a
+crashing program to leave the rest of the system intact.
+
+### The one explicit exception: `source`
+
+The shell built-in `source` (equivalently, `.`) does *not* spawn
+a child process. It reads the named file and executes its
+commands directly in the *current* shell. A `cd` inside a
+sourced file therefore does change the calling shell's working
+directory, and an `export` inside a sourced file does set a
+variable in the calling shell's namespace. Sourcing is the
+mechanism by which `.zshrc` contributes its definitions to the
+interactive session in the first place, and it is the standard
+workaround when a helper genuinely needs to leave the user in a
+new directory but is too long to live as a function.
+
+The cost is the loss of isolation: a sourced file shares the
+calling shell's state and can read, modify, or clobber any name
+defined there. An error in a sourced file (an unset variable
+under `set -u`, a stray `exit`) terminates the interactive
+session rather than a child process. For these reasons, sourcing
+is reserved for files whose authors explicitly intend to operate
+on the parent's state; ordinary helpers should be invoked, not
+sourced.
+
+## Why the distinction matters
+
+These two execution models are not interchangeable. Some helpers
+genuinely require the function form because their entire purpose
+is to mutate the parent shell's state: a wrapper that prepares a
+project directory and leaves the user inside it, a helper that
+loads a credential into the current session via `export`, a
+function that toggles a shell option for the remainder of the
+session. Other helpers fit equally well in either form, but the
+choice has measurable consequences for testability,
+auditability, startup performance, security review, and the
+reader's mental model of where logic lives.
+
+A toolbox that has drifted out of alignment shows two symmetric
+inversions: scripts that should have been aliases (because the
+'script' is a single command line that does not even merit its
+own file), and functions that should have been scripts (because
+the 'function' performs no operation that requires access to the
+parent shell's state). The next section defines the rule that
 resolves both.
 
 # Guiding principle
@@ -136,33 +325,38 @@ The rule is short:
 > calling shell. Otherwise it should be a versioned, executable
 > script in `~/bin`.
 
-The remainder of this section unpacks the rule for an audience used
-to thinking carefully about scope, reproducibility, and the boundaries
-between processes: namely, computer-literate biostatisticians.
+The remainder of this section unpacks the rule in terms readily
+familiar to an audience trained in scope, reproducibility, and the
+boundaries between processes.
 
 ## A familiar analogy: R functions and Rscript files
 
-R users have lived with the same boundary for years without naming
-it. A pure helper that takes inputs, returns a value, and has no side
-effects is written as a function, often grouped with related
-functions in an R package. A one-shot batch job that loads a dataset,
-fits a model, writes a `.rds`, and emits a PDF is written as a
-script, run with `Rscript` or knit through Quarto. Nobody seriously
-proposes to put the entire batch pipeline inside `.Rprofile`, even
-though `.Rprofile` is technically capable of executing it. The
-pipeline does not need access to the interactive session's namespace,
-and burying it there would slow every R session to a crawl, hide it
-from version control review, and prevent any tooling from analysing
-it as a unit.
+R users have lived with the same boundary for years without
+naming it explicitly. A pure helper that takes inputs, returns a
+value, and produces no side effects is written as an R function,
+often grouped with related functions in an R package. A one-shot
+batch job that loads a dataset, fits a model, writes an `.rds`
+file, and emits a PDF report is written as a script and executed
+with `Rscript` or rendered through Quarto. No experienced R user
+would propose to embed an entire batch pipeline in `.Rprofile`,
+even though `.Rprofile` is technically capable of running it.
+The pipeline does not require access to the interactive session's
+namespace, and locating it there would slow every R session,
+obscure it from version control review, and prevent any tooling
+from analysing it as a self-contained unit.
 
-The shell case is the same boundary at a different scale. A shell
-function is the equivalent of a function loaded into the user's
-current R session: it can see and change that session's globals.
-A shell script is the equivalent of `Rscript` invoked from the
-command line: it gets fresh state, returns through stdout and an
-exit code, and finishes. Conflating the two in shell-land has the
-same costs as it would have in R-land, except that shell-land has
-historically been more tolerant of the conflation.
+The shell case is the same boundary at a different scale. A
+shell function corresponds to a function loaded into the user's
+current R session: it can read and modify that session's
+globals, and it lives or dies with the session. A shell script
+corresponds to `Rscript` invoked from the command line: it
+receives a fresh interpreter, communicates back through `stdout`
+and an exit code, and exits cleanly. The process boundary that
+makes `Rscript` reliable for batch work is the same boundary
+that makes a shell script reliable for non-interactive use.
+Conflating the two in shell-land carries the same costs as it
+would in R-land; the shell community has historically been less
+attentive to the conflation.
 
 ## Scope, in four lines
 
@@ -174,18 +368,23 @@ following in a way that should outlast the helper's run:
 - Modify aliases, options, key bindings, completion definitions.
 - Manipulate the directory stack, history, or job table.
 
-Anything outside that list (running a program, reading or writing
-files, formatting output, fetching from a URL, calling git, calling
-make, calling a database, parsing JSON) is a script's job, full
-stop. The rule scales: a function that *both* runs a long pipeline
-*and* needs to `cd` at the end is two helpers, one calling the
-other.
+Each item on this list shares a single property: the change must
+persist in the calling shell's process, which is precisely what a
+child process is structurally incapable of accomplishing.
+Anything outside the list (running a program, reading or writing
+files, formatting output, fetching from a URL, calling `git`,
+calling `make`, calling a database, parsing JSON) communicates
+with the surrounding world through file descriptors and exit
+codes alone, which is exactly what the script form is designed
+for. The rule scales cleanly: a function that *both* runs a long
+pipeline *and* needs to `cd` at the end is two helpers, one
+calling the other.
 
 ## Why the inversion is expensive
 
-A long shell function in `.zshrc` carries five hidden costs that
-biostatisticians, with their habits around `renv`, package
-versioning, and unit testing, will recognise immediately.
+A long shell function in `.zshrc` carries five practical costs
+that map directly onto practices already familiar from `renv`,
+package versioning, and unit testing.
 
 **Startup latency.** A function in `.zshrc` is parsed every time the
 shell starts. A script is parsed only when invoked. A two-hundred-
