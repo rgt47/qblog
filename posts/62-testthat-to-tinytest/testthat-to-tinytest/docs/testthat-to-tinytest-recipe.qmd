@@ -338,10 +338,12 @@ stream the test was actually checking.
 ## 12. Assertions in testthat but not in tinytest
 
 A class of patterns the original draft of this recipe missed.
-A real migration on `zzpower` (10 files, 602 assertions)
-turned up four `testthat` 3 functions whose names tinytest
-does not export: `expect_s3_class`, `expect_type`,
-`expect_named`, and `expect_no_error`. Each requires manual
+Two real migrations (zzpower, 10 files, 602 assertions; and
+zztable1, 13 files, 564 assertions) turned up nine `testthat`
+functions whose names tinytest does not export:
+`expect_s3_class`, `expect_type`, `expect_named`,
+`expect_no_error`, `expect_lt`, `expect_gt`, `expect_lte`,
+`expect_gte`, and `expect_is`. Each requires manual
 substitution. The substitutes are mechanical but worth
 naming explicitly because forgetting them produces a
 deceptively-passing migration: when `pkgload::load_all()`
@@ -430,13 +432,78 @@ removing the outer `expect_no_error()` also removes one
 assertion from the count for each block; this is the
 expected behaviour, not a regression.
 
+### `expect_lt`, `expect_gt`, `expect_lte`, `expect_gte`
+
+```r
+# testthat
+expect_lt(elapsed, 0.5)
+expect_gte(speedup_ratio, 0.5)
+expect_lt(memory_size, 1000000, 'Memory regression')
+```
+
+```r
+# tinytest
+expect_true(elapsed < 0.5)
+expect_true(speedup_ratio >= 0.5)
+expect_true(memory_size < 1000000)
+```
+
+The four ordering assertions have no tinytest equivalent;
+substitute `expect_true` with the inline comparison. The
+optional message argument that testthat accepts as a third
+positional argument has no tinytest counterpart and is
+dropped (the failing line and value are sufficient
+diagnostics in the tinytest report).
+
+### `expect_is`
+
+```r
+# testthat (deprecated alias of expect_s3_class)
+expect_is(theme, 'table1_theme')
+expect_is(output, 'character')
+```
+
+```r
+# tinytest
+expect_inherits(theme, 'table1_theme')
+expect_inherits(output, 'character')
+```
+
+`expect_is` is testthat's older alias and behaves like
+`expect_s3_class`. The tinytest substitute is the same:
+`expect_inherits`. Note that `expect_inherits` works for both
+S3 classes and base R types because R's class system treats
+'character', 'numeric', etc. as classes for `inherits()`
+purposes.
+
+### Argument-name differences in `expect_error` /
+### `expect_warning` / `expect_message`
+
+```r
+# testthat (both names accepted)
+expect_error(f(), regex = 'pattern')
+expect_warning(f(), regexp = 'pattern')
+```
+
+```r
+# tinytest
+expect_error(f(), pattern = 'pattern')
+expect_warning(f(), pattern = 'pattern')
+```
+
+testthat accepts `regex =` and `regexp =` as named arguments
+to its condition-matching expect functions. tinytest accepts
+only `pattern =`. A textual rewrite must rename both.
+
 ### Detection
 
-Before the first dry-run, grep for these four patterns:
+Before the first dry-run, grep for the patterns:
 
 ```sh
-grep -hoE 'expect_(s3_class|type|named|no_error)' \
+grep -hoE 'expect_(s3_class|type|named|no_error|lt|gt|lte|gte|is)\b' \
   inst/tinytest/*.R | sort | uniq -c
+grep -hoE '(regex|regexp)[[:space:]]*=' inst/tinytest/*.R | \
+  sort | uniq -c
 ```
 
 If the count is non-zero, fix them before running the suite.

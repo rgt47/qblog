@@ -62,7 +62,7 @@ authors pre-dated discovering the alias. A guiding principle resolves
 both inversions: \emph{a helper should be a shell function only when
 it must mutate the calling shell, otherwise it should be a versioned,
 executable script in} \texttt{\textasciitilde/bin}. The paper applies
-this rule to specific helpers, sequences the refactor into eight
+this rule to specific helpers, sequences the refactor into nine
 independently shippable phases, lists effort estimates and acceptance
 criteria, and surfaces the risks worth managing during execution.
 \end{abstract}
@@ -281,110 +281,14 @@ that also fail the principle:
 fresh shell and from a non-interactive context (for example, from
 within a Makefile). Each is \texttt{shellcheck}-clean.
 
-\subsection{Phase 3: rebuild the navigation functions}
+\paragraph{Note on \texttt{mr}.} The \texttt{mr} function calls
+\texttt{\_zzcollab\_root}, which lives in \texttt{.zshrc} as a
+function and is not exported to child processes. The extracted
+\texttt{mr} script must therefore inline a small project-root
+walk rather than call the function. A few self-contained lines
+at the top of the script suffice.
 
-The 14 navigation functions legitimately remain in the function
-tier (each calls \texttt{cd}). The current implementation,
-however, has three problems that should be fixed in a single
-pass:
-
-\begin{enumerate}
-  \item \textbf{Duplicated body.} The same five-token line is
-        copy-pasted fourteen times with only the subpath
-        varying.
-  \item \textbf{Misleading error path.} Errors are written to
-        \texttt{stdout} rather than \texttt{stderr}, and the
-        message \texttt{`Not in ZZCOLLAB project'} fires both
-        when the project root cannot be located and when the
-        root \emph{is} located but the requested subpath does
-        not exist; the second case is misleading.
-  \item \textbf{Sentinel false positive.}
-        \texttt{\_zzcollab\_root} treats any directory containing
-        \texttt{DESCRIPTION} as a project root. Every R package
-        in the user's tree (for example,
-        \texttt{\textasciitilde/prj/sfw/01-zzlongplot/zzlongplot/}
-        in its non-zzcollab incarnation) carries a
-        \texttt{DESCRIPTION} file, so the helper produces a false
-        positive there and the navigation shortcuts attempt to
-        \texttt{cd} into a non-existent subpath. The fix is to
-        require a marker that is specific to zzcollab projects.
-\end{enumerate}
-
-The \texttt{z} prefix on the shortcut names was originally
-introduced to avoid collisions with single-letter names elsewhere
-in the shell. A survey of the user's environment narrows the
-problem: the natural one-letter mapping (first letter of the
-target subdirectory) collides with the zsh \texttt{r} builtin
-(re-run last command), \texttt{/usr/bin/w} (logged-in users), and
-\texttt{/opt/X11/bin/x} (an XQuartz launch helper). To avoid
-shadowing the high-impact \texttt{r} builtin, three shortcuts
-are remapped to free letters: \texttt{r} (R/) becomes
-\texttt{c}; \texttt{c} (archive/) becomes \texttt{h}; \texttt{w}
-(raw\_data/) becomes \texttt{x}. The remapping resolves both
-\texttt{r} and \texttt{w} and accepts a single trivial-impact
-override of \texttt{/opt/X11/bin/x} (reachable as \texttt{command
-x} if ever needed).
-
-\paragraph{Sentinel choice.} A survey of the user's actual
-projects clarifies which marker file reliably distinguishes a
-zzcollab project from an ordinary R package. Across thirteen
-zzcollab projects under \texttt{\textasciitilde/prj/sfw/}:
-
-\begin{itemize}
-  \item All thirteen carry \texttt{DESCRIPTION} (so do all R
-        packages; \texttt{DESCRIPTION} alone is the source of the
-        false positive).
-  \item All thirteen carry an \texttt{analysis/} subdirectory; no
-        ordinary R package does.
-  \item About half (4 of 13) carry \texttt{zzcollab.yaml}; the
-        remainder are older projects that pre-date the marker.
-\end{itemize}
-
-The combined sentinel \texttt{[[ -f zzcollab.yaml \textbar\textbar
-\ -d analysis ]]} therefore matches every zzcollab project
-without false-positiving any R package.
-
-\paragraph{Action.} Replace the existing \texttt{\_zzcollab\_root}
-plus 14 navigation functions with the rebuilt versions in
-Appendix~A. Replace the \texttt{nav} helper with the rewritten
-version in Appendix~A.3.
-
-\paragraph{Optional follow-up.} Move the \texttt{\_zzcollab\_root}
-helper to \texttt{\textasciitilde/bin/zzcollab-root} and invoke
-it via \texttt{\$(zzcollab-root)}. This brings the
-project-detection walk under \texttt{shellcheck} and makes it
-callable from non-interactive contexts (Makefiles, cron jobs).
-The 14 wrappers themselves must remain functions because each
-calls \texttt{cd}.
-
-\paragraph{Effort.} One hour. Most of the time goes to verifying
-the sentinel change against every zzcollab project the user has
-on disk and confirming that no script in
-\texttt{\textasciitilde/bin} or \texttt{.zshrc} accidentally
-references the old \texttt{z?} names.
-
-\paragraph{Acceptance criteria.}
-\begin{itemize}
-  \item All 14 single-letter shortcuts behave identically to
-        the corresponding old \texttt{z?} shortcuts when invoked
-        from inside a zzcollab project.
-  \item In an ordinary R package (e.g.\ a directory with
-        \texttt{DESCRIPTION} but no \texttt{analysis/} and no
-        \texttt{zzcollab.yaml}), the shortcuts return cleanly
-        with `Not in a ZZCOLLAB project' on \texttt{stderr}.
-        They do not silently fail or cd into a non-existent
-        subpath.
-  \item When the project is found but a specific subpath is
-        missing, the error message names the missing path.
-  \item The zsh \texttt{r} builtin and \texttt{/usr/bin/w} are
-        unaffected (the natural-mapping shortcuts that would have
-        shadowed them are remapped to \texttt{c} and \texttt{x}).
-        \texttt{/opt/X11/bin/x} is overridden by the navigation
-        wrapper but remains reachable via \texttt{command x}.
-  \item \texttt{nav} prints the new single-letter table.
-\end{itemize}
-
-\subsection{Phase 4: promote microscripts to aliases}
+\subsection{Phase 3: promote microscripts to aliases}
 
 Four scripts in \texttt{\textasciitilde/bin} reduce to a single
 command pipeline with no flag parsing or branching. Each is more
@@ -420,7 +324,7 @@ k}, \texttt{alias bb}, and (if chosen) \texttt{alias start} resolve
 to the expected definitions. The four files are absent from
 \texttt{\textasciitilde/bin}.
 
-\subsection{Phase 5: harden the remaining microscripts}
+\subsection{Phase 4: harden the remaining microscripts}
 
 Five scripts (\texttt{qcp}, \texttt{ss}, \texttt{vv}, \texttt{zz},
 \texttt{p2}) are correctly placed but unhardened. All five share
@@ -448,16 +352,16 @@ script: shebang, \texttt{set -euo pipefail}, replace backticks,
 quote variables, delete dead code, resolve all
 \texttt{shellcheck} findings.
 
-\paragraph{Effort.} One hour. Phase~6 reduces this further by
+\paragraph{Effort.} One hour. Phase~5 reduces this further by
 collapsing the worst three.
 
 \paragraph{Acceptance criteria.}
 \texttt{file \textasciitilde/bin/\{qcp,ss,vv,zz,p2\}} reports each
 as a shell script. \texttt{shellcheck} returns clean.
 
-\subsection{Phase 6: consolidate the latest-of helpers}
+\subsection{Phase 5: consolidate the latest-of helpers}
 
-Three of the scripts hardened in Phase~5 (\texttt{ss},
+Three of the scripts hardened in Phase~4 (\texttt{ss},
 \texttt{vv}, \texttt{zz}) are the same script with different
 terminal commands at the bottom: each finds the most recent file
 matching a glob in the current directory, then opens it with a
@@ -466,7 +370,7 @@ chosen viewer (\texttt{open -a Skim}, \texttt{vim},
 
 \paragraph{Action.} Replace the three scripts with one
 parameterised helper plus three thin wrappers. The replacement
-(verbatim) is given in Appendix~B.
+(verbatim) is given in Appendix~A.
 
 \paragraph{Effort.} Twenty minutes.
 
@@ -475,7 +379,7 @@ and \texttt{zz} continues to do exactly what it did before. The
 shared logic appears once. Adding a fourth viewer (for example,
 \texttt{Preview.app}) requires one new two-line wrapper.
 
-\subsection{Phase 7: clean up non-executables}
+\subsection{Phase 6: clean up non-executables}
 
 The \texttt{\textasciitilde/bin} directory contains the following
 non-executable artefacts that should be relocated:
@@ -513,7 +417,7 @@ helpers.
 -maxdepth 1 -not -type f -not -name 'lib' -not -name '.'} returns
 nothing (or only the optional \texttt{lib/} directory).
 
-\subsection{Phase 8: decommission the archive directory}
+\subsection{Phase 7: decommission the archive directory}
 
 The buried \texttt{\textasciitilde/bin/archive/} subdirectory
 contains 40+ legacy files dating from 2021--2024, including
@@ -544,7 +448,7 @@ scheduler still in use).
 no longer exists. \texttt{git log} preserves the deleted
 content for any future recovery.
 
-\subsection{Phase 9: naming hygiene}
+\subsection{Phase 8: naming hygiene}
 
 Several helpers carry names that fail the legibility standard the
 rest of the refactor enforces. The renames proposed below are for
@@ -553,12 +457,12 @@ defensible on grounds of frequency-of-use, and the author is the
 only person who knows which fall into that category. The proposed
 disposition is divided into three sub-phases by category.
 
-\subsubsection*{9a. Application launchers}
+\subsubsection*{8a. Application launchers}
 
 Two scripts launch terminal emulators with single- or
 double-character names that collide with conventional grep
 targets (\texttt{gg} is also common shorthand for
-\texttt{git grep}). After Phase~4 these become aliases; the
+\texttt{git grep}). After Phase~3 these become aliases; the
 rename and the promotion should land in the same commit.
 
 \begin{longtable}{@{}llp{2.7in}@{}}
@@ -570,13 +474,7 @@ rename and the promotion should land in the same commit.
   \bottomrule
 \end{longtable}
 
-\subsubsection*{9b. The \texttt{z?} navigation family}
-
-Folded into Phase~3. The fourteen \texttt{z?} shortcuts are
-renamed to single letters as part of the navigation rebuild. See
-\S{}Phase 3 and Appendix~A for the action and the resulting code.
-
-\subsubsection*{9c. Gratuitously cryptic helpers}
+\subsubsection*{8b. Gratuitously cryptic helpers}
 
 The following entries in \texttt{\textasciitilde/bin} have names
 that do not map to their behaviour, are infrequently invoked,
@@ -589,12 +487,12 @@ removal.
   \toprule
   \textbf{Helper} & \textbf{Behaviour} & \textbf{Disposition} \\
   \midrule
-  \texttt{bb}    & edits \texttt{\textasciitilde/docs/personal/preludelist.tex} & rename to \texttt{edit-preludes}, or absorb as the Phase 4 alias \\
+  \texttt{bb}    & edits \texttt{\textasciitilde/docs/personal/preludelist.tex} & rename to \texttt{edit-preludes}, or absorb as the Phase 3 alias \\
   \texttt{qcp}   & copies a built post PDF into the working directory          & rename to \texttt{pull-post-pdf}                                  \\
   \texttt{p2}    & enscript-to-PDF-to-printer pipeline (two-up)                 & rename to \texttt{print-2up}                                      \\
-  \texttt{ss}    & opens latest PDF in Skim                                     & retire after Phase~6 (replaced by \texttt{latest-of} wrapper)     \\
-  \texttt{vv}    & edits latest Rmd/qmd in vim                                  & retire after Phase~6                                              \\
-  \texttt{zz}    & opens latest PDF in zathura                                  & retire after Phase~6                                              \\
+  \texttt{ss}    & opens latest PDF in Skim                                     & retire after Phase~5 (replaced by \texttt{latest-of} wrapper)     \\
+  \texttt{vv}    & edits latest Rmd/qmd in vim                                  & retire after Phase~5                                              \\
+  \texttt{zz}    & opens latest PDF in zathura                                  & retire after Phase~5                                              \\
   \texttt{n1}    & unknown (33 lines)                                           & inspect; rename to a descriptive name or delete                   \\
   \texttt{n2}    & unknown (22 lines)                                           & inspect; rename or delete                                         \\
   \texttt{p1}    & unknown (23 lines)                                           & inspect; rename or delete                                         \\
@@ -629,9 +527,9 @@ unknown helpers. The renames themselves are individually cheap.
         reference the new names.
 \end{itemize}
 
-\subsection{Phase 10: install a guardrail}
+\subsection{Phase 9: install a guardrail}
 
-The refactor of phases 1--9 cleans up a decade of accreted drift.
+The refactor of phases 1--8 cleans up a decade of accreted drift.
 Without an automated check, the same drift will reaccumulate
 within a few years.
 
@@ -655,7 +553,7 @@ covers only shell scripts and only the top-level
 that may hold helpers in other languages.
 
 \paragraph{Effort.} Thirty minutes (including hook installation
-and a verification pass against the post-Phase-7 toolbox).
+and a verification pass against the post-Phase-6 toolbox).
 
 \paragraph{Acceptance criteria.} \texttt{make lint} returns clean
 on the post-refactor toolbox. A deliberately broken script
@@ -669,16 +567,15 @@ introduced as a test causes the pre-commit hook to fail.
   \midrule
   1 & Extract \texttt{gz}, \texttt{\_gz\_secret\_scan}, \texttt{gz-scan-history} & 4\,h            \\
   2 & Extract \texttt{pp}, \texttt{rr}, \texttt{mma}, \texttt{mr}, \texttt{nav}  & 1\,h            \\
-  3 & Rebuild navigation: collapse, tighten sentinel, drop \texttt{z} prefix     & 1\,h            \\
-  4 & Promote four microscripts to aliases                                       & 0.3\,h          \\
-  5 & Harden five remaining microscripts                                         & 1\,h            \\
-  6 & Consolidate \texttt{ss}, \texttt{vv}, \texttt{zz} into one helper          & 0.3\,h          \\
-  7 & Relocate non-executables out of \texttt{\textasciitilde/bin}               & 1\,h            \\
-  8 & Decommission \texttt{\textasciitilde/bin/archive/}                         & 0.1\,h          \\
-  9 & Naming hygiene (launchers, \texttt{z?} family, cryptic helpers)            & 1\,h            \\
-  10 & Install \texttt{make lint} guardrail                                      & 0.5\,h          \\
+  3 & Promote four microscripts to aliases                                       & 0.3\,h          \\
+  4 & Harden five remaining microscripts                                         & 1\,h            \\
+  5 & Consolidate \texttt{ss}, \texttt{vv}, \texttt{zz} into one helper          & 0.3\,h          \\
+  6 & Relocate non-executables out of \texttt{\textasciitilde/bin}               & 1\,h            \\
+  7 & Decommission \texttt{\textasciitilde/bin/archive/}                         & 0.1\,h          \\
+  8 & Naming hygiene (launchers, cryptic helpers)                                & 0.7\,h          \\
+  9 & Install \texttt{make lint} guardrail                                       & 0.5\,h          \\
   \midrule
-    & \textbf{Total}                                                             & \textbf{10.2\,h} \\
+    & \textbf{Total}                                                             & \textbf{8.9\,h} \\
   \bottomrule
 \end{longtable}
 
@@ -783,14 +680,30 @@ After execution of all nine phases:
         executables (with at most a \texttt{lib/} subdirectory
         for sourced helpers).
   \item Shell startup time decreases by an estimated 50--150\,ms
-        on the audited file. The dominant contribution comes
-        from removing the \texttt{gz} family.
+        from the function extractions in phases 1--2. The
+        dominant contribution comes from removing the \texttt{gz}
+        family.
   \item Every helper in the toolbox is one \texttt{git log} away
         from full history, one \texttt{shellcheck} away from
         lint, and one \texttt{cat} away from a complete reading.
   \item The \texttt{make lint} guardrail prevents the same
         drift from reaccumulating.
 \end{itemize}
+
+\paragraph{Caveat on the startup-time projection.} The 50--150\,ms
+estimate above accounts only for the function-extraction phases.
+After execution, the dominant remaining startup cost in the
+audited file is the conda initialisation block (lines 634--647),
+which invokes \texttt{conda 'shell.zsh' 'hook'} on every shell
+launch, spawning a Python interpreter. On the audited machine
+this adds roughly 50--150\,ms by itself, so the perceived
+improvement to interactive responsiveness will be smaller than
+the function-extraction numbers alone suggest. The standard
+mitigation is to lazy-load conda: replace the eager hook with a
+shell stub that initialises conda only on first \texttt{conda}
+invocation. This is out of scope for the current plan but worth
+considering as a follow-up; it is the highest-leverage remaining
+intervention on shell startup time.
 
 The largest qualitative gain is composability. Scripts in
 \texttt{\textasciitilde/bin} are picked up by anything that
@@ -804,108 +717,7 @@ tooling can call.
 
 \appendix
 
-\section{Rebuilt Navigation Functions (Phase 3)}
-
-\subsection*{A.1 Tightened project-root locator}
-
-Replace the existing \texttt{\_zzcollab\_root} with:
-
-\begin{lstlisting}[language=bash]
-# Project-root locator. Walks upward from $PWD looking for a
-# zzcollab-specific marker. The combined sentinel matches every
-# zzcollab project (all carry analysis/; newer ones additionally
-# carry zzcollab.yaml) without false-positiving on R packages
-# that carry only DESCRIPTION.
-_zzcollab_root() {
-    local dir="$PWD"
-    while [[ "$dir" != "/" ]]; do
-        if [[ -f "$dir/zzcollab.yaml" || -d "$dir/analysis" ]]; then
-            echo "$dir"
-            return 0
-        fi
-        dir="$(dirname "$dir")"
-    done
-    return 1
-}
-\end{lstlisting}
-
-\subsection*{A.2 Single helper plus single-letter wrappers}
-
-Replace the 14 \texttt{z?} function definitions with one helper
-and 14 thin wrappers. The wrappers are functions (not aliases)
-because each calls \texttt{cd}. The natural mapping for three
-letters has been remapped to avoid name collisions: \texttt{r}
-(R/) is now \texttt{c}; \texttt{c} (archive/) is now \texttt{h};
-\texttt{w} (raw\_data/) is now \texttt{x}. The single surviving
-override is on \texttt{/opt/X11/bin/x}, reachable via
-\texttt{command x} if ever needed.
-
-\begin{lstlisting}[language=bash]
-# Single helper: find the project root, then cd to a subpath.
-# Routes both failure modes to stderr with distinct messages.
-_zcd() {
-    local subpath="$1" root
-    root=$(_zzcollab_root) \
-        || { print -u2 'Not in a ZZCOLLAB project'; return 1; }
-    cd -- "$root/$subpath" \
-        || { print -u2 "Path missing: $root/$subpath"; return 1; }
-}
-
-# Single-letter navigation wrappers.
-0() { _zcd '';                          }
-a() { _zcd analysis;                    }
-t() { _zcd analysis/data;               }
-x() { _zcd analysis/data/raw_data;      }   # overrides /opt/X11/bin/x
-y() { _zcd analysis/data/derived_data;  }
-s() { _zcd analysis/scripts;            }
-p() { _zcd analysis/report;             }
-f() { _zcd analysis/figures;            }
-c() { _zcd R;                           }   # remapped from r
-m() { _zcd man;                         }
-e() { _zcd tests;                       }
-o() { _zcd docs;                        }
-h() { _zcd archive;                     }   # remapped from c
-g() { _zcd vignettes;                   }
-\end{lstlisting}
-
-\subsection*{A.3 Rewritten \texttt{nav} helper}
-
-Replace the existing \texttt{nav} function with:
-
-\begin{lstlisting}[language=bash]
-# Print the navigation cheat-sheet. Single-letter shortcuts are
-# active only when $PWD is inside a zzcollab project (a directory
-# at or above $PWD contains zzcollab.yaml or an analysis/
-# subdirectory).
-nav() {
-    cat <<'EOF'
-ZZCOLLAB navigation shortcuts (single-letter):
-
-  0  -> project root
-  a  -> analysis/
-  t  -> analysis/data/
-  x  -> analysis/data/raw_data/      (overrides /opt/X11/bin/x;
-                                      use 'command x' for original)
-  y  -> analysis/data/derived_data/
-  s  -> analysis/scripts/
-  p  -> analysis/report/
-  f  -> analysis/figures/
-  c  -> R/                            (R code)
-  m  -> man/
-  e  -> tests/
-  o  -> docs/
-  h  -> archive/                      (history)
-  g  -> vignettes/
-
-Make commands (from any subdirectory):
-  mr          make r (start container)
-  mr test     make test
-  mr <target> make <target>
-EOF
-}
-\end{lstlisting}
-
-\section{Replacement for ss / vv / zz (Phase 6)}
+\section{Replacement for ss / vv / zz (Phase 5)}
 
 Place at \texttt{\textasciitilde/bin/latest-of}:
 
@@ -991,7 +803,7 @@ exec latest-of '\.pdf$' zathura
 \vfill
 \hrule
 \vspace{0.5em}
-{\small \emph{Rendered on 2026-05-03 at 09:34 PDT.}\\
+{\small \emph{Rendered on 2026-05-03 at 11:14 PDT.}\\
 \emph{Source:}
 \texttt{\textasciitilde/prj/qblog/posts/51-scripts-vs-functions/}\\
 \hspace*{1.5em}\texttt{scripts-vs-functions/analysis/configs/}\\

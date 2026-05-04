@@ -781,6 +781,30 @@ artefacts of the migration rather than the framework itself.
     direct source-dir checking is required, add explicit
     `Author:` and `Maintainer:` lines to DESCRIPTION alongside
     `Authors@R`.
+11. **`skip_if_not()` inside `test_that()` was scoped to one
+    test; a flat conversion may halt the entire file.** A
+    naive textual rewrite of
+    `test_that('memory test', { skip_if_not(...); ... })`
+    produces a top-level `if (!cond) exit_file(...)` followed
+    by the body. `exit_file()` halts the entire test file, but
+    in the original the skip applied only to that one
+    `test_that` block; subsequent blocks ran normally.
+    Symptom: the converted suite passes but reports
+    significantly fewer assertions than the testthat baseline,
+    with one entire file showing zero results. Fix: replace
+    the file-level `exit_file()` with a block-level
+    `if (cond) { ... }` wrapper around just the assertions
+    that depend on the condition. Recipe section 6 now
+    documents both forms; pick the one that matches the
+    original scope.
+12. **Argument-name differences in `expect_error` and
+    `expect_warning`.** testthat accepts both `regex =` and
+    `regexp =` as the named-argument form for the matching
+    pattern. tinytest accepts only `pattern =`. Symptom:
+    `unused argument (regex = "...")` or
+    `unused argument (regexp = "...")` errors during the
+    tinytest run. Fix: rename both to `pattern =`. The recipe
+    now lists this in section 12.
 
 # Uninstall / Rollback
 
@@ -1014,12 +1038,23 @@ compendium.
 | `expect_silent(f())`                  | `expect_silent(f())`                      |
 | `expect_snapshot(x)`                  | (no direct equivalent; see pattern 5)     |
 | `expect_s3_class(x, 'cls')`           | `expect_inherits(x, 'cls')`               |
+| `expect_is(x, 'cls')`                 | `expect_inherits(x, 'cls')`               |
 | `expect_type(x, 'closure')`           | `expect_true(is.function(x))`             |
 | `expect_type(x, 'double')`            | `expect_equal(typeof(x), 'double')`       |
 | `expect_named(x, c(...))`             | `expect_equal(sort(names(x)), sort(c(...)))` |
 | `expect_no_error({block})`            | (unwrap; inner assertions stand on their own) |
+| `expect_lt(x, y)`                     | `expect_true(x < y)`                      |
+| `expect_gt(x, y)`                     | `expect_true(x > y)`                      |
+| `expect_lte(x, y)`                    | `expect_true(x <= y)`                     |
+| `expect_gte(x, y)`                    | `expect_true(x >= y)`                     |
+| `expect_error(f(), regex = 'msg')`    | `expect_error(f(), pattern = 'msg')`      |
+| `expect_warning(f(), regexp = 'msg')` | `expect_warning(f(), pattern = 'msg')`    |
 | `skip_on_cran()`                      | `if (!nzchar(Sys.getenv('NOT_CRAN'))) exit_file('CRAN')` |
 | `skip_if_not_installed('pkg')`        | `if (!requireNamespace('pkg', quietly = TRUE)) exit_file('pkg missing')` |
+| `skip_on_ci()`                        | `if (nzchar(Sys.getenv('CI'))) exit_file('CI')` |
+| `skip_if_not(cond, msg)` (per-test)   | `if (cond) { ... }` (block-level wrapper) |
+| `context('label')`                    | (remove; tinytest has no equivalent)      |
+| `library(testthat)` in test files     | (remove; tinytest is implicit at runtime) |
 | `helper-foo.R` (auto-sourced)         | `source('helper_foo.R', local = TRUE)`    |
 
 # Appendix B: A Real Migration on `zzpower` {#appendix-b}
@@ -1137,6 +1172,75 @@ two dry-runs to surface the testthat-namespace contamination
 issue, and patching the recipe with the four newly-discovered
 patterns. The migration commit and follow-up commits are on
 branch `testthat-to-tinytest` of the zzpower repository.
+
+## Second case study: `zztable1`
+
+`zzpower` was small enough that the recipe gaps it surfaced
+might have been idiosyncratic. A second migration on
+`zztable1` (publication-quality summary tables, version
+0.5.0; 13 testthat files, 2,393 LOC, 564 passing assertions
+plus 1 skipped) exercised the recipe at roughly twice the
+scale and exposed five additional patterns the first
+case missed.
+
+Pre-migration, `zztable1` had: 36 `expect_s3_class` calls,
+24 `expect_is` calls (testthat's older alias for the same
+operation), 19 `expect_type` calls, 18 `expect_lt` calls and
+one `expect_gte`, and several `skip_*` invocations including
+an in-block `skip_if_not(capabilities('long.double'), ...)`
+inside a `test_that` block. It also had two condition
+matchers using the `regex =` and `regexp =` argument names,
+a `library(testthat)` line in 10 of the 13 files, and a
+single `context(...)` call.
+
+The migration applied the pattern table in section 12 and
+the conversion-atlas additions, with the following new
+findings folded back into the recipe:
+
+1. **Ordering assertions (`expect_lt`, `expect_gt`,
+   `expect_lte`, `expect_gte`) have no tinytest equivalent.**
+   Replace with `expect_true(x < y)` and similar forms. This
+   added 38 substitutions in `zztable1`; the same pattern
+   added zero in `zzpower` because that package's tests
+   happened not to use ordering assertions.
+2. **`expect_is` is testthat's deprecated alias for
+   `expect_s3_class`.** It behaves identically; the
+   substitute is `expect_inherits`. zztable1's test suite
+   used both forms inconsistently across files.
+3. **`expect_error` and `expect_warning` accept both
+   `regex =` and `regexp =` as the matching-argument name.**
+   tinytest accepts only `pattern =`. Both names need to be
+   renamed.
+4. **A `skip_if_not()` call placed inside a `test_that()`
+   block was scoped to that block alone in testthat.** A
+   naive flat conversion places `exit_file()` at the file
+   level, which halts the entire file. This dropped 12
+   assertions from `test_performance.R` until the conversion
+   was rewritten as a block-level `if (cond) { ... }` wrapper.
+5. **`library(testthat)` calls inside test files and bare
+   `context('...')` declarations** are testthat-specific and
+   must be removed from the converted files. Neither
+   surfaces as an error if the testthat package is still
+   installed (because `library(testthat)` succeeds and
+   `context` is exported), but both are noise that will
+   error once testthat is finally removed from `Suggests`.
+
+After applying these substitutions, **564 of 564 expected
+assertions passed** under `tinytest::test_package('zztable1')`.
+`R CMD check zztable1_0.5.0.tar.gz` reports
+`checking tests ... OK`. Three other warnings remain
+(`build` directory, `dependencies in R code`,
+`package vignettes`), all stemming from a missing
+`zzobj2fig` package in `Suggests/Remotes` and unrelated to
+the migration.
+
+Time spent on `zztable1`: approximately three hours. The
+incremental cost over `zzpower` came almost entirely from
+the five new patterns; the brace-aware conversion script
+itself ran without modification. The recipe has been updated
+to cover all nine testthat-only assertion functions and the
+two scoping issues, so a third migration should not turn up
+additional surprises at this scale.
 
 ---
 
