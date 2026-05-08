@@ -1,0 +1,67 @@
+# Lockfile Validation v1.0 (Tier 1 only)
+#
+# This is a Quarto blog post, not an R package. The R-package
+# skeleton (DESCRIPTION, NAMESPACE, R/, tests/) is scaffolding
+# from zzcollab; the deliverable is the rendered HTML produced
+# by the companion blog-render.yml workflow.
+#
+# This workflow runs Tier 1 only: it restores the lockfile and
+# reports any inconsistency between renv.lock, DESCRIPTION, and
+# the source code's library() calls. R CMD check is intentionally
+# omitted because the project is not a package being shipped.
+#
+# blog-render.yml owns Tier 3 (the render check) and is path-
+# filtered to changes under analysis/report/, renv.lock, and
+# Dockerfile, so it does not fire on every push. This validate
+# workflow runs on every push and catches lockfile drift that
+# would otherwise go silent until the next render-relevant
+# change.
+#
+# See zzcollab/docs/ci-strategy-tiered-model.md for rationale.
+
+name: Lockfile Validation
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+          r-version: 'renv'
+
+      - uses: r-lib/actions/setup-renv@v2
+
+      - name: Report renv status (fail on inconsistency)
+        shell: Rscript {0}
+        run: |
+          status <- renv::status()
+          if (!isTRUE(status$synchronized)) {
+            cat("\n",
+                "renv reports the project is not synchronized.\n",
+                "Run renv::snapshot() locally and commit ",
+                "the updated renv.lock.\n",
+                sep = "")
+            quit(status = 1)
+          }
+          cat("\nrenv: lockfile, library, and source are synchronized.\n")
+
+      - name: zzrenvcheck audit (optional)
+        shell: Rscript {0}
+        run: |
+          if (requireNamespace('zzrenvcheck', quietly = TRUE)) {
+            zzrenvcheck::check_packages()
+          } else {
+            cat('zzrenvcheck not installed; skipping audit.\n')
+          }

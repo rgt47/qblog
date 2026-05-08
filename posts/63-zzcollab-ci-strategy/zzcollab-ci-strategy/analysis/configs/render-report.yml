@@ -1,0 +1,97 @@
+# Compendia CI v1.0 (new-generation) -- Render Report
+#
+# Path-filtered render of analysis/report/report.Rmd via
+# rmarkdown + xelatex, using setup-renv@v2 for dependency
+# restore. Companion to r-package.yml (validate + check).
+#
+# Triggers only on changes that could affect rendered output.
+
+name: Render Report
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'analysis/**'
+      - 'R/**'
+      - 'DESCRIPTION'
+      - 'renv.lock'
+      - '.github/workflows/render-report.yml'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'analysis/**'
+      - 'R/**'
+      - 'DESCRIPTION'
+      - 'renv.lock'
+
+jobs:
+
+  render:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - uses: r-lib/actions/setup-tinytex@v2
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+          r-version: 'renv'
+
+      - name: Install LaTeX packages
+        shell: bash
+        run: |
+          tlmgr install \
+            pdfcrop \
+            fontspec \
+            booktabs multirow wrapfig colortbl pdflscape \
+            tabu threeparttable threeparttablex ulem makecell \
+            xcolor caption siunitx adjustbox microtype environ \
+            varwidth
+
+      - uses: r-lib/actions/setup-renv@v2
+
+      - name: Detect manuscript file
+        id: detect
+        shell: bash
+        run: |
+          MANUSCRIPT=""
+          for candidate in \
+            analysis/report/report.Rmd \
+            analysis/report/manuscript.Rmd \
+            analysis/report/main.Rmd \
+            analysis/report/index.qmd
+          do
+            if [ -f "$candidate" ]; then
+              MANUSCRIPT="$candidate"
+              break
+            fi
+          done
+          if [ -z "$MANUSCRIPT" ]; then
+            MANUSCRIPT=$(find analysis/report \( -name "*.Rmd" -o -name "*.qmd" \) -type f -exec ls -lS {} + 2>/dev/null | head -1 | awk '{print $NF}')
+          fi
+          if [ -z "$MANUSCRIPT" ]; then
+            echo "No manuscript found in analysis/report/"
+            exit 1
+          fi
+          echo "manuscript=$MANUSCRIPT" >> $GITHUB_OUTPUT
+          echo "Detected: $MANUSCRIPT"
+
+      - name: Render manuscript
+        shell: Rscript {0}
+        run: |
+          rmarkdown::render('${{ steps.detect.outputs.manuscript }}')
+
+      - name: Upload rendered output
+        uses: actions/upload-artifact@v4
+        with:
+          name: rendered-report
+          path: |
+            analysis/report/*.pdf
+            analysis/report/*.html
+          if-no-files-found: warn

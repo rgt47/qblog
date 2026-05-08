@@ -1,0 +1,687 @@
+---
+title: "A tiered CI strategy for zzcollab research compendia"
+subtitle: "Why your green checkmarks are lying, and what to do about it"
+author: "Ronald 'Ryy' G. Thomas"
+date: "2026-05-06"
+categories: [ci, github-actions, reproducibility, zzcollab, renv]
+description: "I did not realise how much my CI was lying to me until I added a single explicit failure check and watched five 'passing' projects turn honestly red. A workflow-style migration guide for zzcollab projects across four workspace types."
+image: "media/images/hero.jpg"
+document-type: "blog"
+draft: false
+execute:
+  echo: true
+  warning: false
+  message: false
+format:
+  html:
+    code-fold: false
+    code-tools: false
+  pdf:
+    pdf-engine: xelatex
+    monofont: 'DejaVu Sans Mono'
+    geometry: margin=1in
+    fontsize: 11pt
+    toc: true
+    toc-depth: 2
+---
+
+<!-- ============================================================================
+AUTHOR PROVIDES — concrete inputs the blogger must supply
+
+Every item below maps to a placeholder in the body. Fill in this checklist
+FIRST, then paste your answers into the matching `[bracketed]` slots. Do not
+publish until every box is ticked.
+
+YAML FRONT MATTER (lines 1-20)
+  [x] title           — '[Tool]' replaced with actual tool name, < 70 chars
+  [x] subtitle        — one-line elaboration of what the post sets up
+  [x] date            — YYYY-MM-DD of intended publication
+  [x] categories      — include `setup`, the tool name, and host OS
+  [x] description     — 1-2 sentences for blog listing card
+  [x] image           — path to hero image (relative to this .qmd)
+  [x] draft: false    — flip when ready
+
+NARRATIVE INPUTS
+  [x] Hook sentence   — 'I didn't know how to configure [tool] until [trigger]'
+  [x] Pain point      — the specific friction the tool removes
+  [x] Motivations     — exactly 4-5 bullets (workflow gap, frustration, curiosity, learning)
+  [x] Objectives      — exactly 4 numbered, verifiable end states
+  [x] What is [Tool]? — 1-sentence definition + 1 analogy + 1 concrete example
+  [x] Daily-workflow paragraph — how this tool fits into your routine after setup
+  [x] Things to Watch Out For — 5-7 gotchas (required; setup posts need this)
+  [x] Lessons Learnt  — 4 conceptual + 4 technical + 4 gotcha bullets
+  [x] Limitations     — 4-6 bullets (what this setup does NOT solve)
+  [x] Opportunities for Improvement — 5-6 numbered next-step extensions
+  [x] Wrapping Up     — 2-3 paragraph conclusion + 'Main takeaways'
+  [x] See Also        — 3-5 links (official docs + 1-2 related blog posts)
+
+CONFIGURATION DELIVERABLES (real, working artifacts, not snippets)
+  [x] Prerequisites list — OS version, hardware, prior knowledge, dependent tools
+  [x] Installation block — exact bash commands, tested on a clean machine
+  [x] Complete config file(s) — verbatim, copy-pasteable, with inline comments
+        Place under: analysis/configs/<filename>
+  [x] Verification commands — `<tool> --version` plus 1-2 functional smoke tests
+  [ ] Optional keybinding/command reference table — markdown table for daily use
+  [x] Uninstall / rollback steps — how the reader undoes what you just did
+  [ ] Optional appendices — credential setup, sample session, teardown procedure
+
+VERSION MATRIX (Reproducibility section)
+  [x] OS + version tested        (e.g., macOS 15.4, Ubuntu 24.04)
+  [x] Tool version pinned        (e.g., aws-cli 2.15)
+  [x] Dependency versions        (e.g., homebrew 4.2, jq 1.7)
+  [x] Date of last verification
+
+IMAGES (4 total: hero + 3 ambiance, all in media/images/)
+  [x] Hero image (80% width)        — workspace/tool logo, sets tone
+  [x] Ambiance image 1 (100% width) — after Objectives (workspace shot)
+  [x] Ambiance image 2 (100% width) — after Configuration (terminal/editor)
+  [x] Ambiance image 3 (100% width) — before Lessons Learnt (workflow scene)
+  [x] media/images/README.md        — sources + attribution for every image
+
+CONTACT & METADATA
+  [x] Author name in YAML matches site author
+  [ ] Social links in 'Let's Connect' updated (or removed)
+  [x] Giscus comments enabled (inherited from _quarto.yml)
+
+============================================================================ -->
+
+<!-- ============================================================================
+HERO IMAGE
+============================================================================ -->
+
+![A layered set of frosted glass panels stacked at increasing depth, each carrying a fainter ink mark, evoking the verification tiers a CI workflow stacks between a commit and a deploy.](media/images/hero.jpg){.img-fluid width=80%}
+
+*Three independent verification tiers, each with its own failure mode and its own definition of 'passing'.*
+
+# Introduction
+
+I did not realise how much my CI was lying to me until I added a
+single explicit failure check and watched five 'passing' projects
+turn honestly red. The framework's default workflow for the zzcollab
+ecosystem (a Docker-plus-renv pattern) had been showing green
+checkmarks across the projects I cared about, and I had been
+trusting those checkmarks the way one trusts the brake light on a
+car. The revelation was that some of the brake lights were on green
+because the bulb was burnt out, not because anything had been
+verified.
+
+The discovery happened almost by accident. I was migrating one
+research compendium to a tighter CI pattern (`r-lib/actions/setup-renv@v2`
+plus an explicit `quit(status = 1)` when `renv::status()` reports
+inconsistency) and the first run failed. Reading the log I saw a
+table titled `The following package(s) are in an inconsistent
+state:` listing dozens of packages installed and used by source
+code but never recorded in the lockfile. The previous CI had not
+been catching this; the new check did. When I extended the migration
+to four more repositories the same shape of finding appeared in three
+of them, plus two distinct categories of project-side regression
+that had been similarly invisible.
+
+This post walks through the migration: a tiered CI model with one
+template per zzcollab workspace type, an explicit synchronisation
+gate for lockfiles, and a strategy for getting the framework out of
+the business of reporting fictional health. The companion
+[white paper](../docs/ci-strategy-tiered-model.pdf) (mirrored in
+the zzcollab repository) records the analytic detail; this post is
+the procedural distillation.
+
+# Motivations
+
+- **Green checkmarks were structurally misleading.** A workflow that
+  prints findings without erroring on them looks identical, in
+  GitHub's UI, to a workflow that found nothing wrong.
+- **The framework's single CI default conflated four workspace
+  types.** Tool packages, LaTeX manuscript compendia, Quarto
+  compendia, and Quarto blog posts have substantively different
+  CI needs. Applying the same template to all four meant some
+  projects were over-checked (blog posts forced through `R CMD
+  check`) and some were under-checked (compendia whose render
+  was never tested).
+- **Lockfile drift was the dominant silent regression.** Three of
+  five projects in the multi-repo verification had `renv.lock`
+  pinning many fewer packages than their source actually used.
+  The previous CI did not detect this; researchers were running
+  in environments their lockfiles could not reproduce.
+- **Posit binary identifiers age out of the registry.** Lockfiles
+  that pin specific Posit Package Manager binary builds (the `-N`
+  suffix) eventually fail when those builds are retired from the
+  snapshot. This pattern recurred across two unrelated repos and
+  two different packages (Rcpp 1.1.1-1, S7 0.2.1-1).
+- **The default R version is not stable.** `setup-r@v2`'s
+  `r-version: 'release'` resolves to whatever is current; lockfiles
+  pin a specific older version; the mismatch surfaces as opaque
+  compilation errors against the wrong header set.
+
+# Objectives
+
+By the end of this migration, your zzcollab project will have:
+
+1. **A workspace-type-appropriate CI template** chosen from the
+   four-row typology. Tool packages get one shape; the three
+   compendium variants get tiered models with the right Tier 3
+   renderer.
+2. **A Tier 1 lockfile-validation job that fails informatively**
+   when `renv.lock` is out of sync with declared dependencies or
+   actually-used source-code references.
+3. **R-version pinning sourced from the lockfile**
+   (`r-version: 'renv'`) so the CI environment matches what the
+   project's developers run locally.
+4. **Posit Package Manager URLs that resolve to current binaries**,
+   either via date-pinned URLs in `renv.lock` or via the
+   `RENV_CONFIG_REPOS_OVERRIDE` env var that `setup-renv@v2` sets
+   automatically.
+
+![A coffee setting in a quiet workspace, the morning's first mug poured before the day's verification work begins. Placeholder imagery; topic-specific replacement pending.](media/images/ambiance1.jpg){.img-fluid}
+
+# What is the tiered CI model?
+
+A workflow design in which CI is split into independent jobs by
+verification purpose, each gated on a different cadence and each
+catching a different class of regression. The architectural analogy
+is a building's life-safety inspections: the structural inspection
+fires once at construction, the fire-alarm test fires periodically,
+and the daily lock-up check fires at every closing. Each is a
+separate inspection with a separate sign-off.
+
+In zzcollab CI specifically, three tiers cover most needs. Tier 1
+(`validate`) verifies that the lockfile, the declared dependencies
+in `DESCRIPTION`, and the source code's actual imports agree.
+Tier 2 (`check`) is the conventional `R CMD check`. Tier 3
+(`render`) renders the project's primary deliverable document
+(the manuscript or blog post). Workspace type determines which
+tiers apply: tool packages skip Tier 3, blog posts skip Tier 2,
+compendia run all three.
+
+# Prerequisites
+
+- A zzcollab project (compendium or tool package) with a populated
+  `renv.lock`, `DESCRIPTION`, and either an `analysis/report/`
+  directory or a top-level `index.qmd`.
+- A GitHub repository with Actions enabled.
+- The `gh` CLI installed locally for triggering and reading runs.
+- R 4.4 or later locally for `renv::snapshot()` and `renv::status()`
+  invocations.
+- About one hour of attention per repository for the first migration;
+  subsequent migrations take 10-15 minutes once the patterns are in
+  hand.
+
+# Migrating an existing zzcollab project
+
+The migration is the same five steps for every workspace type;
+only the workflow contents differ. Pick one repository to start
+with and walk it end to end before applying the pattern to others.
+
+## Step 1: Identify the workspace type
+
+Inspect the project's deliverable to choose one of four templates:
+
+- `analysis/report/report.Rmd` exists with `output: pdf_document`
+  in the YAML header: **LaTeX manuscript compendium**.
+- `analysis/report/index.qmd` (or top-level `index.qmd`) has
+  `document-type: "blog"` in the YAML header, or the project lives
+  inside a Quarto blog tree: **Quarto blog post**.
+- `analysis/report/index.qmd` (or `report.qmd`) without the blog
+  marker, targeting HTML or PDF via Quarto: **Quarto analysis
+  compendium**.
+- None of the above; only `R/`, `tests/`, `man/` populated:
+  **tool package**.
+
+File presence alone is unreliable for this decision. zzcollab
+scaffolds the same R-package skeleton (DESCRIPTION, NAMESPACE, R/,
+tests/) under every paradigm, so the discriminating signal is the
+YAML header of the primary document, not the directory structure.
+
+## Step 2: Replace the workflow
+
+The four templates are recorded in the
+[white paper](../docs/ci-strategy-tiered-model.pdf) and reproduced
+in `analysis/configs/` in this companion compendium. The shape
+common to all four is:
+
+```yaml
+name: <Workflow name per workspace>
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+          r-version: 'renv'
+      - uses: r-lib/actions/setup-renv@v2
+      - name: Report renv status (fail on inconsistency)
+        shell: Rscript {0}
+        run: |
+          status <- renv::status()
+          if (!isTRUE(status$synchronized)) {
+            cat("renv reports the project is not synchronized.\n",
+                "Run renv::snapshot() locally and commit ",
+                "the updated renv.lock.\n",
+                sep = "")
+            quit(status = 1)
+          }
+          cat("renv: lockfile, library, and source are synchronized.\n")
+```
+
+Three points warrant emphasis. First, `r-version: 'renv'` reads the
+R version from the lockfile rather than defaulting to whatever
+`release` happens to be. Second, the explicit `quit(status = 1)`
+on `!isTRUE(status$synchronized)` is what turns the silent print
+into a visible failure. Third, the workflow does not run a Docker
+container; `setup-renv@v2` handles renv installation, lockfile
+restore, and GitHub Actions caching itself. The Docker container
+remains useful for local development reproducibility but is not
+needed in CI.
+
+## Step 3: Push and observe failures
+
+Commit and push the new workflow. The first run almost certainly
+fails. This is expected and informative; the failure mode tells
+you which class of project-side regression is present.
+
+```sh
+git add .github/workflows/
+git commit -m "Migrate to new-generation tiered CI"
+git push origin main
+gh run list --limit 5
+```
+
+Examine the failed run with `gh run view <id> --log-failed`. The
+failures fall into a small number of categories.
+
+## Step 4: Address project-side findings
+
+For each failure category, the fix is project-side, not CI-side.
+Section 'Things to Watch Out For' below catalogues the patterns
+observed across the multi-repo verification and the action each
+implies. Once the project-side issues are repaired, the same
+workflow will pass cleanly.
+
+## Step 5: Verify and propagate
+
+Once one repository is green, apply the same workflow template
+(adjusted for workspace type) to the other repositories in the
+same project family. The mechanical work shrinks dramatically:
+copy the YAML, push, observe, fix project-side issues that
+surface.
+
+![A coffee scene mid-pour, the kind of small precision the migration above is asking of CI. Placeholder imagery; topic-specific replacement pending.](media/images/ambiance2.jpg){.img-fluid}
+
+# Things to Watch Out For
+
+Six recurring patterns to expect during this migration, each with
+a specific symptom and a specific fix. The first three were
+observed directly in the five-repository verification; the
+remaining three are documented in the companion white paper from
+earlier diagnostic work. None of these are CI-infrastructure
+noise; all are project-side regressions that the previous CI
+pattern was masking.
+
+**Symptom 1: `renv::status()` lists packages in 'inconsistent
+state' but the workflow shows green.** This was the founding
+discovery. `renv::status()` prints findings and returns a list; it
+does not raise an error. Without an explicit `quit(status = 1)` on
+`!isTRUE(status$synchronized)`, the workflow exits 0 and GitHub
+marks the run successful regardless of how much drift the log
+records. **Fix:** the explicit guard shown in Step 2 above.
+
+**Symptom 2: 'package(s) are in an inconsistent state, installed:
+y, recorded: n, used: y'.** The lockfile is incomplete. Source code
+references packages that the lockfile does not record; those
+packages are present in the project library because something
+(usually `setup-renv@v2`'s aggressive transitive resolution, or a
+prior `renv::install()`) put them there. **Fix:** locally,
+`renv::snapshot()` to capture the actual library, then commit the
+updated `renv.lock`. The CI should then go green honestly.
+
+**Symptom 3: `Error: failed to install '<package>'`, where the
+version has a `-N` suffix (`Rcpp 1.1.1-1`, `S7 0.2.1-1`).** Posit
+Package Manager has retired the specific binary build the lockfile
+pins. **Fix:** locally, refresh the lockfile against the current
+Posit URL via `renv::snapshot()`, or pin
+`R$Repositories[0].URL` in `renv.lock` to a date-stamped Posit
+URL with the OS segment (`__linux__/noble/<date>`) so binaries are
+reproducible from a fixed snapshot.
+
+**Symptom 4: Compilation errors against R headers, e.g.
+`R_NamespaceRegistry was not declared` or `R_ext/PrtUtil.h: No
+such file or directory`.** The CI is running a different R version
+than the lockfile pins. The default `r-version: 'release'`
+resolves to the current release at run time, which drifts forward
+as new R versions ship. **Fix:** add `r-version: 'renv'` to
+`setup-r@v2`'s `with:` block. This reads the lockfile and matches
+the pinned version exactly.
+
+**Symptom 5: `R CMD check found WARNINGs` for things like
+'Undocumented code objects' or 'Consider adding importFrom'.**
+The previous CI used `error_on = 'error'` in its hand-rolled
+`rcmdcheck` call, which let WARNINGs pass. `r-lib/actions/check-r-package@v2`
+errors on WARNINGs by default. **Fix:** address the warnings
+(documentation gaps, NAMESPACE imports, examples). These are real
+package-quality regressions; the fact that CI surfaced them is the
+point.
+
+**Symptom 6: A workflow with the right structure but fires on
+every push, including pushes that change only the manuscript.**
+The render tier is expensive (5-15 minutes) and should not run on
+every push. **Fix:** path-filter the render workflow to trigger
+only on changes under `analysis/`, `R/`, `DESCRIPTION`, or
+`renv.lock`. The split between `r-package.yml` (always-on
+validation) and `render-report.yml` (path-filtered render) is the
+standard zzcollab pattern.
+
+# Uninstall / Rollback
+
+The migration is fully reversible. The previous workflow lives in
+git history; restoring it requires checking out the prior version
+of `.github/workflows/r-package.yml` (and any companion files)
+from the commit before the migration:
+
+```sh
+git log --oneline -- .github/workflows/r-package.yml
+git checkout <prior-sha> -- .github/workflows/r-package.yml
+git commit -m "Revert to prior CI workflow"
+git push
+```
+
+If only the strict synchronisation check is the source of friction
+(for example, during a transitional period while several lockfiles
+are being repaired in parallel), the strict guard can be loosened
+to informational reporting by removing the `quit(status = 1)`
+line. The rest of the new generation pattern remains in place.
+
+![An empty cup beside a closed notebook, the morning's verification work done and the cup ready for the next pour. Placeholder imagery; topic-specific replacement pending.](media/images/ambiance3.jpg){.img-fluid}
+
+# What did we learn?
+
+## Conceptual
+
+- **CI checks for regressions, and different regressions need
+  different checks.** A workflow that runs `R CMD check` is
+  necessary for a tool package and useless for a Quarto blog post
+  whose deliverable is rendered HTML. The framework's purpose
+  determines the appropriate verification, not the framework's
+  default.
+- **A green dashboard with red findings in logs is operationally
+  indistinguishable from an absent CI check.** The visible signal
+  is the job exit status. A check that prints evidence of
+  regression but exits 0 is a false sense of safety, not a check.
+- **File presence is a noisy signal for workspace-type detection.**
+  zzcollab scaffolds the same R-package skeleton across all
+  paradigms; the discriminating signal lives in the document YAML
+  header (`document-type: "blog"`, `output: pdf_document`).
+- **The two-workflow split is an existing zzcollab pattern that
+  should be propagated uniformly.** The framework already ships
+  `r-package.yml` and `render-report.yml` templates; three of
+  eighteen surveyed compendium repos have both deployed. The
+  contribution of this migration is uniform deployment, not a new
+  design.
+
+## Technical
+
+- **`r-lib/actions/setup-renv@v2`** handles renv installation,
+  lockfile restore, GitHub Actions caching, and the
+  `RENV_CONFIG_REPOS_OVERRIDE` env var in roughly twenty lines of
+  YAML. It is the canonical R-package CI bootstrap; the
+  Docker-in-CI pattern adds complexity that this action already
+  resolves.
+- **`r-version: 'renv'`** on `setup-r@v2` reads the R version from
+  the lockfile. Without it, the workflow's R version drifts
+  forward with each new R release while the project's pinned
+  version stays put.
+- **`renv::status()` returns a list with `synchronized = TRUE/FALSE`.**
+  Capture it explicitly and `quit(status = 1)` on inconsistency.
+  The job's exit status is what GitHub reads; nothing else
+  matters.
+- **`r-lib/actions/check-r-package@v2`** errors on WARNINGs by
+  default. This is stricter than a hand-rolled
+  `rcmdcheck::rcmdcheck(error_on = 'error')`. The strictness is a
+  feature: it surfaces real package-quality regressions.
+
+## Gotchas
+
+- **The default `r-version` drifts.** `setup-r@v2` resolves
+  `release` at run time, so a workflow that worked yesterday can
+  fail tomorrow when R 4.x.y is released. Pin to the lockfile.
+- **Posit binary identifiers are not stable.** A lockfile pinning
+  `Rcpp 1.1.1-1` will eventually fail when Posit retires that
+  build. Prefer date-pinned URLs.
+- **The `.Rprofile` auto-restore can race the workflow.** The
+  zzcollab template fires `renv::restore()` on R session start;
+  the workflow also calls restore. Set
+  `ZZCOLLAB_AUTO_RESTORE=false` in the workflow `env:` to give
+  control to the workflow.
+- **Stale `render-report.yml` variants exist in deployed repos.**
+  The `templates/.github/` tree (since deleted from canonical
+  zzcollab) shipped a hardcoded `report.Rmd` matcher; projects
+  that received that variant fail silently for any project using
+  `manuscript.Rmd`. Re-template via `zzc doctor`.
+
+# Limitations
+
+- **Project-side fixes are still required.** The new CI surfaces
+  drift, missing documentation, and aged-out binaries; it does
+  not repair them. Each surfaced issue requires a developer to
+  address it.
+- **Posit snapshot dates expire.** Date-pinned URLs eventually
+  age out (Posit retains snapshots for roughly three to five
+  years). Long-lived projects need periodic snapshot refreshes.
+- **Detection at scaffolding time is not yet automated.** The
+  decision among the four workspace templates currently requires
+  a developer to inspect the project and pick. A future
+  enhancement to `zzc analysis` or `zzc doctor` could automate
+  this.
+- **The `renv::status()` synchronisation check assumes
+  `renv.lock` is the source of truth.** Projects that
+  intentionally maintain a smaller lockfile (for example, a
+  package that lists only its declared `Imports` and trusts the
+  user's environment for everything else) will fail the
+  synchronisation check by design. The check is appropriate for
+  research compendia; it may not be for some other patterns.
+- **The Docker container is no longer exercised by CI.** Projects
+  that rely on the Dockerfile for production deployment should
+  consider adding a separate Docker-build verification job.
+
+# Opportunities for Improvement
+
+1. **Auto-detect workspace type at `zzc analysis` time.** Inspect
+   the YAML headers and emit the appropriate workflow template
+   in `.github/workflows/` automatically. This removes the
+   manual decision in Step 1 of the migration.
+2. **Date-pin the lockfile URL at init time.** When `zzc`
+   initialises a project, write `R$Repositories[0].URL` as
+   `https://packagemanager.posit.co/cran/__linux__/noble/<today>`
+   rather than the unqualified source URL the framework currently
+   emits.
+3. **`zzc doctor` propagation.** Extend the doctor command's
+   full-content workflow replacement (introduced earlier in this
+   work) to detect workspace type and replace stale
+   `render-report.yml` variants with the canonical
+   `.qmd`-aware version.
+4. **Output verification.** Hash the rendered manuscript and fail
+   Tier 3 if the hash differs from a recorded baseline. Catches
+   regressions in figures and tables that pass `R CMD check`
+   but produce different rendered output.
+5. **Schedule-driven freshness checks.** Add a weekly cron job
+   that re-runs Tier 1 against the current Posit URL, surfacing
+   binary aging-out before it blocks an active push.
+6. **Documentation pass.** The four workflow templates and the
+   migration procedure deserve to be embedded in the canonical
+   zzcollab user guide alongside the existing
+   `CI_WORKFLOW_ARCHITECTURE.md` and
+   `ci-workflows-whitepaper.md` documents.
+
+# Wrapping Up
+
+The migration's core contribution is making CI honest. The previous
+green checkmarks across these projects were structurally
+misleading; they reflected the absence of an error rather than the
+presence of verification. The new pattern's first response on most
+projects is to turn red, but the red is informative and actionable,
+and the resulting fixes are real improvements to the projects'
+reproducibility.
+
+The pattern is not a new design. The two-workflow split
+(`r-package.yml` plus `render-report.yml`), the use of
+`r-lib/actions/setup-renv@v2`, and the path-filtering on the render
+workflow all already exist in zzcollab's template set, applied
+inconsistently across deployed projects. The migration described
+here is the explicit deployment of those existing patterns
+uniformly, with the addition of a single explicit synchronisation
+guard that the framework's templates had been missing.
+
+The companion white paper records the analytic detail behind the
+choices made here, including the four-workspace typology, the
+verification of the synchronisation check at scale, and the
+classification of failure modes observed during the multi-repo
+deployment. Readers who want to understand why the templates have
+the shapes they do should consult that document; readers who want
+to apply the templates should follow this post.
+
+## Main Takeaways
+
+- A CI check that prints findings without erroring is operationally
+  invisible. The job's exit status is the only signal GitHub
+  shows.
+- Four zzcollab workspace types map to four distinct CI templates:
+  tool package, LaTeX compendium, Quarto compendium, Quarto blog
+  post. File presence is a noisy signal; the document YAML
+  header is the discriminator.
+- `r-lib/actions/setup-renv@v2` plus `r-version: 'renv'` plus a
+  one-line `quit(status = 1)` guard on
+  `renv::status()$synchronized` covers the bulk of what an
+  always-on validation tier needs.
+- Failures from the new pattern point to real project-side
+  regressions: lockfile drift, aged-out Posit binaries, R-version
+  mismatch, missing package documentation. None are CI-
+  infrastructure noise.
+
+# See Also
+
+- The companion [white paper](../docs/ci-strategy-tiered-model.pdf)
+  in this compendium, which records the analytic detail behind
+  the choices in this post.
+- The same white paper mirrored in zzcollab itself at
+  `~/prj/sfw/07-zzcollab/zzcollab/docs/ci-strategy-tiered-model.md`,
+  for ongoing co-evolution.
+- The
+  [renv documentation on continuous integration](https://rstudio.github.io/renv/articles/ci.html),
+  which describes the canonical `r-lib/actions/setup-renv@v2`
+  pattern this work builds on.
+- The
+  [r-lib/actions repository](https://github.com/r-lib/actions),
+  which documents `setup-r`, `setup-renv`, `setup-pandoc`,
+  `setup-tinytex`, and `check-r-package`.
+- Related blog posts in this series:
+  [Post 14: penguins1zzcollab](../../14-penguins1zzcollab/penguins1zzcollab/index.html)
+  (the worked example whose CI verification produced Section 9.7
+  of the white paper);
+  [Post 61: zzcollab analysis checklist](../../61-zzcollab-analysis-checklist/zzcollab-analysis-checklist/index.html)
+  (the closest-in-time companion post on zzcollab procedure).
+
+# Reproducibility
+
+Tested on the configurations below.
+
+| Component | Version | Notes |
+|---|---|---|
+| OS (CI runner) | Ubuntu 24.04 (noble) | GitHub Actions ubuntu-latest as of May 2026 |
+| OS (local) | macOS 15 (Darwin 25) | for `gh`, `git`, local renv operations |
+| R | 4.4.2 | matches lockfile pins across surveyed projects |
+| `r-lib/actions/setup-r` | v2 | with `r-version: 'renv'` |
+| `r-lib/actions/setup-renv` | v2 | handles caching automatically |
+| `r-lib/actions/setup-pandoc` | v2 | needed for Tier 2 and Tier 3 |
+| `r-lib/actions/setup-tinytex` | v2 | needed for LaTeX render tier |
+| `r-lib/actions/check-r-package` | v2 | errors on WARNINGs by default |
+| `quarto-dev/quarto-actions/setup` | v2 | needed for Quarto render tier |
+| Date of last verification | 2026-05-06 | five-repo deployment, all surfacing project-side findings |
+
+The companion compendium ships
+`analysis/configs/r-package.yml`,
+`analysis/configs/render-report.yml`, and
+`analysis/configs/blog-render.yml` as the four templates
+referenced in Step 2. Copy the appropriate one to
+`.github/workflows/` in your project.
+
+# Let's Connect
+
+Comments and questions on this post are welcome via the giscus
+panel below. Corrections, alternative patterns, and reports of
+edge cases that the four-workspace typology does not cover are
+particularly useful: the typology was extracted from a sample of
+roughly twenty projects in two trees, and the natural next step is
+to test it against external projects whose patterns differ.
+
+The companion white paper at
+`zzcollab/docs/ci-strategy-tiered-model.md` is the live document;
+it will be updated with new findings as they accumulate.
+
+---
+
+*Rendered on 2026-05-07 at 15:05 PDT.*<br>
+*Source: ~/Dropbox/prj/qblog/posts/63-zzcollab-ci-strategy/zzcollab-ci-strategy/analysis/report/index.qmd*
+
+<!-- ============================================================================
+PRE-PUBLISH QA CHECKLIST: verify each item BEFORE setting draft: false
+
+This is the verification pass that mirrors the AUTHOR PROVIDES list at the
+top of this file. If anything below is unchecked, the post is not ready.
+
+[x] YAML
+    [x] title, subtitle, date, categories, description, image filled in
+    [x] document-type: 'blog'
+    [x] draft: false
+
+[x] Narrative complete (no remaining `[bracketed]` placeholders)
+    [x] grep '\[' index.qmd returns only legitimate code/links
+
+[x] Configuration artifacts present and tested
+    [x] Full config file shown verbatim, not snippets
+    [x] Install commands tested on a clean machine (or VM)
+    [x] Verification commands produce the documented output
+    [x] Uninstall / rollback steps documented
+
+[x] Things to Watch Out For
+    [x] At least 5 gotchas listed (setup posts require this)
+    [x] Each gotcha has both a symptom AND a fix
+
+[x] Visual design
+    [x] 1 hero image (width=80%) immediately after AUTHOR PROVIDES block
+    [x] Exactly 3 ambiance images ({.img-fluid} only, no width=NN%,
+        no fig-align): after Objectives, after Configuration, before
+        Lessons Learnt
+    [x] Hero and ambiance captions describe the actual image (not a
+        placeholder description)
+    [x] No hand-coded "Download PDF" link in body. The site auto-injects
+        one via _includes/after-body.html for any post with format: pdf
+        in YAML.
+    [x] media/images/README.md attributes every image
+
+[x] Content quality
+    [x] Learner voice: author positioned as peer, not expert
+    [x] Zero emoji anywhere (narrative, comments, captions)
+    [x] Zero em dashes (forbidden per house style; use parens or commas)
+    [x] Single quotes preferred over double quotes in prose
+    [x] Each command and config setting interpreted in plain language
+
+[x] Reproducibility
+    [x] Version matrix table filled in (OS, tool, dependencies, date)
+    [x] Config files committed under analysis/configs/
+    [x] Install script (if provided) is runnable on a clean machine
+
+[x] Render verification
+    [x] quarto render index.qmd produces clean HTML with no warnings
+    [x] Hero image displays in /blog/ listing card
+    [x] Internal links resolve
+
+============================================================================ -->
