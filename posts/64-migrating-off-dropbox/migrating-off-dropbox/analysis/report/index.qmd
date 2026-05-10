@@ -16,7 +16,7 @@ description: >
   history files that Dropbox handles particularly
   badly. Frames the problem as three layers and walks
   through trade-offs for each.
-image: 'media/images/hero.png'
+image: 'media/images/hero.jpg'
 document-type: 'blog'
 draft: true
 execute:
@@ -50,7 +50,7 @@ YAML FRONT MATTER (lines 1-20)
   [x] date            — 2026-05-07
   [x] categories      — workflow, sync, migration, dropbox
   [x] description     — set
-  [x] image           — media/images/hero.png (placeholder until generated)
+  [x] image           — media/images/hero.jpg (Imagen 3, 2026-05-07)
   [ ] draft: false    — flip when imagery in place and render verified
 
 NARRATIVE INPUTS
@@ -101,17 +101,33 @@ CONTACT & METADATA
 HERO IMAGE
 ============================================================================ -->
 
-![A workspace where a single mounted disk fans out into several local sync mechanisms, suggesting decoupling from a single cloud provider.](media/images/hero.png){.img-fluid width=80%}
+![A wooden tray on a plain workbench, with one large compartment on the left holding a single round glass weight and three narrower compartments on the right holding three different small objects, suggesting a single category being separated into three purpose-fit ones.](media/images/hero.jpg){.img-fluid width=80%}
 
 *A portable dotfiles repository is only the first half of leaving Dropbox. The other half is the rest of the workflow.*
 
 # Introduction
 
-I did not really appreciate how much of my daily workflow depended on Dropbox until I tried to leave it. The dotfiles migration described in [post 24](https://focusonr.org/posts/24-setupdotfilesongithub/) was the obvious half: pull the configuration files out of a cloud-mounted directory, put them under git, write an installer that creates symlinks. After committing that work, every dotfile in `$HOME` was version-controlled and reproducible on a new laptop with two commands.
+I did not really appreciate how much of my daily workflow depended on Dropbox until I tried to leave it. The dotfiles migration described in [post 24](https://focusonr.org/posts/24-setupdotfilesongithub/) is the obvious half: pull the configuration files out of a cloud-mounted directory, put them under git, write an installer that creates symlinks. Once that work is committed, every dotfile in `$HOME` becomes version-controlled and reproducible on a new laptop with two commands.
 
 The non-obvious half is everything else. The dotfiles deploy cleanly on a fresh machine, then the new shell tries to `cd ~/prj/some-project` and fails because the project tree still lives at `~/Library/CloudStorage/Dropbox/prj/`. Backup scripts hardcode the same Dropbox path. AI-tool history files live under a Dropbox-synced symlink and accumulate conflict copies on every overlapping write between machines. The configuration is portable; the workflow is not.
 
 This post is the second half of post 24. It frames the problem as three independent layers (dotfiles, project content, append-only history), surveys the sync mechanisms each layer can use, and walks through a migration sequence that does not break a running pipeline mid-move. The companion deliverable is a decision worksheet that takes a reader from current state to a concrete migration plan. The choice of whether to leave Dropbox at all is left to the reader; this post is about doing it deliberately rather than partially.
+
+::: {.callout-note}
+## Status of this migration
+
+This post documents an ongoing migration on the author's own setup.
+At time of writing, Layer 1 (dotfiles) is complete: the repository
+exists at `~/dotfiles/`, the installer is written and dry-run-tested,
+and the architecture below has been exercised end-to-end on this
+laptop. Layer 2 (project content) and Layer 3 (append-only history)
+are in progress. The framework is presented as it stands today; the
+'After completing this migration' results section near the end is
+labelled as expected outcomes rather than claimed ones, and will be
+updated with measured numbers once the migration reaches a fresh
+laptop. The companion plan tracking this work is available in the
+dotfiles repository as `MULTI_LAPTOP_PLAN.md`.
+:::
 
 ## Motivations
 
@@ -130,7 +146,7 @@ This post is the second half of post 24. It frames the problem as three independ
 
 I am documenting my own migration here. If you spot errors or have better approaches, please let me know.
 
-![A workspace ambiance shot suggesting layered organisation: notebook, terminal, and reference materials arranged in distinct zones.](media/images/ambiance1.png){.img-fluid}
+![A wooden desk seen from above with three small index cards arranged in a horizontal row, each card showing a hand-drawn symbol, suggesting classification before action.](media/images/ambiance1.jpg){.img-fluid}
 
 # What is the Problem?
 
@@ -142,7 +158,7 @@ The problem is that 'sync everything via one cloud provider' was a reasonable de
 
 A useful analogy: it is the same reason a research compendium separates `data/`, `R/`, and `analysis/`. Each directory has different rules about what changes, how it changes, and who is allowed to change it. Lumping them all into one sync mechanism enforces no useful constraint and produces friction at the boundary.
 
-A concrete example from this migration: the file `~/.claude/history.jsonl` is an append-only log of prompts entered into the Claude Code CLI. Five machines write to it through a Dropbox-synced symlink. Most days, only one machine is active and the file syncs cleanly. The day two machines write within the same minute, Dropbox cannot merge the two append streams and creates a conflict copy. Across April 2026 alone, this produced six new conflict copies on this account, each holding several hundred KB of unique prompts. The file format is not the problem; the choice to sync an append log via a whole-file cloud provider is.
+A concrete example from this migration: the file `~/.claude/history.jsonl` is an append-only log of prompts entered into the Claude Code CLI. Five machines (athena, Joe, julia.local, MacBook-Air.local, and the author's primary laptop) write to it through a Dropbox-synced symlink. Most days, only one machine is active and the file syncs cleanly. The day two machines write within the same minute, Dropbox cannot merge the two append streams and creates a conflict copy. Across April 2026 alone, this produced four new conflict copies on this account, each holding several hundred KB of unique prompts; the running total since January is eleven. The file format is not the problem; the choice to sync an append log via a whole-file cloud provider is.
 
 # Prerequisites
 
@@ -237,11 +253,11 @@ The order of operations matters because the backup pipeline must remain valid at
 
 The sequence is robust to interruption. If you stop after step 3, you have a working pilot and the backup pipeline still works. If you stop after step 5, the workflow is independent and you have not yet decided about history files.
 
-![Editor or terminal showing the migration in progress: a directory tree being reorganised, with both old and new paths visible.](media/images/ambiance2.png){.img-fluid}
+![Two open-top boxes side by side on a workbench, the left box full of mixed objects and the right box divided into three sorted compartments, with a single object mid-transfer between them.](media/images/ambiance2.jpg){.img-fluid}
 
 # Things to Watch Out For
 
-The six gotchas that hurt the most during the migration. Each lists the symptom and the fix.
+Seven gotchas to anticipate during the migration. Each lists the symptom and the fix.
 
 1. **The backup pipeline goes stale silently.** Symptom: `backup-gdrive` runs every night, exits 0, but the syncthing folder it backs up has not changed in a week because the source path no longer exists. Fix: `rclone sync` exits 0 even when the source is empty, so add an explicit `[[ -d $PRJ_ROOT ]]` guard at the top of every backup script and fail loud on missing source.
 2. **Cloud-mounted git working trees corrupt their indexes.** Symptom: `git status` reports phantom changes; `git fsck` finds dangling refs; the working tree is inconsistent. Fix: never put `~/dotfiles/` inside `~/Dropbox/`, `~/Library/CloudStorage/...`, or `~/Library/Mobile Documents/`. Git's frequent writes to `.git/index` race with the cloud provider's sync engine. The repo MUST be on a non-synced filesystem path.
@@ -249,6 +265,7 @@ The six gotchas that hurt the most during the migration. Each lists the symptom 
 4. **Append-only history conflict copies do not announce themselves.** Symptom: a file named `history (machine's conflicted copy YYYY-MM-DD).jsonl` appears next to the canonical file, with no notification, no error, no merge prompt. Fix: a weekly grep for 'conflicted copy' across the Dropbox tree, or an explicit migration of the affected files out of cloud sync.
 5. **launchd plist substitutions overwrite themselves.** Symptom: an edit to `~/dotfiles/launchd/local.backup.research.plist` does not change the running job, because `install.sh` sed-substitutes `__USER__` to `$USER` when writing to `~/Library/LaunchAgents/`, and the active plist is the substituted copy. Fix: do not edit the active plist directly; edit the source in `~/dotfiles/launchd/`, then re-run `install.sh` plus `launchctl bootout` and `launchctl bootstrap`.
 6. **Project content includes runtime artefacts that should not move.** Symptom: a 200 MB `renv/library/` directory comes along with a project move and now lives at `~/prj/<project>/renv/library/`, where renv expects to manage it. Fix: confirm `.gitignore` excludes the right paths before pushing; add `**/renv/library/` to the dotfiles repo's `.gitignore` if you ever accidentally track one.
+7. **In-place editors race with cloud sync and truncate files to zero bytes.** Symptom: `sed -i.bak file`, `awk -i inplace`, or `perl -i` against a path under `~/Library/CloudStorage/...` returns 0 but leaves the file empty. The `.bak` saved by `-i.bak` is also placed in cloud storage and is subject to the same race; on the incident that produced this gotcha, both the file and its backup were lost locally and required Dropbox version-history restore. Fix: never run `-i`-style editors on cloud-mounted paths. Either use the Edit tool / a real editor, or copy to `/tmp`, edit, and `mv` back. (If the dotfiles repo is on a non-synced path per gotcha 2, this hazard is confined to scripts that touch `~/Library/CloudStorage/...` from elsewhere.)
 
 # Uninstall / Rollback
 
@@ -264,7 +281,7 @@ This is also the recommended path for a reader who completed the dotfiles work b
 
 To roll back the entire migration: the dotfiles installer's `--dry-run` should never have shipped destructively, so the rollback is just `rm -rf ~/dotfiles` plus restoring `$HOME` from a Time Machine backup. Most readers will not need this.
 
-![A workspace ambiance shot suggesting completion: a laptop closed, a notebook open to a page of summary notes.](media/images/ambiance3.jpg){.img-fluid}
+![A closed wooden chest with three small brass clasps on a stone surface, an open notebook and a capped fountain pen beside it, suggesting a deliberate and completed reorganisation.](media/images/ambiance3.jpg){.img-fluid}
 
 # What Did We Learn?
 
@@ -307,15 +324,17 @@ To roll back the entire migration: the dotfiles installer's `--dry-run` should n
 
 # Wrapping Up
 
-A portable dotfiles repository is the first half of a Dropbox-free workflow; this post has been the second half. The key idea: stop treating sync as a single dimension and start treating it as three layers (configuration, project content, append-only history) with different semantics and different right answers.
+A portable dotfiles repository is the first half of a Dropbox-free workflow; this post is the framework for the second half. The key idea: stop treating sync as a single dimension and start treating it as three layers (configuration, project content, append-only history) with different semantics and different right answers.
 
 Most of the work is in the inventory and decision step, not in the moves themselves. Once each artefact is classified and each layer has a chosen mechanism, the actual migration is a sequence of small file moves and a few text edits. The pieces that take time are testing the new-machine bootstrap, deciding what to do about history files, and resisting the temptation to migrate everything in one weekend.
 
-After completing this migration on a real workflow:
+## Expected outcomes
 
-- New-laptop setup is `git clone … ~/dotfiles && ./install.sh && (per-project git clones)`. About 30 minutes from clean machine to working environment.
-- Conflict copies of `history.jsonl` and similar files have not recurred.
-- Backup pipelines source from `$PRJ_ROOT`, which can point anywhere; Dropbox is no longer load-bearing.
+The architecture aims to deliver three measurable end states. The first is verifiable now (Layer 1 is complete on the author's primary laptop); the other two will be confirmed and updated with measured numbers when Layer 2 and Layer 3 land.
+
+- **New-laptop setup** is `git clone … ~/dotfiles && ./install.sh && (per-project git clones)`. The plan budget is roughly 30 minutes from clean machine to working environment; the actual figure will be added after a fresh-VM bootstrap is run.
+- **Conflict copies of `history.jsonl` and similar files** should stop recurring once the affected files are moved out of Dropbox sync. The post will be updated with the post-migration count once Layer 3 is applied.
+- **Backup pipelines** will source from `$PRJ_ROOT`, which can point anywhere; once Layer 2 lands, Dropbox is no longer load-bearing for the workflow.
 
 **Main takeaways:**
 
@@ -328,6 +347,7 @@ After completing this migration on a real workflow:
 - Post 24, [Creating a GitHub Dotfiles Repository](https://focusonr.org/posts/24-setupdotfilesongithub/) — the prerequisite. This post is its sequel.
 - Post 20, [Setting Up a Comprehensive Research Backup System on macOS](https://focusonr.org/posts/20-researchbackupsystem/) — three-tier backup architecture; most of the relevant launchd-plist patterns originate there.
 - Post 22, [Launching AWS EC2 Instances with Bash Scripts and the AWS CLI](https://focusonr.org/posts/22-serversetupawscli/) — the worked example of `__USER__` substitution and CLI-driven deployment.
+- `MULTI_LAPTOP_PLAN.md` (in the dotfiles repository) — the live action plan tracking this migration, with done-marks and effort estimates for each step. `MIGRATION_NOTES.md` in the same repository captures what was copied and what was deliberately excluded during the Layer 1 move.
 - [Syncthing documentation](https://docs.syncthing.net/) — peer-to-peer sync, the most-recommended Dropbox replacement for project content.
 - [Atuin](https://atuin.sh/) — the cleanest answer to 'I want my shell history across machines'; an example of append-aware sync done right.
 - [The XDG Base Directory Specification](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html) — the underlying convention that determines where each XDG-aware tool actually puts its files; relevant when choosing between `~/.cache`, `~/.local/share`, and `~/.local/state`.
@@ -359,7 +379,7 @@ I would enjoy hearing from you if:
 
 ---
 
-*Rendered on 2026-05-07 at 16:14 PDT.*<br>
+*Rendered on 2026-05-08 at 06:10 PDT.*<br>
 *Source: ~/Dropbox/prj/qblog/posts/64-migrating-off-dropbox/migrating-off-dropbox/analysis/report/index.qmd*
 
 <!-- ============================================================================
