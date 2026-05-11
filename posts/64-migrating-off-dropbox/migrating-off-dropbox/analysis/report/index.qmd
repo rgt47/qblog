@@ -236,6 +236,54 @@ Time depends on mailbox size; a 3 GB mailbox over residential broadband is rough
 
 The one cost of this pattern is that mail is not available offline until the first `mbsync -a` completes. For mutt users this is rarely a meaningful constraint; for users who need immediate offline access on a fresh laptop, an `rsync` of a recent Maildir snapshot from the previous laptop into `~/.local/share/mail/` skips the IMAP fetch step.
 
+### Worked example: relocating an existing Maildir to ~/.local/share/mail/
+
+A common starting point for long-time mutt users is a Maildir at `~/Mail/` (the convention from before the XDG Base Directory specification existed). The relocation to `~/.local/share/mail/` is mechanical, and the cache-and-index can be moved in place rather than re-downloaded. The steps below assume mutt + mbsync + notmuch and a single Gmail account at `~/Mail/gmail/`; generalisation to other layouts is direct.
+
+```bash
+# 1. Stop any running mbsync. If a launchd job runs mbsync on a
+#    schedule, bootout it temporarily.
+pkill -f mbsync || true
+launchctl bootout "gui/$UID/local.mbsync" 2>/dev/null || true
+
+# 2. Cheap insurance: dump the notmuch tag database. Tags are user
+#    state; the message index can be rebuilt, the tags cannot.
+notmuch dump --output="$HOME/notmuch-dump-$(date +%Y%m%d).txt"
+
+# 3. Move the Maildir AND .notmuch together. They must move
+#    atomically to keep the Xapian database's relative paths valid.
+mkdir -p ~/.local/share/mail
+mv ~/Mail/gmail   ~/.local/share/mail/gmail
+mv ~/Mail/.notmuch ~/.local/share/mail/.notmuch
+
+# 4. Update the dotfiles repo (Layer 1, single source of truth)
+#    BEFORE editing any live config under $HOME. Edit:
+#       ~/dotfiles/editors/notmuch-config         (path = $HOME/.local/share/mail)
+#       ~/dotfiles/config/mutt/muttrc             (folder, spoolfile, postponed, record)
+#       ~/dotfiles/mbsyncrc                        (Path, Inbox under each MaildirStore)
+#    Commit and push. (The dotfiles repo is OUTSIDE cloud-mounted
+#    paths per Layer 1, so in-place editors are safe to use here.)
+
+# 5. Reflect the dotfiles changes into $HOME (idempotent).
+cd ~/dotfiles && ./install.sh
+
+# 6. Verify.
+mbsync -a                  # Resumes incrementally; should NOT re-download.
+notmuch search '*' | head  # Confirms the index resolves message paths.
+mutt -e 'exit'             # Opens and exits cleanly with the new paths.
+
+# 7. Re-enable the scheduled mbsync once verification passes.
+launchctl bootstrap "gui/$UID" \
+    ~/Library/LaunchAgents/local.mbsync.plist
+```
+
+Two points worth flagging:
+
+- The notmuch Xapian database stores message paths relative to `database.path`. Moving the Maildir and `.notmuch` together preserves those relative paths, so `notmuch new` is not required. If for any reason you move them separately, the index becomes invalid and `notmuch new` is needed to rebuild it.
+- Step 4 (update the dotfiles repo first) is the step the obvious version of this recipe omits. Editing the live `~/.config/mutt/muttrc` directly before updating the repo copy makes the two diverge. A second laptop bootstrapped from the repo today would deploy a muttrc that points at a Maildir that does not exist. Always edit the repo file, then `install.sh`.
+
+The pre-XDG location (`~/Mail/`) can be deleted after a few days of confirmed working state; keep it around briefly as a rollback target.
+
 ## Layer 3: Append-only history files
 
 This layer is small in bytes but disproportionate in friction. The relevant files:
