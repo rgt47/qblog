@@ -209,6 +209,33 @@ Most readers benefit from a hybrid: per-project git remotes for code (the bulk o
 
 The single most consequential observation in this migration: 'project content' is not a homogeneous category. Splitting it into 'code' and 'data' before choosing a mechanism makes every subsequent decision easier.
 
+### Reconstructable local caches: the Maildir case
+
+A subset of what looks like Layer 2 data is in fact a local cache of a canonical source that already lives elsewhere. For these, the right move is not to choose a sync mechanism at all; it is to let each machine rebuild its copy from the authoritative source on demand.
+
+The worked example: a Maildir-based mail setup with mutt, mbsync, and notmuch. The IMAP server holds the canonical mailbox. `mbsync` mirrors a subset of folders into a local Maildir at `~/.local/share/mail/` (or any other non-synced path; the XDG `~/.local/share/<app>/` location is a sensible default). `notmuch new` indexes the Maildir into a local Xapian database. `mutt` reads the Maildir directly. On a second laptop, the same configs deploy via Layer 1, the same `mbsync` runs from a launchd job, the local Maildir gets repopulated from IMAP, and `notmuch new` rebuilds the index. There is nothing to sync between the two laptops; the IMAP server is doing the synchronisation by being the canonical source.
+
+Putting the Maildir in Dropbox is wrong on four counts. It duplicates the work IMAP already does. It triples the disk footprint (IMAP + Dropbox + local). Maildir's one-message-per-file format produces hundreds of thousands of small files that strain cloud-sync engines. And the notmuch Xapian database is a B-tree-on-disk format that is not safe to share between processes on different machines via file sync.
+
+The same pattern applies to a broader class of local artefacts: Homebrew's package cache (`~/Library/Caches/Homebrew/`), language-server indexes, browser caches, ccache, AI-model caches that hash to the same content given the same prompts. None of these need to be synced between machines; each is a derivative of an authoritative source and is rebuilt cheaply on demand. Treat them as per-machine state, exclude them from any sync mechanism, and add the rebuild step to the new-machine bootstrap if it does not happen automatically.
+
+The new-laptop bootstrap for the Maildir case, after `install.sh` has deployed the configs:
+
+```bash
+# Restore IMAP/SMTP credentials (manual; from pass / keychain / 1Password).
+# Then:
+mbsync -a                        # populate ~/.local/share/mail/
+notmuch new                      # build the Xapian index
+launchctl bootstrap "gui/$UID" \
+  ~/Library/LaunchAgents/local.mbsync.plist
+launchctl bootstrap "gui/$UID" \
+  ~/Library/LaunchAgents/local.notmuch.new.plist
+```
+
+Time depends on mailbox size; a 3 GB mailbox over residential broadband is roughly 30-60 minutes. The two scheduled jobs keep the Maildir current thereafter.
+
+The one cost of this pattern is that mail is not available offline until the first `mbsync -a` completes. For mutt users this is rarely a meaningful constraint; for users who need immediate offline access on a fresh laptop, an `rsync` of a recent Maildir snapshot from the previous laptop into `~/.local/share/mail/` skips the IMAP fetch step.
+
 ## Layer 3: Append-only history files
 
 This layer is small in bytes but disproportionate in friction. The relevant files:
@@ -340,7 +367,8 @@ The architecture aims to deliver three measurable end states. The first is verif
 
 1. The dotfiles layer is the wedge, not the goal. Once it is in place, the rest of the migration is mechanical.
 2. 'Project content' is two layers in disguise: code (wants git) and data (wants something else). Separate them before choosing a mechanism.
-3. Append-only files are the only category that benefits from sophisticated sync; for everything else, simpler is better.
+3. Some of what looks like 'data' is actually a local cache of an authoritative source elsewhere (Maildir from IMAP, Homebrew cache, language-server indexes). For these, do not sync at all; rebuild on each machine from the canonical source.
+4. Append-only files are the only category that benefits from sophisticated sync; for everything else, simpler is better.
 
 # See Also
 
