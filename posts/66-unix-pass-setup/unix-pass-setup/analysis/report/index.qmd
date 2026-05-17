@@ -113,16 +113,23 @@ storage format without paying for a subscription.
 
 The turning point came when I discovered `pass`, the standard Unix
 password manager. It stores every password as a GPG-encrypted file in a
-plain directory tree. The store lives in `~/.password-store/`, can be
-tracked in git, and requires no proprietary client to read: any machine
-with GPG installed can decrypt an entry. The architecture is almost
-comically simple, which is precisely what makes it trustworthy.
+plain directory tree. The store lives in `~/.password-store/` (a
+non-cloud-mounted path, outside any Dropbox or iCloud hierarchy), can be
+tracked in a private git repository, and requires no proprietary client
+to read: any machine with GPG installed can decrypt an entry. The
+architecture is almost comically simple, which is precisely what makes
+it trustworthy.
 
 This post documents the setup procedure: generating a GPG key, installing
 `pass`, initialising the store, and migrating a 1Password vault. It also
-records the incident that followed the migration -- accidentally
-committing `.password-store` to a public dotfiles repository -- and the
-steps taken to recover.
+records the incident that followed the migration: accidentally committing
+`.password-store` to a public dotfiles repository. That incident was a
+symptom of a prior architectural error: the store had been placed under
+a Dropbox-synced path, which is wrong on two grounds. First, a git
+repository in a cloud-mounted directory is subject to index corruption
+from sync races (a point developed in [post 64](https://focusonr.org/posts/64-migrating-off-dropbox/)). Second, an encrypted
+credential store belongs to no one's sync pipeline but your own. This
+post corrects both errors.
 
 ## Motivations
 
@@ -140,6 +147,11 @@ steps taken to recover.
 - A terminal-native workflow integrates naturally with the rest of a
   command-line research environment without requiring a browser
   extension or GUI application.
+- A new-laptop bootstrap (per [post 64](https://focusonr.org/posts/64-migrating-off-dropbox/)) needs working credentials before
+  anything credential-dependent can run. `pass` provides the
+  mechanism: import the GPG key, pull the store from a private
+  remote, and the bootstrap sequence can proceed without
+  interactive password entry or a running Dropbox client.
 
 ## Objectives
 
@@ -289,26 +301,46 @@ pass ls
 
 `pass ls` displays the full tree of stored entries.
 
-## Step 4: Initialise git Tracking and Push to a Remote
+## Step 4: Initialise git Tracking
 
 `pass` can manage a git repository inside the store automatically.
-Initialise it and push to a private remote for off-site backup and
-multi-device access:
+Every `pass insert`, `pass edit`, and `pass rm` is then committed
+without any extra steps.
 
 ```sh
 pass git init
-pass git remote add origin git@github.com:yourusername/password-store.git
+```
+
+Use `pass git log` to review history. To push to a remote (for
+off-site backup), add one now:
+
+```sh
+pass git remote add origin git@your-private-host:password-store.git
 pass git push -u origin main
 ```
 
-After this, every `pass insert`, `pass edit`, and `pass rm` operation
-is automatically committed. Use `pass git log` to review history and
-`pass git push` to sync to the remote.
+**Choose the remote carefully.** The post-64 framework (see
+[Migrating Off Dropbox](https://focusonr.org/posts/64-migrating-off-dropbox/)) treats credentials as outside the sync
+layers that project content uses. The password store should not go
+to a public cloud git host, even in a 'private' repository: the
+entry names are metadata (they reveal which services you have
+accounts with) and a breach of the host exposes that metadata and
+the ciphertext. Prefer one of:
+
+- A self-hosted Gitea or Forgejo instance on a home server or NAS.
+- A VPS you control, accessed over SSH.
+- No remote at all, with periodic offline exports of the GPG key
+  and store as the backup strategy (see Uninstall / Rollback).
+
+Accepting per-machine state for the password store (no remote sync,
+manual key import on each new machine) is architecturally honest and
+the simplest option for single-laptop setups.
 
 ::: {.callout-warning}
-The remote repository must be private. Even though entries are
-GPG-encrypted, a public repository exposes the names of every service
-you have an account with.
+Do not use GitHub, GitLab.com, or any third-party-hosted git service
+as the remote for your password store. Even a 'private' repository
+on those services places your credential metadata and ciphertext
+under a third party's access controls.
 :::
 
 ## Step 5: Guard the Store Against Accidental git Commits
@@ -416,6 +448,27 @@ memory built up around a GUI password manager. The clipboard-copy
 workflow (`pass -c name`) integrates cleanly with browser login
 fields and terminal credential prompts alike.
 
+## New-Laptop Bootstrap Position
+
+In the three-layer bootstrap sequence from [post 64](https://focusonr.org/posts/64-migrating-off-dropbox/), credentials must
+be available before any credential-dependent step (IMAP sync, cloud
+storage auth, API key injection) can run. The pass setup therefore
+belongs immediately after the dotfiles layer, before any service
+authentication:
+
+```
+1. git clone ~/dotfiles && cd ~/dotfiles && ./install.sh
+2. gpg --import private-key.asc          # from offline backup
+3. pass git clone git@your-host:pass.git ~/.password-store
+4. pass ls                                # verify store is readable
+5. mbsync -a                             # now IMAP credentials exist
+6. ... (remaining bootstrap steps)
+```
+
+The offline key backup (`gpg --export-secret-keys --armor ...`) is
+a prerequisite for step 2 on any new machine. Keep it on encrypted
+removable media, not in cloud storage.
+
 # Things to Watch Out For
 
 1. **The `.password-store` directory must not appear in any public
@@ -456,6 +509,16 @@ fields and terminal credential prompts alike.
    requires re-encrypting every entry.** The `.gpg-id` file stores
    the recipient identity; changing it with `pass init new@email`
    triggers a batch re-encryption of the whole store.
+
+8. **Pass for iOS generates its own SSH key pair; you must add that
+   key to GitHub, not your desktop key.** A common mistake is
+   copying the desktop SSH public key to GitHub while the iOS app
+   is using a different key it generated internally. The symptom is
+   a 'permission denied (publickey)' error on every sync attempt.
+   Go to the app's Settings, copy the displayed public key, and
+   add it as a separate entry in your GitHub SSH keys. Also verify
+   that the GPG key fingerprint shown in the app matches the
+   fingerprint in `~/.password-store/.gpg-id`.
 
 # Uninstall / Rollback
 
@@ -540,10 +603,12 @@ secured and at rest.](media/images/ambiance3.png){.img-fluid}
 - **Multi-device synchronisation is manual.** `pass` can push and
   pull from a git remote, but the user must manage this explicitly;
   there is no background sync daemon.
-- **Mobile access requires a companion app.** Pass for iOS (and
-  Android equivalents) exist and work well, but they require
-  importing the GPG private key to the device, which raises its
-  own security considerations.
+- **Mobile access requires a companion app and key transfer.** Pass
+  for iOS exists and syncs via a git remote, but it requires
+  importing the GPG private key to the device. The key transfer
+  itself (AirDrop or similar) is a security event: the private key
+  is briefly in plaintext and in transit. See Appendix A for the
+  full procedure.
 - **No breach monitoring.** Unlike some commercial managers, `pass`
   does not check credentials against known-breached password lists.
 - **Bulk password generation is not built in.** Generating unique
@@ -557,11 +622,12 @@ secured and at rest.](media/images/ambiance3.png){.img-fluid}
 
 ## Opportunities for Improvement
 
-1. Push the store to a private git remote (a self-hosted Gitea
-   instance or a private GitHub repository) for off-site backup
-   and multi-device access.
-2. Install and configure Pass for iOS to enable mobile access
-   without typing passwords manually.
+1. Push the store to a private GitHub repository using
+   `pass git init` and `pass git remote add` (covered in
+   Configuration Step 4 above).
+2. Install and configure Pass for iOS to enable mobile access;
+   see Appendix A for the git sync, GPG key export, and SSH
+   configuration procedure.
 3. Configure the GPG agent to use a hardware security key
    (YubiKey) so the private key never exists in plaintext on disk.
 4. Add a shell alias (e.g., `alias p='pass -c'`) to reduce the
@@ -613,9 +679,16 @@ created, not after.
 
 **Related posts:**
 
+- Post 64, [Migrating Off Dropbox: Beyond Dotfiles](https://focusonr.org/posts/64-migrating-off-dropbox/):
+  the three-layer framework that defines where the password store
+  belongs in a multi-laptop workflow and why cloud-mounted git
+  repos are structurally wrong.
+- Post 24, [Creating a GitHub Dotfiles Repository](https://focusonr.org/posts/24-setupdotfilesongithub/):
+  the dotfiles layer that must be in place before the bootstrap
+  sequence in this post makes sense.
 - [Setting Up Git on a New Machine](https://focusonr.org/posts/setupgit/):
   relevant if you plan to track the password store in a private
-  git remote
+  self-hosted git remote.
 
 ---
 
@@ -653,6 +726,96 @@ pass -c test/smoke         # confirm clipboard copy works
 
 *Rendered on 2026-05-17 at 09:08 PDT.*<br>
 *Source: ~/prj/qblog/posts/66-unix-pass-setup/unix-pass-setup/analysis/report/index.qmd*
+
+---
+
+# Appendix A: iOS Sync with Pass for iOS {#appendix-a}
+
+The Pass for iOS app reads the same GPG-encrypted `.gpg` files that
+the desktop `pass` command produces. Once the store is in a private
+git remote (Configuration Step 4), the iOS app can pull and decrypt
+entries on the device. The procedure has four parts.
+
+## A.1 Confirm the Remote is Set Up
+
+From the desktop:
+
+```sh
+pass git remote -v
+# Should show: origin  git@your-private-host:password-store.git
+pass git push
+```
+
+If no remote is configured, add one first (see Configuration Step 4).
+Note that this remote should be a self-hosted server, not a
+public cloud service. The iOS app will pull directly from the
+same remote.
+
+## A.2 Export the GPG Key
+
+The app needs your private key to decrypt entries. Export both the
+public and private key to armored text files:
+
+```sh
+gpg --export-armor YOUR_KEY_ID > public.asc
+gpg --export-secret-keys --armor YOUR_KEY_ID > private.asc
+```
+
+Transfer `private.asc` to the iPhone securely. AirDrop is
+acceptable for this step: the file is protected only by your GPG
+passphrase, so ensure the passphrase is strong before transferring.
+Delete the `.asc` files from the desktop immediately after transfer.
+
+::: {.callout-warning}
+The exported private key is a sensitive file. Do not email it, do
+not store it in Dropbox or iCloud unencrypted, and delete it from
+the Files app on the iPhone after importing into Pass.
+:::
+
+## A.3 Configure the iOS App
+
+Install **Pass - Password Store** from the App Store. In the app:
+
+1. Go to **Settings → Password Store**.
+2. Set the **Git Repository URL** to your GitHub remote.
+
+**HTTPS (recommended for simplicity):**
+
+- Use your GitHub username and a Personal Access Token (not your
+  account password). Generate a token at GitHub → Settings →
+  Developer Settings → Personal Access Tokens → Fine-grained
+  tokens. Grant it read and write access to the password-store
+  repository only.
+
+**SSH (if preferred):**
+
+- The app generates its own SSH key pair. Go to
+  **Settings → SSH Key**, copy the public key displayed, and add
+  it as a new entry at GitHub → Settings → SSH and GPG Keys.
+  Do not add your desktop key; the app uses a different key.
+
+## A.4 Import the GPG Key and Sync
+
+1. In the app, go to **Settings → PGP Key → Import Key**.
+2. Select the `private.asc` file from Files.
+3. Enter your GPG passphrase when prompted.
+4. Tap **Sync**. The app pulls the repository and decrypts the
+   entry list.
+
+Confirm that a known entry is visible and tappable. Tapping an
+entry copies the password to the iOS clipboard.
+
+## A.5 Common Snags
+
+- **'Permission denied (publickey)' on sync:** the app's SSH key
+  has not been added to GitHub. Copy the public key from
+  Settings → SSH Key and add it at github.com/settings/keys.
+- **'No secret key' decryption error:** the fingerprint in the
+  app does not match the `.gpg-id` in the repository. Check
+  both values: `cat ~/.password-store/.gpg-id` on the desktop,
+  Settings → PGP Key in the app.
+- **HTTPS 401 error:** the Personal Access Token has expired or
+  was not granted write access to the repository. Regenerate it.
 
 ---
 
