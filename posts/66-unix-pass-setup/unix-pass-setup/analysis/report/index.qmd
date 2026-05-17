@@ -147,11 +147,6 @@ post corrects both errors.
 - A terminal-native workflow integrates naturally with the rest of a
   command-line research environment without requiring a browser
   extension or GUI application.
-- A new-laptop bootstrap (per [post 64](https://focusonr.org/posts/64-migrating-off-dropbox/)) needs working credentials before
-  anything credential-dependent can run. `pass` provides the
-  mechanism: import the GPG key, pull the store from a private
-  remote, and the bootstrap sequence can proceed without
-  interactive password entry or a running Dropbox client.
 
 ## Objectives
 
@@ -583,94 +578,6 @@ not in cloud storage.
    Also verify that the GPG key fingerprint shown in the app matches
    the fingerprint in `~/.password-store/.gpg-id`.
 
-# Security Considerations
-
-The following items do not fit neatly into the setup steps but
-materially affect the security posture of the overall credential
-architecture.
-
-## GPG Subkey Architecture
-
-The setup above creates a single key pair used for both certification
-and encryption. The correct operational model for daily use is:
-
-- **Master key (certify only):** signs new subkeys and revocation
-  certificates. Generated once, then moved to offline storage or a
-  hardware security key (YubiKey). Never used in daily operation.
-- **Encryption subkey:** the only key needed by `pass` for day-to-day
-  encrypt/decrypt operations. Shorter expiry than the master.
-- **Signing subkey (optional):** used for `git commit --gpg-sign`.
-
-With this architecture, the master private key never needs to exist
-on the laptop's disk during normal operation. A compromised laptop
-exposes only the encryption subkey, which can be revoked by signing
-a new revocation certificate with the (offline) master key. This is
-the mechanism by which hardware security keys (Opportunity #3) work.
-Implementing the full subkey architecture is beyond this post's scope
-but is the recommended next step after the basic setup is stable.
-
-## AWS and API Credentials via pass
-
-The `~/.aws/credentials` file is plaintext on disk. Having a working
-`pass` store makes it straightforward to remove it:
-
-```sh
-# Store AWS credentials in pass
-pass insert aws/access-key-id
-pass insert aws/secret-access-key
-
-# Retrieve on demand via a shell function in ~/.zshrc:
-aws_env() {
-  export AWS_ACCESS_KEY_ID=$(pass aws/access-key-id)
-  export AWS_SECRET_ACCESS_KEY=$(pass aws/secret-access-key)
-}
-```
-
-Call `aws_env` at the start of a session that needs AWS access.
-The plaintext credentials are in memory only, not on disk. Remove
-`~/.aws/credentials` after confirming the function works. The same
-pattern applies to any plaintext credential file (`~/.npmrc` tokens,
-`~/.config/rclone/rclone.conf`, API keys in `~/.env`).
-
-## FileVault
-
-Full-disk encryption (FileVault on macOS) is a prerequisite, not
-an enhancement, for any local credential store. The GPG encrypted
-files in `~/.password-store/` are strong, but the GPG agent caches
-the decrypted private key in memory; if the machine is lost while
-unlocked, or if a swap file captures memory, the cached key is
-readable without FileVault. Confirm FileVault status:
-
-```sh
-fdesetup status
-# Expected: FileVault is On.
-```
-
-If FileVault is not enabled, enable it before populating the
-password store.
-
-## SSH Key Policy for Multi-Laptop Setups
-
-Post 65's bootstrap sequence says "Restore `~/.ssh` from secure
-storage." For SSH private keys, the correct multi-machine policy is
-NOT to copy keys between machines but to generate a new key pair on
-each machine:
-
-```sh
-ssh-keygen -t ed25519 -C "$(hostname)-$(date +%Y%m)"
-```
-
-Then add the new public key to GitHub, servers, and anywhere the
-previous key was authorised. This is more work initially, but it
-means a compromised laptop exposes only that machine's key, and
-revocation is surgical. Copying a private key between machines
-means all machines are compromised if any one of them is.
-
-The one exception is the GPG private key, which is a single identity
-and must be the same across machines by design. The mitigant is the
-subkey architecture described above, which limits the blast radius
-of any single machine compromise.
-
 # Uninstall / Rollback
 
 To remove `pass` and its configuration from your workstation:
@@ -882,11 +789,6 @@ pass -c test/smoke         # confirm clipboard copy works
 
 ---
 
-*Rendered on 2026-05-17 at 09:08 PDT.*<br>
-*Source: ~/prj/qblog/posts/66-unix-pass-setup/unix-pass-setup/analysis/report/index.qmd*
-
----
-
 # Appendix A: iOS Sync with Pass for iOS {#appendix-a}
 
 The Pass for iOS app reads the same GPG-encrypted `.gpg` files that
@@ -979,6 +881,97 @@ entry copies the password to the iOS clipboard.
 
 ---
 
+# Appendix B: Security Considerations {#appendix-b}
+
+The following items do not fit neatly into the setup steps but
+materially affect the security posture of the overall credential
+architecture. Post 67 addresses these topics in depth; this appendix
+summarises the key points for quick reference.
+
+## B.1 GPG Subkey Architecture
+
+The setup above creates a single key pair used for both certification
+and encryption. The correct operational model for daily use is:
+
+- **Master key (certify only):** signs new subkeys and revocation
+  certificates. Generated once, then moved to offline storage or a
+  hardware security key (YubiKey). Never used in daily operation.
+- **Encryption subkey:** the only key needed by `pass` for day-to-day
+  encrypt/decrypt operations. Shorter expiry than the master.
+- **Signing subkey (optional):** used for `git commit --gpg-sign`.
+
+With this architecture, the master private key never needs to exist
+on the laptop's disk during normal operation. A compromised laptop
+exposes only the encryption subkey, which can be revoked by signing
+a new revocation certificate with the (offline) master key. This is
+the mechanism by which hardware security keys (Opportunity #3) work.
+Implementing the full subkey architecture is beyond this post's scope
+but is the recommended next step after the basic setup is stable.
+
+## B.2 AWS and API Credentials via pass
+
+The `~/.aws/credentials` file is plaintext on disk. Having a working
+`pass` store makes it straightforward to remove it:
+
+```sh
+# Store AWS credentials in pass
+pass insert aws/access-key-id
+pass insert aws/secret-access-key
+
+# Retrieve on demand via a shell function in ~/.zshrc:
+aws_env() {
+  export AWS_ACCESS_KEY_ID=$(pass aws/access-key-id)
+  export AWS_SECRET_ACCESS_KEY=$(pass aws/secret-access-key)
+}
+```
+
+Call `aws_env` at the start of a session that needs AWS access.
+The plaintext credentials are in memory only, not on disk. Remove
+`~/.aws/credentials` after confirming the function works. The same
+pattern applies to any plaintext credential file (`~/.npmrc` tokens,
+`~/.config/rclone/rclone.conf`, API keys in `~/.env`).
+
+## B.3 FileVault
+
+Full-disk encryption (FileVault on macOS) is a prerequisite, not
+an enhancement, for any local credential store. The GPG encrypted
+files in `~/.password-store/` are strong, but the GPG agent caches
+the decrypted private key in memory; if the machine is lost while
+unlocked, or if a swap file captures memory, the cached key is
+readable without FileVault. Confirm FileVault status:
+
+```sh
+fdesetup status
+# Expected: FileVault is On.
+```
+
+If FileVault is not enabled, enable it before populating the
+password store.
+
+## B.4 SSH Key Policy for Multi-Laptop Setups
+
+Post 65's bootstrap sequence says 'Restore `~/.ssh` from secure
+storage.' For SSH private keys, the correct multi-machine policy is
+NOT to copy keys between machines but to generate a new key pair on
+each machine:
+
+```sh
+ssh-keygen -t ed25519 -C "$(hostname)-$(date +%Y%m)"
+```
+
+Then add the new public key to GitHub, servers, and anywhere the
+previous key was authorised. This is more work initially, but it
+means a compromised laptop exposes only that machine's key, and
+revocation is surgical. Copying a private key between machines
+means all machines are compromised if any one of them is.
+
+The one exception is the GPG private key, which is a single identity
+and must be the same across machines by design. The mitigant is the
+subkey architecture described above, which limits the blast radius
+of any single machine compromise.
+
+---
+
 # Let's Connect
 
 *Have questions, suggestions, or spot an error? Let me know.*
@@ -992,6 +985,11 @@ I would enjoy hearing from you if:
 - You spot an error or a better approach to any of the steps above.
 - You have suggestions for topics you would like to see covered.
 - You use a different OS or password manager and want to compare notes.
+
+---
+
+*Rendered on 2026-05-17 at 09:08 PDT.*<br>
+*Source: ~/prj/qblog/posts/66-unix-pass-setup/unix-pass-setup/analysis/report/index.qmd*
 
 ---
 
