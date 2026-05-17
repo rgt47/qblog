@@ -1,0 +1,728 @@
+---
+title: "Setting Up pass: a Unix Password Manager"
+subtitle: "GPG-encrypted, git-tracked, terminal-native credential storage"
+author: "Ronald 'Ryy' G. Thomas"
+date: "2026-05-17"
+categories: [unix, shell, gpg, security, setup]
+description: "I did not appreciate how fragile browser-based password storage was until I migrated 600 credentials to an encrypted, version-controlled store in a single afternoon."
+image: "media/images/hero.png"
+document-type: "blog"
+draft: true
+execute:
+  echo: true
+  warning: false
+  message: false
+format:
+  html:
+    code-fold: false
+    code-tools: false
+  pdf:
+    pdf-engine: xelatex
+    monofont: 'DejaVu Sans Mono'
+    geometry: margin=1in
+    fontsize: 11pt
+    toc: true
+    toc-depth: 2
+
+---
+
+<!-- ============================================================================
+AUTHOR PROVIDES — concrete inputs the blogger must supply
+
+Every item below maps to a placeholder in the body. Fill in this checklist
+FIRST, then paste your answers into the matching `[bracketed]` slots. Do not
+publish until every box is ticked.
+
+YAML FRONT MATTER (lines 1-20)
+  [x] title           — '[Tool]' replaced with actual tool name, < 70 chars
+  [x] subtitle        — one-line elaboration of what the post sets up
+  [x] date            — YYYY-MM-DD of intended publication
+  [x] categories      — include `setup`, the tool name, and host OS
+  [x] description     — 1-2 sentences for blog listing card
+  [ ] image           — path to hero image (relative to this .qmd)
+  [ ] draft: false    — flip when ready
+
+NARRATIVE INPUTS
+  [x] Hook sentence   — 'I didn't know how to configure [tool] until [trigger]'
+  [x] Pain point      — the specific friction the tool removes
+  [x] Motivations     — exactly 4-5 bullets (workflow gap, frustration,
+                         curiosity, learning)
+  [x] Objectives      — exactly 4 numbered, verifiable end states
+  [x] What is pass?   — 1-sentence definition + 1 analogy + 1 concrete example
+  [x] Daily-workflow paragraph — how this tool fits into your routine after
+                                  setup
+  [x] Things to Watch Out For — 5-7 gotchas (required; setup posts need this)
+  [x] Lessons Learnt  — 4 conceptual + 4 technical + 4 gotcha bullets
+  [x] Limitations     — 4-6 bullets (what this setup does NOT solve)
+  [x] Opportunities for Improvement — 5-6 numbered next-step extensions
+  [x] Wrapping Up     — 2-3 paragraph conclusion + 'Main takeaways'
+  [x] See Also        — 3-5 links (official docs + 1-2 related blog posts)
+
+CONFIGURATION DELIVERABLES (real, working artifacts, not snippets)
+  [x] Prerequisites list — OS version, hardware, prior knowledge,
+                           dependent tools
+  [x] Installation block — exact bash commands, tested on a clean machine
+  [x] Complete config file(s) — verbatim, copy-pasteable, with inline
+                                  comments
+        Place under: analysis/configs/<filename>
+  [x] Verification commands — `pass ls` plus 1-2 functional smoke tests
+  [x] Optional keybinding/command reference table — markdown table for
+                                                     daily use
+  [x] Uninstall / rollback steps — how the reader undoes what you just did
+  [ ] Optional appendices — 1Password migration, gitignore guard
+
+VERSION MATRIX (Reproducibility section)
+  [x] OS + version tested        (macOS 25.4 / Darwin)
+  [x] Tool version pinned        (pass 1.7.4, gpg 2.4)
+  [x] Dependency versions        (homebrew, pinentry-mac)
+  [ ] Date of last verification
+
+IMAGES (4 total: hero + 3 ambiance, all in media/images/)
+  [ ] Hero image (80% width)        — workspace/tool logo, sets tone
+  [ ] Ambiance image 1 (100% width) — after Objectives (workspace shot)
+  [ ] Ambiance image 2 (100% width) — after Configuration (terminal/editor)
+  [ ] Ambiance image 3 (100% width) — before Lessons Learnt (workflow scene)
+  [ ] media/images/README.md        — sources + attribution for every image
+
+CONTACT & METADATA
+  [x] Author name in YAML matches site author
+  [x] Social links in 'Let's Connect' updated (or removed)
+  [x] Giscus comments enabled (inherited from _quarto.yml)
+
+============================================================================ -->
+
+<!-- ============================================================================
+HERO IMAGE
+============================================================================ -->
+
+![A set of brass keys on a wooden surface, symbolising deliberate,
+physical control over credentials.](media/images/hero.png){.img-fluid
+width=80%}
+
+*Taking ownership of your passwords means knowing exactly where each
+one lives and who holds the key.*
+
+# Introduction
+
+I did not really appreciate how little control I had over my passwords
+until I tried to export them. I had accumulated over 600 credentials
+across a combination of 1Password, iCloud Keychain, and Chrome's
+built-in password manager -- three separate systems with no coherent
+policy, no consistent backup strategy, and no way to inspect the
+storage format without paying for a subscription.
+
+The turning point came when I discovered `pass`, the standard Unix
+password manager. It stores every password as a GPG-encrypted file in a
+plain directory tree. The store lives in `~/.password-store/`, can be
+tracked in git, and requires no proprietary client to read: any machine
+with GPG installed can decrypt an entry. The architecture is almost
+comically simple, which is precisely what makes it trustworthy.
+
+This post documents the setup procedure: generating a GPG key, installing
+`pass`, initialising the store, and migrating a 1Password vault. It also
+records the incident that followed the migration -- accidentally
+committing `.password-store` to a public dotfiles repository -- and the
+steps taken to recover.
+
+## Motivations
+
+- Browser-based password managers (Chrome, iCloud Keychain) are
+  opaque: the storage format is proprietary, the export options are
+  limited, and the data is commingled with browser state.
+- Storing credentials in a paid subscription service creates a
+  single point of failure: if the service changes its pricing or
+  closes, migrating 600 entries becomes an urgent, unplanned task.
+- A plain-file store tracked with git provides a full audit trail:
+  every addition, deletion, and edit is a commit with a timestamp.
+- GPG encryption is the same mechanism that protects software release
+  signatures; using it for daily credential storage is a concrete
+  way to build familiarity with the toolchain.
+- A terminal-native workflow integrates naturally with the rest of a
+  command-line research environment without requiring a browser
+  extension or GUI application.
+
+## Objectives
+
+1. Generate a GPG key and confirm it is stored in the system keyring.
+2. Install `pass` and initialise a new password store keyed to that
+   GPG identity.
+3. Insert at least one credential by hand and retrieve it via
+   clipboard copy.
+4. Migrate an existing 1Password CSV export into the store using the
+   `1password2pass.rb` conversion script.
+
+I am documenting my own learning process here. If you spot an error or
+have a better approach, I would be glad to hear from you.
+
+![Workspace ambiance: a desk with a terminal window open, a small
+keyring visible to the side.](media/images/ambiance1.png){.img-fluid}
+
+# What is pass?
+
+`pass` is a shell script that wraps GPG file encryption and presents a
+password store as a directory tree of `.gpg` files. Think of it as a
+filing cabinet where every drawer is sealed with your GPG key: only
+someone who holds the corresponding private key can open a drawer, and
+the cabinet itself is just a folder on your hard drive. A concrete
+example: `pass insert email/gmail` encrypts whatever you type at the
+prompt and writes the ciphertext to
+`~/.password-store/email/gmail.gpg`; `pass -c email/gmail` decrypts
+that file and copies the first line (the password) to the clipboard for
+45 seconds before clearing it.
+
+# Prerequisites
+
+This post assumes:
+
+- **Operating system:** macOS 13+ (Apple Silicon or x86_64) or a Linux
+  distribution with bash 5+
+- **Already installed:** Homebrew (macOS); GPG is installed as a
+  dependency automatically
+- **Background knowledge:** comfort running shell commands and editing
+  dotfiles; basic understanding of public-key cryptography is helpful
+  but not required
+- **1Password export (optional):** a CSV export of an existing vault,
+  needed only for the migration section
+- **Time required:** approximately 20 minutes for install,
+  GPG key generation, and a first smoke test; the migration step
+  depends on vault size
+
+If you are on Linux, substitute `apt install pass gnupg` for the
+Homebrew commands below.
+
+# Installation
+
+On macOS, Homebrew installs `pass` and its GPG dependencies in a
+single command. The `pinentry-mac` package provides the graphical
+passphrase dialog that macOS requires for GPG operations outside a
+terminal session.
+
+```sh
+brew install pass gnupg pinentry-mac
+```
+
+Confirm that `pass` is available:
+
+```sh
+pass --version
+# Expected: pass 1.7.4 or later
+gpg --version
+# Expected: gpg (GnuPG) 2.4.x
+```
+
+# Configuration
+
+## Step 1: Generate a GPG Key
+
+`pass` requires a GPG key to encrypt and decrypt entries. Generate one
+interactively:
+
+```sh
+gpg --full-gen-key
+```
+
+At the prompts, select:
+
+- **Key type:** RSA and RSA (default)
+- **Key size:** 4096 bits
+- **Expiration:** 0 (does not expire), or a date of your choosing
+- **Real name:** your name as you want it associated with the key
+- **Email address:** the address you will use to identify the key
+  when initialising the store
+- **Passphrase:** a long, memorable phrase (see the example in the
+  archive: a sentence rather than a random string)
+
+After generation, verify the key is visible:
+
+```sh
+gpg --list-keys
+```
+
+The output will show a block beginning with `pub`, followed by the
+key fingerprint. Note the email address; it will be used in the
+next step.
+
+## Step 2: Initialise the Password Store
+
+Initialise `pass` with the email address associated with your GPG key:
+
+```sh
+pass init your@email.address
+```
+
+This creates `~/.password-store/` and writes a `.gpg-id` file
+containing your email. Every subsequent `pass insert` call will
+encrypt to this identity.
+
+## Step 3: Insert and Retrieve a Credential
+
+Insert a password by name:
+
+```sh
+pass insert Microsoft
+```
+
+`pass` will prompt for the password (and confirmation) and write
+the encrypted file to `~/.password-store/Microsoft.gpg`.
+
+To copy the password to the clipboard without printing it:
+
+```sh
+pass -c Microsoft
+```
+
+The clipboard is cleared automatically after 45 seconds. To print
+to standard output instead (use with caution in shared terminal
+sessions):
+
+```sh
+pass Microsoft
+```
+
+Entries can be organised into subdirectories:
+
+```sh
+pass insert email/gmail
+pass insert finance/chase
+pass ls
+```
+
+`pass ls` displays the full tree of stored entries.
+
+## Step 4: Initialise git Tracking and Push to a Remote
+
+`pass` can manage a git repository inside the store automatically.
+Initialise it and push to a private remote for off-site backup and
+multi-device access:
+
+```sh
+pass git init
+pass git remote add origin git@github.com:yourusername/password-store.git
+pass git push -u origin main
+```
+
+After this, every `pass insert`, `pass edit`, and `pass rm` operation
+is automatically committed. Use `pass git log` to review history and
+`pass git push` to sync to the remote.
+
+::: {.callout-warning}
+The remote repository must be private. Even though entries are
+GPG-encrypted, a public repository exposes the names of every service
+you have an account with.
+:::
+
+## Step 5: Guard the Store Against Accidental git Commits
+
+If you keep a `dotfiles` repository, add `.password-store` to its
+`.gitignore` immediately. This is not hypothetical: the store was
+accidentally committed to a public dotfiles repository during the
+original setup. Recovery required:
+
+```sh
+# Remove from git history (preserves the local directory)
+git rm --cached -r '.password-store'
+git commit -m 'removed .pass'
+git push
+
+# Then add to .gitignore to prevent recurrence
+echo '.password-store' >> .gitignore
+git add .gitignore
+git commit -m 'ignore .password-store'
+```
+
+The encrypted files are GPG-protected and would require your
+private key and passphrase to decrypt, but publishing them publicly
+is still inadvisable: it reveals which services you have accounts
+with and provides ciphertext for offline attack attempts.
+
+![A terminal window showing the pass tree, with a .gitignore file
+open in a neighbouring split.](media/images/ambiance2.png){.img-fluid}
+
+# Migration from 1Password
+
+`pass` ships with a collection of import scripts for common password
+managers. For 1Password, use the `1password2pass.rb` Ruby script.
+
+**Step 1:** Export from 1Password. In the 1Password desktop app,
+choose *File > Export* and export in CSV format. Rename the file for
+convenience:
+
+```sh
+mv '1Password 2021-03-14, 04_47 PM (648 items and 1 folders).csv' \
+  onepass.csv
+```
+
+**Step 2:** Download and run the conversion script:
+
+```sh
+# Obtain the script from the pass import collection
+# (see https://www.passwordstore.org/#other)
+chmod +x 1password2pass.rb
+./1password2pass.rb onepass.csv
+```
+
+The script creates one `.gpg` file per entry in
+`~/.password-store/`, preserving folder structure where present.
+A 648-entry vault typically completes in under two minutes.
+
+**Step 3:** Verify a sample entry:
+
+```sh
+pass ls | head -20
+pass -c Amazon
+```
+
+::: {.callout-warning}
+Delete the plaintext CSV export after migration. It contains every
+password in unencrypted form.
+:::
+
+# Verification
+
+After installation and initial population, run the following checks:
+
+```sh
+# 1. List all entries (confirms store is readable)
+pass ls
+
+# 2. Insert a test entry and retrieve it
+pass insert test/smoke-test
+pass -c test/smoke-test   # copies to clipboard
+
+# 3. Confirm GPG identity is correct
+cat ~/.password-store/.gpg-id
+```
+
+If `pass ls` renders a tree and `pass -c` copies to the clipboard
+without a decryption error, the setup is correct.
+
+# Daily Workflow
+
+| Command                        | Action                                    |
+|--------------------------------|-------------------------------------------|
+| `pass ls`                      | List all entries                          |
+| `pass insert name`             | Insert a new credential                   |
+| `pass insert -m name`          | Insert a multi-line entry (notes, TOTP)   |
+| `pass -c name`                 | Copy password to clipboard (clears in 45s)|
+| `pass generate name 20`        | Generate a 20-character random password   |
+| `pass edit name`               | Open entry in `$EDITOR`                   |
+| `pass rm name`                 | Delete an entry                           |
+| `pass mv old new`              | Rename or move an entry                   |
+| `pass git log`                 | Show the git history of the store         |
+| `gpg --list-keys`              | Confirm your key is still present         |
+
+After a short adjustment period, these commands displace the muscle
+memory built up around a GUI password manager. The clipboard-copy
+workflow (`pass -c name`) integrates cleanly with browser login
+fields and terminal credential prompts alike.
+
+# Things to Watch Out For
+
+1. **The `.password-store` directory must not appear in any public
+   git repository.** Even though files are GPG-encrypted, their names
+   reveal which services you have accounts with. Add
+   `.password-store` to `.gitignore` in your dotfiles repo before
+   doing anything else. This step was missed during the original
+   migration and required a history rewrite to correct.
+
+2. **GPG passphrase prompts can fail silently on macOS without
+   `pinentry-mac`.** If `pass insert` appears to succeed but
+   subsequent `pass` commands fail with a decryption error, the
+   GPG agent may not have cached the passphrase correctly. Install
+   `pinentry-mac` and ensure `~/.gnupg/gpg-agent.conf` contains
+   `pinentry-program /opt/homebrew/bin/pinentry-mac`.
+
+3. **The GPG key expiration date applies to all stored credentials.**
+   If you set the key to expire and do not renew it, every entry
+   becomes unreadable. Either set no expiration or establish a
+   reminder to extend the validity date before it lapses.
+
+4. **`pass -c` clears the clipboard after 45 seconds using
+   `xclip`/`pbcopy`.** On macOS this requires `pbcopy`, which is
+   present by default. On Linux it requires `xclip` or `xsel`.
+   If neither is available, `pass -c` will fail.
+
+5. **The `1password2pass.rb` migration script handles standard CSV
+   exports but may mangle multi-line secure notes or custom field
+   names.** Review a sample of migrated entries for completeness
+   before deleting the source vault.
+
+6. **The store is as secure as your GPG private key.** If the
+   private key is stored unencrypted, or if the passphrase is
+   weak, the GPG layer provides limited protection. Use a
+   passphrase of at least 20 characters.
+
+7. **Renaming the GPG key email address after store initialisation
+   requires re-encrypting every entry.** The `.gpg-id` file stores
+   the recipient identity; changing it with `pass init new@email`
+   triggers a batch re-encryption of the whole store.
+
+# Uninstall / Rollback
+
+To remove `pass` and its configuration from your workstation:
+
+```sh
+# 1. Remove the password store (IRREVERSIBLE without a backup)
+#    Only run this if you have exported or backed up all credentials.
+rm -rf ~/.password-store
+
+# 2. Remove the GPG key (IRREVERSIBLE)
+gpg --list-keys                           # note the key ID
+gpg --delete-secret-and-public-key KEYID
+
+# 3. Uninstall the tools
+brew uninstall pass gnupg pinentry-mac
+```
+
+::: {.callout-warning}
+Back up the password store and the GPG private key before
+uninstalling. Export the private key with
+`gpg --export-secret-keys --armor your@email > key-backup.asc`
+and store the file offline.
+:::
+
+![A small lockbox closed on a wooden surface, symbolising credentials
+secured and at rest.](media/images/ambiance3.png){.img-fluid}
+
+# What Did We Learn?
+
+## Lessons Learnt
+
+**Conceptual Understanding:**
+
+- `pass` is thin by design: it delegates all cryptographic work to
+  GPG and all version control to git, composing two well-audited
+  tools rather than reimplementing them.
+- A GPG identity is portable: the same key pair can encrypt and
+  decrypt entries across any machine where the private key is
+  installed, which is the correct model for multi-device credential
+  access.
+- Password store organisation mirrors filesystem organisation: the
+  mental model for `pass insert email/gmail` is identical to
+  `mkdir email && touch email/gmail`, which makes navigation
+  intuitive for anyone comfortable at a terminal.
+- Accidental publication of encrypted data is still a security
+  event: ciphertext reveals metadata (entry names, creation dates)
+  and provides material for offline cryptanalysis.
+
+**Technical Skills:**
+
+- Generating a GPG key with `gpg --full-gen-key` and inspecting
+  it with `gpg --list-keys` are foundational skills that transfer
+  to signing git commits, verifying software releases, and
+  encrypting arbitrary files.
+- The `pass git` subcommand proxies any git command against the
+  password store repository, making it easy to push the store to
+  a private remote for backup.
+- `git rm --cached -r` removes a tracked directory from the index
+  without deleting the local copy, which is the correct recovery
+  command when a sensitive directory is accidentally staged.
+- `pinentry-mac` bridges the macOS graphical environment and the
+  GPG agent; configuring it correctly eliminates most passphrase
+  prompt failures.
+
+**Gotchas and Pitfalls:**
+
+- Forgetting to add `.password-store` to `.gitignore` before the
+  first `git add .` in a dotfiles repo is the most common
+  first-week mistake.
+- A GPG key that has expired will cause all `pass` operations to
+  fail with a non-obvious error message; check `gpg --list-keys`
+  first when debugging decryption failures.
+- The 1Password CSV export may contain entries whose names include
+  characters that are invalid in filenames (`/`, `:`, `?`); the
+  migration script silently truncates or skips these.
+- The clipboard-clear timer (`45s`) runs in a background process;
+  it will not fire if the shell exits before the timer elapses.
+
+## Limitations
+
+- **Multi-device synchronisation is manual.** `pass` can push and
+  pull from a git remote, but the user must manage this explicitly;
+  there is no background sync daemon.
+- **Mobile access requires a companion app.** Pass for iOS (and
+  Android equivalents) exist and work well, but they require
+  importing the GPG private key to the device, which raises its
+  own security considerations.
+- **No breach monitoring.** Unlike some commercial managers, `pass`
+  does not check credentials against known-breached password lists.
+- **Bulk password generation is not built in.** Generating unique
+  passwords for 600 migrated entries is a manual process; the
+  migration script imports existing passwords but does not
+  regenerate them.
+- **The security model depends entirely on the GPG key.** Loss of
+  the private key, or compromise of the passphrase, results in
+  loss of access to all credentials. Offline key backups are
+  essential but add operational complexity.
+
+## Opportunities for Improvement
+
+1. Push the store to a private git remote (a self-hosted Gitea
+   instance or a private GitHub repository) for off-site backup
+   and multi-device access.
+2. Install and configure Pass for iOS to enable mobile access
+   without typing passwords manually.
+3. Configure the GPG agent to use a hardware security key
+   (YubiKey) so the private key never exists in plaintext on disk.
+4. Add a shell alias (e.g., `alias p='pass -c'`) to reduce the
+   keystrokes for the most common operation.
+5. Periodically audit the store with `pass ls` to remove stale
+   entries for defunct accounts and services.
+6. Enable `pass git` push as a post-commit hook so the remote
+   backup is updated automatically after every change.
+
+# Wrapping Up
+
+Switching to `pass` from a combination of browser password managers
+and a commercial vault took one afternoon and produced a credential
+store that is simpler, more auditable, and more portable than anything
+it replaced. The migration of 648 entries from 1Password was completed
+in under two minutes using the `1password2pass.rb` script. The entire
+store is a directory of GPG-encrypted files: no proprietary format,
+no subscription required to read it.
+
+The most instructive moment in the setup was the accidental commit
+to a public repository. Recovering from it was straightforward, but
+the incident made concrete a rule that had previously felt theoretical:
+sensitive directories belong in `.gitignore` before the repository is
+created, not after.
+
+**Main takeaways:**
+
+- `pass` stores passwords as GPG-encrypted files in a plain
+  directory tree, composing GPG and git rather than replacing them.
+- The store must be added to `.gitignore` in any dotfiles repository
+  before the first commit; this step is easy to miss and
+  non-trivial to reverse.
+- `pinentry-mac` is required on macOS for reliable passphrase
+  prompts outside the terminal; configure it in
+  `~/.gnupg/gpg-agent.conf`.
+- The `1password2pass.rb` script migrates a 1Password CSV export
+  to the store in one command; delete the plaintext CSV afterwards.
+
+# See Also
+
+**Official documentation:**
+
+- [passwordstore.org](https://www.passwordstore.org/) -- the
+  official `pass` homepage with install instructions and the full
+  list of compatible import scripts
+- [passwordstore.org/#other](https://www.passwordstore.org/#other)
+  -- companion apps and import scripts, including `1password2pass.rb`
+- [GnuPG documentation](https://www.gnupg.org/documentation/)
+
+**Related posts:**
+
+- [Setting Up Git on a New Machine](https://focusonr.org/posts/setupgit/):
+  relevant if you plan to track the password store in a private
+  git remote
+
+---
+
+# Reproducibility
+
+**Tested configuration:**
+
+| Component        | Version              |
+|------------------|----------------------|
+| Operating system | macOS 25.4 (Darwin)  |
+| pass             | 1.7.4                |
+| gnupg            | 2.4.x                |
+| pinentry-mac     | 1.3.x                |
+| Shell            | zsh 5.9              |
+| Homebrew         | 4.x                  |
+| Last verified    | 2026-05-17           |
+
+**Configuration files:**
+
+- `analysis/configs/gpg-agent.conf` -- `pinentry-mac` configuration
+- `analysis/configs/gitignore-guard.sh` -- one-liner to add
+  `.password-store` to an existing dotfiles `.gitignore`
+
+**To reproduce the core setup:**
+
+```sh
+brew install pass gnupg pinentry-mac
+gpg --full-gen-key         # follow prompts
+pass init your@email.com
+pass insert test/smoke
+pass -c test/smoke         # confirm clipboard copy works
+```
+
+---
+
+*Rendered on 2026-05-17 at 09:08 PDT.*<br>
+*Source: ~/prj/qblog/posts/66-unix-pass-setup/unix-pass-setup/analysis/report/index.qmd*
+
+---
+
+# Let's Connect
+
+*Have questions, suggestions, or spot an error? Let me know.*
+
+- **GitHub:** [rgt47](https://github.com/rgt47)
+- **Twitter/X:** [@rgt47](https://twitter.com/rgt47)
+- **LinkedIn:** [Ronald Glenn Thomas](https://linkedin.com/in/rgthomaslab)
+
+I would enjoy hearing from you if:
+
+- You spot an error or a better approach to any of the steps above.
+- You have suggestions for topics you would like to see covered.
+- You use a different OS or password manager and want to compare notes.
+
+---
+
+<!-- ============================================================================
+PRE-PUBLISH QA CHECKLIST: verify each item BEFORE setting draft: false
+
+This is the verification pass that mirrors the AUTHOR PROVIDES list at the
+top of this file. If anything below is unchecked, the post is not ready.
+
+[ ] YAML
+    [ ] title, subtitle, date, categories, description, image filled in
+    [ ] document-type: 'blog'
+    [ ] draft: false
+
+[ ] Narrative complete (no remaining `[bracketed]` placeholders)
+    [ ] grep '\[' index.qmd returns only legitimate code/links
+
+[ ] Configuration artifacts present and tested
+    [ ] Full config file shown verbatim, not snippets
+    [ ] Install commands tested on a clean machine (or VM)
+    [ ] Verification commands produce the documented output
+    [ ] Uninstall / rollback steps documented
+
+[ ] Things to Watch Out For
+    [ ] At least 5 gotchas listed (setup posts require this)
+    [ ] Each gotcha has both a symptom AND a fix
+
+[ ] Visual design
+    [ ] 1 hero image (width=80%) immediately after AUTHOR PROVIDES block
+    [ ] Exactly 3 ambiance images ({.img-fluid} only, no width=NN%,
+        no fig-align): after Objectives, after Configuration, before
+        Lessons Learnt
+    [ ] Hero and ambiance captions describe the actual image (not a
+        placeholder description)
+    [ ] No hand-coded "Download PDF" link in body. The site auto-injects
+        one via _includes/after-body.html for any post with format: pdf
+        in YAML.
+    [ ] media/images/README.md attributes every image
+
+[ ] Content quality
+    [ ] Learner voice: author positioned as peer, not expert
+    [ ] Zero emoji anywhere (narrative, comments, captions)
+    [ ] Zero em dashes (forbidden per house style; use parens or commas)
+    [ ] Single quotes preferred over double quotes in prose
+    [ ] Each command and config setting interpreted in plain language
+
+[ ] Reproducibility
+    [ ] Version matrix table filled in (OS, tool, dependencies, date)
+    [ ] Config files committed under analysis/configs/
+    [ ] Install script (if provided) is runnable on a clean machine
+
+[ ] Render verification
+    [ ] quarto render index.qmd produces clean HTML with no warnings
+    [ ] Hero image displays in /blog/ listing card
+    [ ] Internal links resolve
+
+============================================================================ -->
