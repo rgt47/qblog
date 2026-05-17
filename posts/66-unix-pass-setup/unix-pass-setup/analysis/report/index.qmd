@@ -235,14 +235,24 @@ gpg --full-gen-key
 
 At the prompts, select:
 
-- **Key type:** RSA and RSA (default)
-- **Key size:** 4096 bits
-- **Expiration:** 0 (does not expire), or a date of your choosing
+- **Key type:** ECC (sign and encrypt) -- the default in GnuPG 2.4+.
+  Ed25519 / Curve 25519 is the correct choice for new keys in 2026:
+  constant-time operations, smaller keys, and equivalent or stronger
+  security than RSA 4096. RSA remains an option but is not
+  recommended for new keys.
+- **Curve:** Curve 25519 (default when ECC is selected)
+- **Expiration:** 2y (two years) rather than 0. A key that never
+  expires remains valid indefinitely if compromised; a two-year
+  expiration creates a forced review point. Add the renewal date to
+  a calendar immediately. See Gotcha 3 for what happens when a key
+  lapses.
 - **Real name:** your name as you want it associated with the key
 - **Email address:** the address you will use to identify the key
   when initialising the store
-- **Passphrase:** a long, memorable phrase (see the example in the
-  archive: a sentence rather than a random string)
+- **Passphrase:** a minimum of six random words (diceware) or a
+  25-character random string. Avoid sentences constructed from
+  real phrases: dictionary attacks against GPG keys use pattern-aware
+  wordlists. The passphrase protects every credential in the store.
 
 After generation, verify the key is visible:
 
@@ -345,27 +355,45 @@ under a third party's access controls.
 
 ## Step 5: Guard the Store Against Accidental git Commits
 
-If you keep a `dotfiles` repository, add `.password-store` to its
-`.gitignore` immediately. This is not hypothetical: the store was
-accidentally committed to a public dotfiles repository during the
-original setup. Recovery required:
+Post 65's sensitive-files inventory (Blocker 3) lists
+`~/.password-store` explicitly alongside `~/.gnupg`, `~/.ssh`, and
+`~/.aws` as items that 'must never be committed to git, even in a
+private repository.' Write the `.gitignore` entry before the first
+`git add` in any dotfiles repository; after the first commit the
+only remediation is a full `git filter-repo` rewrite and credential
+rotation.
+
+If you keep a `dotfiles` repository, add `.password-store` and
+`.gnupg` to its `.gitignore` before `git init`:
 
 ```sh
-# Remove from git history (preserves the local directory)
-git rm --cached -r '.password-store'
-git commit -m 'removed .pass'
-git push
-
-# Then add to .gitignore to prevent recurrence
-echo '.password-store' >> .gitignore
-git add .gitignore
-git commit -m 'ignore .password-store'
+# In ~/dotfiles/.gitignore, before git init:
+.password-store
+.gnupg
+.ssh
+.aws
+secrets/*
+!secrets/README.md
 ```
 
-The encrypted files are GPG-protected and would require your
-private key and passphrase to decrypt, but publishing them publicly
-is still inadvisable: it reveals which services you have accounts
-with and provides ciphertext for offline attack attempts.
+This step was missed during the original migration. Recovery after
+an accidental commit to a local-only repository:
+
+```sh
+git rm --cached -r '.password-store'
+git commit -m 'removed .pass'
+```
+
+If the data reached a public remote, `git rm --cached` is
+insufficient: use `git filter-repo` to rewrite history and rotate
+any credentials the ciphertext could represent. See
+[git-filter-repo](https://github.com/newren/git-filter-repo) and
+post 65's Limitations section for the full procedure.
+
+The encrypted files are GPG-protected and would require the private
+key and passphrase to decrypt, but publishing them publicly is still
+inadvisable: the entry names reveal which services you have accounts
+with and the ciphertext is material for offline cryptanalysis.
 
 ![A terminal window showing the pass tree, with a .gitignore file
 open in a neighbouring split.](media/images/ambiance2.png){.img-fluid}
@@ -406,7 +434,13 @@ pass -c Amazon
 
 ::: {.callout-warning}
 Delete the plaintext CSV export after migration. It contains every
-password in unencrypted form.
+password in unencrypted form. On macOS, `rm` does not overwrite file
+content on APFS/SSD; the data persists until the block is reused. If
+FileVault full-disk encryption is enabled (it should be), the block
+is protected at rest. If FileVault is not enabled, use a
+secure-delete tool before discarding the machine. In either case,
+ensure `~/Downloads/` is not synced to iCloud Drive before running
+the export.
 :::
 
 # Verification
@@ -457,17 +491,23 @@ belongs immediately after the dotfiles layer, before any service
 authentication:
 
 ```
-1. git clone ~/dotfiles && cd ~/dotfiles && ./install.sh
-2. gpg --import private-key.asc          # from offline backup
-3. pass git clone git@your-host:pass.git ~/.password-store
-4. pass ls                                # verify store is readable
-5. mbsync -a                             # now IMAP credentials exist
-6. ... (remaining bootstrap steps)
+1. git clone git@github.com:rgt47/dotfiles ~/dotfiles
+2. cd ~/dotfiles && ./install.sh
+   # Installer prints: "Restore ~/.aws, ~/.ssh, ~/.gnupg
+   #                    from secure storage"
+3. gpg --import private-key.asc          # from offline backup
+4. pass git clone git@your-host:pass.git ~/.password-store
+5. pass ls                                # verify store is readable
+6. mbsync -a                             # now IMAP credentials exist
+7. ... (remaining bootstrap steps)
 ```
 
-The offline key backup (`gpg --export-secret-keys --armor ...`) is
-a prerequisite for step 2 on any new machine. Keep it on encrypted
-removable media, not in cloud storage.
+Step 2 is the `install.sh` from post 65, which deploys dotfiles
+symlinks and prints a reminder to restore `~/.gnupg` before any
+credential-dependent step runs. The offline GPG key backup
+(`gpg --export-secret-keys --armor ...`) is a prerequisite for
+step 3 on any new machine; keep it on encrypted removable media,
+not in cloud storage.
 
 # Things to Watch Out For
 
@@ -482,18 +522,40 @@ removable media, not in cloud storage.
    `pinentry-mac`.** If `pass insert` appears to succeed but
    subsequent `pass` commands fail with a decryption error, the
    GPG agent may not have cached the passphrase correctly. Install
-   `pinentry-mac` and ensure `~/.gnupg/gpg-agent.conf` contains
-   `pinentry-program /opt/homebrew/bin/pinentry-mac`.
+   `pinentry-mac` and add this to `~/.gnupg/gpg-agent.conf`:
+
+   ```
+   pinentry-program /opt/homebrew/bin/pinentry-mac
+   default-cache-ttl 300
+   max-cache-ttl 600
+   ```
+
+   The path `/opt/homebrew/bin/pinentry-mac` is correct for Apple
+   Silicon. On Intel Macs, Homebrew installs to `/usr/local/bin/`;
+   substitute accordingly, or use `$(brew --prefix)/bin/pinentry-mac`
+   in a setup script. The `default-cache-ttl` (300 s) controls how
+   long after the last use the passphrase stays cached;
+   `max-cache-ttl` (600 s) is the absolute ceiling. Omitting these
+   leaves the default at 600 s, which is long for an unattended
+   machine.
 
 3. **The GPG key expiration date applies to all stored credentials.**
    If you set the key to expire and do not renew it, every entry
    becomes unreadable. Either set no expiration or establish a
    reminder to extend the validity date before it lapses.
 
-4. **`pass -c` clears the clipboard after 45 seconds using
-   `xclip`/`pbcopy`.** On macOS this requires `pbcopy`, which is
-   present by default. On Linux it requires `xclip` or `xsel`.
-   If neither is available, `pass -c` will fail.
+4. **`pass -c` clears the clipboard after 45 seconds, but clipboard
+   managers bypass this entirely.** On macOS this requires `pbcopy`,
+   which is present by default. On Linux it requires `xclip` or
+   `xsel`. If neither is available, `pass -c` will fail.
+   More importantly: any clipboard manager (Alfred, Raycast,
+   ClipMenu, the macOS Universal Clipboard synced via iCloud) captures
+   the `pass -c` output before the 45-second timer fires and stores
+   it permanently, possibly syncing it to other devices. Disable
+   clipboard history, or exclude `pass` invocations, in any clipboard
+   manager running on the system. On a two-laptop setup with iCloud
+   Universal Clipboard enabled, every `pass -c` on one machine
+   appears in plaintext on the other.
 
 5. **The `1password2pass.rb` migration script handles standard CSV
    exports but may mangle multi-line secure notes or custom field
@@ -510,15 +572,104 @@ removable media, not in cloud storage.
    the recipient identity; changing it with `pass init new@email`
    triggers a batch re-encryption of the whole store.
 
-8. **Pass for iOS generates its own SSH key pair; you must add that
-   key to GitHub, not your desktop key.** A common mistake is
-   copying the desktop SSH public key to GitHub while the iOS app
-   is using a different key it generated internally. The symptom is
-   a 'permission denied (publickey)' error on every sync attempt.
-   Go to the app's Settings, copy the displayed public key, and
-   add it as a separate entry in your GitHub SSH keys. Also verify
-   that the GPG key fingerprint shown in the app matches the
-   fingerprint in `~/.password-store/.gpg-id`.
+8. **Pass for iOS generates its own SSH key pair; add that key to
+   your self-hosted server, not your desktop key.** A common mistake
+   is copying the desktop SSH public key to the server's
+   `authorized_keys` while the iOS app is using a different key it
+   generated internally. The symptom is a 'permission denied
+   (publickey)' error on every sync attempt. Go to the app's
+   Settings, copy the displayed public key, and append it to
+   `~/.ssh/authorized_keys` on the git server as a separate entry.
+   Also verify that the GPG key fingerprint shown in the app matches
+   the fingerprint in `~/.password-store/.gpg-id`.
+
+# Security Considerations
+
+The following items do not fit neatly into the setup steps but
+materially affect the security posture of the overall credential
+architecture.
+
+## GPG Subkey Architecture
+
+The setup above creates a single key pair used for both certification
+and encryption. The correct operational model for daily use is:
+
+- **Master key (certify only):** signs new subkeys and revocation
+  certificates. Generated once, then moved to offline storage or a
+  hardware security key (YubiKey). Never used in daily operation.
+- **Encryption subkey:** the only key needed by `pass` for day-to-day
+  encrypt/decrypt operations. Shorter expiry than the master.
+- **Signing subkey (optional):** used for `git commit --gpg-sign`.
+
+With this architecture, the master private key never needs to exist
+on the laptop's disk during normal operation. A compromised laptop
+exposes only the encryption subkey, which can be revoked by signing
+a new revocation certificate with the (offline) master key. This is
+the mechanism by which hardware security keys (Opportunity #3) work.
+Implementing the full subkey architecture is beyond this post's scope
+but is the recommended next step after the basic setup is stable.
+
+## AWS and API Credentials via pass
+
+The `~/.aws/credentials` file is plaintext on disk. Having a working
+`pass` store makes it straightforward to remove it:
+
+```sh
+# Store AWS credentials in pass
+pass insert aws/access-key-id
+pass insert aws/secret-access-key
+
+# Retrieve on demand via a shell function in ~/.zshrc:
+aws_env() {
+  export AWS_ACCESS_KEY_ID=$(pass aws/access-key-id)
+  export AWS_SECRET_ACCESS_KEY=$(pass aws/secret-access-key)
+}
+```
+
+Call `aws_env` at the start of a session that needs AWS access.
+The plaintext credentials are in memory only, not on disk. Remove
+`~/.aws/credentials` after confirming the function works. The same
+pattern applies to any plaintext credential file (`~/.npmrc` tokens,
+`~/.config/rclone/rclone.conf`, API keys in `~/.env`).
+
+## FileVault
+
+Full-disk encryption (FileVault on macOS) is a prerequisite, not
+an enhancement, for any local credential store. The GPG encrypted
+files in `~/.password-store/` are strong, but the GPG agent caches
+the decrypted private key in memory; if the machine is lost while
+unlocked, or if a swap file captures memory, the cached key is
+readable without FileVault. Confirm FileVault status:
+
+```sh
+fdesetup status
+# Expected: FileVault is On.
+```
+
+If FileVault is not enabled, enable it before populating the
+password store.
+
+## SSH Key Policy for Multi-Laptop Setups
+
+Post 65's bootstrap sequence says "Restore `~/.ssh` from secure
+storage." For SSH private keys, the correct multi-machine policy is
+NOT to copy keys between machines but to generate a new key pair on
+each machine:
+
+```sh
+ssh-keygen -t ed25519 -C "$(hostname)-$(date +%Y%m)"
+```
+
+Then add the new public key to GitHub, servers, and anywhere the
+previous key was authorised. This is more work initially, but it
+means a compromised laptop exposes only that machine's key, and
+revocation is surgical. Copying a private key between machines
+means all machines are compromised if any one of them is.
+
+The one exception is the GPG private key, which is a single identity
+and must be the same across machines by design. The mitigant is the
+subkey architecture described above, which limits the blast radius
+of any single machine compromise.
 
 # Uninstall / Rollback
 
@@ -622,9 +773,10 @@ secured and at rest.](media/images/ambiance3.png){.img-fluid}
 
 ## Opportunities for Improvement
 
-1. Push the store to a private GitHub repository using
-   `pass git init` and `pass git remote add` (covered in
-   Configuration Step 4 above).
+1. Push the store to a private self-hosted remote (Gitea, Forgejo,
+   or a bare git repository on a NAS) using `pass git init` and
+   `pass git remote add` (covered in Configuration Step 4). Avoid
+   third-party cloud git hosts even with private repositories.
 2. Install and configure Pass for iOS to enable mobile access;
    see Appendix A for the git sync, GPG key export, and SSH
    configuration procedure.
@@ -683,9 +835,15 @@ created, not after.
   the three-layer framework that defines where the password store
   belongs in a multi-laptop workflow and why cloud-mounted git
   repos are structurally wrong.
+- Post 65, [Multi-Laptop macOS Bootstrap](https://focusonr.org/posts/65-multi-laptop-bootstrap/):
+  the concrete implementation of post 64's framework: the `install.sh`
+  that deploys dotfiles and prints the 'restore `~/.gnupg` from
+  secure storage' reminder that step 3 of this post's bootstrap
+  sequence depends on. Also lists `~/.password-store` explicitly
+  in its sensitive-files inventory.
 - Post 24, [Creating a GitHub Dotfiles Repository](https://focusonr.org/posts/24-setupdotfilesongithub/):
-  the dotfiles layer that must be in place before the bootstrap
-  sequence in this post makes sense.
+  the architectural design that post 65 implements and that this
+  post's bootstrap sequence builds on.
 - [Setting Up Git on a New Machine](https://focusonr.org/posts/setupgit/):
   relevant if you plan to track the password store in a private
   self-hosted git remote.
@@ -698,7 +856,7 @@ created, not after.
 
 | Component        | Version              |
 |------------------|----------------------|
-| Operating system | macOS 25.4 (Darwin)  |
+| Operating system | macOS 15.4 (Sequoia) |
 | pass             | 1.7.4                |
 | gnupg            | 2.4.x                |
 | pinentry-mac     | 1.3.x                |
@@ -777,22 +935,22 @@ the Files app on the iPhone after importing into Pass.
 Install **Pass - Password Store** from the App Store. In the app:
 
 1. Go to **Settings → Password Store**.
-2. Set the **Git Repository URL** to your GitHub remote.
+2. Set the **Git Repository URL** to your self-hosted remote.
 
-**HTTPS (recommended for simplicity):**
-
-- Use your GitHub username and a Personal Access Token (not your
-  account password). Generate a token at GitHub → Settings →
-  Developer Settings → Personal Access Tokens → Fine-grained
-  tokens. Grant it read and write access to the password-store
-  repository only.
-
-**SSH (if preferred):**
+**SSH (recommended for a self-hosted remote):**
 
 - The app generates its own SSH key pair. Go to
-  **Settings → SSH Key**, copy the public key displayed, and add
-  it as a new entry at GitHub → Settings → SSH and GPG Keys.
-  Do not add your desktop key; the app uses a different key.
+  **Settings → SSH Key**, copy the displayed public key, and add
+  it to `~/.ssh/authorized_keys` on your self-hosted git server.
+  Do not copy your desktop key; the iOS app generates a separate
+  key internally.
+
+**HTTPS (if your remote supports it):**
+
+- Use the credentials for your self-hosted service (Gitea, Forgejo,
+  etc.). If the service supports tokens, use a token scoped to
+  the password-store repository only rather than your account
+  password.
 
 ## A.4 Import the GPG Key and Sync
 
@@ -808,8 +966,10 @@ entry copies the password to the iOS clipboard.
 ## A.5 Common Snags
 
 - **'Permission denied (publickey)' on sync:** the app's SSH key
-  has not been added to GitHub. Copy the public key from
-  Settings → SSH Key and add it at github.com/settings/keys.
+  has not been added to your self-hosted server's
+  `authorized_keys`. Copy the public key from Settings → SSH Key
+  in the app and append it to `~/.ssh/authorized_keys` on the
+  git server.
 - **'No secret key' decryption error:** the fingerprint in the
   app does not match the `.gpg-id` in the repository. Check
   both values: `cat ~/.password-store/.gpg-id` on the desktop,
