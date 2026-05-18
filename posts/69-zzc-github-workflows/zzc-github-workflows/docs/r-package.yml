@@ -1,0 +1,86 @@
+# zzcollab r-package.yml v2.4.0
+#
+# R CMD check in a rocker/tidyverse container, triggered on
+# pushes and PRs to main/master.
+#
+# Workspace types: manuscript-package, data-analysis
+# Do NOT use for blog-post compendia (no R package structure).
+#
+name: R Package Check (Container)
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    # Pin to the same R version as renv.lock.
+    container: rocker/tidyverse:4.4.2
+    env:
+      # Signals to .Rprofile that we are in a container; activates
+      # renv and sets Posit Package Manager as the CRAN mirror.
+      ZZCOLLAB_CONTAINER: "true"
+      # Separate library for CI tools (rcmdcheck, tinytest) so they
+      # do not appear as undeclared dependencies during R CMD check.
+      CI_TOOLS_LIB: "/tmp/ci-tools"
+      # Forces renv::restore() to use pre-compiled binaries for
+      # Ubuntu 24.04 (noble), regardless of what the lockfile says.
+      # Without this, renv may restore from a jammy or source repo
+      # and produce 'packages not available' errors.
+      RENV_CONFIG_REPOS_OVERRIDE: >-
+        https://packagemanager.posit.co/cran/__linux__/noble/latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      # C libraries required by common R packages (httr, git2r, xml2).
+      # Extend this list for packages with additional system dependencies.
+      - name: Install system dependencies
+        run: |
+          apt-get update && apt-get install -y \
+            jq libcurl4-openssl-dev libssl-dev libxml2-dev cmake
+
+      # Persist the renv global package store across runs.
+      # Key is the renv.lock hash; stale caches serve as partial
+      # restores and avoid full recompilation on cache misses.
+      - name: Cache renv packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/R/renv
+          key: renv-${{ hashFiles('renv.lock') }}
+          restore-keys: |
+            renv-
+
+      # Install renv from CRAN, then restore all packages pinned in
+      # renv.lock into the project-local library.
+      - name: Install renv and restore project packages
+        run: |
+          Rscript -e "\
+            install.packages('renv',
+              repos = 'https://cloud.r-project.org'); \
+            renv::restore(prompt = FALSE)"
+
+      # rcmdcheck and tinytest live in a throwaway library so they
+      # do not pollute the renv project library.
+      # For testthat repos: remove 'tinytest' from this list;
+      # testthat is already in renv.lock and restored above.
+      - name: Install CI tools to separate library
+        run: |
+          mkdir -p $CI_TOOLS_LIB
+          Rscript -e "\
+            install.packages(c('rcmdcheck', 'tinytest'),
+              lib = Sys.getenv('CI_TOOLS_LIB'),
+              repos = 'https://cloud.r-project.org')"
+
+      # Full R CMD check (skipping PDF manual build).
+      # Prepend CI_TOOLS_LIB so rcmdcheck is found without adding it
+      # to the project library. Fails the workflow on any ERROR.
+      - name: Run R CMD check
+        run: |
+          Rscript -e "\
+            .libPaths(c(Sys.getenv('CI_TOOLS_LIB'), .libPaths())); \
+            rcmdcheck::rcmdcheck(
+              args = '--no-manual', error_on = 'error')"

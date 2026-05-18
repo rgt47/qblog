@@ -1,12 +1,17 @@
 ---
-title: "Setup Post Template (worked example: AWS CLI provisioning)"
+title: "GitHub Actions workflows for zzcollab research compendia"
 author: "Ronald 'Ryy' G. Thomas"
-date: "2025-01-01"
-categories: [aws, shell, reproducibility]
-description: "I did not really appreciate how tedious it was to click through the EC2 console until I automated the whole process with four short bash scripts and the AWS CLI."
-image: "media/images/hero.png"
+date: "2026-05-18"
+categories: [ci, github-actions, zzcollab, reproducibility, r-package]
+description: "Not all zzcollab repos need the same CI. A manuscript-package
+  compendium requires both an R CMD check workflow and a report-rendering
+  workflow; a data-analysis compendium needs only the latter; a blog-post
+  compendium needs neither. This post maps the three workspace types to
+  their correct workflow combinations and walks through each YAML file
+  line by line."
+image: "media/images/hero.jpg"
 document-type: "blog"
-draft: false
+draft: true
 execute:
   echo: true
   warning: false
@@ -15,7 +20,12 @@ format:
   html:
     code-fold: false
     code-tools: false
-
+  pdf:
+    pdf-engine: xelatex
+    monofont: 'DejaVu Sans Mono'
+    geometry: margin=1in
+    fontsize: 11pt
+    toc: false
 ---
 
 <!-- ============================================================================
@@ -26,43 +36,39 @@ FIRST, then paste your answers into the matching `[bracketed]` slots. Do not
 publish until every box is ticked.
 
 YAML FRONT MATTER (lines 1-20)
-  [ ] title           — '[Tool]' replaced with actual tool name, < 70 chars
-  [ ] subtitle        — one-line elaboration of what the post sets up
-  [ ] date            — YYYY-MM-DD of intended publication
-  [ ] categories      — include `setup`, the tool name, and host OS
-  [ ] description     — 1-2 sentences for blog listing card
-  [ ] image           — path to hero image (relative to this .qmd)
+  [x] title           — '[Tool]' replaced with actual tool name, < 70 chars
+  [x] subtitle        — one-line elaboration of what the post sets up
+  [x] date            — YYYY-MM-DD of intended publication
+  [x] categories      — include `setup`, the tool name, and host OS
+  [x] description     — 1-2 sentences for blog listing card
+  [x] image           — path to hero image (relative to this .qmd)
   [ ] draft: false    — flip when ready
 
 NARRATIVE INPUTS
-  [ ] Hook sentence   — 'I didn't know how to configure [tool] until [trigger]'
-  [ ] Pain point      — the specific friction the tool removes
-  [ ] Motivations     — exactly 4-5 bullets (workflow gap, frustration, curiosity, learning)
-  [ ] Objectives      — exactly 4 numbered, verifiable end states
-  [ ] What is [Tool]? — 1-sentence definition + 1 analogy + 1 concrete example
-  [ ] Daily-workflow paragraph — how this tool fits into your routine after setup
-  [ ] Things to Watch Out For — 5-7 gotchas (required; setup posts need this)
-  [ ] Lessons Learnt  — 4 conceptual + 4 technical + 4 gotcha bullets
-  [ ] Limitations     — 4-6 bullets (what this setup does NOT solve)
-  [ ] Opportunities for Improvement — 5-6 numbered next-step extensions
-  [ ] Wrapping Up     — 2-3 paragraph conclusion + 'Main takeaways'
-  [ ] See Also        — 3-5 links (official docs + 1-2 related blog posts)
+  [x] Hook sentence   — 'I didn't know how to configure [tool] until [trigger]'
+  [x] Pain point      — the specific friction the tool removes
+  [x] Motivations     — exactly 4-5 bullets (workflow gap, frustration, curiosity, learning)
+  [x] Objectives      — exactly 4 numbered, verifiable end states
+  [x] What is [Tool]? — 1-sentence definition + 1 analogy + 1 concrete example
+  [x] Daily-workflow paragraph — how this tool fits into your routine after setup
+  [x] Things to Watch Out For — 5-7 gotchas (required; setup posts need this)
+  [x] Lessons Learnt  — 4 conceptual + 4 technical + 4 gotcha bullets
+  [x] Limitations     — 4-6 bullets (what this setup does NOT solve)
+  [x] Opportunities for Improvement — 5-6 numbered next-step extensions
+  [x] Wrapping Up     — 2-3 paragraph conclusion + 'Main takeaways'
+  [x] See Also        — 3-5 links (official docs + 1-2 related blog posts)
 
 CONFIGURATION DELIVERABLES (real, working artifacts, not snippets)
-  [ ] Prerequisites list — OS version, hardware, prior knowledge, dependent tools
-  [ ] Installation block — exact bash commands, tested on a clean machine
-  [ ] Complete config file(s) — verbatim, copy-pasteable, with inline comments
-        Place under: analysis/configs/<filename>
-  [ ] Verification commands — `<tool> --version` plus 1-2 functional smoke tests
-  [ ] Optional keybinding/command reference table — markdown table for daily use
-  [ ] Uninstall / rollback steps — how the reader undoes what you just did
-  [ ] Optional appendices — credential setup, sample session, teardown procedure
+  [x] Prerequisites list — OS version, hardware, prior knowledge, dependent tools
+  [x] Complete config file(s) — verbatim, copy-pasteable, with inline comments
+        Place under: docs/r-package.yml and docs/render-report.yml
+  [x] Verification commands — trigger CI and confirm green
+  [x] Uninstall / rollback steps — how the reader undoes what you just did
 
 VERSION MATRIX (Reproducibility section)
-  [ ] OS + version tested        (e.g., macOS 15.4, Ubuntu 24.04)
-  [ ] Tool version pinned        (e.g., aws-cli 2.15)
-  [ ] Dependency versions        (e.g., homebrew 4.2, jq 1.7)
-  [ ] Date of last verification
+  [x] OS + version tested        (macOS 15.4, Ubuntu 24.04 in container)
+  [x] Tool version pinned        (actions/checkout@v6, actions/cache@v5)
+  [x] Date of last verification
 
 IMAGES (4 total: hero + 3 ambiance, all in media/images/)
   [ ] Hero image (80% width)        — workspace/tool logo, sets tone
@@ -72,32 +78,25 @@ IMAGES (4 total: hero + 3 ambiance, all in media/images/)
   [ ] media/images/README.md        — sources + attribution for every image
 
 CONTACT & METADATA
-  [ ] Author name in YAML matches site author
-  [ ] Social links in 'Let's Connect' updated (or removed)
-  [ ] Giscus comments enabled (inherited from _quarto.yml)
+  [x] Author name in YAML matches site author
+  [x] Social links in 'Let's Connect' updated (or removed)
+  [x] Giscus comments enabled (inherited from _quarto.yml)
 
 ============================================================================ -->
 
 <!-- ============================================================================
 EXEMPLAR SETUP / TOOLING POST TEMPLATE
 
-This is the configuration-centric counterpart to post 39 (data analysis).
-The narrative below is filled in with a concrete worked example (AWS CLI
-provisioning, drawn from post 22) so that future authors see what each
-section looks like when complete. To use this template:
+This post documents the GitHub Actions CI workflow setup for zzcollab
+research compendia. It covers two workflow files: r-package.yml (R CMD
+check inside a rocker/tidyverse container) and render-report.yml (Docker
+build plus Rmd rendering). It explains which combination of files applies
+to each of the three zzc workspace types: manuscript-package,
+data-analysis, and blog-post.
 
-  1. Copy this entire directory to posts/NN-yourtopic/yourtopic/
-  2. Replace the AWS-CLI worked example with your own tool
-  3. Keep the AUTHOR PROVIDES and PRE-PUBLISH QA comment blocks
-  4. Tick every box in AUTHOR PROVIDES before flipping draft: false
-
-Key differences from the data-analysis template:
-  - No analysis pipeline (no 01_prepare_data.R, etc.)
-  - Configuration files replace CSV / .rds artifacts
-  - 'Things to Watch Out For' is REQUIRED, not optional (5-7 gotchas)
-  - Verification commands replace summary statistics tables
-  - Reproducibility section pins OS and tool versions, not R session info
-  - Optional appendices for credential setup, sample sessions, teardown
+Deliverables live in docs/:
+  docs/r-package.yml       — annotated generic workflow
+  docs/render-report.yml   — annotated generic workflow
 
 ============================================================================ -->
 
@@ -105,616 +104,581 @@ Key differences from the data-analysis template:
 HERO IMAGE
 ============================================================================ -->
 
-![A cloud server rack symbolising the automation of virtual infrastructure through command-line scripting.](media/images/hero.png){.img-fluid width=80% fig-align="center"}
+![  ](media/images/hero.jpg){.img-fluid width=80% fig-align="center"}
 
-*Automating cloud infrastructure removes repetitive manual steps and lets you focus on the work that matters.*
+*Two workflow files, three workspace types: knowing which CI to apply
+is the first step toward a reproducible research pipeline.*
 
 # Introduction
 
-<!-- TEMPLATE INSTRUCTION: Hook with the 'I did not really appreciate X until Y'
-narrative. Establish yourself as the reader's peer, not their teacher.
+I did not realise that my zzcollab repos had inconsistent CI until I tried
+to distribute a single working workflow file across 45 projects and watched
+the results diverge in unexpected ways. Some repos needed R CMD check. Some
+needed Rmd rendering. Some needed both. A few needed neither. There was no
+single file that was right for all of them.
 
-Three short paragraphs:
-  1. The 'until' moment, the day you first felt the friction
-  2. What you discovered that resolved it
-  3. What this post will walk through (transition to Motivations)
+The problem was not the YAML itself; it was that I had treated all zzc
+workspaces as equivalent. A manuscript-package compendium (an R package
+plus a companion Rmd report) has genuinely different CI needs from a
+data-analysis compendium (scripts and data, no package) or a blog-post
+compendium (Quarto source, no R package at all). Applying the wrong
+workflow to the wrong workspace type either misses real errors or runs
+unnecessary steps on every push.
 
-Cross-reference any companion posts (e.g., a manual-console version of the
-same task) so the reader can choose the path that fits their needs.
--->
-
-I did not really appreciate how much time I was spending clicking through the AWS EC2 console until I tried to spin up the same configuration for the third time in a month. Each launch required navigating a dozen screens, selecting the same AMI, the same instance type, the same security group settings, and the same key pair, all by hand.
-
-The turning point came when I discovered that the AWS Command Line Interface (CLI) exposes every console action as a terminal command. Four short bash scripts later, I could reproduce an identical server environment in under two minutes. This post documents those scripts and the environment variables that drive them.
-
-In a separate post ([here](https://focusonr.org/posts/setupaws/)) I address the same task using the interactive EC2 dashboard. That walkthrough is instructive for understanding the components, but it becomes tedious after the first few repetitions. The scripts presented here replace that manual workflow entirely.
+This post maps the three workspace types to their correct workflow
+combinations, walks through each YAML file line by line, and documents the
+key configuration decisions that determine whether CI passes or fails.
 
 ## Motivations
 
-<!-- TEMPLATE INSTRUCTION: Be specific. Generic motivations ('productivity!')
-do not earn the reader's trust. Tie each bullet to a concrete pain point. -->
-
-- I needed a reliable way to launch identical EC2 instances for hosting Shiny applications without re-entering the same parameters each time.
-- Clicking through the EC2 console is error-prone: a wrong subnet or missing port rule can waste an hour of debugging.
-- Scripted provisioning makes it possible to version control the entire server setup alongside application code.
-- I wanted a teardown procedure that is as quick and systematic as the setup, reducing the risk of orphaned resources accumulating charges.
-- Learning the AWS CLI seemed like a transferable skill that would pay dividends beyond this single use case.
+- Distributing a single workflow file across all repos exposed the fact
+  that 'one size fits all' CI does not work when workspace structure varies.
+- A repo running R CMD check against packages that are not declared in
+  DESCRIPTION will fail with a cryptic 'packages not available' error that
+  takes time to diagnose.
+- The `RENV_CONFIG_REPOS_OVERRIDE` variable is not in the zzcollab
+  template by default, yet without it renv may restore from a binary repo
+  pinned to the wrong Ubuntu release.
+- Version-controlling CI alongside the compendium means every collaborator
+  gets the same check, not just the person who happens to have the tools
+  installed locally.
+- Surveying 45 repos revealed that five were missing the `# Profile:`
+  comment that `make r` requires, and seven were using the wrong base
+  workflow for their workspace type.
 
 ## Objectives
 
-<!-- TEMPLATE INSTRUCTION: Each objective should be VERIFIABLE. After
-following the post, the reader should be able to answer 'did I achieve
-objective N? yes / no.' -->
+1. Understand the three zzc workspace types and which CI workflows each
+   requires.
+2. Deploy `r-package.yml` correctly, including the `RENV_CONFIG_REPOS_OVERRIDE`
+   fix, in any manuscript-package or data-analysis compendium.
+3. Deploy `render-report.yml` correctly in any workspace that contains
+   `analysis/**/report.Rmd` files.
+4. Verify that CI passes on GitHub Actions after deploying the correct
+   workflow combination.
 
-1. Install and configure the AWS CLI on a macOS workstation, including IAM credential setup.
-2. Define eight environment variables that parameterise all subsequent scripts.
-3. Write four bash scripts that create a security group, generate a key pair, launch an EC2 instance, and bootstrap server software.
-4. Walk through a complete sample work session from scratch and document the teardown (undo) procedure.
+![  ](media/images/ambiance1.jpg){.img-fluid}
 
-I am documenting my learning process here. If you spot errors or have better approaches, please let me know.
+# What is a zzcollab workflow?
 
-![Workspace ambiance image: a desk with terminal windows in active use.](media/images/ambiance1.png){.img-fluid}
+A zzcollab workflow is a GitHub Actions YAML file that runs R CMD check,
+renders manuscripts, or both, inside a pre-built Docker container that
+mirrors the researcher's local environment. Think of it as the CI
+equivalent of `make r`: the same container, the same packages, the same
+R version, but triggered automatically on every push to `main`.
 
-# What is the AWS CLI?
-
-<!-- TEMPLATE INSTRUCTION: One sentence definition. One analogy. One concrete
-example. Do not lecture; readers who need the deep dive will follow links. -->
-
-The AWS Command Line Interface is a unified tool that provides a consistent interface for interacting with all parts of Amazon Web Services from a terminal. Think of it as the scriptable equivalent of the EC2 web console: every button click in the browser corresponds to an `aws` subcommand.
-
-The key benefit is repeatability. A bash script that calls `aws ec2 run-instances` will produce the same result every time, whereas a manual console session depends on the operator selecting the correct options from dozens of dropdown menus.
+The key architectural decision is that CI runs inside the project's own
+container, not on a bare GitHub runner. This means `renv.lock` drives
+package installation, and the check environment is reproducible by
+construction.
 
 # Prerequisites
 
-<!-- TEMPLATE INSTRUCTION: Front-load every assumption. The reader should
-know within 30 seconds whether this post applies to them. -->
-
 This post assumes:
 
-- **Operating system:** macOS 13+ or a Linux distribution with bash 5+
-- **Hardware:** any (Apple Silicon and x86_64 both work)
-- **Already installed:** Homebrew (macOS) or apt (Debian/Ubuntu), plus `jq` for JSON parsing
-- **Background knowledge:** comfort editing dotfiles and running shell commands; familiarity with the AWS console at a basic level
-- **AWS account:** an active account with permission to create IAM users
-- **Time required:** about 30 minutes for install, configuration, and a first launch
+- **zzcollab version**: v2.4.0 or later (the `.zzcollab/manifest.json`
+  marker is present).
+- **GitHub**: the repo is hosted on GitHub with Actions enabled.
+- **Workspace type**: you know whether your repo is a manuscript-package,
+  data-analysis, or blog-post compendium (see the decision table below).
+- **renv**: an `renv.lock` file is present and up to date.
+- **Dockerfile**: the repo has a `Dockerfile` with a `# Profile:` comment
+  in the first 20 lines.
 
-If any of the above does not apply, the steps below may need adaptation.
+If the `Dockerfile` is missing the `# Profile:` comment, `make r` will
+abort with 'Could not detect profile from Dockerfile'. Add the comment
+before proceeding.
 
-# Installation
+# The Three Workspace Types
 
-<!-- TEMPLATE INSTRUCTION: Show the command. Show the expected output. Keep
-prose between blocks under three sentences. -->
+zzcollab repos fall into three structural categories. The correct CI
+combination follows from the category.
 
-On macOS, Homebrew provides the simplest installation path. The `aws configure` command then prompts for your IAM credentials, default region, and output format.
+| Workspace type      | Has R package | Has `analysis/**/report.Rmd` | `r-package.yml` | `render-report.yml` |
+|---------------------|:-------------:|:----------------------------:|:---------------:|:-------------------:|
+| Manuscript-package  | yes           | yes                          | yes             | yes                 |
+| Data-analysis       | yes           | no                           | yes             | no                  |
+| Blog-post           | no            | no (Quarto source)           | no              | no                  |
 
-```sh
-brew install awscli jq
-aws configure
+**Manuscript-package** (most common): an R package that implements the
+analysis, plus one or more `analysis/*/report.Rmd` manuscripts. Needs both
+workflows: `r-package.yml` checks the package, `render-report.yml` renders
+the manuscripts.
+
+**Data-analysis**: an R package used for a self-contained analysis but
+without companion manuscripts. Needs `r-package.yml` only.
+
+**Blog-post** (qblog compendia): a Quarto document with supporting R code
+but no R package structure. Neither workflow applies; Quarto rendering is
+handled by a separate `quarto-publish.yml` if needed.
+
+The zzcollab doctor (`zzc doctor`) reports `r-package.yml` as a required
+file for manuscript-package and data-analysis repos. It does not currently
+scaffold `render-report.yml` automatically.
+
+# The R CMD Check Workflow: `r-package.yml`
+
+Place this file at `.github/workflows/r-package.yml`. It is the standard
+zzcollab CI workflow for any repo that contains an R package.
+
+```yaml
+# zzcollab r-package.yml v2.4.0
+#
+# R CMD check in a rocker/tidyverse container, triggered on
+# pushes and PRs to main/master.
+#
+name: R Package Check (Container)
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    container: rocker/tidyverse:4.4.2
+    env:
+      ZZCOLLAB_CONTAINER: "true"
+      CI_TOOLS_LIB: "/tmp/ci-tools"
+      RENV_CONFIG_REPOS_OVERRIDE: >-
+        https://packagemanager.posit.co/cran/__linux__/noble/latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install system dependencies
+        run: |
+          apt-get update && apt-get install -y \
+            jq libcurl4-openssl-dev libssl-dev libxml2-dev cmake
+
+      - name: Cache renv packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/R/renv
+          key: renv-${{ hashFiles('renv.lock') }}
+          restore-keys: |
+            renv-
+
+      - name: Install renv and restore project packages
+        run: |
+          Rscript -e "\
+            install.packages('renv',
+              repos = 'https://cloud.r-project.org'); \
+            renv::restore(prompt = FALSE)"
+
+      - name: Install CI tools to separate library
+        run: |
+          mkdir -p $CI_TOOLS_LIB
+          Rscript -e "\
+            install.packages(c('rcmdcheck', 'tinytest'),
+              lib = Sys.getenv('CI_TOOLS_LIB'),
+              repos = 'https://cloud.r-project.org')"
+
+      - name: Run R CMD check
+        run: |
+          Rscript -e "\
+            .libPaths(c(Sys.getenv('CI_TOOLS_LIB'), .libPaths())); \
+            rcmdcheck::rcmdcheck(
+              args = '--no-manual', error_on = 'error')"
 ```
 
-The `aws configure` command will ask for four values:
+## Key decisions in `r-package.yml`
 
-- **AWS Access Key ID** and **AWS Secret Access Key**: obtained from your IAM credentials CSV (see [Appendix A: IAM Credential Setup](#appendix-a) below).
-- **Default region**: for example, `us-west-1`.
-- **Default output format**: `json` is recommended.
+**`RENV_CONFIG_REPOS_OVERRIDE`**: This is the most important line not
+in the zzcollab template by default. Without it, `renv::restore()` uses
+the CRAN URL baked into `renv.lock` at snapshot time, which may target a
+different Ubuntu release than the container. The container runs Ubuntu
+24.04 (noble); if the lockfile was snapshotted against Ubuntu 22.04
+(jammy) binaries, packages will be absent or broken. Setting this
+variable forces renv to use the noble binary repo regardless of what the
+lockfile says.
 
-::: {.callout-note}
-Instructions to install the Homebrew software management system on macOS can be found at [brew.sh](https://brew.sh/). Additional installation paths (Linux, Windows) are documented in the [official AWS CLI guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
-:::
+**`CI_TOOLS_LIB`**: `rcmdcheck` and `tinytest` are installed into a
+separate library (`/tmp/ci-tools`) rather than the project renv library.
+This prevents them from appearing as undeclared dependencies during R CMD
+check and avoids version conflicts with project packages.
 
-Confirm the install succeeded:
+**`rocker/tidyverse:4.4.2`**: The container matches the R version in
+`renv.lock`. Changing the container R version without updating the lock
+file will cause package binary mismatches.
 
-```sh
-aws --version
-# Expected output: aws-cli/2.15.x Python/3.11.x Darwin/...
+**`tinytest` in CI tools**: Repos using the default testthat framework
+do not need `tinytest` in the CI tools step; testthat is restored via
+`renv::restore()`. Include it only for repos that use tinytest as their
+test framework.
+
+![  ](media/images/ambiance2.jpg){.img-fluid}
+
+# The Report-Rendering Workflow: `render-report.yml`
+
+Place this file at `.github/workflows/render-report.yml`. It applies only
+to manuscript-package repos that contain `analysis/**/report.Rmd` files.
+
+```yaml
+name: Render Reports
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'analysis/**'
+      - 'R/**'
+      - 'renv.lock'
+      - 'Dockerfile'
+      - '.github/workflows/render-report.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'analysis/**'
+      - 'R/**'
+      - 'renv.lock'
+      - 'Dockerfile'
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        run: |
+          docker build -t compendium-env .
+
+      - name: Restore packages and render all manuscripts
+        run: |
+          docker run --rm -e CI=true \
+            -v ${{ github.workspace }}:/project \
+            -w /project compendium-env \
+            Rscript -e '
+              renv::restore()
+              rmds <- list.files(
+                "analysis", pattern = "^report[.]Rmd$",
+                recursive = TRUE, full.names = TRUE
+              )
+              cat("Found", length(rmds), "manuscripts\n\n")
+              failed <- character()
+              for (rmd in rmds) {
+                cat("=== Rendering:", rmd, "===\n")
+                old_wd <- setwd(dirname(rmd))
+                tryCatch(
+                  rmarkdown::render(basename(rmd)),
+                  error = function(e) {
+                    cat("FAILED:", conditionMessage(e), "\n")
+                    failed <<- c(failed, rmd)
+                  }
+                )
+                setwd(old_wd)
+              }
+              cat("\n=== summary ===\n")
+              cat("rendered:", length(rmds) - length(failed), "\n")
+              cat("failed:  ", length(failed), "\n")
+              if (length(failed) > 0) {
+                for (f in failed) cat("  ", f, "\n")
+                quit(status = 1)
+              }
+            '
+
+      - name: Upload rendered PDFs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rendered-manuscripts
+          path: |
+            analysis/**/*.pdf
+          retention-days: 30
+          if-no-files-found: warn
 ```
 
-# Configuration
+## Key decisions in `render-report.yml`
 
-<!-- TEMPLATE INSTRUCTION: Show the FULL config file, not snippets. Readers
-copy-paste; partial files force them to guess. Add inline comments explaining
-the WHY of non-obvious settings. Place real config files under
-analysis/configs/<filename> and either include them with knitr or paste
-verbatim. -->
+**Path filters**: The workflow triggers only when files under `analysis/`,
+`R/`, `renv.lock`, or the Dockerfile change. This avoids running a
+full Docker build on every push that touches only documentation or CI
+configuration.
 
-Nine parameters (including a project name) are required for automated instance generation via the AWS API. The first eight are likely to remain static across launches. Store them as environment variables in your shell configuration file so that every script can reference them without hardcoded values.
+**Docker build inside CI**: The workflow builds the project's own Docker
+image rather than using `rocker/tidyverse` directly. This means the
+rendered output reflects the exact environment defined in the repo's
+Dockerfile, including any custom system dependencies.
 
-Add the following to your `.zshrc` (or equivalent):
+**`if-no-files-found: warn`**: If the repo contains no `report.Rmd`
+files, the upload step warns rather than fails. This makes the workflow
+safe to include in repos where manuscripts are work-in-progress.
 
-```sh
-# ~/.zshrc — AWS provisioning environment
-# Tested on aws-cli 2.15, macOS 15.4
-
-# 1-2. VPC and subnet (find in EC2 dashboard)
-export vpc_id="vpc-14814b73"
-export subnet_id="subnet-f02c90ab"
-
-# 3-5. AMI, instance type, storage size (GB)
-export ami_id="ami-014d05e6b24240371"      # Ubuntu 22.04 LTS, us-west-1
-export instance_type="t2.micro"            # 1 vCPU, 1 GB RAM
-export storage_size="30"
-
-# 6-7. Key pair name, security group ID
-export key_name="power1_app"
-export security_grp="sg-0fef542d93849669c"
-
-# 8. Static (Elastic) IP
-export static_ip="13.57.139.31"
-```
-
-A ninth parameter, `proj_name`, is supplied at the time each script is called via the `-p` flag.
-
-![Editor or terminal showing the AWS CLI in action.](media/images/ambiance2.png){.img-fluid}
-
-# The Four Provisioning Scripts
-
-The provisioning workflow consists of four scripts executed in sequence:
-
-1. **Create a security group**: define firewall rules (which ports to open).
-2. **Create a key pair**: generate an SSH key for encrypted communication.
-3. **Launch the instance**: provision the server with all parameters.
-4. **Bootstrap software**: install Docker and supporting tools on first boot.
-
-## Script 1: Create Security Group
-
-This script creates a security group (firewall) and opens specified ports. The `-n` flag sets the group name and the `-p` flag adds a port. The default behavior opens ports 22 (SSH) and 443 (HTTPS) only.
-
-```sh
-# Example usage
-aws_create_security_group.sh -n power1_app -p 22 -p 80 -p 443
-```
-
-```sh
-#!/usr/bin/env bash
-Help() {
-  echo "Generates a new security group."
-  echo "  -n  group name (defaults to current dir name)"
-  echo "  -p  port to open (repeatable; e.g., -p 22 -p 443)"
-  echo "Reads vpc_id from environment variables."
-}
-
-sg_grp_name=$(basename "$PWD")
-while getopts ":hp:n:" opt; do
-  case $opt in
-    p ) ports+=("$OPTARG") ;;
-    n ) sg_grp_name=$OPTARG ;;
-    h ) Help; exit ;;
-    * ) echo 'error in command line parsing' >&2; exit 1 ;;
-  esac
-done
-
-aws ec2 create-security-group \
-  --group-name "$sg_grp_name" \
-  --description "security group" \
-  --tag-specifications \
-    "ResourceType=security-group,Tags=[{Key=Name,Value=$sg_grp_name}]" \
-  --vpc-id "$vpc_id" > temp.txt
-
-security_grp=$(jq -r .GroupId temp.txt)
-echo "security group ID = $security_grp"
-
-for i in "${ports[@]}"; do
-  aws ec2 authorize-security-group-ingress \
-    --group-id "$security_grp" \
-    --protocol tcp \
-    --port "${i}" \
-    --cidr "0.0.0.0/0" > /dev/null
-done
-```
-
-## Script 2: Create Key Pair
-
-This script generates an SSH key pair and stores the private key in `~/.ssh/`. The `-k` flag sets the key pair name; if omitted, the current directory name is used.
-
-```sh
-# Example usage
-aws_create_keypair.sh -k power1_app
-```
-
-```sh
-#!/usr/bin/env bash
-Help() {
-  echo "Generates a new SSH key pair."
-  echo "  -k  key pair name (defaults to current dir name)"
-  echo "Stores the .pem file under ~/.ssh/ with mode 400."
-}
-
-while getopts 'hk:' flag; do
-  case "${flag}" in
-    h) Help; exit ;;
-    k) key_pair_name=${OPTARG} ;;
-  esac
-done
-
-: "${key_pair_name:=$(basename "$PWD")}"
-echo "key_pair_name is $key_pair_name"
-
-rm -f "$HOME/.ssh/$key_pair_name.pem"
-aws ec2 create-key-pair \
-  --key-name "$key_pair_name" \
-  --query 'KeyMaterial' \
-  --output text > "$HOME/.ssh/$key_pair_name.pem"
-
-chmod 400 "$HOME/.ssh/$key_pair_name.pem"
-```
-
-## Script 3: Launch the EC2 Instance
-
-This is the core script. It reads all eight environment variables, launches the instance, and associates the Elastic IP. The `-p` flag sets the project name used for tagging.
-
-```sh
-# Example usage
-aws_create_instance.sh -p power1_app
-```
-
-```sh
-#!/usr/bin/env bash
-Help() {
-  echo "Launches an EC2 instance with the configured parameters."
-  echo "  -p  project name (used for tagging)"
-  echo "Prerequisites: security group + key pair must already exist."
-}
-
-while getopts 'hp:' flag; do
-  case "${flag}" in
-    h) Help; exit ;;
-    p) proj_name=${OPTARG} ;;
-  esac
-done
-
-: "${proj_name:=$(basename "$PWD")}"
-
-aws ec2 run-instances \
-  --image-id "$ami_id" \
-  --count 1 \
-  --instance-type "$instance_type" \
-  --key-name "$key_name" \
-  --security-group-ids "$security_grp" \
-  --subnet-id "$subnet_id" \
-  --block-device-mappings \
-    "[{\"DeviceName\":\"/dev/sda1\",\"Ebs\":{\"VolumeSize\":$storage_size}}]" \
-  --tag-specifications \
-    "ResourceType=instance,Tags=[{Key=Name,Value=$proj_name}]" \
-  --user-data file://~/Dropbox/prj/c060/aws_startup_code.sh
-
-iid=$(aws ec2 describe-instances \
-  --filters "Name=tag:Name,Values=$proj_name" | \
-  jq -r '.Reservations[].Instances[].InstanceId')
-
-aws ec2 associate-address \
-  --public-ip "$static_ip" \
-  --instance-id "$iid"
-```
-
-## Script 4: Startup Bootstrap
-
-This user-data script runs automatically on first boot. It installs Docker and Docker Compose on the new Ubuntu instance, then adds the default `ubuntu` user to the `docker` group.
-
-```sh
-#!/bin/bash
-apt update
-apt-get install -y curl gnupg ca-certificates lsb-release
-
-install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
-  gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-chmod a+r /etc/apt/keyrings/docker.gpg
-
-echo "deb [arch=$(dpkg --print-architecture) \
-  signed-by=/etc/apt/keyrings/docker.gpg] \
-  https://download.docker.com/linux/ubuntu \
-  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
-  | tee /etc/apt/sources.list.d/docker.list > /dev/null
-
-apt-get update
-apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-usermod -aG docker ubuntu
-```
+**No `r-package.yml` duplication**: `render-report.yml` does not run
+R CMD check. It is the companion to `r-package.yml`, not a replacement.
+Both files must be present in a manuscript-package repo.
 
 # Verification
 
-<!-- TEMPLATE INSTRUCTION: Give the reader a smoke test that proves the
-setup is working. 'It runs' is not enough; demonstrate at least one
-configured behavior. -->
-
-Run the following to verify the configuration loaded correctly:
+After placing the correct workflow files, push a commit to `main` and
+confirm CI passes:
 
 ```sh
-# 1. Version check
-aws --version
-
-# 2. Configuration introspection
-aws configure list
-echo "vpc_id=$vpc_id"   # should print your VPC ID
-
-# 3. Functional smoke test (lists instances in the configured region)
-aws ec2 describe-instances --query 'Reservations[].Instances[].InstanceId'
+gh run list --repo <owner>/<repo> --limit 3
+gh run view <run-id> --log-failed
 ```
 
-If step 3 returns a JSON array (empty or populated), the credentials and region are configured correctly.
+A successful `r-package.yml` run ends with:
+
+```
+Status: 0 ERRORs, 0 WARNINGs, N NOTEs
+```
+
+A successful `render-report.yml` run uploads one PDF per `report.Rmd`
+found in the `analysis/` tree.
+
+## Diagnosing common failures
+
+**'Packages required but not available'**: `RENV_CONFIG_REPOS_OVERRIDE`
+is missing or wrong. Check that the URL ends in `noble/latest` (not
+`jammy/latest`) for Ubuntu 24.04 containers.
+
+**'Could not detect profile from Dockerfile'**: The `Dockerfile` is
+missing `# Profile: <name>` in the first 20 lines. Add it before
+running `make r` or pushing to CI.
+
+**'no package called here' in tinytest**: A test file calls
+`library(here)` but `here` is not declared in `DESCRIPTION`. Add
+`here` to `Suggests`.
+
+**'Namespaces in Imports field not imported from'**: A package is listed
+in `DESCRIPTION` `Imports` but never used. Remove it or demote it to
+`Suggests`.
 
 # Daily Workflow
 
-<!-- TEMPLATE INSTRUCTION: A keybinding / command reference table is the
-single most-bookmarked element of a setup post. Make it scannable. -->
+With both workflow files in place, the typical development loop is:
 
-The configuration above enables the following daily-use commands:
+| Action | CI triggered |
+|--------|-------------|
+| `git push` to `main` | both workflows if paths match |
+| Edit `analysis/` only | `render-report.yml` only |
+| Edit `R/` only | both workflows |
+| Edit `.github/` only | neither (path filters exclude it) |
 
-| Command                                     | Action                                  |
-|---------------------------------------------|-----------------------------------------|
-| `aws_create_security_group.sh -n NAME -p P` | Create firewall, open port `P`          |
-| `aws_create_keypair.sh -k NAME`             | Generate `.pem` key under `~/.ssh/`     |
-| `aws_create_instance.sh -p NAME`            | Launch tagged EC2 instance              |
-| `ssh rgtlab.org`                            | Connect to the running instance         |
-| `aws ec2 describe-instances`                | List all instances in current region    |
-| `aws ec2 terminate-instances --instance-ids ID` | Terminate by ID                     |
-
-After two or three provisioning cycles these become muscle memory and the productivity gain compounds.
-
-## Connecting to the New Server
-
-For convenience, construct a `config` file in `~/.ssh/` so that you can connect with a simple hostname rather than remembering the IP address and key path:
-
-```sh
-Host rgtlab.org
-  HostName 13.57.139.31
-  User ubuntu
-  Port 22
-  IdentityFile ~/.ssh/power1_app.pem
-```
-
-Then connect with:
-
-```sh
-ssh rgtlab.org
-```
-
-::: {.callout-tip}
-Set the private key permissions to 600 for additional security: `chmod 600 ~/.ssh/power1_app.pem`.
-:::
+Running `zzc doctor` before pushing catches most structural issues
+(missing `# Profile:`, outdated `.Rprofile`, misplaced files) before
+they become CI failures.
 
 # Things to Watch Out For
 
-<!-- TEMPLATE INSTRUCTION: REQUIRED for setup posts. List every gotcha,
-edge case, and platform-specific surprise you hit. The reader will trust
-the post more, not less, when you are honest about pitfalls. Aim for 5-7. -->
+1. **`RENV_CONFIG_REPOS_OVERRIDE` must match the container OS.** The
+   URL `cran/__linux__/noble/latest` is correct for Ubuntu 24.04. If the
+   container base image changes (e.g., to a Debian image), the URL
+   must be updated to match the new distribution and codename.
 
-1. **Security group names must be unique within a VPC.** If a group with the same name already exists, the create script will fail. Check the EC2 console or use `aws ec2 describe-security-groups` before running the script.
+2. **Both workflows trigger on the same push if both are present.** In
+   a manuscript-package repo this is correct. In a data-analysis repo
+   with no manuscripts, `render-report.yml` will still run but will
+   find zero `report.Rmd` files and exit with a warning, not an error.
 
-2. **Key pair names must also be unique.** A duplicate name causes a CLI error. Delete the old pair first if you need to regenerate.
+3. **The `r-package.yml` `tinytest` install is only needed for
+   tinytest repos.** For testthat repos, `tinytest` is an unnecessary
+   install that adds about 30 seconds to CI. Remove it from the CI
+   tools step in those repos.
 
-3. **The Elastic IP must be allocated before association.** If you have not yet allocated a static IP through the console, the associate command in Script 3 will fail silently.
+4. **`render-report.yml` builds the Docker image on every triggered
+   run.** Without a Docker layer cache, this adds 3-10 minutes per
+   run. The workflow does not currently use `cache-from` or `cache-to`
+   for the Docker build step.
 
-4. **User-data scripts run as root on first boot only.** If the bootstrap script has an error, you must terminate the instance and launch a new one; there is no way to re-run user-data on an existing instance.
+5. **Undeclared test dependencies cause R CMD check failures.** If a
+   tinytest file calls `library(foo)` and `foo` is not in `DESCRIPTION`
+   `Imports` or `Suggests`, R CMD check will fail even if `foo` is in
+   `renv.lock`.
 
-5. **Environment variables are session-scoped.** If you open a new terminal without sourcing `.zshrc`, the scripts will fail because the variables are not set. Verify with `echo $vpc_id` before running any script.
+6. **The `r-package.yml` version stamp must match the zzcollab version.**
+   `zzc doctor` checks the stamp and flags a mismatch. Bumping the stamp
+   without changing the content is correct when the template content has
+   not changed between versions.
 
-6. **AWS CLI commands are region-specific.** Ensure your `aws configure` region matches the region where you allocated your VPC and Elastic IP, or commands will appear to succeed but operate on the wrong region.
+7. **`render-report.yml` uses `actions/checkout@v6`, which is current
+   as of May 2026.** Verify the latest release before copying the file
+   to a new repo, as the major version may have advanced.
 
 # Uninstall / Rollback
 
-<!-- TEMPLATE INSTRUCTION: A trustworthy setup post tells the reader how
-to undo the changes if they decide the tool is not for them. The full
-teardown for this AWS workflow lives in Appendix C; here we cover the
-local CLI removal. -->
-
-To remove the AWS CLI from your workstation:
+To remove CI from a repo:
 
 ```sh
-# 1. Remove the configuration
-rm -i ~/.aws/credentials ~/.aws/config
-
-# 2. Uninstall the CLI
-brew uninstall awscli   # macOS
-sudo apt remove awscli  # Ubuntu / Debian
+rm .github/workflows/r-package.yml
+rm .github/workflows/render-report.yml
+git add -u .github/workflows/
+git commit -m "Remove CI workflows"
+git push
 ```
 
-For full AWS resource teardown (instance, security group, key pair, Elastic IP), see [Appendix C](#appendix-c).
+GitHub Actions stops triggering automatically once the YAML files are
+removed. Any in-progress runs will complete before the removal takes
+effect.
 
-![Workflow scene: a calm post-setup environment with the new server in use.](media/images/ambiance3.jpg){.img-fluid}
+![  ](media/images/ambiance3.jpg){.img-fluid}
 
 # What Did We Learn?
 
 ## Lessons Learnt
 
-**Conceptual Understanding:**
+**Conceptual understanding:**
 
-- The EC2 console and the AWS CLI are two interfaces to the same API; anything clickable in the browser has a corresponding `aws ec2` subcommand.
-- A security group is a stateful firewall that operates at the instance level, not the subnet level; each rule opens a single port to a specified CIDR range.
-- Elastic IPs are free while associated with a running instance but incur charges when allocated but unused.
-- User-data scripts provide a one-shot bootstrap mechanism; for ongoing configuration management, tools such as Ansible or cloud-init are more appropriate.
+- Workspace type (manuscript-package, data-analysis, blog-post) determines
+  the correct CI combination. Applying the same workflow to all repos
+  masks real differences in what each repo needs to verify.
+- CI and `make r` share the same fundamental guarantee: the container
+  defines the environment, and `renv.lock` defines the packages. Any
+  divergence between them is a reproducibility gap.
+- `RENV_CONFIG_REPOS_OVERRIDE` is a configuration variable, not a
+  workaround. It makes explicit what `renv.lock` leaves implicit: which
+  binary repository should be used for package installation.
+- Separating CI tools (`rcmdcheck`, `tinytest`) from project packages
+  in `CI_TOOLS_LIB` is the correct pattern for preventing tool
+  contamination of the renv library.
 
-**Technical Skills:**
+**Technical skills:**
 
-- Writing bash scripts with `getopts` for flag parsing produces reusable, self-documenting CLI tools.
-- The `jq` utility is essential for extracting fields from the JSON responses returned by AWS CLI commands.
-- Storing infrastructure parameters as environment variables decouples configuration from code, following the twelve-factor app methodology.
-- The `--user-data file://` directive in `aws ec2 run-instances` enables automatic software installation on instance launch.
+- `gh run list` and `gh run view --log-failed` are sufficient to diagnose
+  most CI failures without opening the browser.
+- `find . -name ".zzcollab" -type d` is a reliable way to enumerate all
+  zzc repos in a directory tree, using `.zzcollab/manifest.json` as the
+  canonical workspace marker.
+- Distributing workflow files with a shell loop (`while read repo; do
+  cp ...; done`) is straightforward but requires a post-distribution
+  audit to confirm no existing file was incorrectly overwritten.
+- `zzc doctor` catches structural issues before CI does. Running it
+  locally before pushing saves one CI cycle per issue.
 
-**Gotchas and Pitfalls:**
+**Gotchas and pitfalls:**
 
-- Forgetting to `chmod 400` the PEM file will cause SSH to reject the connection with a permissions error.
-- The `--cidr "0.0.0.0/0"` rule opens a port to the entire internet; restrict this to your own IP in production environments.
-- If you delete a security group while an instance references it, the deletion will fail; terminate the instance first.
-- AWS CLI commands are region-specific; ensure your `aws configure` region matches the region where you allocated your VPC and Elastic IP.
+- A workflow file that already existed before the distribution loop
+  will be silently overwritten. Always compare against the existing file
+  if the repo may have repo-specific customisations.
+- `actions/checkout@v6` exists and is current. Checking the GitHub
+  Marketplace release history before assuming a version is wrong prevents
+  unnecessary edits.
+- Adding `render-report.yml` to a data-analysis repo is harmless but
+  wasteful. The `if-no-files-found: warn` option prevents a hard failure,
+  but the Docker build step still runs.
 
 ## Limitations
 
-This setup has constraints worth naming up front:
-
-- **Single-instance scope:** These scripts assume a single-instance deployment and do not address auto-scaling groups, load balancers, or multi-AZ redundancy.
-- **Permissive firewall:** The security group rules open ports to all IPv4 addresses (`0.0.0.0/0`), which is acceptable for development but inappropriate for production.
-- **No application-layer security:** The bootstrap script installs Docker but does not configure TLS certificates, reverse proxies, or application-level security.
-- **Long-lived credentials:** IAM credentials stored in `~/.aws/credentials` are long-lived; rotating to short-lived credentials via IAM roles would be more secure.
-- **No rollback logic:** The scripts do not include error recovery; a failure mid-sequence can leave orphaned resources.
-- **Single region:** All commands target one AWS region; multi-region deployments would require additional parameterisation.
+- These two workflow files cover only the most common zzc CI patterns.
+  Repos with Shiny applications, pkgdown sites, or Quarto books require
+  additional or different workflow files not documented here.
+- `render-report.yml` does not cache the Docker build. Large images
+  with many compiled system libraries can take 10 or more minutes to
+  build from scratch on every triggered run.
+- The workflows target the `main` and `master` branches only. Feature
+  branches do not get CI unless the `on: push: branches` list is
+  extended.
+- The `r-package.yml` container is pinned to `rocker/tidyverse:4.4.2`.
+  Repos with a different R version in their Dockerfile will need a
+  corresponding change to the container tag.
+- Neither workflow addresses code coverage, linting, or spell-checking.
+  These require additional workflow steps or separate YAML files.
 
 ## Opportunities for Improvement
 
-If I had more time, here is what I would explore next:
-
-1. Replace long-lived IAM credentials with IAM roles attached directly to the EC2 instance profile.
-2. Add `set -euo pipefail` to each script for stricter error handling and automatic failure on undefined variables.
-3. Migrate the bootstrap script to a cloud-init configuration file for better logging and idempotency.
-4. Restrict security group ingress rules to the operator's current public IP rather than `0.0.0.0/0`.
-5. Wrap all four scripts in a single orchestration script with a `--teardown` flag to reverse the entire setup.
-6. Explore AWS CloudFormation or Terraform for declarative infrastructure definitions that can be version controlled and reviewed.
+1. Add Docker layer caching to `render-report.yml` using
+   `cache-from: type=gha` and `cache-to: type=gha,mode=max` in the
+   build step to reduce build times from 10 minutes to under 2 minutes
+   on cache hits.
+2. Extend `zzc doctor` to scaffold `render-report.yml` automatically
+   for manuscript-package repos, so the file is present from first
+   `zzc init` rather than requiring manual distribution.
+3. Add a `--no-vignettes` flag to the `rcmdcheck::rcmdcheck()` call
+   for repos with vignettes that require LaTeX, which is not available
+   in the `rocker/tidyverse` container by default.
+4. Parameterise the R version and Ubuntu codename in both workflow files
+   so that bumping the container image requires a change in one place
+   rather than two.
+5. Add a workflow dispatch trigger (`on: workflow_dispatch`) to both
+   files so CI can be triggered manually from the GitHub Actions tab
+   without a push.
+6. Build a `zzc ci-status` subcommand that queries `gh run list` for
+   all repos in a directory tree and reports pass/fail in a single
+   table.
 
 # Wrapping Up
 
-Automating EC2 provisioning with the AWS CLI reduced what was a fifteen-minute, error-prone console session to a two-minute, reproducible bash workflow. The four scripts presented here (security group creation, key pair generation, instance launch, and software bootstrap) cover the essential steps for getting a Docker-ready Ubuntu server online.
+Getting CI right in a zzcollab portfolio is a two-step problem: first,
+identify the workspace type; second, apply the correct workflow
+combination. The manuscript-package type is the most common and the most
+demanding, requiring both `r-package.yml` and `render-report.yml`. The
+data-analysis type needs only the package check. The blog-post type
+needs neither.
 
-The most valuable lesson was that the AWS console and the CLI are two windows into the same API. Once that relationship became clear, every new console action suggested a corresponding scriptable command, and the scope for automation expanded considerably.
+The single most impactful change to the zzcollab template is adding
+`RENV_CONFIG_REPOS_OVERRIDE` to the `r-package.yml` environment block.
+Without it, CI restores packages from a binary repository that may not
+match the container's Ubuntu release, producing 'packages not available'
+errors that look like dependency problems but are actually repository
+configuration problems.
 
 **Main takeaways:**
 
-- Four bash scripts replace the entire EC2 console provisioning workflow.
-- Eight environment variables parameterise the scripts, making them reusable across projects.
-- The teardown procedure (Appendix C) is equally important; orphaned resources accumulate charges.
-- The AWS CLI is a transferable skill applicable to S3, RDS, Lambda, and every other AWS service.
+- Workspace type determines CI: manuscript-package gets both workflows,
+  data-analysis gets `r-package.yml` only, blog-post gets neither.
+- `RENV_CONFIG_REPOS_OVERRIDE` is required for reliable binary package
+  installation in Ubuntu 24.04 containers.
+- `CI_TOOLS_LIB` keeps rcmdcheck and tinytest out of the renv project
+  library.
+- `zzc doctor` before push; `gh run view --log-failed` after push.
 
 # See Also
 
 **Related posts:**
 
-- [Setting Up an AWS EC2 Server via the Console](https://focusonr.org/posts/setupaws/): the manual equivalent of this workflow.
+- [A tiered CI strategy for zzcollab research compendia](
+  https://focusonr.org/posts/63-zzcollab-ci-strategy/): companion post
+  on the broader CI philosophy behind these workflow files.
 
 **Key resources:**
 
-- [AWS CLI Command Reference: EC2](https://docs.aws.amazon.com/cli/latest/reference/ec2/)
-- [AWS CLI Getting Started Guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
-- [Docker Installation on Ubuntu](https://docs.docker.com/engine/install/ubuntu/)
-- [jq Manual](https://jqlang.github.io/jq/manual/)
+- [GitHub Actions documentation](
+  https://docs.github.com/en/actions): reference for workflow syntax,
+  triggers, and runner environments.
+- [Posit Package Manager](
+  https://packagemanager.posit.co/): source of pre-compiled R package
+  binaries for Linux distributions.
+- [rocker-org/rocker-versioned2](
+  https://github.com/rocker-org/rocker-versioned2): source for the
+  `rocker/tidyverse` and `rocker/verse` container images used in CI.
+- [renv documentation](
+  https://rstudio.github.io/renv/): reference for `renv.lock`,
+  `RENV_CONFIG_REPOS_OVERRIDE`, and related configuration options.
 
 ---
 
 # Reproducibility
 
-<!-- TEMPLATE INSTRUCTION: For setup posts, reproducibility means PINNED
-VERSIONS, not sessionInfo(). State exactly what was tested. -->
-
 **Tested configuration:**
 
-| Component        | Version              |
-|------------------|----------------------|
-| Operating system | macOS 15.4           |
-| AWS CLI          | 2.15.30              |
-| Shell            | zsh 5.9              |
-| jq               | 1.7.1                |
-| Homebrew         | 4.2.x                |
-| Last verified    | 2025-01-01           |
+| Component                  | Version                     |
+|----------------------------|-----------------------------|
+| Operating system (host)    | macOS 15.4                  |
+| Operating system (CI)      | Ubuntu 24.04.1 LTS (noble)  |
+| R (container)              | 4.4.2                       |
+| rocker/tidyverse           | 4.4.2                       |
+| actions/checkout           | v6 (v6.0.2)                 |
+| actions/cache              | v5                          |
+| actions/upload-artifact    | v4                          |
+| docker/setup-buildx-action | v3                          |
+| Last verified              | 2026-05-18                  |
 
-**Configuration files:**
+**Workflow files (genericised):**
 
-- `analysis/configs/aws_create_security_group.sh`: full Script 1 source
-- `analysis/configs/aws_create_keypair.sh`: full Script 2 source
-- `analysis/configs/aws_create_instance.sh`: full Script 3 source
-- `analysis/configs/aws_startup_code.sh`: full Script 4 (user-data)
-- `analysis/configs/zshrc_aws_block.sh`: the eight environment variable exports
-
-**To reproduce end-to-end:**
-
-```sh
-brew install awscli jq
-aws configure                                              # supply IAM credentials
-source analysis/configs/zshrc_aws_block.sh                 # set environment vars
-bash analysis/configs/aws_create_security_group.sh \
-  -n power1_app -p 22 -p 80 -p 443
-bash analysis/configs/aws_create_keypair.sh -k power1_app
-bash analysis/configs/aws_create_instance.sh -p power1_app
-```
+- `docs/r-package.yml`: annotated generic R CMD check workflow
+- `docs/render-report.yml`: annotated generic report-rendering workflow
 
 ---
 
-# Appendix A: IAM Credential Setup {#appendix-a}
-
-This appendix explains how to create IAM credentials for use with the AWS CLI.
-
-1. Log into the AWS console.
-2. Search for the **IAM** service and navigate to the IAM dashboard.
-3. Select **User groups** and create a group based on the Power User profile. Name it `admin` and include your IAM user in the group.
-4. Select **Users** in the left panel, then click **Create User**.
-5. Enter a username (e.g., `zenn`) and click **Next**, then **Create User**.
-6. Click on the new username. Select the **Security Credentials** tab.
-7. Under the **Access Keys** panel, click **Create access key**.
-8. Select **Command Line Interface (CLI)** and check the acknowledgement box at the bottom.
-9. Click **Create access key** and then **Download .csv file**.
-10. Save the CSV to your local `~/.aws/` directory.
-
-Now configure the CLI:
-
-```sh
-aws configure
-```
-
-Paste the **Access Key ID** and **Secret Access Key** from the downloaded CSV. When prompted, enter your region (e.g., `us-west-1`) and output format (`json`).
-
-::: {.callout-note}
-AWS Identity and Access Management (IAM) is a web service that helps you securely control access to AWS resources. Treat your credentials like passwords: never commit them to version control.
-:::
-
-# Appendix B: Sample Work Session {#appendix-b}
-
-This appendix walks through a complete provisioning session starting from scratch, assuming only that `aws configure` has been run and that VPC and subnet IDs are stored as environment variables.
-
-**Assumptions:**
-
-1. AWS CLI is configured.
-2. No security group has been defined.
-3. No key pair has been generated.
-4. `vpc_id` and `subnet_id` are known.
-5. Project name is `power1_app`.
-
-The session will spin up an Ubuntu server with type `t2.micro` (1 vCPU, 1 GB memory) and a 30 GB hard drive.
-
-**Step 1.** Generate a security group:
-
-```sh
-aws_create_security_group.sh -n power1_app -p 22 -p 80 -p 443
-```
-
-**Step 2.** Create the key pair:
-
-```sh
-aws_create_keypair.sh -k power1_app
-```
-
-**Step 3.** Allocate a new Elastic IP and update shell configuration. If the new IP is `204.236.167.50`:
-
-```sh
-sed -i '.bak' '/static/d'   ~/.config/zsh/.zsh_export
-sed -i '.bak' '/security/d' ~/.config/zsh/.zsh_export
-echo "export static_ip='204.236.167.50'"            >> ~/.config/zsh/.zsh_export
-echo "export security_grp='sg-0fda72c2879d6b2ad'"   >> ~/.config/zsh/.zsh_export
-```
-
-**Step 4.** Launch the instance:
-
-```sh
-aws_create_instance.sh -p power1_app
-```
-
-**Step 5.** Update SSH config with the new IP:
-
-```sh
-cd ~/.ssh
-sed -i '.bak' '/HostName/d' config
-echo "  HostName 204.236.167.50" >> config
-```
-
-# Appendix C: Teardown (Undo) {#appendix-c}
-
-To remove all AWS resources associated with a project, follow these steps in order:
-
-1. **Terminate the instance.** In the EC2 console, select the instance and choose *Instance state > Terminate*.
-2. **Delete the security group.** Under *Network & Security > Security Groups*, select the group and choose *Actions > Delete*.
-3. **Release the Elastic IP.** Under *Network & Security > Elastic IPs*, select the address and choose *Actions > Release*.
-4. **Delete the SSH key pair.** Under *Network & Security > Key Pairs*, select the pair and choose *Actions > Delete*.
-5. **Clean up any project repositories** if applicable.
-
-::: {.callout-warning}
-Orphaned Elastic IPs and unused EBS volumes continue to accrue charges. Always run the full teardown when a project is complete.
-:::
+*Rendered on 2026-05-18 at 09:48 PDT.*<br>
+*Source: ~/Dropbox/prj/qblog/posts/69-zzc-github-workflows/zzc-github-workflows/analysis/report/index.qmd*
 
 ---
 
@@ -723,16 +687,8 @@ Orphaned Elastic IPs and unused EBS volumes continue to accrue charges. Always r
 *Have questions, suggestions, or spot an error? Let me know.*
 
 - **GitHub:** [rgt47](https://github.com/rgt47)
-- **Twitter/X:** [@rgt47](https://twitter.com/rgt47)
 - **LinkedIn:** [Ronald Glenn Thomas](https://linkedin.com/in/rgthomaslab)
-- **Email:** [Contact form](https://rgtlab.org/contact)
-
-I would enjoy hearing from you if:
-
-- You spot an error or a better approach to any of the code in this post.
-- You have suggestions for topics you would like to see covered.
-- You use a different OS and want to compare notes.
-- You just want to say hello and connect.
+- **Email:** rgthomas47@gmail.com
 
 ---
 
@@ -751,8 +707,8 @@ top of this file. If anything below is unchecked, the post is not ready.
     [ ] grep '\[' index.qmd returns only legitimate code/links
 
 [ ] Configuration artifacts present and tested
-    [ ] Full config file shown verbatim, not snippets
-    [ ] Install commands tested on a clean machine (or VM)
+    [ ] docs/r-package.yml present (genericised, annotated)
+    [ ] docs/render-report.yml present (genericised, annotated)
     [ ] Verification commands produce the documented output
     [ ] Uninstall / rollback steps documented
 
@@ -767,9 +723,7 @@ top of this file. If anything below is unchecked, the post is not ready.
         Lessons Learnt
     [ ] Hero and ambiance captions describe the actual image (not a
         placeholder description)
-    [ ] No hand-coded "Download PDF" link in body. The site auto-injects
-        one via _includes/after-body.html for any post with format: pdf
-        in YAML.
+    [ ] No hand-coded "Download PDF" link in body
     [ ] media/images/README.md attributes every image
 
 [ ] Content quality
@@ -781,8 +735,8 @@ top of this file. If anything below is unchecked, the post is not ready.
 
 [ ] Reproducibility
     [ ] Version matrix table filled in (OS, tool, dependencies, date)
-    [ ] Config files committed under analysis/configs/
-    [ ] Install script (if provided) is runnable on a clean machine
+    [ ] Workflow files committed under docs/
+    [ ] Verification commands confirmed against a real CI run
 
 [ ] Render verification
     [ ] quarto render index.qmd produces clean HTML with no warnings
