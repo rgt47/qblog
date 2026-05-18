@@ -1242,8 +1242,275 @@ additional surprises at this scale.
 
 ---
 
-*Rendered on 2026-05-02 at 09:05 PDT.*<br>
-*Source: ~/Dropbox/prj/qblog/posts/62-testthat-to-tinytest/testthat-to-tinytest/analysis/report/index.qmd*
+# Appendix C: The `zzedc` Migration -- Origins of the Translator
+
+The recipe in this post was hardened against the `zzedc` electronic
+data capture package before `zzpower` or `zztable1` were attempted.
+`zzedc` is the largest package in the portfolio: 51 test files, 989
+test blocks, 3,064 assertions. This appendix records why the migration
+was attempted on that package first, what the Python translator was
+designed to handle, and the seven-round arc that produced the
+post-round-7 artifact now in the companion repository.
+
+## C.1 When migration is worth the cost
+
+Most R packages should leave `testthat` alone. The framework is
+well documented, well integrated with `usethis` and `devtools`, and
+has a much larger user base than any alternative. If your package is
+fine on `testthat`, that is the correct choice.
+
+For a smaller class of packages the dependency calculus is different.
+`testthat` 3 brings roughly thirty transitive packages into a
+package's `Suggests` field. `tinytest`, by Mark van der Loo, brings
+zero. The migration becomes worth considering in five concrete contexts:
+
+- CRAN-bound packages where reviewers see and weigh every dependency.
+- CI matrices where each row reinstalls `testthat` and its full
+  transitive tail.
+- Long-term reproducibility stacks (Docker images, `renv` lockfiles)
+  where a thirty-package surface ages less gracefully than a
+  one-package surface.
+- Pharmaverse and FDA-submission contexts, where every dependency
+  appears in a software bill of materials and must be justified.
+- Embedded R deployments (AWS Lambda, scratch containers, minimal
+  Posit Connect images) where install size matters.
+
+For `zzedc`, the relevant constraint was the third and fourth: the
+package targets clinical research environments where the dependency
+graph is itself a documentation artifact, and the existing
+research-compendium workflow already exercised `tinytest` elsewhere
+in the portfolio. If none of these apply, the migration is not worth
+the disruption.
+
+## C.2 The naive approach and why it fails
+
+The temptation is to reach for `sed`. Most `expect_*` names are
+shared between the two frameworks, and the obvious script handles a
+useful fraction of cases:
+
+```bash
+sed -E \
+  -e 's/library\(testthat\)/library(tinytest)/' \
+  -e '/^context\(/d' \
+  tests/testthat/test-*.R
+```
+
+The result parses. It also fails in at least four substantive ways.
+
+First, `test_that()` has no `tinytest` analogue. The wrapper must be
+removed. A naive deletion of the wrapping line and its closing brace
+breaks block scoping: `testthat` runs each block in a fresh function
+frame, so `on.exit()` fires at the end of the block and local
+variables do not leak. Top-level tinytest code has neither property.
+
+Second, `skip_if(requireNamespace('haven', quietly = TRUE), 'msg')`
+contains a comma inside the inner call. A regex that splits at the
+first comma will mangle the condition. The translator needs a
+paren-balanced parser, not a regex.
+
+Third, multi-line string literals containing YAML, SQL, or JSON
+fixtures often use indentation that is part of the string content.
+An early version of the translator de-indented test bodies to
+compensate for the dropped wrapper, which silently corrupted those
+literals.
+
+Fourth, `expect_warning(x, NA)` is `testthat` idiom for 'expect no
+warning'. A direct translation passes `NA` to
+`tinytest::expect_warning` and reports a confusing failure. The
+correct rewrite is `expect_silent(x)`.
+
+These are not edge cases. All four appeared in the first hundred
+lines of the `zzedc` test suite.
+
+## C.3 What the Python translator handles
+
+The Python translator (`testthat_to_tinytest.py`) handles the
+patterns below. Each is a fix for a class of failure surfaced during
+the `zzedc` migration.
+
+**Block dropping with scope preservation.** `test_that('desc', { ... })`
+becomes a `# Test: desc` comment plus `local({ ... })` around the
+body:
+
+```r
+test_that('creates database', {
+  con <- dbConnect(SQLite(), ':memory:')
+  on.exit(dbDisconnect(con))
+  expect_true(dbIsValid(con))
+})
+```
+
+becomes
+
+```r
+# Test: creates database
+local({
+  con <- dbConnect(SQLite(), ':memory:')
+  on.exit(dbDisconnect(con))
+  expect_true(dbIsValid(con))
+})
+```
+
+The `local()` wrapper is the cheapest way to recover testthat's
+function-frame semantics without rewriting every test.
+
+**Nested BDD blocks.** `describe(...) { it(...) { ... } }` is handled
+by iterating the block translator to a fixed point. Each pass strips
+one layer; ten passes covers everything seen in practice.
+
+**Comparison rewrites.** `tinytest` does not provide
+`expect_lt`/`expect_gt`/`expect_lte`/`expect_gte` as first-class
+expectations. The translator rewrites them to `expect_true(x < y)`
+and so on. Similarly `expect_length(x, n)` becomes
+`expect_equal(length(x), n)`, `expect_null(x)` becomes
+`expect_true(is.null(x))`, `expect_s3_class(x, 'c')` becomes
+`expect_true(inherits(x, 'c'))`, and `expect_no_error(expr)` becomes
+`expect_silent(expr)`.
+
+**No-warning idiom.** `expect_warning(x, NA)` and
+`expect_warning(x, regexp = NA)` translate to `expect_silent(x)`.
+The same applies to `expect_error(x, NA)`.
+
+**Argument renames.** `regexp = '...'` becomes `pattern = '...'` for
+`tinytest`'s `expect_match` and related functions.
+
+**Paren-balanced skip translation.**
+`skip_if(requireNamespace('haven', quietly = TRUE), 'msg')` is parsed
+as a single call with two top-level arguments. The result is
+`if ((requireNamespace('haven', quietly = TRUE))) exit_file('msg')`.
+
+**Block-scoped skip semantics.** `tinytest`'s `exit_file()` aborts
+the entire file, whereas testthat's `skip_*` aborts only the current
+block. When a `skip_*` call is the first directive of a `test_that`
+body, the translator wraps the rest of the block in
+`if (!cond) local({ ... })` rather than emitting a top-level
+`exit_file()`. The skip stays scoped to its original block.
+
+## C.4 The helper-file consolidation problem
+
+`testthat` auto-loads any file in `tests/testthat/` whose name
+begins with `helper-`. `tinytest` has no such convention. It does
+auto-load files in `inst/tinytest/` that begin with an underscore,
+but only when invoked through `tinytest::test_package()`; running
+individual files via `tinytest::run_test_file()` does not trigger
+the auto-load.
+
+The convention used for `zzedc` is to consolidate the four
+`helper-*.R` files (`helper-test-setup.R`, `helper-skip.R`,
+`helper-db-backends.R`, `helper-test-utilities.R`) into a single
+`inst/tinytest/_setup.R`, and to source it explicitly from the top
+of each translated test file:
+
+```r
+if (file.exists('_setup.R')) source('_setup.R')
+```
+
+This is honest: one large setup file is less ergonomic than four
+small ones, but `tinytest`'s model is simpler for users to reason
+about, and the explicit `source()` keeps individual test files
+runnable without invoking the package-level harness.
+
+The translator emits the `source()` line; the consolidated
+`_setup.R` is hand-written. The `zzedc` `_setup.R` runs to about
+680 lines, combining database fixtures, multi-backend test harnesses,
+custom expectations, and `Sys.setenv`/`Sys.unsetenv` lifecycle
+helpers. The `testthat::skip()` call is reimplemented as a thin
+wrapper around `exit_file()` so existing helper code continues to
+compile.
+
+## C.5 The seven-round migration arc
+
+The `zzedc` migration proceeded in seven rounds. The arc is a useful
+empirical record of what a hardened translator does and does not
+catch on first contact with a real package.
+
+**Round 1, naive translator:** 0 of 989 tests ran. The first file
+had a parse error from a YAML literal whose indentation had been
+stripped by an over-eager de-indent pass; the `tinytest` runner
+aborts on a single parse failure. Removing the de-indent step and
+relying on `local({})` for scoping fixed this.
+
+**Round 2, after `local({})` wrapping:** 981 of 989 tests ran.
+Eight failures remained.
+
+**Rounds 3 through 6** each surfaced one new pattern: paren-balanced
+skip conditions, block-scoped skip wrapping, the `regexp = NA`
+idiom, S3 class inheritance, and the custom `expect_table_exists`
+helper.
+
+**Round 7:** 3,064 of 3,064 assertions passing.
+
+The eight final failures resolved into two classes. Seven were
+indentation-stripping inside YAML literals that survived the first
+de-indent fix because they were nested two levels deep; removing
+de-indentation entirely (rather than partially) eliminated the class.
+The eighth was the `expect_warning(x, NA)` semantics, which had been
+masquerading as a passing test under `testthat` because the regex
+was `NA` and matched nothing rather than checking warning
+suppression.
+
+The version of the translator in the companion repository is the
+post-round-7 artifact.
+
+## C.6 Using the tools
+
+For a single file during development, invoke the Python translator
+directly:
+
+```bash
+python3 testthat_to_tinytest.py \
+  tests/testthat/test-mything.R \
+  inst/tinytest/test_mything.R
+```
+
+The output is a self-contained tinytest file that sources `_setup.R`
+from its own directory if present.
+
+For a whole repository, the bash orchestrator (`migrate.sh`) handles
+the surrounding `DESCRIPTION` and scaffold edits. Phase 1 is fully
+automated for repositories whose tests are three-line `testthat`
+stubs (the pattern produced by `usethis::use_testthat()` followed by
+no further work). Phase 2 generates per-file conversion previews
+into `.migration-previews/` for repositories with substantive test
+code, which the user reviews and applies manually:
+
+```bash
+./migrate.sh phase1 [--dry]
+./migrate.sh phase2
+```
+
+Beyond translation, the orchestrator replaces `testthat` with
+`tinytest` in `DESCRIPTION`, removes `Config/testthat/edition: 3`
+if present, deletes the `tests/testthat/` tree, writes a new
+`tests/tinytest.R`, regenerates `renv.lock` from the trimmed
+`DESCRIPTION`, and commits the result.
+
+After translation, the manual checklist for a real-test repository
+is:
+
+- Hand-write `inst/tinytest/_setup.R` consolidating any
+  `helper-*.R` files. Replace `library(testthat)` with nothing and
+  `testthat::skip(msg)` with `exit_file(msg)` (or with a wrapped
+  form if you want block scoping).
+- Inspect any `expect_snapshot` and `local_edition` calls; they will
+  not work without manual rewriting.
+- Run `tinytest::run_test_dir('inst/tinytest')` and triage the first
+  round of failures.
+
+The translator handles the rote mechanical work: paren-balanced
+parsing, the seventeen `expect_*` rewrites, the scope-preserving
+`local({...})` wrapping, the block-scoped skip semantics. It does
+not replace the judgment required to convert snapshot tests, to
+consolidate helper files, or to decide which `Suggests` packages
+should now move to `Imports` because the test suite was the only
+place using them. That judgment is the actual work of the migration;
+the translator makes the mechanical part fast enough that the
+judgment becomes the bottleneck rather than the typing.
+
+---
+
+*Rendered on 2026-05-18 at 09:00 PDT.*<br>
+*Source: ~/prj/qblog/posts/62-testthat-to-tinytest/testthat-to-tinytest/analysis/report/index.qmd*
 
 ---
 
