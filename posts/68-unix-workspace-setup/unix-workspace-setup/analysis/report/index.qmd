@@ -203,8 +203,8 @@ configuration, dotfiles structure, and core installer logic are
 shared across all three; we will note macOS-specific and
 Linux-specific steps where they diverge.
 
-We begin by installing the minimum set of tools required before
-any configuration can proceed:
+On the macOS machines, we begin by installing the minimum set of
+tools required before any configuration can proceed:
 
 ```bash
 # Homebrew (if not yet installed)
@@ -219,7 +219,16 @@ ssh-keygen -t ed25519 -C "your_email@university.edu"
 # Then add the public key to your GitHub account settings
 ```
 
-Confirm that GitHub access is working before continuing:
+On Linux Mint, install the equivalents via apt:
+
+```bash
+sudo apt update && sudo apt install -y git pipx
+# gh CLI: follow https://cli.github.com/manual/installation
+# then: sudo apt install gh
+```
+
+On all three machines, confirm that GitHub access is working before
+continuing:
 
 ```bash
 gh auth login     # follow the browser prompt
@@ -289,11 +298,15 @@ macos_option_as_alt                  yes
 macos_quit_when_last_window_closed   yes
 ```
 
-Install the Nerd Font variant required for prompt icons:
+Install the Nerd Font variant required for prompt icons. On macOS:
 
 ```bash
 brew install --cask font-jetbrains-mono-nerd-font
 ```
+
+On Linux Mint, download JetBrainsMono Nerd Font from
+nerdfonts.com, extract the `.ttf` files to `~/.local/share/fonts/`,
+and run `fc-cache -fv` to register them.
 
 Among the settings listed, `copy_on_select clipboard` has the
 largest day-to-day effect: selecting any text with the mouse copies
@@ -380,14 +393,18 @@ the shell startup path.
 ### Modern CLI Replacements
 
 Several tools have largely superseded the default Unix utilities
-for interactive use. We install them in one step:
+for interactive use. On macOS, we install them in one step:
 
 ```bash
 brew install eza bat fd ripgrep zoxide fzf git-delta lazygit \
              shellcheck
 ```
 
-Wire each into Zsh with a conditional guard:
+On Linux Mint, several are available via `apt` (`ripgrep`,
+`fd-find`, `bat`, `fzf`, `shellcheck`); `eza`, `zoxide`,
+`git-delta`, and `lazygit` are best installed from their GitHub
+releases or via `cargo install`. Wire each into Zsh with a
+conditional guard:
 
 ```sh
 # eza: ls with git awareness and tree mode
@@ -427,7 +444,9 @@ which is the first indication that an assumption has not been met.
 ### Fuzzy File Finders
 
 Three short functions cover the most common interactive search
-patterns we encounter in a research compendium:
+patterns we encounter in a research compendium. Note that `open`
+in the `pp()` function is macOS-specific; on Linux Mint substitute
+`xdg-open` in its place:
 
 ```sh
 # find any file, cd to its directory
@@ -515,7 +534,10 @@ The `gh auth git-credential` helper delegates all GitHub
 authentication to the GitHub CLI. After `gh auth login` has run
 once on a given machine, no personal access tokens or SSH key
 passphrases are required for subsequent git operations on that
-machine.
+machine. On Linux Mint, the `gh` binary lives at `/usr/bin/gh`
+rather than `/opt/homebrew/bin/gh`; replace the helper path in
+`.gitconfig` accordingly, or use `$(which gh)` to make it
+portable across both operating systems.
 
 # Layer 3: The Dotfiles Repository
 
@@ -615,10 +637,14 @@ researcher's own rather than public property.
 ## install.sh
 
 The installer creates symlinks from `~/dotfiles` into `$HOME`,
-handles launchd plist parameterisation, and installs packages via
-Homebrew and pipx. The full source is at
-`analysis/configs/install.sh`. Several design decisions in the
-script merit brief comment.
+handles launchd plist parameterisation on macOS, and installs
+packages via Homebrew and pipx where those tools are present. The
+full source is at `analysis/configs/install.sh`. On Linux Mint,
+where Homebrew is not standard, the Homebrew section is skipped
+silently by the conditional guard (`command -v brew > /dev/null`);
+package installation there falls to `apt` and is handled
+separately. Several other design decisions in the script merit
+brief comment.
 
 The `--dry-run` flag causes every action to be printed without
 execution. We recommend always running the dry-run on a new machine
@@ -771,6 +797,12 @@ git project.
 | `pp` | Fuzzy-find and open a PDF |
 | `ff` | Fuzzy-find any file, cd to its directory |
 
+`brew bundle dump --force` applies only to the macOS machines; on
+the Linux Mint workstation, package state is managed through `apt`
+and there is no direct equivalent for snapshotting installed
+packages into the dotfiles repository. The remaining commands in
+the table are cross-platform.
+
 The single most useful habit we have found is running `make update`
 on each machine at the start of every work session. The operation
 takes roughly ten seconds and ensures that a setting committed on
@@ -822,13 +854,16 @@ the time the next session begins.
    creates one symlink per script; this is more verbose but
    correct across all machines.
 
-6. **The launchd `__USER__` substitution writes to
-   `~/Library/LaunchAgents/`, not back to the repository.** To
-   modify a plist, edit the source template in
-   `~/dotfiles/launchd/` and re-run the installer. Editing the
-   substituted copy in `~/Library/LaunchAgents/` directly is
-   problematic: it is overwritten on the next `install.sh` run
-   and the change is lost.
+6. **The launchd `__USER__` substitution is macOS-only; it
+   produces no output on Linux Mint.** On the MacBook Pro and
+   MacBook Air, the installer writes substituted plists to
+   `~/Library/LaunchAgents/`. To modify a plist, edit the source
+   template in `~/dotfiles/launchd/` and re-run the installer.
+   Editing the substituted copy in `~/Library/LaunchAgents/`
+   directly is problematic: it is overwritten on the next
+   `install.sh` run and the change is lost. On the Linux Mint
+   workstation, the equivalent mechanism is systemd user units;
+   see Opportunities for the extension path.
 
 7. **`SHARE_HISTORY` propagates across all terminal sessions in
    real time.** A command typed in one tab is immediately
@@ -856,7 +891,7 @@ done
 # 2. Remove per-file ~/bin symlinks
 find ~/bin -maxdepth 1 -type l -delete
 
-# 3. Unload and remove launchd agents
+# 3. Unload and remove launchd agents (macOS only)
 launchctl bootout gui/$UID \
   ~/Library/LaunchAgents/local.*.plist 2>/dev/null
 rm -f ~/Library/LaunchAgents/local.*.plist
@@ -1040,7 +1075,7 @@ needed, not during it.
 **Related posts on this site:**
 
 - [Migrating Off Dropbox: Beyond Dotfiles](https://focusonr.org/posts/64-migrating-off-dropbox/)
-  (post 64): the broader context -- project content,
+  (post 64): the broader context, covering project content,
   append-only history files, and the three-layer framework
   for workflow independence from cloud sync.
 - [Multi-Laptop macOS Bootstrap](https://focusonr.org/posts/65-multi-laptop-bootstrap/)
@@ -1052,8 +1087,8 @@ needed, not during it.
   migration of credentials out of cloud sync.
 - [Multi-Laptop Security: Hardening the Bootstrap](https://focusonr.org/posts/67-multi-laptop-security/)
   (post 67): a security audit of the infrastructure built
-  in this post -- FileVault, GPG subkey architecture,
-  per-machine SSH keys.
+  in this post, covering FileVault, GPG subkey architecture,
+  and per-machine SSH keys.
 - [Modern CLI Replacements](https://focusonr.org/posts/53-modern-cli-replacements/)
   (post 53): the full reference for `eza`, `bat`, `fd`,
   `zoxide`, `delta`, and `lazygit`.
@@ -1080,9 +1115,9 @@ needed, not during it.
 
 **Tested configuration:**
 
-| Component        | Version     |
-|------------------|-------------|
-| Operating system | macOS 15.4  |
+| Component        | Version                           |
+|------------------|-----------------------------------|
+| Operating system | macOS 15.4 / Linux Mint 21.3      |
 | zsh              | 5.9         |
 | git              | 2.45.x      |
 | Homebrew         | 4.3.x       |
@@ -1098,9 +1133,9 @@ needed, not during it.
 
 **Configuration deliverables:**
 
-- `analysis/configs/install.sh` -- full installer source
-- `analysis/configs/Makefile` -- build targets
-- `analysis/configs/gitignore` -- `.gitignore` template
+- `analysis/configs/install.sh` (full installer source)
+- `analysis/configs/Makefile` (build targets)
+- `analysis/configs/gitignore` (`.gitignore` template)
 
 **To reproduce on a new machine:**
 
