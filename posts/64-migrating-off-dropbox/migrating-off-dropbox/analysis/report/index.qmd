@@ -100,7 +100,7 @@ HERO IMAGE
 *A portable dotfiles repository is only the first half of leaving Dropbox. The other half is the rest of the workflow.*
 
 ::: {.callout-note}
-**Multi-Machine Setup Series** -- Recommended reading order:
+**Multi-Machine Setup Series** (recommended reading order):
 [Part 1: Migrating off Dropbox](/posts/64-migrating-off-dropbox/) |
 [Part 2: Multi-Laptop Bootstrap](/posts/65-multi-laptop-bootstrap/) |
 [Part 3: Security Audit](/posts/67-multi-laptop-security/)
@@ -136,7 +136,10 @@ dotfiles repository as `MULTI_LAPTOP_PLAN.md`.
 - Dropbox sync of append-only files (shell history, AI-tool history, editor undo files) routinely produces conflict copies on multi-machine setups. The 12 conflict copies of `history.jsonl` discovered in this account on 2026-05-02 are one symptom of an architectural mismatch.
 - Project content directories under Dropbox commingle with cloud-only artefacts that should not be synced (model output, large derived data, machine-specific caches). Excluding them via `.dropboxignore` is fragile and error-prone.
 - The set of services that compete for `$HOME` (Dropbox, iCloud Drive, Google Drive, OneDrive) keeps growing, and choosing one default for everything is increasingly suboptimal as each service specialises.
-- The work to reach 'workflow independence' is largely the same work as 'workflow modernisation': separating concerns by layer, choosing sync mechanisms that match each layer's semantics, and writing the move down so future-you can audit it.
+- The work to reach 'workflow independence' is largely the same
+  work as 'workflow modernisation': separating concerns by layer,
+  choosing sync mechanisms that match each layer's semantics, and
+  documenting each move so it can be audited later.
 
 ## Objectives
 
@@ -145,7 +148,9 @@ dotfiles repository as `MULTI_LAPTOP_PLAN.md`.
 3. Sequence the migration so that the backup pipeline never points at a stale source path and the launchd jobs stay valid throughout the move.
 4. Establish a fresh-machine bootstrap that does not require Dropbox and verifies the entire workflow end to end.
 
-I am documenting my own migration here. If you spot errors or have better approaches, please let me know.
+This post documents the author's own migration. If errors are
+spotted or better approaches are known, the comment thread below
+is the right place to note them.
 
 ![A wooden desk seen from above with three small index cards arranged in a horizontal row, each card showing a hand-drawn symbol, suggesting classification before action.](media/images/ambiance1.jpg){.img-fluid}
 
@@ -171,7 +176,10 @@ This post assumes:
 - **Hardware:** a single primary laptop is sufficient. A second machine (or VM) is useful for the migration's verification step but is not required.
 - **Time required:** about a day's careful work to inventory and decide; about a half-day to execute the moves once the decisions are made.
 
-If you are still on a single machine and have never seen a conflict copy, the migration's payoff is smaller and you may not want to undertake it. The framework still applies, but Dropbox is unlikely to be hurting you yet.
+On a single-machine setup where conflict copies have never
+appeared, the migration's payoff is smaller and may not warrant
+the undertaking. The framework still applies, but Dropbox is
+unlikely to be causing friction in that scenario.
 
 # The Three Layers
 
@@ -280,7 +288,8 @@ launchctl bootstrap "gui/$UID" \
 
 Two points worth flagging:
 
-- The notmuch Xapian database stores message paths relative to `database.path`. Moving the Maildir and `.notmuch` together preserves those relative paths, so `notmuch new` is not required. If for any reason you move them separately, the index becomes invalid and `notmuch new` is needed to rebuild it.
+- The notmuch Xapian database stores message paths relative to `database.path`. Moving the Maildir and `.notmuch` together preserves those relative paths, so `notmuch new` is not required. If the two directories are moved separately for any reason, the
+index becomes invalid and `notmuch new` is needed to rebuild it.
 - Step 4 (update the dotfiles repo first) is the step the obvious version of this recipe omits. Editing the live `~/.config/mutt/muttrc` directly before updating the repo copy makes the two diverge. A second laptop bootstrapped from the repo today would deploy a muttrc that points at a Maildir that does not exist. Always edit the repo file, then `install.sh`.
 
 The pre-XDG location (`~/Mail/`) can be deleted after a few days of confirmed working state; keep it around briefly as a rollback target.
@@ -309,10 +318,17 @@ The companion deliverable for this post is a Quarto document at `docs/migration-
 
 1. **Inventory.** List every sync-relevant artefact in `$HOME` and `~/Dropbox/`. Classify each into one of the three layers.
 2. **Mechanism selection.** For each layer, pick a sync mechanism (or 'no sync, per-machine') from the table above.
-3. **Migration order.** Sequence the moves so the backup pipeline never points at a stale path. The general rule is: dotfiles first (already done if you followed post 24), then a single project as a pilot, then the rest of project content, then history files.
+3. **Migration order.** Sequence the moves so the backup pipeline
+   never points at a stale path. The general rule is: dotfiles
+   first (already done if post 24 was followed), then a single
+   project as a pilot, then the rest of project content, then
+   history files.
 4. **Verification.** Bootstrap a clean user account or VM and confirm the full workflow comes up without Dropbox.
 
-The worksheet is generic; it does not assume any particular project structure or sync mechanism. Fill it in for your own setup and the migration becomes a series of small, audited moves rather than a single large rewrite.
+The worksheet is generic; it does not assume any particular
+project structure or sync mechanism. Completing it for a given
+setup converts the migration into a series of small, audited
+moves rather than a single large rewrite.
 
 # Migration Sequence
 
@@ -322,12 +338,21 @@ The order of operations matters because the backup pipeline must remain valid at
 2. **Introduce a path-abstraction env var.** Add `PRJ_ROOT` to `~/.zshenv` with a fallback that resolves to `~/Dropbox/prj` for now. Replace literal `~/Dropbox/prj` references in scripts and configs with `$PRJ_ROOT`. Nothing visible changes, but the next move is now a single-line edit.
 3. **Pilot one project.** Pick a single small repo. Move it from `~/Dropbox/prj/<project>/` to `~/prj/<project>/` (real path, outside cloud). Push to a private git remote if it is not already. Confirm the workflow on it.
 4. **Migrate the rest of project content in batches.** A batch a day prevents the backup pipeline from going stale. For each batch: move, repoint any in-script paths, push to remotes, verify.
-5. **Repoint backup sources.** Once `$PRJ_ROOT` resolves to the new path, edit `backup-gdrive` and `backup-icloud` (or your equivalents) to source from `$PRJ_ROOT` instead of the literal Dropbox path. The launchd plists themselves do not change; only the scripts they call.
-6. **Resolve append-only history.** Pick option 1, 2, or 3 from the previous section. Apply per-file. Document the choice in the dotfiles repo's README so future-you remembers.
+5. **Repoint backup sources.** Once `$PRJ_ROOT` resolves to the
+   new path, edit `backup-gdrive` and `backup-icloud` (or their
+   equivalents) to source from `$PRJ_ROOT` instead of the literal
+   Dropbox path. The launchd plists themselves do not change; only
+   the scripts they call.
+6. **Resolve append-only history.** Pick option 1, 2, or 3 from
+   the previous section. Apply per-file. Document the choice in
+   the dotfiles repo's README for future reference.
 7. **Verify on a clean account.** Boot a fresh user, clone dotfiles, run installer, set up project remotes, confirm the workflow. The first surprise reveals the assumption that was hiding.
 8. **Optional: uninstall Dropbox.** Most users do not need to actually remove Dropbox. Once the workflow is independent, Dropbox can stay installed as a backup or for sharing files with colleagues, without being load-bearing for the workflow itself.
 
-The sequence is robust to interruption. If you stop after step 3, you have a working pilot and the backup pipeline still works. If you stop after step 5, the workflow is independent and you have not yet decided about history files.
+The sequence is robust to interruption. Stopping after step 3
+leaves a working pilot with the backup pipeline intact. Stopping
+after step 5 leaves the workflow independent; the history-file
+decision can be deferred.
 
 ![Two open-top boxes side by side on a workbench, the left box full of mixed objects and the right box divided into three sorted compartments, with a single object mid-transfer between them.](media/images/ambiance2.jpg){.img-fluid}
 
@@ -340,7 +365,13 @@ Seven gotchas to anticipate during the migration. Each lists the symptom and the
 3. **Symlinks to Dropbox break asymmetrically across machines.** Symptom: `~/.config/git -> ~/Library/CloudStorage/Dropbox/dotfiles/config/git` on machine A, but on machine B the same symlink is dangling because Dropbox is at a different path or not installed. Fix: symlinks created by `install.sh` should target `$DOTFILES` (an env var resolved at install time), not literal Dropbox paths.
 4. **Append-only history conflict copies do not announce themselves.** Symptom: a file named `history (machine's conflicted copy YYYY-MM-DD).jsonl` appears next to the canonical file, with no notification, no error, no merge prompt. Fix: a weekly grep for 'conflicted copy' across the Dropbox tree, or an explicit migration of the affected files out of cloud sync.
 5. **launchd plist substitutions overwrite themselves.** Symptom: an edit to `~/dotfiles/launchd/local.backup.research.plist` does not change the running job, because `install.sh` sed-substitutes `__USER__` to `$USER` when writing to `~/Library/LaunchAgents/`, and the active plist is the substituted copy. Fix: do not edit the active plist directly; edit the source in `~/dotfiles/launchd/`, then re-run `install.sh` plus `launchctl bootout` and `launchctl bootstrap`.
-6. **Project content includes runtime artefacts that should not move.** Symptom: a 200 MB `renv/library/` directory comes along with a project move and now lives at `~/prj/<project>/renv/library/`, where renv expects to manage it. Fix: confirm `.gitignore` excludes the right paths before pushing; add `**/renv/library/` to the dotfiles repo's `.gitignore` if you ever accidentally track one.
+6. **Project content includes runtime artefacts that should not
+   move.** Symptom: a 200 MB `renv/library/` directory comes along
+   with a project move and now lives at
+   `~/prj/<project>/renv/library/`, where renv expects to manage
+   it. Fix: confirm `.gitignore` excludes the right paths before
+   pushing; add `**/renv/library/` to the dotfiles repo's
+   `.gitignore` if one is accidentally tracked.
 7. **In-place editors race with cloud sync and truncate files to zero bytes.** Symptom: `sed -i.bak file`, `awk -i inplace`, or `perl -i` against a path under `~/Library/CloudStorage/...` returns 0 but leaves the file empty. The `.bak` saved by `-i.bak` is also placed in cloud storage and is subject to the same race; on the incident that produced this gotcha, both the file and its backup were lost locally and required Dropbox version-history restore. Fix: never run `-i`-style editors on cloud-mounted paths. Either use the Edit tool / a real editor, or copy to `/tmp`, edit, and `mv` back. (If the dotfiles repo is on a non-synced path per gotcha 2, this hazard is confined to scripts that touch `~/Library/CloudStorage/...` from elsewhere.)
 
 # Uninstall / Rollback
@@ -412,12 +443,18 @@ The architecture aims to deliver three measurable end states. The first is verif
 - **Conflict copies of `history.jsonl` and similar files** should stop recurring once the affected files are moved out of Dropbox sync. The post will be updated with the post-migration count once Layer 3 is applied.
 - **Backup pipelines** will source from `$PRJ_ROOT`, which can point anywhere; once Layer 2 lands, Dropbox is no longer load-bearing for the workflow.
 
-**Main takeaways:**
-
-1. The dotfiles layer is the wedge, not the goal. Once it is in place, the rest of the migration is mechanical.
-2. 'Project content' is two layers in disguise: code (wants git) and data (wants something else). Separate them before choosing a mechanism.
-3. Some of what looks like 'data' is actually a local cache of an authoritative source elsewhere (Maildir from IMAP, Homebrew cache, language-server indexes). For these, do not sync at all; rebuild on each machine from the canonical source.
-4. Append-only files are the only category that benefits from sophisticated sync; for everything else, simpler is better.
+In conclusion, four points merit emphasis. First, the dotfiles
+layer is the wedge, not the goal; once it is in place, the rest
+of the migration is mechanical. Second, 'project content' is two
+layers in disguise (code, which wants git, and data, which wants
+something else); the two should be separated before a mechanism
+is chosen. Third, some of what looks like 'data' is actually a
+local cache of an authoritative source elsewhere (Maildir from
+IMAP, Homebrew cache, language-server indexes); for these the
+right answer is not to sync at all, but to rebuild on each
+machine from the canonical source. Fourth, append-only files are
+the only category that benefits from sophisticated sync; for
+everything else, simpler is better.
 
 # See Also
 

@@ -111,8 +111,8 @@ Several `testthat` idioms (`expect_snapshot`, `local_edition`,
 and require either a different pattern or, in a few cases, a
 deliberate decision to drop the test.
 
-This post walks through the conversion as a paired-example
-review. I cover layout differences, the mechanical mapping of
+We walk through the conversion as a paired-example review. I
+cover layout differences, the mechanical mapping of
 `expect_*` calls, the handful of patterns that do not port
 cleanly, the CI implications, and a short list of cases where I
 concluded that staying on `testthat` was the right call. The
@@ -220,8 +220,8 @@ calibrate whether the conversion is worth their afternoon.
 - **A smaller cognitive surface.** No editions, no fixture
   caching, no helper auto-sourcing, no description strings.
   When a test fails, the failure mode is straightforward.
-  When it passes, you know it passed for the reason you
-  intended.
+  When it passes, one can be confident it passed for the
+  reason intended.
 - **Predictable behaviour across R versions.** With no
   third-party dependencies, `tinytest` is unaffected by
   changes in the broader package ecosystem. A test suite
@@ -314,7 +314,7 @@ whose IDE workflow is critical, the test-pane row dominates.
 - A practical interest in seeing what breaks. Several `testthat`
   idioms are deeply embedded in the broader R-package ecosystem
   (snapshot testing, parallel test runners, RStudio's test pane).
-  Porting forces a clear-eyed audit of what you actually use.
+  Porting forces a clear-eyed audit of what one actually uses.
 
 ## Objectives
 
@@ -711,7 +711,7 @@ artefacts of the migration rather than the framework itself.
    this line from `DESCRIPTION` is harmless but confusing for
    future maintainers. Symptom: a `DESCRIPTION` that references
    a framework the package no longer uses. Fix: remove the line
-   manually; no tooling does this for you.
+   manually; no tooling performs this step automatically.
 5. **Snapshot tests have no clean port.** Listed above as
    pattern 5; worth re-stating. If a substantial fraction of
    the suite is `expect_snapshot_*()`, reconsider the migration.
@@ -897,8 +897,8 @@ AMBIANCE IMAGE 3: placed before Lessons Learnt (workflow scene)
   artefacts that do not belong in a published package.
 - Mixing `testthat` and `tinytest` during a partial migration.
   Both bootstraps will run during `R CMD check`. If the same
-  assertion is duplicated, you double-count; if it is split, you
-  fragment the report. Pick one and finish before merging.
+  assertion is duplicated, the count doubles; if it is split,
+  the report fragments. Pick one and finish before merging.
 - Underestimating the snapshot-test inventory. Run
   `grep -r 'expect_snapshot' tests/testthat/` before starting.
   If the count is non-trivial, the migration will be longer
@@ -963,24 +963,22 @@ dependencies, faster `R CMD check`, a smaller cognitive
 surface.
 
 This post stops short of recommending the conversion as a
-default. Both frameworks are well-engineered. The choice
-between them is an architectural decision about how much
-ceremony you want a test framework to impose, and that decision
+default. Both frameworks are well-engineered. The choice between them is an architectural decision about how
+much ceremony a test framework should impose, and that decision
 is package-specific.
 
-## Main takeaways
+## Wrapping Up
 
-- The mechanical mapping is mostly one-to-one; snapshots are
-  the exception.
-- The `inst/tinytest/` placement makes tests installable,
-  which is the largest conceptual shift.
-- Helper files are not auto-sourced. Add explicit `source()`
-  calls.
-- `Config/testthat/edition` lingers in `DESCRIPTION` if
-  you forget to remove it.
-- The migration is reversible; perform it on a branch.
-- Snapshot-heavy suites are a strong reason to stay on
-  `testthat`.
+In conclusion, six points merit emphasis. First, the mechanical
+mapping is mostly one-to-one; snapshots are the exception.
+Second, the `inst/tinytest/` placement makes tests installable,
+which is the largest conceptual shift. Third, helper files are
+not auto-sourced, so explicit `source()` calls are required.
+Fourth, `Config/testthat/edition` lingers in `DESCRIPTION` if
+the line is not removed manually. Fifth, the migration is
+reversible; performing it on a branch is the recommended
+practice. Sixth, snapshot-heavy suites are a strong reason to
+remain on `testthat`.
 
 # See Also
 
@@ -1242,7 +1240,7 @@ additional surprises at this scale.
 
 ---
 
-# Appendix C: The `zzedc` Migration -- Origins of the Translator
+# Appendix C: The `zzedc` Migration (Origins of the Translator)
 
 The recipe in this post was hardened against the `zzedc` electronic
 data capture package before `zzpower` or `zztable1` were attempted.
@@ -1256,8 +1254,8 @@ post-round-7 artifact now in the companion repository.
 
 Most R packages should leave `testthat` alone. The framework is
 well documented, well integrated with `usethis` and `devtools`, and
-has a much larger user base than any alternative. If your package is
-fine on `testthat`, that is the correct choice.
+has a much larger user base than any alternative. If a package is
+already working well on `testthat`, that is the correct choice.
 
 For a smaller class of packages the dependency calculus is different.
 `testthat` 3 brings roughly thirty transitive packages into a
@@ -1491,7 +1489,7 @@ is:
 - Hand-write `inst/tinytest/_setup.R` consolidating any
   `helper-*.R` files. Replace `library(testthat)` with nothing and
   `testthat::skip(msg)` with `exit_file(msg)` (or with a wrapped
-  form if you want block scoping).
+  form where block scoping is needed).
 - Inspect any `expect_snapshot` and `local_edition` calls; they will
   not work without manual rewriting.
 - Run `tinytest::run_test_dir('inst/tinytest')` and triage the first
