@@ -2,9 +2,9 @@
 title: "Unix Command-Line Workspace Setup for Data Science Researchers"
 author: "Ronald 'Ryy' G. Thomas"
 date: "2026-05-17"
-categories: [shell, macos, dotfiles, git, workflow, setup]
-description: "A new researcher arrives with three laptops and no
-  shared configuration. This post builds the terminal layer,
+categories: [shell, macos, linux, dotfiles, git, workflow, setup]
+description: "A new researcher arrives with two macOS laptops and
+  a Linux Mint workstation. This post builds the terminal layer,
   the shell layer, and the dotfiles repository that keeps all
   three machines consistent from day one."
 image: "media/images/hero.jpg"
@@ -77,23 +77,24 @@ CONTACT & METADATA
 
 ![  ](media/images/hero.jpg){.img-fluid width=80% fig-align="center"}
 
-*One set of configuration files, three consistent workstations: a
-dotfiles repository turns months of accumulated environment knowledge
-into a two-command bootstrap.*
+*One set of configuration files, two Macs and a Linux workstation:
+a dotfiles repository turns months of accumulated environment
+knowledge into a two-command bootstrap.*
 
 # Introduction
 
 Consider the situation that arises, perhaps more often than one
 might expect, when a new researcher joins a data science and
-biostatistics laboratory equipped with three fresh macOS laptops: a
-primary workstation on campus, a machine for home analysis, and a
-lighter travel laptop for conferences. On the first day all three
-are indistinguishable. By the third week, however, one has acquired
-a custom `.zshrc`, another has accumulated a set of shell aliases
-whose provenance no one can quite reconstruct, and the third still
-presents the default macOS prompt. Six months later, reproducing a
-particular analysis command on the second machine requires either
-an unusually reliable memory or something closer to archaeology.
+biostatistics laboratory with three machines: a MacBook Pro for
+primary campus work, a Linux Mint workstation at home for
+long-running analyses, and a MacBook Air for travel and
+conferences. On the first day all three are unconfigured. By the
+third week, the campus MacBook has acquired a custom `.zshrc`, the
+Linux machine has accumulated PATH entries and aliases added in the
+moment and never documented, and the travel Air still presents the
+default macOS prompt. Six months later, reproducing a particular
+analysis command on the Linux machine requires either an unusually
+reliable memory or something closer to archaeology.
 
 The Unix command-line workspace does not maintain itself. Left to
 accumulate without deliberate management, three machines will develop
@@ -168,12 +169,12 @@ deployment artefact rather than a wishlist.
 
 # What is a Unix Workspace?
 
-A Unix command-line workspace is a layered system. Each layer has a
-distinct responsibility, configures a distinct set of files, and
-fails in a distinct way when misconfigured. Understanding the layers
-is more useful than memorising any particular setting, because the
-layers generalise across machines, operating-system versions, and
-tool upgrades.
+A Unix command-line workspace is, at bottom, a layered system. Each
+layer carries a distinct responsibility, configures a distinct set
+of files, and tends to fail in a distinct way when misconfigured.
+We have found that understanding the layers is more useful than
+memorising any particular setting, because the layers generalise
+across machines, operating-system versions, and tool upgrades.
 
 | Layer | Responsibility | Configured via |
 |---|---|---|
@@ -184,20 +185,26 @@ tool upgrades.
 | Line editor | Vi-mode in R, Python, database clients | `.inputrc` |
 | Dotfiles repository | Deploys all of the above reproducibly | `install.sh`, `Makefile` |
 
-Think of the dotfiles repository as the source code for the
-workspace. Just as application code can be cloned and built on a
-fresh server, a dotfiles repository can be cloned and installed on
-a fresh laptop. The analogy holds: the repository should live in
-git, be tested before deployment, and have a clear migration path
-for breaking changes.
+We may think of the dotfiles repository as the source code for the
+workspace itself. Just as application code can be cloned and built
+on a fresh server, a dotfiles repository can be cloned and
+installed on a fresh laptop, and the analogy holds in its details:
+the repository should live in git, be tested before deployment,
+and have a clear migration path for breaking changes. The second
+bootstrap, on a genuinely different machine, is the moment that
+surfaces assumptions invisible during the first.
 
 # Prerequisites
 
-This post targets macOS 13 (Ventura) or later on Apple Silicon or
-Intel hardware. The shell configuration extends to Ubuntu 22.04+
-with minor path adjustments.
+The primary campus machine and the travel laptop run macOS 13
+(Ventura) or later on Apple Silicon. The home analysis machine
+runs Linux Mint 21 or later (Ubuntu 22.04 base). The shell
+configuration, dotfiles structure, and core installer logic are
+shared across all three; we will note macOS-specific and
+Linux-specific steps where they diverge.
 
-Install the following before starting:
+We begin by installing the minimum set of tools required before
+any configuration can proceed:
 
 ```bash
 # Homebrew (if not yet installed)
@@ -212,35 +219,47 @@ ssh-keygen -t ed25519 -C "your_email@university.edu"
 # Then add the public key to your GitHub account settings
 ```
 
-Confirm access before proceeding:
+Confirm that GitHub access is working before continuing:
 
 ```bash
 gh auth login     # follow the browser prompt
 gh auth status    # should report 'Logged in to github.com'
 ```
 
-Time budget: 2-3 hours for the initial setup on the primary
-machine; 20-30 minutes per subsequent machine.
+In our experience, the initial setup on the primary machine
+requires roughly two to three hours, depending on familiarity
+with the tools; each subsequent machine should take no more than
+twenty to thirty minutes once the repository is in place.
 
 # Layer 1: Terminal Emulator
 
-The terminal emulator draws the window, renders text using the GPU,
-and forwards keystrokes to the shell. Two terminals are well suited
-to a data science workflow on macOS.
+The terminal emulator occupies the outermost layer: it draws the
+window, renders text through the GPU, and forwards keystrokes to
+the shell. Two terminals are well suited to a data science workflow
+across macOS and Linux, and we shall consider both briefly before
+settling on one for the worked examples.
 
-**Kitty** (`brew install --cask kitty`) is GPU-accelerated with a
+**Kitty** (`brew install --cask kitty` on macOS; `apt install kitty`
+or the official installer on Linux Mint) is GPU-accelerated with a
 built-in graphics protocol (`kitten icat`) that renders matplotlib
-and R plots inline. Configuration is a single plain-text file at
-`~/.config/kitty/kitty.conf`.
+and R plots inline without a separate display server. Its
+configuration is a single plain-text file at
+`~/.config/kitty/kitty.conf` and is identical across operating
+systems, which makes it the natural choice for a mixed macOS and
+Linux setup.
 
-**Ghostty** (`brew install --cask ghostty`) is a newer
-GPU-accelerated terminal with sensible defaults and native macOS
-integration. Configuration lives at `~/.config/ghostty/config`.
-It requires less initial configuration than Kitty.
+**Ghostty** is available for macOS (`brew install --cask ghostty`)
+and Linux. It offers sensible defaults and, on macOS, tighter
+native system integration. Its configuration lives at
+`~/.config/ghostty/config`, and it requires somewhat less initial
+configuration than Kitty to reach a usable state.
 
-The choice is a matter of preference. The worked examples below use
-Kitty because its configuration is more explicit and therefore more
-instructive for a first setup.
+The choice between them is, in our view, a matter of genuine
+preference. Kitty is the stronger cross-platform choice here,
+because its configuration file is identical on the MacBook Pro,
+the Linux Mint workstation, and the MacBook Air. The worked
+examples below use Kitty for this reason and because its explicit
+configuration makes the choices visible.
 
 ## Core Kitty Settings
 
@@ -270,23 +289,26 @@ macos_option_as_alt                  yes
 macos_quit_when_last_window_closed   yes
 ```
 
-Install the Nerd Font variant (required for prompt icons):
+Install the Nerd Font variant required for prompt icons:
 
 ```bash
 brew install --cask font-jetbrains-mono-nerd-font
 ```
 
-The setting with the largest day-to-day effect is
-`copy_on_select clipboard`: selecting any text with the mouse
-copies it to the clipboard without a separate `Cmd+C` keystroke.
+Among the settings listed, `copy_on_select clipboard` has the
+largest day-to-day effect: selecting any text with the mouse copies
+it to the system clipboard without requiring a separate `Cmd+C`
+keystroke.
 
 # Layer 2: Shell Configuration
 
 ## Environment Variables (.zshenv)
 
-`.zshenv` is loaded by every shell instance, interactive or not.
-Keep it minimal: only environment variables that every process
-needs.
+`.zshenv` is sourced by every shell instance, interactive or not,
+which makes it the right place for environment variables that every
+downstream process will need. We keep it minimal for exactly that
+reason: a variable that appears here should be one whose absence
+would break non-interactive shells or background jobs.
 
 ```sh
 # ~/.zshenv
@@ -297,9 +319,10 @@ export VISUAL="nvim"
 ```
 
 `DOTFILES` and `PRJ_ROOT` are the two variables that all other
-configuration and all project scripts should reference. Setting
-them here, with defaults, means a fresh machine that has not yet
-run `install.sh` still gets sensible fallback values.
+configuration and project scripts should reference. Setting them
+here, with defaults, means a fresh machine that has not yet run
+`install.sh` will still receive sensible fallback values rather
+than errors.
 
 ## Shell Configuration (.zshrc)
 
@@ -313,12 +336,13 @@ setopt SHARE_HISTORY HIST_IGNORE_DUPS
 setopt INC_APPEND_HISTORY HIST_VERIFY
 ```
 
-One hundred thousand lines is not excessive for research work.
-Model training runs, pipeline executions, and database queries
-generate commands worth recalling weeks later. `SHARE_HISTORY`
-syncs history across all open terminal sessions in real time;
-`INC_APPEND_HISTORY` writes each command immediately rather than
-at session end, so a crashed terminal loses nothing.
+One hundred thousand lines is not, in our view, excessive for
+research work. Model training runs, pipeline executions, and
+database queries generate commands worth recalling weeks later.
+`SHARE_HISTORY` synchronises history across all open terminal
+sessions in real time; `INC_APPEND_HISTORY` writes each command
+immediately rather than at session end, so a crashed terminal
+loses nothing.
 
 ### Project Navigation
 
@@ -327,13 +351,13 @@ cdpath=($PRJ_ROOT $PRJ_ROOT/.. $HOME)
 setopt auto_cd
 ```
 
-With `cdpath`, typing `cd myproject` from anywhere causes Zsh to
-search `$PRJ_ROOT/myproject` automatically. Combined with
-`auto_cd` (which permits typing a directory name without `cd`),
-navigating between analysis projects becomes a single word rather
-than a full path. The `$PRJ_ROOT` indirection is deliberate:
-changing the project tree location requires editing one line in
-`.zshenv`, not dozens of scripts.
+With `cdpath` set, typing `cd myproject` from anywhere causes Zsh
+to search `$PRJ_ROOT/myproject` automatically. Combined with
+`auto_cd`, which permits typing a directory name alone without the
+`cd` prefix, navigating between analysis projects becomes a single
+word rather than a full path. The `$PRJ_ROOT` indirection is
+deliberate: changing the project tree location requires editing one
+line in `.zshenv`, not dozens of scripts.
 
 ### Git Branch in the Prompt
 
@@ -348,21 +372,22 @@ PROMPT+='%F{red}${vcs_info_msg_0_}%f$ '
 ```
 
 A prompt that shows the current git branch prevents the most
-common commit error in research projects: committing to the wrong
-branch when switching between experiments. The `vcs_info` hook is
-lightweight and adds no extra git processes.
+common commit error we encounter in research projects: committing
+to the wrong branch when switching between experiments. The
+`vcs_info` hook is lightweight and adds no extra git processes to
+the shell startup path.
 
 ### Modern CLI Replacements
 
-Several tools have superseded the default Unix utilities for
-interactive use. Install them in one step:
+Several tools have largely superseded the default Unix utilities
+for interactive use. We install them in one step:
 
 ```bash
 brew install eza bat fd ripgrep zoxide fzf git-delta lazygit \
              shellcheck
 ```
 
-Wire them into Zsh with conditional guards:
+Wire each into Zsh with a conditional guard:
 
 ```sh
 # eza: ls with git awareness and tree mode
@@ -393,14 +418,16 @@ command -v rg > /dev/null && {
 ```
 
 The conditional guard (`command -v tool > /dev/null &&`) is the
-key portability decision: the same `.zshrc` deploys to a fresh
-machine before tools are installed, skipping aliases gracefully
-until the corresponding package is present.
+key portability decision. The same `.zshrc` can be deployed to a
+fresh machine before any tools are installed, skipping each alias
+gracefully until the corresponding package is present. Without this
+guard, a missing tool produces an error on every shell startup,
+which is the first indication that an assumption has not been met.
 
 ### Fuzzy File Finders
 
-Three functions cover the most common interactive search patterns
-in a research compendium:
+Three short functions cover the most common interactive search
+patterns we encounter in a research compendium:
 
 ```sh
 # find any file, cd to its directory
@@ -428,11 +455,13 @@ pp() {
 
 ### Readline Configuration (.inputrc)
 
-Many command-line tools use the GNU Readline library for line
+Many command-line tools rely on the GNU Readline library for line
 editing: R, Python's REPL, `psql`, and most database clients.
-Without `.inputrc`, each of these uses Emacs-mode keybindings
+Without a `.inputrc`, each of these uses Emacs-mode keybindings
 while Zsh uses vi-mode, requiring the researcher to switch mental
-models with every tool change. The fix:
+models with every tool change. This is, in our experience,
+sufficiently disorienting to warrant the single file that resolves
+it:
 
 ```sh
 # ~/.inputrc
@@ -447,8 +476,9 @@ set colored-stats on
 "\e[B": history-search-forward
 ```
 
-The cursor shape changes between insert (thin bar) and command
-(block) mode, providing a persistent visual indicator.
+The cursor shape changes between insert mode (thin bar) and command
+mode (block), providing a persistent visual indicator that removes
+any ambiguity about the current editing state.
 
 ### Git Configuration (.gitconfig)
 
@@ -482,15 +512,16 @@ The cursor shape changes between insert (thin bar) and command
 ```
 
 The `gh auth git-credential` helper delegates all GitHub
-authentication to the GitHub CLI. After `gh auth login` runs
-once, no personal access tokens or SSH key passphrases are
-needed for subsequent git operations.
+authentication to the GitHub CLI. After `gh auth login` has run
+once on a given machine, no personal access tokens or SSH key
+passphrases are required for subsequent git operations on that
+machine.
 
 # Layer 3: The Dotfiles Repository
 
-With the configuration files defined, the next step is putting
-them under version control so they can be deployed to all three
-machines.
+With the configuration files defined, we turn to the question of
+putting them under version control so that they can be deployed
+reproducibly to all three machines.
 
 ## Repository Structure
 
@@ -524,18 +555,19 @@ machines.
     └── README.md        # inventory only; no secrets in git
 ```
 
-Files are stored without leading dots (`zshrc`, not `.zshrc`).
-The installation script adds the dot prefix when creating
-symlinks in `$HOME`, making the mapping explicit and the
-repository contents visible in standard directory listings.
+We store files without leading dots (`zshrc`, not `.zshrc`). The
+installation script adds the dot prefix when creating symlinks in
+`$HOME`, making the mapping explicit and the repository contents
+visible in standard directory listings without requiring `ls -a`.
 
 ## Write .gitignore First
 
-The `.gitignore` must exist before the first `git add`. One
+The `.gitignore` must be in place before the first `git add`. One
 commit with a credential in history requires a full
-`git filter-repo` rewrite and rotation of every exposed
-credential. The template is at `analysis/configs/gitignore`.
-Key patterns:
+`git filter-repo` rewrite and rotation of every exposed secret.
+Unfortunately, this is not a hypothetical concern; it is a
+predictable outcome of skipping this step. The template is at
+`analysis/configs/gitignore`. Key patterns include:
 
 ```gitignore
 # Sensitive: never commit
@@ -573,42 +605,43 @@ git commit -m 'initial dotfiles import'
 gh repo create yourhandle/dotfiles --private --source=. --push
 ```
 
-The repository must be private. Even a `.gitconfig` without
-credentials reveals preferred tooling, organisational paths, and
-workflow patterns that belong to the researcher, not the public.
+The repository should be private. Even a `.gitconfig` that
+contains no credentials reveals preferred tooling, organisational
+paths, and workflow patterns that are, in our view, the
+researcher's own rather than public property.
 
 ![  ](media/images/ambiance2.jpg){.img-fluid}
 
 ## install.sh
 
 The installer creates symlinks from `~/dotfiles` into `$HOME`,
-handles launchd plist parameterisation, and installs packages
-via Homebrew and pipx. The full source is at
-`analysis/configs/install.sh`.
+handles launchd plist parameterisation, and installs packages via
+Homebrew and pipx. The full source is at
+`analysis/configs/install.sh`. Several design decisions in the
+script merit brief comment.
 
-Key design decisions:
+The `--dry-run` flag causes every action to be printed without
+execution. We recommend always running the dry-run on a new machine
+before the real install; it surfaces every hardcoded assumption
+that does not hold on the new hardware, and the cost of reviewing
+the output is small relative to the cost of diagnosing a failed
+deploy.
 
-**`--dry-run` flag.** Every action is printed without execution
-when `--dry-run` is passed. Always run the dry-run on a new
-machine before the real install; it surfaces every hardcoded
-assumption that does not hold on the new hardware.
+Before creating a symlink, existing files are moved to
+`filename.backup.TIMESTAMP`. This makes the installer idempotent:
+it can be re-run on an already-deployed machine without destroying
+local changes accumulated since the last install.
 
-**Timestamped backups.** Before creating a symlink, existing
-files are moved to `filename.backup.TIMESTAMP`. The installer
-is idempotent: it can be re-run on an already-deployed machine
-without destroying local changes.
+For `~/bin`, the installer creates one symlink per script
+(`~/bin/script -> ~/dotfiles/bin/script`) rather than a top-level
+directory link (`~/bin -> ~/dotfiles/bin`). A top-level symlink
+appears to work on the machine where it was created but dangles
+silently on any machine where the absolute path differs.
 
-**Per-file symlinks for `~/bin`.** The installer creates one
-symlink per script (`~/bin/script -> ~/dotfiles/bin/script`)
-rather than a top-level link (`~/bin -> ~/dotfiles/bin`). A
-top-level symlink works on one machine but dangles silently on
-any machine with a different absolute path.
-
-**launchd `__USER__` substitution.** macOS `launchd` does not
-expand `~` in plist files. The installer substitutes the
-`__USER__` placeholder with `$USER` when writing plist files
-to `~/Library/LaunchAgents/`, keeping the source templates
-machine-agnostic.
+On macOS, `launchd` does not expand `~` in plist files. The
+installer substitutes the `__USER__` placeholder with the value of
+`$USER` when writing plist files to `~/Library/LaunchAgents/`,
+keeping the source templates machine-agnostic.
 
 ```bash
 ./install.sh --dry-run   # review all planned actions
@@ -617,8 +650,8 @@ machine-agnostic.
 
 ## Makefile
 
-The Makefile provides a stable interface for common operations.
-The full source is at `analysis/configs/Makefile`.
+The Makefile provides a stable, memorable interface for common
+operations. The full source is at `analysis/configs/Makefile`.
 
 | Target | Action |
 |---|---|
@@ -630,7 +663,8 @@ The full source is at `analysis/configs/Makefile`.
 
 ## Sensitive Files Inventory
 
-Before the first `git add`, audit `$HOME` for sensitive material:
+Before the first `git add`, we recommend auditing `$HOME` for
+sensitive material:
 
 ```
 ~/.aws/           AWS credentials
@@ -643,16 +677,17 @@ Before the first `git add`, audit `$HOME` for sensitive material:
 ~/.password-store pass encrypted credential store
 ```
 
-None of these belong in git. Add each to `.gitignore` before
-the first commit. Create `secrets/README.md` listing each item
-and its restore mechanism (1Password, pass, manual transfer via
-an encrypted drive). On a new machine, restore secrets manually
-after `install.sh` runs; the installer prints a reminder.
+None of these items belong in git. Add each to `.gitignore` before
+the first commit. Create a `secrets/README.md` listing each item
+and its restore mechanism, whether that is 1Password, pass, or
+manual transfer via an encrypted drive. On a new machine, secrets
+are restored manually after `install.sh` runs; the installer
+prints a reminder checklist as its final output.
 
 # Bootstrapping Three Machines
 
 With the dotfiles repository on GitHub, bootstrapping the second
-and third machines is a two-command operation:
+and third machines is reduced to two commands:
 
 ```bash
 # On the new machine, after installing Homebrew and git:
@@ -660,27 +695,31 @@ git clone git@github.com:yourhandle/dotfiles ~/dotfiles
 cd ~/dotfiles && ./install.sh
 ```
 
-Then manually restore sensitive files from secure storage. The
-installer prints a checklist derived from `secrets/README.md`.
+Sensitive files are then restored manually from secure storage;
+the installer prints a checklist derived from `secrets/README.md`
+as its final step.
 
-The recommended sequence for a three-machine lab setup:
+We suggest the following sequence. First, on the MacBook Pro
+(Machine 1), complete the full setup described in this post,
+commit, and push to GitHub. Second, on the Linux Mint workstation
+(Machine 2), clone the repository, run `install.sh --dry-run`,
+inspect the output carefully, and only then execute the real
+install. Fix any failures before proceeding; the Linux machine is
+where cross-platform assumptions surface, and failures here almost
+always reflect something hardcoded for macOS that was invisible on
+Machine 1. Third, on the MacBook Air (Machine 3), clone and run.
+Because it shares the same operating system as Machine 1, it
+should be silent if Machine 2 succeeded.
 
-1. **Machine 1 (primary):** complete the full setup in this
-   post; commit and push to GitHub.
-2. **Machine 2:** clone, run `--dry-run`, inspect the output,
-   then execute. Fix any failures in the repository (they
-   almost always reflect an assumption invisible on Machine 1).
-3. **Machine 3:** clone and run. If Machine 2 succeeded without
-   fixes, Machine 3 should be silent.
-
-The second bootstrap always surfaces the assumptions hidden in
-the first. This is the most valuable property of the three-machine
-requirement: it forces the repository into a state where a fresh
-environment is a first-class test case, not an afterthought.
+The second bootstrap is, in our view, the most informative step
+in the entire process, and the fact that it runs on a different
+operating system makes it more informative still. It is the moment
+that converts the repository from a local configuration into a
+tested, cross-platform deployment artefact.
 
 # Verification
 
-After each bootstrap, verify the key invariants:
+After each bootstrap, we verify the key invariants:
 
 ```bash
 # 1. Symlinks resolve correctly
@@ -710,12 +749,14 @@ R --quiet
 cd ~/dotfiles && make test
 ```
 
-A clean `make test` with no warnings confirms the repository is
-in a deployable state and can be trusted for Machine 3.
+A clean `make test` with no warnings confirms that the repository
+is in a deployable state and can be trusted for subsequent
+machines.
 
 # Daily Workflow
 
-After setup, the dotfiles repository is a standard git project.
+After setup, the dotfiles repository is maintained as a standard
+git project.
 
 | Command | Action |
 |---|---|
@@ -730,61 +771,72 @@ After setup, the dotfiles repository is a standard git project.
 | `pp` | Fuzzy-find and open a PDF |
 | `ff` | Fuzzy-find any file, cd to its directory |
 
-The most useful habit is running `make update` on each machine
-at the start of every work session: it takes ten seconds and
-ensures that a setting committed on the primary machine yesterday
-is available everywhere today.
+The single most useful habit we have found is running `make update`
+on each machine at the start of every work session. The operation
+takes roughly ten seconds and ensures that a setting committed on
+the primary machine the previous day is available everywhere by
+the time the next session begins.
 
 # Things to Watch Out For
 
 1. **Write `.gitignore` before `git init`, not after.** If any
-   sensitive file is committed even once, removing it requires
-   a full `git filter-repo` rewrite and rotation of every
-   exposed credential. The template in `analysis/configs/gitignore`
-   covers the standard sensitive categories; review it before
+   sensitive file is committed even once, removing it requires a
+   full `git filter-repo` rewrite and rotation of every exposed
+   credential. Unfortunately this is not a recoverable situation
+   in any practical sense; the secret must be treated as
+   compromised regardless of how briefly the commit was visible.
+   The template in `analysis/configs/gitignore` covers the
+   standard sensitive categories and merits careful review before
    running `git add .`.
 
 2. **Do not place the dotfiles repository inside Dropbox,
    iCloud, or Google Drive.** Git writes to `.git/index`,
    `.git/HEAD`, and ref files on every operation. A cloud
-   provider racing to sync those writes can corrupt the index
-   or truncate files to zero bytes. The repository must be
-   local to each machine; git with a GitHub remote is the
-   synchronisation mechanism.
+   provider racing to synchronise those writes can corrupt the
+   index or truncate files to zero bytes. We have observed this
+   failure mode. The repository must be local to each machine;
+   git with a GitHub remote is the synchronisation mechanism,
+   not the cloud provider.
 
 3. **Run `install.sh --dry-run` on the second machine before
    the real run.** The first dry-run on a fresh environment
-   surfaces every hardcoded assumption invisible on the primary
-   machine. Look especially for paths that reference a directory
-   that does not exist on the new hardware.
+   surfaces every hardcoded assumption that was invisible on the
+   primary machine. Look especially for paths that reference a
+   directory that does not exist on the new hardware; these tend
+   to produce silent failures rather than useful errors.
 
 4. **Do not track editor plugin directories.** The directories
-   where plugin managers deposit downloaded code
-   (`~/.config/vim/bundle/`, `~/.config/nvim/plugged/`) are
-   large, platform-specific, and regenerated automatically on
-   first launch. Track only the plugin manifest (the `vimrc`
-   `Plug` lines or `nvim/lua/plugins.lua`); add the download
-   directories to `.gitignore` before the first commit.
+   where plugin managers deposit downloaded code,
+   `~/.config/vim/bundle/` or `~/.config/nvim/plugged/` for
+   instance, are large, platform-specific, and regenerated
+   automatically on first launch. Track only the plugin manifest
+   (the `vimrc` `Plug` lines or `nvim/lua/plugins.lua`) and add
+   the download directories to `.gitignore` before the first
+   commit. A reliable heuristic: if a directory is regenerated
+   by running a tool, it is not user configuration.
 
 5. **Per-file symlinks in `~/bin`, not a top-level directory
    link.** A `~/bin -> ~/dotfiles/bin` symlink appears to work
-   but dangles silently on any machine where the absolute path
-   differs. The installer creates one symlink per script; this
-   is more verbose but correct on every machine.
+   on the machine where it was created but dangles silently on
+   any machine where the absolute path differs. The installer
+   creates one symlink per script; this is more verbose but
+   correct across all machines.
 
 6. **The launchd `__USER__` substitution writes to
-   `~/Library/LaunchAgents/`, not back to the repository.** Edit
-   the source template in `~/dotfiles/launchd/` and re-run the
-   installer. Never edit the substituted plist in
-   `~/Library/LaunchAgents/` directly; it is overwritten on the
-   next `install.sh` run.
+   `~/Library/LaunchAgents/`, not back to the repository.** To
+   modify a plist, edit the source template in
+   `~/dotfiles/launchd/` and re-run the installer. Editing the
+   substituted copy in `~/Library/LaunchAgents/` directly is
+   problematic: it is overwritten on the next `install.sh` run
+   and the change is lost.
 
-7. **`SHARE_HISTORY` shares across all terminal sessions in real
-   time.** A command typed in one tab is immediately available in
-   all others. The side effect is interleaved history from
-   concurrent sessions. If this is disorienting, replace
-   `SHARE_HISTORY` with `INC_APPEND_HISTORY` alone; history is
-   then shared across sessions only after each session ends.
+7. **`SHARE_HISTORY` propagates across all terminal sessions in
+   real time.** A command typed in one tab is immediately
+   available in all others, which is useful but produces
+   interleaved history when several sessions are active
+   concurrently. If this behaviour proves disorienting, replacing
+   `SHARE_HISTORY` with `INC_APPEND_HISTORY` alone restricts
+   sharing to session boundaries rather than individual commands.
 
 # Uninstall / Rollback
 
@@ -813,10 +865,12 @@ rm -f ~/Library/LaunchAgents/local.*.plist
 rm -rf ~/dotfiles
 ```
 
-If no `.backup.TIMESTAMP` files exist (first-run on a machine
-with no prior dotfiles), step 1 leaves empty broken symlinks
-that must be removed manually. The `--dry-run` flag shows
-exactly which files would be backed up before the real run.
+If no `.backup.TIMESTAMP` files exist, as is the case on a
+first-run against a machine with no prior dotfiles, step 1 will
+leave empty broken symlinks that must be removed manually. The
+`--dry-run` flag shows exactly which files would be backed up
+before the real install, which is the most reliable way to confirm
+the rollback path before committing to a production machine.
 
 ![  ](media/images/ambiance3.jpg){.img-fluid}
 
@@ -826,130 +880,160 @@ exactly which files would be backed up before the real run.
 
 **Conceptual Understanding:**
 
-- The workspace is a layered system. The terminal emulator,
-  shell, editor, line editor, and dotfiles repository are
-  independent layers with independent configuration files and
-  independent failure modes. Treating them as a coherent system
-  from the start produces a qualitatively different working
-  environment.
-- Cloud sync and git are not substitutes. Cloud sync provides
-  availability across machines; git provides history, diff,
-  rollback, and the ability to deploy a specific state to a
-  specific machine. The dotfiles repository needs git.
-- The second bootstrap is more informative than the first.
-  Setting up the primary machine is configuration; setting up
-  the second machine is testing. Assumptions invisible on the
-  primary machine surface immediately on the second.
-- A sensitive-files inventory written before the first commit
-  is a one-time investment that prevents a class of irreversible
-  errors. Credential rotation after an accidental git commit is
-  a half-day minimum.
+We began with a model in which the workspace is a single
+undifferentiated collection of files. We leave with a layered
+model: the terminal emulator, shell, editor, line editor, and
+dotfiles repository are independent layers, each with independent
+configuration files and independent failure modes. Treating them
+as a coherent system from the start produces a qualitatively
+different working environment from one assembled ad hoc.
+
+We also found, perhaps more clearly than expected, that cloud sync
+and git are not substitutes. Cloud sync provides availability
+across machines; git provides history, diff, rollback, and the
+ability to deploy a specific state to a specific machine. The
+dotfiles repository needs git.
+
+On the question of the three-machine requirement, we shall
+emphasise it once more: the second bootstrap is more informative
+than the first. Setting up the primary machine is configuration;
+setting up the second machine is testing. Assumptions invisible on
+the primary surface immediately on the second, and this is the
+mechanism by which the requirement earns its cost.
+
+A sensitive-files inventory written before the first commit is a
+one-time investment that prevents a class of irreversible errors.
+Credential rotation after an accidental git commit is, at a
+minimum, a half-day operation, and it must be assumed thorough
+regardless of how briefly the commit was visible.
 
 **Technical Skills:**
 
-- The `link_file` pattern (back up with a timestamp, then create
-  a symlink) makes `install.sh` idempotent: it can be re-run on
-  an already-deployed machine without destroying local changes.
-- The `--dry-run` flag is low-cost to implement and essential for
-  validating any installer before committing to a production
-  machine. Ten seconds of review prevents an afternoon of
-  recovery.
-- Conditional tool guards (`command -v tool > /dev/null &&`) in
-  `.zshrc` allow the same configuration to deploy before tools
-  are installed and to a fully-configured machine without errors.
-- `$OSTYPE` detection (`case "$OSTYPE" in darwin*) ... linux*)
-  ... esac`) allows a single `.zshrc` to configure different PATH
-  and alias settings for macOS and Linux without forking the
-  repository.
+The `link_file` pattern, which backs up existing files with a
+timestamp before creating a symlink, makes `install.sh` idempotent:
+it can be re-run on an already-deployed machine without destroying
+local changes. The `--dry-run` flag is inexpensive to implement and
+essential for validating any installer before committing to a
+production machine. Ten seconds of review prevents an afternoon of
+recovery.
+
+Conditional tool guards (`command -v tool > /dev/null &&`) in
+`.zshrc` allow the same configuration file to deploy before tools
+are installed and to a fully-configured machine without producing
+errors. The `$OSTYPE` detection pattern (`case "$OSTYPE" in
+darwin*) ... linux*) ... esac`) allows a single `.zshrc` to
+configure different `PATH` and alias settings for macOS and Linux
+without forking the repository into two maintenance paths.
 
 **Gotchas and Pitfalls:**
 
-- The order of operations matters: `.gitignore` before `git init`,
-  `git status` review before `git add`, dry-run before the real
-  run. Each shortcut creates a harder problem to undo.
-- Editor plugin directories in `~/.config/vim/` or
-  `~/.config/nvim/` are large, platform-specific, and silently
-  break cross-machine deploys if tracked in git. The rule: if
-  a directory is regenerated by running a tool, it is not user
-  configuration.
-- `delta` as a git pager requires both `export GIT_PAGER='delta'`
-  in `.zshrc` and `[core] pager = delta` in `.gitconfig`. Either
-  alone is insufficient.
+The order of operations is not negotiable: `.gitignore` before
+`git init`, `git status` review before `git add`, dry-run before
+the real run. Each shortcut creates a harder problem to undo, and
+the hardest of them, a committed credential, cannot be undone at
+all.
+
+Editor plugin directories in `~/.config/vim/` or
+`~/.config/nvim/` are large, platform-specific, and silently break
+cross-machine deploys if tracked in git. The reliable rule is: if
+a directory is regenerated by running a tool, it is not user
+configuration.
+
+We should note one dependency that is not obvious: `delta` as a
+git pager requires both `export GIT_PAGER='delta'` in `.zshrc`
+and `[core] pager = delta` in `.gitconfig`. Either setting alone
+is insufficient.
 
 ## Limitations
 
-- This configuration is tested on macOS 15.4 (Sequoia) with
-  Apple Silicon and on Ubuntu 22.04. Other distributions, NixOS,
-  and enterprise-managed workstations may require adjustments to
-  PATH, plugin paths, and package names.
-- The `install.sh` deploys to `$HOME` only. System-level
-  configuration (`/etc/`, system-wide launchd daemons) is out of
-  scope.
-- The launchd plist handling is macOS-only. A Linux equivalent
-  using systemd user units would require a separate code path.
-- The secrets workflow is manual: the installer prints a reminder
-  but provides no automation for restoring `~/.ssh`, `~/.aws`,
-  or `~/.gnupg` on a new machine.
-- No automated CI is applied. A GitHub Actions workflow that runs
-  `install.sh --dry-run` on macOS and Ubuntu after every push
-  would catch cross-platform breakage before a laptop bootstrap.
+Several limitations of the current approach merit explicit
+statement.
+
+The configuration has been tested on macOS 15.4 (Sequoia) with
+Apple Silicon and on Linux Mint 21.3 (Ubuntu 22.04 base). Other
+distributions, NixOS, and enterprise-managed workstations may
+require adjustments to `PATH`, plugin paths, and package names
+that we have not yet worked out.
+
+The `install.sh` deploys to `$HOME` only; system-level
+configuration, including `/etc/` files and system-wide launchd
+daemons, is out of scope. The launchd plist handling is macOS-only; on Linux Mint the
+equivalent mechanism is systemd user units, which require a
+separate code path in the installer (noted under Opportunities).
+
+The secrets workflow is manual throughout. The installer prints a
+reminder but provides no automation for restoring `~/.ssh`,
+`~/.aws`, or `~/.gnupg` on a new machine. This is by design, in
+that automating credential restoration raises its own security
+concerns, but it does mean that the bootstrap is not fully
+hands-off.
+
+Finally, no automated CI is applied to the repository itself. A
+GitHub Actions workflow that runs `install.sh --dry-run` on macOS
+and Ubuntu runners after every push would catch cross-platform
+breakage before it propagates to a live machine bootstrap.
 
 ## Opportunities for Improvement
 
-1. Add a `bootstrap.sh` that installs Homebrew and git before
-   cloning, making the first command on a fresh machine a single
-   `curl | bash` invocation (review the script content before
-   running it).
-2. Add a GitHub Actions workflow that runs `install.sh --dry-run`
-   and `make lint` on macOS and Ubuntu runners after every push.
-3. Write a systemd user-unit equivalent of the launchd plist
-   section, conditioned on `linux*` in `$OSTYPE`, so the
-   repository serves Linux development servers without a separate
-   maintenance path.
-4. Evaluate `git-crypt` for encrypting a small set of
-   near-sensitive configs (rclone config, mbsyncrc) so they can
-   live in the repository without manual scrubbing before each
-   commit.
-5. Complete the editor plugin manifest and add a post-install
-   hook that runs `:PlugInstall` in headless vim, making the
-   editor ready without manual intervention on a new machine.
+Several extensions would meaningfully improve the setup described
+here.
+
+First, a `bootstrap.sh` that installs Homebrew and git before
+cloning would reduce the first command on a fresh machine to a
+single `curl | bash` invocation. We note that reviewing the script
+content before running it is essential in this pattern, but the
+convenience is real.
+
+Second, a GitHub Actions workflow that runs `install.sh --dry-run`
+and `make lint` on macOS and Ubuntu runners after every push would
+catch cross-platform breakage before it reaches a live machine.
+This is perhaps the highest-value addition for anyone maintaining
+the repository across multiple operating systems.
+
+Third, writing a systemd user-unit equivalent of the launchd plist
+section, conditioned on `linux*` in `$OSTYPE`, would allow the
+repository to serve Linux development servers without a separate
+maintenance path.
+
+Fourth, `git-crypt` merits evaluation for a small set of
+near-sensitive configuration files, rclone config and mbsyncrc for
+instance, that are not credentials but are not entirely public
+either. The alternative, manual scrubbing before each commit, is
+problematic at scale.
+
+Fifth, completing the editor plugin manifest and adding a
+post-install hook that runs `:PlugInstall` in headless vim would
+make the editor ready on a new machine without manual
+intervention.
 
 # Wrapping Up
 
 The three-laptop problem is a microcosm of the reproducibility
 problem that motivates most of the Unix best-practice literature.
-A workflow that exists only in a researcher's memory is not
-reproducible: it cannot be audited, handed off, or recovered from
-hardware failure. A workflow that exists in a version-controlled
-repository is auditable, deployable, and recoverable.
+A workflow that exists only in a researcher's memory cannot be
+audited, handed off, or recovered from hardware failure. A workflow
+that exists in a version-controlled repository can be all three.
 
-The investment described in this post, a few hours on day one,
-pays every time a machine is refreshed, every time a new
-collaborator joins the lab, and every time the primary laptop
-needs repair. The second and third machines are not
-afterthoughts; they are the test suite that validates the
-configuration.
+The investment described in this post is roughly a few hours on
+day one. It pays every time a machine is refreshed, every time a
+new collaborator joins the laboratory, and every time the primary
+laptop requires repair. In conclusion, four points are worth
+emphasising.
 
-**Main takeaways:**
-
-- A dotfiles repository is the source code for the workspace.
-  It should live in git, be tested before deployment, and have
-  a clear migration path for breaking changes.
-- Cloud sync is not version control. A dotfiles repository inside
-  Dropbox or iCloud has no history, no diff, no rollback, and is
-  subject to sync-race corruption. The repository must be local;
-  GitHub is the remote.
-- Write `.gitignore` before `git init`. This is a prerequisite,
-  not a best practice. One sensitive commit requires a full
-  rewrite and credential rotation.
-- Test on the second machine before needing the third. The second
-  bootstrap surfaces every assumption invisible on the primary
-  machine. The time to find those assumptions is before the third
-  machine is needed, not during.
-- The conditional guard pattern in `.zshrc` is the key to
-  portability: a configuration that degrades gracefully before
-  tools are installed can be deployed on day one and improved
-  incrementally.
+First, a dotfiles repository is, in the fullest sense, the source
+code for the workspace. It should live in git, be tested before
+deployment, and have a clear migration path for breaking changes.
+Second, cloud sync is not version control. A dotfiles repository
+inside Dropbox or iCloud has no history, no diff, no rollback, and
+is subject to sync-race corruption that git does not protect
+against. The repository must be local to each machine, with GitHub
+as the remote. Third, write `.gitignore` before `git init`. This
+is a prerequisite, not a best practice; one sensitive commit
+requires a full rewrite and credential rotation. Fourth, verify on
+the second machine before the third is needed. The second bootstrap
+surfaces every assumption invisible on the primary machine, and the
+time to find those assumptions is before the third machine is
+needed, not during it.
 
 # See Also
 
@@ -1036,15 +1120,13 @@ make install    # deploy symlinks and packages
 
 # Let's Connect
 
-I would enjoy hearing from you if:
-
-- You are setting up a research computing environment and have
-  questions about adapting this configuration to your toolchain.
-- You use a different secrets mechanism or sync strategy and want
-  to compare notes.
-- You have extended the launchd section to work with systemd on
-  Linux and are willing to share the approach.
-- You spot an error or a better approach to any of the code here.
+I would enjoy hearing from readers who are setting up a research
+computing environment and have questions about adapting this
+configuration to a different toolchain, who use a different secrets
+mechanism or synchronisation strategy and wish to compare notes,
+who have extended the launchd section to work with systemd on Linux
+and are willing to share the approach, or who have spotted an error
+or a better approach to any of the code presented here.
 - You just want to say hello and connect.
 
 - **GitHub:** [rgt47](https://github.com/rgt47)
