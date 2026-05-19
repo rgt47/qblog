@@ -83,68 +83,86 @@ into a two-command bootstrap.*
 
 # Introduction
 
-A new researcher joins a data science and biostatistics lab with
-three machines: a primary workstation on campus, a laptop for home
-analysis, and a travel machine for conferences. On day one all three
-are identical. By week three, one has a custom `.zshrc`, another has
-accumulated aliases no one can remember writing, and the third still
-shows the default macOS shell prompt. Six months in, reproducing the
-same analysis command on a second machine requires either memory or
-archaeology.
+Consider the situation that arises, perhaps more often than one
+might expect, when a new researcher joins a data science and
+biostatistics laboratory equipped with three fresh macOS laptops: a
+primary workstation on campus, a machine for home analysis, and a
+lighter travel laptop for conferences. On the first day all three
+are indistinguishable. By the third week, however, one has acquired
+a custom `.zshrc`, another has accumulated a set of shell aliases
+whose provenance no one can quite reconstruct, and the third still
+presents the default macOS prompt. Six months later, reproducing a
+particular analysis command on the second machine requires either
+an unusually reliable memory or something closer to archaeology.
 
-The Unix command-line workspace does not manage itself. Left
-unattended, three laptops accumulate three divergent configurations
-and the researcher who set them up is the only person who knows the
-differences. The solution is not more discipline; it is the right
-architecture from the start: a version-controlled dotfiles
-repository that makes each machine a reproducible deployment of a
-single source of truth.
+The Unix command-line workspace does not maintain itself. Left to
+accumulate without deliberate management, three machines will develop
+three divergent configurations, and the researcher who built them
+will be the only person with any clear picture of the differences.
+We have found that the solution is not, in practice, a matter of
+imposing more discipline on oneself; it is rather a question of
+establishing the right architecture from the start. That architecture
+is a version-controlled dotfiles repository, kept in git, that
+treats each machine as a reproducible deployment of a single
+authoritative source.
 
-This post describes that architecture in three layers: the terminal
-emulator, the shell, and the dotfiles repository that holds both.
-It is written for a researcher joining a lab with fresh macOS
-hardware and no existing configuration, though the same procedure
-applies to anyone consolidating an ad-hoc setup. The three
-deliverables (install.sh, Makefile, and a .gitignore template) are
-generic starting points intended to be adapted, not copied verbatim.
+We shall describe that architecture here in three layers: the
+terminal emulator, the shell, and the dotfiles repository that ties
+both together. The presentation is addressed primarily to a
+researcher arriving with fresh hardware and no existing
+configuration, though the same procedure applies to anyone who has
+accumulated an ad-hoc setup and wishes to consolidate it. The three
+deliverables we shall present (an `install.sh` installer, a
+`Makefile`, and a `.gitignore` template) are intended as generic
+starting points; they merit adaptation to the specific tools and
+conventions of one's own laboratory, not copying verbatim.
 
 ## Motivations
 
-- Three laptops managed by memory alone diverge within weeks. The
-  researcher who set them up is the only person who can reason about
-  the differences, and that person is often unavailable.
-- Reproducing a broken analysis environment on a second machine is
-  the hardest class of reproducibility failure: the dependencies are
-  invisible, the state is implicit, and the only documentation is
-  the original researcher's recollection.
-- A new machine bootstrap that requires hours of manual
-  configuration is a tax on every hardware refresh, contract
-  renewal, and collaborative handoff in the lab.
-- Configuration files accumulated over years of daily use contain
-  hard-won knowledge (project navigation shortcuts, editor settings,
-  safety aliases, job-scheduling patterns) that has no other
-  repository. Losing a machine without version control means losing
-  that knowledge.
-- The Unix tools that make a data science workflow efficient
-  (fuzzy file finding, consistent vi-mode across all CLI tools,
-  per-project directory jumping, syntax-highlighted diffs) require
-  deliberate configuration. The defaults are functional; the
-  configured environment is qualitatively different.
+We have several reasons for approaching the problem this way. To
+begin with, three laptops managed by memory alone will diverge
+within weeks. The researcher who assembled them is, practically
+speaking, the only person who can reason about the differences,
+and that person is frequently unavailable at the moment the second
+machine is needed.
+
+Beyond simple divergence, reproducing a broken analysis environment
+on a second machine is among the harder classes of reproducibility
+failure one encounters in practice. The dependencies are invisible,
+the state is implicit, and the only documentation is typically the
+original researcher's recollection. A new-machine bootstrap that
+demands several hours of manual configuration is, furthermore, a
+recurring tax on every hardware refresh, contract renewal, and
+collaborative handoff in a laboratory of any size.
+
+We should also note that configuration files accumulated over years
+of daily use contain hard-won knowledge: project navigation
+shortcuts, editor settings, safety aliases, job-scheduling patterns.
+Unfortunately, this knowledge has no other repository. Losing a
+machine without version control means losing that knowledge entirely,
+and the cumulative cost of such losses is not trivial.
+
+Finally, the Unix tools that make a data science workflow genuinely
+efficient, including fuzzy file finding, consistent vi-mode across
+all command-line clients, per-project directory jumping, and
+syntax-highlighted diffs, require deliberate configuration. The
+default settings are functional; the configured environment is
+qualitatively different in ways that compound over a working day.
 
 ## Objectives
 
-1. Configure a modern terminal emulator and shell on the primary
-   machine, with settings documented and version-controlled from
-   the first session.
-2. Create a `~/dotfiles` git repository outside any cloud-sync
-   path, containing shell configuration, editor settings, git
-   config, system scripts, and a sensitive-files inventory.
-3. Write and test an `install.sh` with `--dry-run` support that
-   bootstraps a fresh machine to the same state as the primary
-   in under 30 minutes.
-4. Verify the bootstrap on the second machine before the third
-   machine is needed, so the repository is a tested deployment
-   artefact, not a wishlist.
+We have four concrete goals. First, we will configure a modern
+terminal emulator and shell on the primary machine, with settings
+documented and placed under version control from the first session.
+Second, we will create a `~/dotfiles` git repository outside any
+cloud-synchronisation path, containing shell configuration, editor
+settings, git configuration, system scripts, and a sensitive-files
+inventory. Third, we will write and test an `install.sh` with
+`--dry-run` support that bootstraps a fresh machine to the same
+state as the primary in under thirty minutes. Fourth, and perhaps
+most importantly, we will verify the bootstrap on the second machine
+before the third is needed, so the repository becomes a tested
+deployment artefact rather than a wishlist.
 
 ![  ](media/images/ambiance1.jpg){.img-fluid}
 
