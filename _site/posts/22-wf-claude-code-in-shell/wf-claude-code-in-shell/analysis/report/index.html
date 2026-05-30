@@ -1,2 +1,1461 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"></html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.5.45">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ronald ‘Ryy’ G. Thomas">
+<meta name="dcterms.date" content="2026-04-28">
+<meta name="description" content="An open-architecture pattern for LLM-augmented editing scoped to an applied biostatistician’s daily work. The post documents Claude Code at the shell as the primary integration, distinguishing it from in-buffer plugins, graphical AI editors, and browser-based prompting. The CLAUDE.md per-project convention is presented as the load-bearing artefact that makes the integration usable rather than novel.">
+
+<title>LLM-Augmented Editing for the Workflow Construct – focusonr</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../../../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../../../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../../../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../../../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../../../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../../../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../../../../">
+<script src="../../../../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../../../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../../../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../../../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../../../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../../../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../../../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../../../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../../../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": true,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "keyboard-shortcut": [
+    "?",
+    "/"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&amp;family=Open+Sans:ital,wght@0,400;0,600;1,400&amp;family=Fira+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<script src="https://kit.fontawesome.com/0fba9333d8.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+
+<!-- Custom meta tags for social sharing -->
+<meta property="og:site_name" content="Thomas Lab">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@rgt47">
+
+<!-- Add responsive features -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<!-- Add analytics if needed -->
+<!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXX');
+</script> -->
+
+<!-- Add custom javascript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Remove code tools button completely
+  const codeButton = document.querySelector('.code-tools-button');
+  if (codeButton) {
+    codeButton.remove();
+  }
+  
+  // Add any custom JavaScript functionality here
+  
+  // Example: Add smooth scrolling
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      
+      document.querySelector(this.getAttribute('href')).scrollIntoView({
+        behavior: 'smooth'
+      });
+    });
+  });
+  
+  // Make sidebar category items clickable (but not TOC items)
+  const categoryLinks = {
+    'Programming & Development': '/posts/?category=Programming+%26+Development',
+    'Data Analysis & Visualization': '/posts/?category=Data+Analysis+%26+Visualization',
+    'Deployment & Operations': '/posts/?category=Deployment+%26+Operations',
+    'Development Environment': '/posts/?category=Development+Environment',
+    'Shiny Applications': '/posts/?category=Shiny+Applications',
+    'AI & Automation': '/posts/?category=AI+%26+Automation',
+    'System Administration': '/posts/?category=System+Administration'
+  };
+  
+  // Only target sidebar items that are not in the TOC
+  document.querySelectorAll('.sidebar-item-section .sidebar-item-text').forEach(item => {
+    // Skip if this is inside the TOC
+    if (item.closest('#TOC')) return;
+    
+    const text = item.textContent.trim();
+    if (categoryLinks[text]) {
+      item.addEventListener('click', function() {
+        window.location.href = categoryLinks[text];
+      });
+    }
+  });
+});
+</script>
+
+
+<meta property="og:title" content="focusonr - LLM-Augmented Editing for the Workflow Construct">
+<meta property="og:description" content="An open-architecture pattern for LLM-augmented editing scoped to an applied biostatistician’s daily work. The post documents Claude Code at the shell as the primary integration, distinguishing it from in-buffer plugins, graphical AI editors, and browser-based prompting. The CLAUDE.md per-project convention is presented as the load-bearing artefact that makes the integration usable rather than novel.">
+<meta property="og:image" content="https://focusonr.org/posts/22-wf-claude-code-in-shell/wf-claude-code-in-shell/analysis/report/media/images/hero.jpg">
+<meta property="og:site_name" content="focusonr">
+</head>
+
+<body class="nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../../../../index.html">
+    <span class="navbar-title">focusonr</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../blog/index.html"> 
+<span class="menu-text">Blog</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="https://rgtlab.org"> 
+<span class="menu-text">rgtlab.org</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47"> <i class="bi bi-twitter" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a>
+  <ul class="collapse">
+  <li><a href="#motivations" id="toc-motivations" class="nav-link" data-scroll-target="#motivations"><span class="header-section-number">1.1</span> Motivations</a></li>
+  <li><a href="#objectives" id="toc-objectives" class="nav-link" data-scroll-target="#objectives"><span class="header-section-number">1.2</span> Objectives</a></li>
+  </ul></li>
+  <li><a href="#what-is-llm-augmented-editing" id="toc-what-is-llm-augmented-editing" class="nav-link" data-scroll-target="#what-is-llm-augmented-editing"><span class="header-section-number">2</span> What Is LLM-Augmented Editing?</a></li>
+  <li><a href="#prerequisites" id="toc-prerequisites" class="nav-link" data-scroll-target="#prerequisites"><span class="header-section-number">3</span> Prerequisites</a></li>
+  <li><a href="#installation" id="toc-installation" class="nav-link" data-scroll-target="#installation"><span class="header-section-number">4</span> Installation</a>
+  <ul class="collapse">
+  <li><a href="#claude-code-recommended-primary" id="toc-claude-code-recommended-primary" class="nav-link" data-scroll-target="#claude-code-recommended-primary"><span class="header-section-number">4.1</span> Claude Code (recommended primary)</a></li>
+  <li><a href="#optional-neovim-in-buffer-plugin" id="toc-optional-neovim-in-buffer-plugin" class="nav-link" data-scroll-target="#optional-neovim-in-buffer-plugin"><span class="header-section-number">4.2</span> Optional: Neovim in-buffer plugin</a></li>
+  <li><a href="#optional-graphical-alternatives-cursor-zed" id="toc-optional-graphical-alternatives-cursor-zed" class="nav-link" data-scroll-target="#optional-graphical-alternatives-cursor-zed"><span class="header-section-number">4.3</span> Optional: graphical alternatives (Cursor, Zed)</a></li>
+  </ul></li>
+  <li><a href="#configuration" id="toc-configuration" class="nav-link" data-scroll-target="#configuration"><span class="header-section-number">5</span> Configuration</a>
+  <ul class="collapse">
+  <li><a href="#the-per-project-claude.md-convention" id="toc-the-per-project-claude.md-convention" class="nav-link" data-scroll-target="#the-per-project-claude.md-convention"><span class="header-section-number">5.1</span> The per-project <code>CLAUDE.md</code> convention</a></li>
+  <li><a href="#global-user-instructions" id="toc-global-user-instructions" class="nav-link" data-scroll-target="#global-user-instructions"><span class="header-section-number">5.2</span> Global user instructions</a></li>
+  </ul></li>
+  <li><a href="#verification" id="toc-verification" class="nav-link" data-scroll-target="#verification"><span class="header-section-number">6</span> Verification</a></li>
+  <li><a href="#daily-workflow" id="toc-daily-workflow" class="nav-link" data-scroll-target="#daily-workflow"><span class="header-section-number">7</span> Daily Workflow</a></li>
+  <li><a href="#things-to-watch-out-for" id="toc-things-to-watch-out-for" class="nav-link" data-scroll-target="#things-to-watch-out-for"><span class="header-section-number">8</span> Things to Watch Out For</a></li>
+  <li><a href="#uninstall-rollback" id="toc-uninstall-rollback" class="nav-link" data-scroll-target="#uninstall-rollback"><span class="header-section-number">9</span> Uninstall / Rollback</a></li>
+  <li><a href="#lessons-learnt" id="toc-lessons-learnt" class="nav-link" data-scroll-target="#lessons-learnt"><span class="header-section-number">10</span> Lessons Learnt</a>
+  <ul class="collapse">
+  <li><a href="#conceptual" id="toc-conceptual" class="nav-link" data-scroll-target="#conceptual"><span class="header-section-number">10.0.1</span> Conceptual</a></li>
+  <li><a href="#technical" id="toc-technical" class="nav-link" data-scroll-target="#technical"><span class="header-section-number">10.0.2</span> Technical</a></li>
+  <li><a href="#gotcha-shaped" id="toc-gotcha-shaped" class="nav-link" data-scroll-target="#gotcha-shaped"><span class="header-section-number">10.0.3</span> Gotcha-shaped</a></li>
+  </ul></li>
+  <li><a href="#limitations" id="toc-limitations" class="nav-link" data-scroll-target="#limitations"><span class="header-section-number">11</span> Limitations</a></li>
+  <li><a href="#alternatives" id="toc-alternatives" class="nav-link" data-scroll-target="#alternatives"><span class="header-section-number">12</span> Alternatives</a>
+  <ul class="collapse">
+  <li><a href="#aider-an-open-source-multi-provider-cli" id="toc-aider-an-open-source-multi-provider-cli" class="nav-link" data-scroll-target="#aider-an-open-source-multi-provider-cli"><span class="header-section-number">12.1</span> <code>aider</code>: an open-source, multi-provider CLI</a></li>
+  <li><a href="#in-buffer-plugins-beyond-codecompanion.nvim" id="toc-in-buffer-plugins-beyond-codecompanion.nvim" class="nav-link" data-scroll-target="#in-buffer-plugins-beyond-codecompanion.nvim"><span class="header-section-number">12.2</span> In-buffer plugins beyond <code>codecompanion.nvim</code></a></li>
+  <li><a href="#browser-based-prompting-post-36" id="toc-browser-based-prompting-post-36" class="nav-link" data-scroll-target="#browser-based-prompting-post-36"><span class="header-section-number">12.3</span> Browser-based prompting (post 36)</a></li>
+  </ul></li>
+  <li><a href="#opportunities-for-improvement" id="toc-opportunities-for-improvement" class="nav-link" data-scroll-target="#opportunities-for-improvement"><span class="header-section-number">13</span> Opportunities for Improvement</a></li>
+  <li><a href="#wrapping-up" id="toc-wrapping-up" class="nav-link" data-scroll-target="#wrapping-up"><span class="header-section-number">14</span> Wrapping Up</a></li>
+  <li><a href="#see-also" id="toc-see-also" class="nav-link" data-scroll-target="#see-also"><span class="header-section-number">15</span> See Also</a></li>
+  <li><a href="#reproducibility" id="toc-reproducibility" class="nav-link" data-scroll-target="#reproducibility"><span class="header-section-number">16</span> Reproducibility</a></li>
+  <li><a href="#feedback" id="toc-feedback" class="nav-link" data-scroll-target="#feedback"><span class="header-section-number">17</span> Feedback</a>
+  <ul class="collapse">
+  <li><a href="#related-posts-in-this-cluster" id="toc-related-posts-in-this-cluster" class="nav-link" data-scroll-target="#related-posts-in-this-cluster"><span class="header-section-number">17.1</span> Related posts in this cluster</a></li>
+  </ul></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="index.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content column-page-left" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">LLM-Augmented Editing for the Workflow Construct</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">setup</div>
+    <div class="quarto-category">llm</div>
+    <div class="quarto-category">ai</div>
+    <div class="quarto-category">claude</div>
+    <div class="quarto-category">editing</div>
+    <div class="quarto-category">workflow</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    <p>An open-architecture pattern for LLM-augmented editing scoped to an applied biostatistician’s daily work. The post documents Claude Code at the shell as the primary integration, distinguishing it from in-buffer plugins, graphical AI editors, and browser-based prompting. The CLAUDE.md per-project convention is presented as the load-bearing artefact that makes the integration usable rather than novel.</p>
+  </div>
+</div>
+
+
+<div class="quarto-title-meta column-page-left">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ronald ‘Ryy’ G. Thomas </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">April 28, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/hero.jpg" class="img-fluid figure-img" style="width:80.0%"></p>
+<figcaption>A small wooden writing desk with a closed laptop, an open notebook lying flat with the corner of a fountain pen visible, and a folded paper square (presumably a printed prompt) tucked between two pages. Beside the laptop, a small ceramic dish holding a single brass key. The image evokes the idea that the human still owns the writing surface, the pen, and the keys; the laptop is one collaborator among several.</figcaption>
+</figure>
+</div>
+<p><em>An LLM-augmented editing workflow is one in which the human retains custody of the writing surface and the versioned source, and the assistant proposes diffs that the human reviews, applies, or rejects. The opposite arrangement (the assistant owns the buffer and the human supervises) produces different ergonomics and a different distribution of failure modes.</em></p>
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>The arrival of capable code-aware language models between 2022 and 2026 has produced a spectrum of integration patterns, each making a slightly different bet about who owns the buffer and how diffs are reviewed. At one end of the spectrum, the human types into a familiar editor and occasionally invokes a short consultation with the model, either through a CLI or through an in-buffer plugin. At the other end, the model generates a draft into a chat surface and the human pastes the result into their editor by hand. In the middle sit graphical ‘AI-first’ editors that have forked an existing IDE (most notably Cursor, a fork of VS Code) and rebuilt the editing surface around the model’s output stream.</p>
+<p>Each integration is internally consistent. The choice between them is largely a choice about which artefacts the human treats as authoritative. A workflow that treats the versioned source under git as authoritative, with the assistant proposing diffs that the human reviews before committing, places the assistant in a deferential role and lets every existing piece of construct machinery (modal editor, secret-scanning git wizard, container-bound R session, reproducible compendium) operate unchanged. A workflow that treats the assistant’s chat surface as authoritative, with the human pasting outputs into a separate editor, fragments the construct: the chat transcript becomes a load-bearing artefact that lives outside git, outside the dotfiles repository, and outside the secret-scanner’s reach.</p>
+<p>We document here the first integration, Claude Code at the shell, as the recommended primary for the Workflow Construct. The shell-CLI integration is the cheapest to adopt (one binary, one configuration file per project), the most consistent with the construct’s existing tools (it runs in a terminal alongside everything else), and the most defensible under git review (the diffs it proposes pass through <code>zzgit</code> and the staging-time secret scanner like any other diff). In-editor plugins (Neovim with <code>codecompanion.nvim</code> or <code>avante.nvim</code>) are documented as conditional adjacents for users whose buffer-level workflow benefits from inline diff display. Graphical alternatives (Cursor, Zed) and the historical browser-based prompting pattern (post 36, retained as a case study of one specific older integration) are noted but are not the recommended primary.</p>
+<p>More formally, we document here the LLM-augmented editing extension family of the Workflow Construct described in <a href="../../../../../posts/52-workflow-construct/">post 52</a>, and is one of the two posts in the construct’s Tier D (Knowledge / LLM) alongside <a href="../../../../../posts/57-knowledge-management/">post 57</a> (when authored) on Zotero, Obsidian, and Pandoc. The two posts together address the construct’s research-side companion layers: post 57 covers the inputs (references, notes, bibliographic data); this post covers the editing interaction with those inputs and with the working source tree.</p>
+<section id="motivations" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="motivations"><span class="header-section-number">1.1</span> Motivations</h2>
+<p>The pain points that motivated documenting the shell-CLI integration as the construct’s primary are specific:</p>
+<ul>
+<li><strong>Loss of context across editor and chat surfaces.</strong> A workflow that pastes the assistant’s output between a browser tab and an IDE loses fidelity at every paste: whitespace, indentation, partial selections, and the surrounding code structure all degrade. The assistant also loses access to the rest of the project (the other files, the git history, the test suite) because it sees only what the human has copied into the chat surface.</li>
+<li><strong>Authoritative artefacts split across systems.</strong> A graphical AI editor that holds chat-style discussion inside the editor produces transcripts that are not in git. The transcripts contain the rationale for changes the human committed; their absence in git means the history loses the argument that produced each commit.</li>
+<li><strong>Vendor lock-in to a specific editor.</strong> A workflow built around Cursor requires Cursor; a workflow built around the construct’s existing modal editor (post 26) plus a shell CLI is portable to any editor and any remote machine that supports a terminal.</li>
+<li><strong>Compatibility with the construct’s review and audit layers.</strong> The <code>zzgit</code> secret-scanning workflow (post 49) inspects the staged diff for credentials. A diff produced by an in-buffer assistant is no different from a hand-typed diff at staging time; both pass through the same scanner. A diff applied by a graphical editor that bypasses the construct’s git wizard produces an unscanned commit.</li>
+<li><strong>Adoption cost amortisation.</strong> A workflow that requires learning a new editor, a new shell, and a new set of ergonomic conventions front-loads the adoption cost. The shell-CLI integration adds a single new binary (<code>claude</code>) to a workflow whose other layers are unchanged; the marginal learning is small.</li>
+</ul>
+</section>
+<section id="objectives" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="objectives"><span class="header-section-number">1.2</span> Objectives</h2>
+<p>This post sets out to deliver:</p>
+<ol type="1">
+<li>Installation and configuration of Claude Code at the shell, including the per-project <code>CLAUDE.md</code> convention that makes the assistant aware of the project’s conventions, file layout, and persona.</li>
+<li>A small set of complementary in-editor integrations (Neovim with <code>codecompanion.nvim</code> for users who prefer inline diffs; Cursor and Zed noted briefly as graphical alternatives).</li>
+<li>A daily-workflow command catalogue mapping common editing patterns (refactor, document, test, review, explain) to the corresponding Claude Code invocation.</li>
+<li>A failure-mode catalogue covering hallucinated APIs, stale context, secret exposure, cost runaway, and the model’s tendency to over-engineer beyond the request.</li>
+</ol>
+<p>One should be able to install and configure the shell-CLI integration in approximately 30 minutes, with the per-project <code>CLAUDE.md</code> files added incrementally as one works through projects.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/placeholder-coffee-02.jpg" class="img-fluid figure-img"></p>
+<figcaption>Placeholder ambiance image (coffee, Unsplash free licence). To be replaced with a screenshot of <code>claude</code> running in a terminal alongside Neovim, with a project’s <code>CLAUDE.md</code> visible in one pane and a proposed diff visible in the other.</figcaption>
+</figure>
+</div>
+</section>
+</section>
+<section id="what-is-llm-augmented-editing" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> What Is LLM-Augmented Editing?</h1>
+<p>LLM-augmented editing is the broad name for any editing workflow in which a language model contributes to the production of source text alongside a human author. The contribution can take five distinct forms, distinguished by where the model lives relative to the human’s authoritative buffer:</p>
+<ol type="1">
+<li><strong>Shell-CLI assistant.</strong> The model is invoked from a terminal command (<code>claude</code> for Anthropic’s Claude Code; <code>aider</code> for an open-source alternative). It can read any file in the project, propose diffs, run tests, and commit, all under the human’s per-step approval. The buffer remains the human’s editor; the assistant consults via the shell.</li>
+<li><strong>In-buffer plugin.</strong> The model is invoked from within the editor itself (<code>codecompanion.nvim</code> or <code>avante.nvim</code> for Neovim; Copilot inline suggestions for VS Code). It produces diffs that appear directly in the buffer for accept-or-reject. The integration is tighter than shell-CLI but is editor-specific.</li>
+<li><strong>Graphical AI editor.</strong> A graphical fork of an existing IDE (Cursor for VS Code; Zed with its built- in AI integration). The editor itself is rebuilt around the model’s output, with a chat panel as a first-class UI element. The integration is tighter still but the editor is no longer the same editor the human used before.</li>
+<li><strong>Browser-based prompting.</strong> The model is consulted through its provider’s web UI (claude.ai, chatgpt.com). The human copies code from their editor into the chat, asks for a transformation, and pastes the result back. Post 36 in this repository is a worked case study of this pattern with a 2023-era ChatGPT for a Shiny app.</li>
+<li><strong>Direct API integration.</strong> The application code itself calls the model’s API at runtime. This is not ‘editing’ per se but is sometimes confused with it; see the Anthropic SDK and OpenAI SDK documentation for the actual application integration pattern.</li>
+</ol>
+<p>The recommended primary for the construct is form 1 (shell-CLI assistant). Form 2 (in-buffer plugin) is a conditional adjacent for users whose review-loop benefits from inline diffs. Forms 3 (graphical AI editor) and 4 (browser-based) are documented for completeness but are not the construct’s recommended path. Form 5 is out of scope for this post.</p>
+<p>The interaction style worth distinguishing alongside the form is whether the assistant edits with a diff loop (the human reviews each proposed change before it lands) or with an autonomous loop (the assistant runs to completion across multiple steps without per-step approval). The construct’s recommended default is the diff loop: every change to the versioned source passes through human review before being committed. Autonomous loops are useful for narrow, well-scoped tasks (running a long batch of refactors across files; sweeping a known fix across a corpus) but should be explicit, opt-in, and bounded in scope.</p>
+</section>
+<section id="prerequisites" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Prerequisites</h1>
+<p>The integration assumes:</p>
+<ul>
+<li><strong>Anthropic API key.</strong> A Claude API key, stored in <code>pass</code> per <a href="../../../../../posts/55-secrets-management/">post 55</a> and injected via the <code>with-secret</code> helper. Long-lived API keys exported in <code>.zshrc</code> are a specific anti-pattern this post avoids.</li>
+<li><strong>Existing construct setup.</strong> Posts 01 (Shell), 24 (Dotfiles), 25 (Git), 26 (Editor), 49 (zzgit), 52 (construct framing), and 55 (secrets management) should be in place. The integration depends on each: the shell for the CLI, the dotfiles for the alias, git and zzgit for the diff-review and staging-scan loop, the editor for the buffer the human reviews diffs in, and post 52’s construct framing for the per-project <code>CLAUDE.md</code> convention.</li>
+<li><strong>Per-project convention discipline.</strong> The integration’s largest single ergonomic input is the per-project <code>CLAUDE.md</code> file documenting the project’s layout, conventions, and persona. A first-pass <code>CLAUDE.md</code> takes ~15 minutes to author per project and is amortised across every subsequent assistant invocation in that project.</li>
+<li><strong>Time investment.</strong> Approximately 30 minutes for the initial Claude Code installation and shell wrapper. The per-project <code>CLAUDE.md</code> authoring is incremental and per-project. Optional in-editor plugin configuration adds a further 30-60 minutes per editor.</li>
+</ul>
+</section>
+<section id="installation" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Installation</h1>
+<section id="claude-code-recommended-primary" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="claude-code-recommended-primary"><span class="header-section-number">4.1</span> Claude Code (recommended primary)</h2>
+<p>Claude Code is distributed as an <code>npm</code> package and a Homebrew formula. The Homebrew installation is preferred on macOS for consistency with the construct’s other tools.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># macOS</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">brew</span> install claude</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Or via npm (cross-platform)</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> install <span class="at">-g</span> @anthropic-ai/claude-code</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Confirm installation</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="ex">claude</span> <span class="at">--version</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The CLI does not include the API key by default; it reads <code>ANTHROPIC_API_KEY</code> from the environment. Per the secrets discipline (post 55), the key is stored in <code>pass</code> and injected at invocation time, not exported into the shell environment.</p>
+<p>The relevant <code>.zshrc</code> block (extending the helper from post 55):</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode zsh code-with-copy"><code class="sourceCode zsh"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ============================================================</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Claude Code wrapper (post 60)</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co"># ============================================================</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Inject the Anthropic API key from pass at invocation time</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co"># rather than exporting it into the shell environment.</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="fu">claude()</span> <span class="kw">{</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="ex">with-secret</span> ANTHROPIC_API_KEY anthropic/api-key <span class="dt">\</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    command claude <span class="st">"</span><span class="va">$@</span><span class="st">"</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Optional: log every Claude session to a dated transcript</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="co"># for later audit (the existing claudelog alias from .zshrc</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="co"># is the canonical implementation).</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The <code>command claude</code> invocation is required to bypass the function definition itself; without it, the function calls itself recursively.</p>
+</section>
+<section id="optional-neovim-in-buffer-plugin" class="level2" data-number="4.2">
+<h2 data-number="4.2" class="anchored" data-anchor-id="optional-neovim-in-buffer-plugin"><span class="header-section-number">4.2</span> Optional: Neovim in-buffer plugin</h2>
+<p>For users whose review-loop benefits from inline diffs (form 2 from the taxonomy above), <code>codecompanion.nvim</code> is the recommended Neovim integration. It supports multiple model providers (including Anthropic) and respects the <code>ANTHROPIC_API_KEY</code> environment variable, so the same <code>pass</code> plus <code>with-secret</code> injection pattern works.</p>
+<p>Installation via the construct’s Lazy plugin manager (post 26):</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode lua code-with-copy"><code class="sourceCode lua"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- ~/.config/nvim/lua/plugins/codecompanion.lua</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> <span class="op">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">'olimorris/codecompanion.nvim'</span><span class="op">,</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="va">dependencies</span> <span class="op">=</span> <span class="op">{</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">'nvim-lua/plenary.nvim'</span><span class="op">,</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">'nvim-treesitter/nvim-treesitter'</span><span class="op">,</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="op">},</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="va">config</span> <span class="op">=</span> <span class="kw">function</span><span class="op">()</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">require</span><span class="op">(</span><span class="st">'codecompanion'</span><span class="op">).</span>setup<span class="op">({</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>      <span class="va">adapters</span> <span class="op">=</span> <span class="op">{</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">anthropic</span> <span class="op">=</span> <span class="kw">function</span><span class="op">()</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>          <span class="cf">return</span> <span class="fu">require</span><span class="op">(</span><span class="st">'codecompanion.adapters'</span><span class="op">).</span>extend<span class="op">(</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>            <span class="st">'anthropic'</span><span class="op">,</span> <span class="op">{</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>              <span class="va">env</span> <span class="op">=</span> <span class="op">{</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>                <span class="va">api_key</span> <span class="op">=</span> <span class="st">'ANTHROPIC_API_KEY'</span><span class="op">,</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>              <span class="op">},</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>            <span class="op">})</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>        <span class="kw">end</span><span class="op">,</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>      <span class="op">},</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>      <span class="va">strategies</span> <span class="op">=</span> <span class="op">{</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>        <span class="va">chat</span> <span class="op">=</span> <span class="op">{</span> <span class="va">adapter</span> <span class="op">=</span> <span class="st">'anthropic'</span> <span class="op">},</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>        <span class="va">inline</span> <span class="op">=</span> <span class="op">{</span> <span class="va">adapter</span> <span class="op">=</span> <span class="st">'anthropic'</span> <span class="op">},</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>      <span class="op">},</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>    <span class="op">})</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>  <span class="kw">end</span><span class="op">,</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Invoke Neovim from a <code>with-secret</code> wrapper so the API key is available to the plugin:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode zsh code-with-copy"><code class="sourceCode zsh"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># .zshrc addition for the Neovim case</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">nvim()</span> <span class="kw">{</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="ex">with-secret</span> ANTHROPIC_API_KEY anthropic/api-key <span class="dt">\</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    command nvim <span class="st">"</span><span class="va">$@</span><span class="st">"</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="optional-graphical-alternatives-cursor-zed" class="level2" data-number="4.3">
+<h2 data-number="4.3" class="anchored" data-anchor-id="optional-graphical-alternatives-cursor-zed"><span class="header-section-number">4.3</span> Optional: graphical alternatives (Cursor, Zed)</h2>
+<p>Cursor (a fork of VS Code, fork-maintained) and Zed (a ground-up implementation in Rust) are graphical AI editors that integrate model interactions directly into the editing surface. Installation is via the projects’ standard distribution channels. Neither is the construct’s recommended primary; both are noted for users whose preference for graphical editors is established and for whom the integration ergonomics outweigh the loss of editor portability across remote sessions.</p>
+</section>
+</section>
+<section id="configuration" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Configuration</h1>
+<section id="the-per-project-claude.md-convention" class="level2" data-number="5.1">
+<h2 data-number="5.1" class="anchored" data-anchor-id="the-per-project-claude.md-convention"><span class="header-section-number">5.1</span> The per-project <code>CLAUDE.md</code> convention</h2>
+<p>The single most consequential configuration artefact in this integration is not the CLI’s settings file but a per-project markdown file named <code>CLAUDE.md</code>, committed at the project’s git root. The file documents the project’s:</p>
+<ul>
+<li><strong>Conventions</strong> (naming, formatting, idiom preferences)</li>
+<li><strong>Layout</strong> (directory structure, where to find things)</li>
+<li><strong>Persona</strong> (who the project’s primary author is, what their working style is)</li>
+<li><strong>Don’ts</strong> (specific anti-patterns to avoid; tools or approaches the project rejects)</li>
+</ul>
+<p>The CLI reads <code>CLAUDE.md</code> automatically when invoked from inside the project’s git root and uses its contents as persistent context for every subsequent prompt. The cost is ~15 minutes to author per project; the benefit is that the assistant’s responses match the project’s style without per-prompt re-explanation.</p>
+<p>A representative <code>CLAUDE.md</code> for an applied-biostatistics project might be:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu"># CLAUDE.md</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="fu">## Project Overview</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>This is a clinical-trial analysis project using zzcollab.</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>The primary deliverable is a Quarto-rendered methods paper</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>for a peer-reviewed journal.</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="fu">## Conventions</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Native R pipe <span class="in">`|&gt;`</span> only; do not use <span class="in">`%&gt;%`</span>.</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>snake_case for variables and functions.</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>testthat for unit tests; integration tests under</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  <span class="in">`tests/integration/`</span>.</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Two-space indentation. No trailing whitespace.</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Avoid em dashes; use commas, semicolons, or colons.</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="fu">## Layout</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`analysis/scripts/`</span> for the analysis pipeline.</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`analysis/report/index.qmd`</span> for the rendered paper.</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`R/`</span> for reusable functions.</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`data/raw/`</span> (read-only) and <span class="in">`data/derived/`</span> for</span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>  pipeline outputs.</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a><span class="fu">## Persona</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>The primary author is a biostatistician working on</span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>randomised trials. They value technical precision over</span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>narrative flair and prefer scholarly third-person voice</span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>over first-person.</span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a><span class="fu">## Don'ts</span></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Do not introduce non-CRAN package dependencies without</span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>  discussion.</span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Do not modify <span class="in">`data/raw/`</span>; generate to <span class="in">`data/derived/`</span>.</span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Do not refactor working code that has tests passing</span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a>  without explicit request.</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The file is intentionally short. Longer is not better; specific is better than general. A <code>CLAUDE.md</code> that says ‘be careful’ is useless; a <code>CLAUDE.md</code> that says ‘do not modify <code>data/raw/</code>’ is operative.</p>
+</section>
+<section id="global-user-instructions" class="level2" data-number="5.2">
+<h2 data-number="5.2" class="anchored" data-anchor-id="global-user-instructions"><span class="header-section-number">5.2</span> Global user instructions</h2>
+<p>In addition to per-project <code>CLAUDE.md</code>, the CLI reads a global <code>~/.claude/CLAUDE.md</code> if present. The construct’s canonical home for global preferences (R style, citation conventions, scholarly voice, no first-person, no em dashes) is this file.</p>
+</section>
+</section>
+<section id="verification" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Verification</h1>
+<div class="sourceCode" id="cb6"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># CLI installed and reachable</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">claude</span> <span class="at">--version</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co"># API key reachable (via pass)</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="ex">pass</span> anthropic/api-key <span class="kw">|</span> <span class="fu">head</span> <span class="at">-c</span> 12 <span class="kw">;</span> <span class="bu">echo</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Should print the first 12 chars of the key, then newline.</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Functional smoke test: a one-shot prompt</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">'Reply with the single word OK and nothing else.'</span> <span class="kw">|</span> <span class="ex">claude</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Should print OK.</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Per-project context: cd into a project with a CLAUDE.md</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="co"># and confirm the assistant uses it.</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ~/prj/some-project</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a><span class="ex">claude</span>  <span class="co"># Interactive mode; should reference project conventions</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>A green pass on all four indicates the integration is operational.</p>
+</section>
+<section id="daily-workflow" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Daily Workflow</h1>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Pattern</th>
+<th>Invocation (representative)</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>One-shot consultation</td>
+<td><code>echo 'question' \| claude</code></td>
+<td>For simple lookups; no project context needed</td>
+</tr>
+<tr class="even">
+<td>Project-context session</td>
+<td><code>claude</code> (from project root)</td>
+<td>Reads CLAUDE.md; interactive</td>
+</tr>
+<tr class="odd">
+<td>Apply a refactor</td>
+<td><code>claude -p 'refactor R/utils.R: split into separate files for IO and transforms'</code></td>
+<td>Proposes a diff; human approves before applying</td>
+</tr>
+<tr class="even">
+<td>Document a function</td>
+<td><code>claude -p 'add roxygen2 docstring to R/fit_models.R::fit_logistic'</code></td>
+<td>Targeted; small diff</td>
+</tr>
+<tr class="odd">
+<td>Generate tests</td>
+<td><code>claude -p 'add testthat tests for R/fit_models.R::fit_logistic, edge cases included'</code></td>
+<td>Adds to tests/testthat/</td>
+</tr>
+<tr class="even">
+<td>Review a diff</td>
+<td><code>git diff \| claude -p 'review this diff for style and correctness'</code></td>
+<td>Read-only; no file changes</td>
+</tr>
+<tr class="odd">
+<td>Explain a function</td>
+<td><code>claude -p 'explain R/fit_models.R::fit_logistic'</code></td>
+<td>Read-only</td>
+</tr>
+<tr class="even">
+<td>Out-of-editor research</td>
+<td><code>claude -p 'summarise the assumptions of mixed-effects logistic regression'</code></td>
+<td>No project files needed</td>
+</tr>
+</tbody>
+</table>
+<p>Note the consistent pattern: the human owns the buffer and the staged commit. The assistant proposes diffs that are reviewed before applying and pass through <code>zzgit</code>’s secret-scanning gate before they reach the remote.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/placeholder-coffee-03.jpg" class="img-fluid figure-img"></p>
+<figcaption>Placeholder ambiance image (coffee, Unsplash free licence). To be replaced with a screenshot of a Claude Code session showing a proposed diff being reviewed in a side-by-side view.</figcaption>
+</figure>
+</div>
+</section>
+<section id="things-to-watch-out-for" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Things to Watch Out For</h1>
+<p>Six gotchas have surfaced repeatedly in real use of this integration. Each is small in isolation; in aggregation they are the most common reasons users either over-rely on the assistant (treating its output as authoritative) or under-rely (refusing to use the integration after a single poor experience).</p>
+<ul>
+<li><strong>The model occasionally invents APIs that do not exist.</strong> Particularly in less-common R packages, the model may produce calls to functions that look plausible but are not in the package’s namespace. The diff-loop workflow catches these at review time; the autonomous loop does not. Run the proposed code in the project’s Docker container before committing; treat ‘compiles cleanly’ as the floor for trust, not the ceiling.</li>
+<li><strong>Stale context is silent.</strong> The model’s training cutoff is fixed; the package being used may have moved on. A request that depends on a feature added after the cutoff will produce code that uses the pre-cutoff API. Cross-check against the package’s current documentation rather than against the model’s recollection of it.</li>
+<li><strong>Secrets in <code>CLAUDE.md</code> or in pasted prompts are sent to the API.</strong> A <code>CLAUDE.md</code> file that contains a database password, an API key, or a private URL will be transmitted with every invocation. Audit <code>CLAUDE.md</code> before committing it; treat it the same way as any other publicly-readable file in the repository (which it is, once committed).</li>
+<li><strong>Cost runaway in autonomous loops.</strong> A poorly-bounded autonomous task can issue dozens or hundreds of API calls before reaching a stopping condition. The CLI exposes session-cost tracking; check it before kicking off long autonomous runs and set explicit budget ceilings. The construct’s default is the diff loop precisely to keep cost predictable.</li>
+<li><strong>The model has an over-engineering bias.</strong> Asked to refactor, it will often introduce abstractions, layers, and configuration options that the project does not need. Push back explicitly: ‘do not introduce abstractions for hypothetical future requirements; three similar lines is better than a premature abstraction.’ This kind of guidance belongs in the project’s <code>CLAUDE.md</code> if it is a persistent preference.</li>
+<li><strong>Inline plugin diffs can land without git review.</strong> In-buffer plugins (<code>codecompanion.nvim</code>, <code>avante.nvim</code>, Copilot) apply changes directly to the buffer; the human reviews in the editor but the change is not staged through <code>zzgit</code>. The construct’s secret- scanning gate (post 49) catches secrets at staging time regardless, but the project’s review discipline depends on the human staging deliberately rather than running a blind <code>git add -A</code> after a plugin-driven session.</li>
+</ul>
+</section>
+<section id="uninstall-rollback" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> Uninstall / Rollback</h1>
+<div class="sourceCode" id="cb7"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove the CLI</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">brew</span> uninstall claude            <span class="co"># macOS</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="co"># or npm uninstall -g @anthropic-ai/claude-code</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove the .zshrc wrapper functions for `claude` and</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="co"># `nvim` if added.</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove per-project CLAUDE.md files (optional; they are</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="co"># committed to git, so removal is a deliberate commit, not</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="co"># a `rm`).</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Optional: revoke the Anthropic API key in the Anthropic</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="co"># console and remove the entry from pass.</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="ex">pass</span> rm anthropic/api-key</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Optional: remove the Neovim plugin</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Edit ~/.config/nvim/lua/plugins/codecompanion.lua to remove</span></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a><span class="co"># the spec, then run :Lazy clean inside Neovim.</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The integration is non-destructive at every layer. None of the above operations affect the project’s source code, the git history, or the secrets store beyond the specific entry removed.</p>
+</section>
+<section id="lessons-learnt" class="level1" data-number="10">
+<h1 data-number="10"><span class="header-section-number">10</span> Lessons Learnt</h1>
+<p>Working through this integration on the qblog and on three applied analysis projects surfaced lessons grouped into three buckets.</p>
+<section id="conceptual" class="level3" data-number="10.0.1">
+<h3 data-number="10.0.1" class="anchored" data-anchor-id="conceptual"><span class="header-section-number">10.0.1</span> Conceptual</h3>
+<ul>
+<li><strong>The diff loop is the construct’s natural integration.</strong> Every existing piece of construct machinery (modal editor, secret-scanning git wizard, container-bound R session, reproducible compendium) operates unchanged when the assistant proposes diffs that pass through the same staging-and-review path as a hand-typed change. The autonomous loop is occasionally useful but is not the default.</li>
+<li><strong><code>CLAUDE.md</code> is the load-bearing artefact.</strong> A model with rich per-project context produces output that is in the project’s voice and respects the project’s conventions. A model without that context produces output that is in the model’s default voice and ignores conventions silently. The 15-minute upfront cost of a good <code>CLAUDE.md</code> is amortised across every subsequent invocation in that project.</li>
+<li><strong>The assistant is a collaborator, not an oracle.</strong> A workflow that treats the assistant’s output as authoritative produces commits the human cannot defend in code review. A workflow that treats the assistant’s output as a draft to review produces commits the human can defend. The latter is the only sustainable mode for research code that may be cited in a methods paper.</li>
+<li><strong>The shell CLI’s portability is a feature, not a consolation.</strong> A shell-CLI integration works identically on the laptop, on the EC2 instance over SSH, and inside the construct’s Docker container. A graphical AI editor’s integration works only where the editor runs. For a workflow that deliberately moves between local, remote, and containerised contexts, portability is load-bearing.</li>
+</ul>
+</section>
+<section id="technical" class="level3" data-number="10.0.2">
+<h3 data-number="10.0.2" class="anchored" data-anchor-id="technical"><span class="header-section-number">10.0.2</span> Technical</h3>
+<ul>
+<li><strong>Per-process API-key injection beats environment export.</strong> The <code>with-secret ANTHROPIC_API_KEY</code> pattern from post 55 applies unchanged. A diagnostic script that runs <code>env</code> does not see the key; a CI runner that inherits the shell environment does not see the key; shell history does not see the key.</li>
+<li><strong>Project-level <code>CLAUDE.md</code> and global <code>~/.claude/CLAUDE.md</code> compose.</strong> The global file documents persistent personal preferences (style, citation, voice); the project file documents project-specific conventions. Both are read; both shape the assistant’s responses; neither overrides the other.</li>
+<li><strong>The CLI’s session-cost metering is sufficient for diff-loop budgeting.</strong> Each invocation reports its token use and approximate cost. A daily-cost ceiling set by the operator (informally, by attention to the metering) is sufficient for most use; explicit budget-enforcement via <code>--max-cost</code> flags is available for autonomous loops.</li>
+<li><strong><code>zzgit</code> plus the diff loop catches assistant- introduced secret leaks at staging time.</strong> The staging-time <code>gitleaks</code> scan is content-based, not origin-based, so a leak from an assistant-proposed diff is caught the same way as a leak from a hand-typed diff. No special integration is needed.</li>
+</ul>
+</section>
+<section id="gotcha-shaped" class="level3" data-number="10.0.3">
+<h3 data-number="10.0.3" class="anchored" data-anchor-id="gotcha-shaped"><span class="header-section-number">10.0.3</span> Gotcha-shaped</h3>
+<ul>
+<li><strong><code>claude</code> invoked from outside the project root sees no <code>CLAUDE.md</code>.</strong> Move into the project’s git root before invoking the CLI. The CLI emits a small banner noting which <code>CLAUDE.md</code> it loaded, useful for confirming the right file is in scope.</li>
+<li><strong><code>CLAUDE.md</code> updates that reduce a previous behaviour do not retroactively reverse the previous behaviour.</strong> If a long-running session has been operating without an instruction, adding the instruction to <code>CLAUDE.md</code> affects subsequent invocations. End the current session and start a fresh one to ensure the new instruction is in scope.</li>
+<li><strong>Some R idioms are model-disfavoured.</strong> The native R pipe <code>|&gt;</code> is treated as a recent feature by older training corpora; explicit instruction in <code>CLAUDE.md</code> (‘use the native R pipe <code>|&gt;</code> only; do not use <code>%&gt;%</code>’) mitigates. Similar for <code>data.table</code> versus <code>dplyr</code>, <code>base::ifelse</code> versus <code>dplyr::if_else</code>, and other preference-bearing idioms.</li>
+<li><strong>The CLI does not currently support per-tool budget ceilings out of the box.</strong> A user who runs autonomous loops should set up an external budget ceiling (a daily cron that polls the Anthropic billing API and alerts above a threshold) until the CLI exposes per-session budget enforcement directly.</li>
+</ul>
+</section>
+</section>
+<section id="limitations" class="level1" data-number="11">
+<h1 data-number="11"><span class="header-section-number">11</span> Limitations</h1>
+<p>The integration as documented has the following honest limitations:</p>
+<ul>
+<li><strong>It depends on a hosted API.</strong> Claude Code requires network access and an active Anthropic API account. Air-gapped or institutionally network-restricted environments cannot use this integration. Local-model alternatives (Ollama with <code>aider</code>) are noted in the alternatives section but are not the recommended primary.</li>
+<li><strong>The integration’s quality is upper-bounded by the model’s quality.</strong> A request the model cannot answer produces output the human will spend more time correcting than they would have spent writing from scratch. Internalise the cases where the assistant helps (boilerplate, refactors, documentation, test scaffolding) and the cases where it does not (novel statistical method derivations, domain-specific code that is rare in the training corpus).</li>
+<li><strong>Per-project <code>CLAUDE.md</code> files are version-controlled artefacts and inherit version-control’s coordination costs.</strong> A team-shared <code>CLAUDE.md</code> requires the same branch-merge discipline as any other shared file. A preference change in one branch can conflict with a different change in another.</li>
+<li><strong>The post does not address fine-tuning, RAG (retrieval augmented generation), or other application-level integrations.</strong> Those are application-engineering concerns, not editing concerns. See the Anthropic SDK documentation for the application path.</li>
+<li><strong>The post is Anthropic-Claude-specific in its primary recommendation.</strong> The <code>aider</code> open-source CLI supports multiple model providers (OpenAI, Anthropic, local via Ollama) and is a reasonable provider-portable alternative; it is mentioned in the alternatives section but is not the canonical primary in this revision.</li>
+</ul>
+</section>
+<section id="alternatives" class="level1" data-number="12">
+<h1 data-number="12"><span class="header-section-number">12</span> Alternatives</h1>
+<p><code>claude</code> (Claude Code) is the recommended primary, but three alternatives deserve mention.</p>
+<section id="aider-an-open-source-multi-provider-cli" class="level2" data-number="12.1">
+<h2 data-number="12.1" class="anchored" data-anchor-id="aider-an-open-source-multi-provider-cli"><span class="header-section-number">12.1</span> <code>aider</code>: an open-source, multi-provider CLI</h2>
+<p><code>aider</code> is an open-source Python CLI that supports Anthropic, OpenAI, local models via Ollama, and a number of other providers. The interaction model is similar (diff loop, project-context awareness, git-staging integration). The case for <code>aider</code> over <code>claude</code> is provider portability (useful when budget or air-gap concerns require a different model) and source-code transparency. The case against is a slightly less polished UX and a less coherent project-context convention than the <code>CLAUDE.md</code> file.</p>
+</section>
+<section id="in-buffer-plugins-beyond-codecompanion.nvim" class="level2" data-number="12.2">
+<h2 data-number="12.2" class="anchored" data-anchor-id="in-buffer-plugins-beyond-codecompanion.nvim"><span class="header-section-number">12.2</span> In-buffer plugins beyond <code>codecompanion.nvim</code></h2>
+<p><code>avante.nvim</code> is a Neovim plugin modelled on Cursor’s in-editor UX, with a chat panel and inline diffs. The case for <code>avante.nvim</code> over <code>codecompanion.nvim</code> is the slightly more polished diff display; the case against is a less mature plugin ecosystem at the time of writing. For VS Code users who do not want to switch editors, GitHub Copilot’s inline suggestions (subscription-based) and the Anthropic-published Claude extension are the two established options.</p>
+</section>
+<section id="browser-based-prompting-post-36" class="level2" data-number="12.3">
+<h2 data-number="12.3" class="anchored" data-anchor-id="browser-based-prompting-post-36"><span class="header-section-number">12.3</span> Browser-based prompting (post 36)</h2>
+<p>The browser-based pattern, in which the human pastes code into a chat surface and pastes the result back into the editor, is documented in <a href="../../../../../posts/36-simpleshinyappwithchatgpt/">post 36</a> as a worked case study with a 2023-era ChatGPT for a Shiny app. The post is retained as a historical reference for one specific older integration pattern; it is not the construct’s recommended primary in 2026, because the shell-CLI integration achieves the same outcome with less context loss and tighter integration into the construct’s other layers.</p>
+</section>
+</section>
+<section id="opportunities-for-improvement" class="level1" data-number="13">
+<h1 data-number="13"><span class="header-section-number">13</span> Opportunities for Improvement</h1>
+<p>Several extensions are plausible for subsequent revisions:</p>
+<ol type="1">
+<li><strong>Local-model option via <code>ollama</code> plus <code>aider</code>.</strong> Documents the air-gapped path: a local Llama or Qwen model running on the laptop or a local server, with <code>aider</code> as the CLI. Reduces the API-cost concern to zero and addresses the institutional-network restriction.</li>
+<li><strong>A construct-aware <code>CLAUDE.md</code> template generator.</strong> A <code>~/bin/claudemd-init.sh</code> script that creates a first-pass <code>CLAUDE.md</code> for a new project by inspecting the project’s structure, Dockerfile, and <code>DESCRIPTION</code> file. Reduces the per-project authoring cost from 15 minutes to 5.</li>
+<li><strong>Per-team <code>CLAUDE.md</code> patterns.</strong> A small set of <code>CLAUDE.md</code> templates for common project archetypes (clinical-trial analysis, simulation study, methods paper, R package). Authored once, reused across projects.</li>
+<li><strong>Integration with <code>zzgit</code> for assistant-attribution.</strong> A small extension to the construct’s git wizard (post 49) that detects when staged content was produced via Claude Code and adds a <code>Generated-by:    claude-code</code> trailer to the commit message, for downstream reproducibility audits.</li>
+<li><strong>A short follow-up on autonomous-loop discipline.</strong> Documents the cases where the autonomous loop is the right tool (large-scale rename across files, sweep of a known mechanical change), with explicit budget and stopping criteria.</li>
+</ol>
+</section>
+<section id="wrapping-up" class="level1" data-number="14">
+<h1 data-number="14"><span class="header-section-number">14</span> Wrapping Up</h1>
+<p>LLM-augmented editing is, in 2026, a productive part of an applied biostatistician’s daily work, but its productivity depends on which integration pattern the operator adopts. The shell-CLI pattern documented here keeps the human’s existing editor, the project’s git history, and the construct’s review and audit layers all unchanged; the assistant participates as a deferential collaborator that proposes diffs the human reviews before committing. The graphical-AI-editor pattern (Cursor, Zed) achieves a tighter UX at the cost of editor portability and a partial fragmentation of the project’s authoritative artefacts. The browser-based pattern (post 36) achieves a working result at the cost of substantial context loss between chat surface and editor.</p>
+<p>The single most consequential configuration choice is not the integration form but the per-project <code>CLAUDE.md</code> file. A 15-minute investment per project pays for itself within hours: the assistant’s output matches the project’s voice, respects its conventions, and avoids the anti-patterns the project rejects. Without a <code>CLAUDE.md</code>, the assistant produces output in its default voice, which is reasonable but not aligned with any specific project.</p>
+<p>The construct’s default is conservative: diff loop, human review, secret-scanning at staging, source-code transparency where it matters most. The recommendations made here are not absolute (autonomous loops are occasionally useful, in-buffer plugins suit some workflows better, the browser pattern remains the floor for cases where no other access is available), but the defaults should hold for the same reason the construct’s other defaults hold: predictability, auditability, and consistency across the construct’s other layers.</p>
+<p>In conclusion, four points merit emphasis. First, the shell-CLI integration is the construct’s natural fit: it composes with the existing editor, dotfiles, and git-wizard layers without disturbing them. Second, <code>CLAUDE.md</code> is the load-bearing artefact; the 15-minute investment per project should not be skipped. Third, the diff loop is the predictable default: autonomous loops should be explicit, opt-in, and bounded. Fourth, API keys should be injected per-process via <code>pass</code>; long-lived exports in <code>.zshrc</code> are an anti-pattern this integration specifically avoids.</p>
+</section>
+<section id="see-also" class="level1" data-number="15">
+<h1 data-number="15"><span class="header-section-number">15</span> See Also</h1>
+<ul>
+<li>Posts in this repository at adjacent layers:
+<ul>
+<li><a href="../../../../../posts/01-configtermzsh/">post 01</a>: the Shell layer where the <code>claude</code> wrapper function lives.</li>
+<li><a href="../../../../../posts/24-setupdotfilesongithub/">post 24</a>: the workstation-IaC keystone where the wrapper is version-controlled.</li>
+<li><a href="../../../../../posts/26-setupneovim/">post 26</a>: the Editor layer; the in-buffer plugin extends the configuration here.</li>
+<li><a href="../../../../../posts/36-simpleshinyappwithchatgpt/">post 36</a>: the historical browser-based ChatGPT pattern, retained as a case study.</li>
+<li><a href="../../../../../posts/49-zzgit/">post 49</a>: the staging-time secret scanner that catches API-key leaks regardless of whether the diff was hand-typed or assistant-proposed.</li>
+<li><a href="../../../../../posts/50-textbookdevelopment/">post 50</a>: the cross-cutting essay on using LLM tools in a textbook-authoring workflow.</li>
+<li><a href="../../../../../posts/52-workflow-construct/">post 52</a>: the construct framing.</li>
+<li><a href="../../../../../posts/55-secrets-management/">post 55</a>: the secrets discipline that the API-key injection here depends on.</li>
+</ul></li>
+<li>External references:
+<ul>
+<li>Claude Code documentation: <a href="https://docs.claude.com/claude-code">https://docs.claude.com/claude-code</a></li>
+<li>Anthropic API and SDK: <a href="https://docs.anthropic.com/">https://docs.anthropic.com/</a></li>
+<li><code>aider</code> (multi-provider CLI): <a href="https://aider.chat/">https://aider.chat/</a></li>
+<li><code>codecompanion.nvim</code>: <a href="https://github.com/olimorris/codecompanion.nvim">https://github.com/olimorris/codecompanion.nvim</a></li>
+<li><code>avante.nvim</code>: <a href="https://github.com/yetone/avante.nvim">https://github.com/yetone/avante.nvim</a></li>
+<li>Cursor: <a href="https://cursor.com/">https://cursor.com/</a></li>
+<li>Zed: <a href="https://zed.dev/">https://zed.dev/</a></li>
+<li>Ollama (local models): <a href="https://ollama.com/">https://ollama.com/</a></li>
+</ul></li>
+</ul>
+</section>
+<section id="reproducibility" class="level1" data-number="16">
+<h1 data-number="16"><span class="header-section-number">16</span> Reproducibility</h1>
+<p>The configuration was developed and verified on the following software stack:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Component</th>
+<th>Version</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Operating system</td>
+<td>macOS 15 (Sequoia)</td>
+<td>primary daily driver</td>
+</tr>
+<tr class="even">
+<td>Operating system</td>
+<td>Linux Mint 22 (Wilma)</td>
+<td>secondary verification</td>
+</tr>
+<tr class="odd">
+<td>Shell</td>
+<td>zsh 5.9</td>
+<td>minimum 5.0</td>
+</tr>
+<tr class="even">
+<td>Claude Code CLI</td>
+<td>1.x (current)</td>
+<td>install via <code>brew install claude</code></td>
+</tr>
+<tr class="odd">
+<td><code>pass</code></td>
+<td>1.7.4</td>
+<td>for API-key injection (post 55)</td>
+</tr>
+<tr class="even">
+<td>Optional Neovim plugin</td>
+<td><code>codecompanion.nvim</code> 12.x</td>
+<td>minimum 10</td>
+</tr>
+<tr class="odd">
+<td>Optional editor</td>
+<td>Neovim 0.11</td>
+<td>for plugin route</td>
+</tr>
+<tr class="even">
+<td>Optional alternative CLI</td>
+<td><code>aider</code> 0.60</td>
+<td>multi-provider option</td>
+</tr>
+<tr class="odd">
+<td>Reference: model</td>
+<td>claude-opus-4-7-20251015</td>
+<td>the version used during authoring</td>
+</tr>
+</tbody>
+</table>
+<p>Date of last verification: 2026-04-28.</p>
+</section>
+<section id="feedback" class="level1" data-number="17">
+<h1 data-number="17"><span class="header-section-number">17</span> Feedback</h1>
+<p>Corrections, suggestions, and questions are welcome. Please open an issue or pull request on the <a href="https://github.com/mygit">GitHub repository</a> or send an email to user@example.com. Particularly welcome are contributions documenting the local-model path (<code>ollama</code> plus <code>aider</code>), per-team <code>CLAUDE.md</code> patterns that have proven useful in practice, and reports of integration patterns the construct’s defaults handle poorly.</p>
+<section id="related-posts-in-this-cluster" class="level2" data-number="17.1">
+<h2 data-number="17.1" class="anchored" data-anchor-id="related-posts-in-this-cluster"><span class="header-section-number">17.1</span> Related posts in this cluster</h2>
+<p>This post is part of the <em>Workflow Construct</em> series. Recommended reading order:</p>
+<ol type="1">
+<li>Post 15: <a href="../15-wf-construct-overview-anchor/">A Workflow Construct for the Modern Data Scientist</a></li>
+<li>Post 16: <a href="../16-wf-unix-workspace-config/">Unix Command-Line Workspace Setup for Data Science</a></li>
+<li>Post 17: <a href="../17-wf-multi-laptop-dotfiles-bootstrap/">Multi-Laptop macOS Bootstrap</a></li>
+<li>Post 18: <a href="../18-wf-git-for-data-science/">Setting Up Git for Data Science Workflows</a></li>
+<li>Post 19: <a href="../19-wf-neovim-data-science-ide/">Setting Up Neovim as a Data Science IDE</a></li>
+<li>Post 20: <a href="../20-wf-r-vim-latex-workflow/">Extending the R-Vim Workflow with LaTeX</a></li>
+<li>Post 21: <a href="../21-wf-modern-cli-tools/">Modern CLI Replacements for the Shell Layer</a></li>
+<li><strong>Post 22: LLM-Augmented Editing for the Workflow Construct</strong> (this post)</li>
+<li>Post 23: <a href="../23-wf-yabai-tiling-window-manager/">Configuring Yabai as a Tiling Window Manager</a></li>
+<li>Post 24: <a href="../24-wf-pocket-terminal-ttyd-tailscale/">A pocket terminal with ttyd and Tailscale</a></li>
+<li>Post 25: <a href="../25-wf-linux-mint-on-macbook/">Install Linux Mint on a MacBook Air</a></li>
+</ol>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp("https:\/\/focusonr\.org");
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<script src="https://giscus.app/client.js" data-repo="rgt47/qblog" data-repo-id="R_kgDOH6TO7A" data-category="General" data-category-id="DIC_kwDOH6TO7M4CXqIi" data-mapping="pathname" data-reactions-enabled="1" data-emit-metadata="0" data-input-position="bottom" data-theme="light" data-lang="en" crossorigin="anonymous" async="">
+</script>
+<input type="hidden" id="giscus-base-theme" value="light">
+<input type="hidden" id="giscus-alt-theme" value="light">
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Copyright 2023-2026, Ronald ‘Ryy’ G. Thomas. The lab’s other activities live at <a href="https://rgtlab.org">rgtlab.org</a>.</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47">
+      <i class="bi bi-github" role="img">
+</i> 
+    </a>
+  </li>  
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47">
+      <i class="bi bi-twitter" role="img">
+</i> 
+    </a>
+  </li>  
+</ul>
+    </div>
+  </div>
+</footer>
+<!-- Fix for Quarto category encoding issue -->
+<script>
+// Fix category encoding for Quarto listing functionality
+(function() {
+  function fixAllCategoryEncoding() {
+    // Only run on pages that have Quarto listings
+    if (!document.querySelector('.quarto-listing')) {
+      return;
+    }
+    
+    // Fix sidebar category data-category attributes
+    const categoryEls = document.querySelectorAll('.quarto-listing-category .category[data-category]');
+    
+    categoryEls.forEach((categoryEl) => {
+      const category = categoryEl.getAttribute('data-category');
+      
+      if (category && category !== '') {
+        // Check if it contains only base64 characters and proper length
+        const isBase64 = /^[A-Za-z0-9+/]*={0,2}$/.test(category) && category.length % 4 === 0;
+        
+        if (isBase64) {
+          try {
+            const decoded = decodeURIComponent(atob(category));
+            // Verify it decoded to something reasonable (no control characters)
+            if (!decoded.match(/^[A-Za-z0-9\s\-,]+$/)) {
+              // Invalid encoding, re-encode from original text
+              const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+              categoryEl.setAttribute('data-category', encodedCategory);
+            }
+          } catch (e) {
+            // Base64 decode failed, re-encode from original text
+            const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+            categoryEl.setAttribute('data-category', encodedCategory);
+          }
+        } else {
+          // Not base64, encode it
+          const encodedCategory = btoa(encodeURIComponent(category));
+          categoryEl.setAttribute('data-category', encodedCategory);
+        }
+      }
+    });
+    
+    // Fix listing item data-categories attributes  
+    const listingItems = document.querySelectorAll('[data-categories]');
+    
+    listingItems.forEach((item) => {
+      const categories = item.getAttribute('data-categories');
+      
+      if (categories && categories !== '') {
+        // Check if it's already base64 encoded
+        try {
+          decodeURIComponent(atob(categories));
+          // Already encoded and valid
+        } catch (e) {
+          // Not encoded, fix it
+          const encodedCategories = btoa(encodeURIComponent(categories));
+          item.setAttribute('data-categories', encodedCategories);
+        }
+      }
+    });
+    
+    // Fix post-specific category tag click handlers
+    const postCategoryTags = document.querySelectorAll('.listing-category[onclick]');
+    
+    postCategoryTags.forEach((tag) => {
+      const categoryText = tag.textContent.trim();
+      
+      // Replace the onclick handler to use encoded category
+      tag.onclick = () => {
+        const encodedCategory = btoa(encodeURIComponent(categoryText));
+        window.quartoListingCategory(encodedCategory);
+        return false;
+      };
+    });
+  }
+  
+  // Run immediately
+  fixAllCategoryEncoding();
+  
+  // Also run when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fixAllCategoryEncoding);
+  }
+})();
+</script>
+
+<!-- PDF view/download button for blog posts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Only add the button on post pages
+  if (window.location.pathname.includes('/posts/') && !window.location.pathname.endsWith('/posts/') && !window.location.pathname.endsWith('/posts/index.html')) {
+    var currentPath = window.location.pathname;
+    // Handle both /posts/name/ and /posts/name/index.html formats
+    var pdfPath;
+    if (currentPath.endsWith('/')) {
+      pdfPath = currentPath + 'index.pdf';
+    } else {
+      pdfPath = currentPath.replace('.html', '.pdf');
+    }
+
+    // Check if PDF exists first
+    fetch(pdfPath, { method: 'HEAD' })
+      .then(function(response) {
+        if (response.ok) {
+          // PDF exists, show download button
+          showDownloadButton(pdfPath);
+        }
+        // If PDF doesn't exist, don't show any button
+      })
+      .catch(function(error) {
+        // Error checking PDF, don't show any button
+      });
+  }
+});
+
+function showDownloadButton(pdfPath) {
+  var downloadBtn = document.createElement('div');
+  downloadBtn.className = 'pdf-download-button';
+
+  // Get file size if possible
+  fetch(pdfPath, { method: 'HEAD' })
+    .then(function(response) {
+      var size = response.headers.get('Content-Length');
+      var sizeText = '';
+
+      if (size) {
+        // Convert to MB or KB
+        var sizeInMB = size / (1024 * 1024);
+        if (sizeInMB >= 1) {
+          sizeText = ' (' + sizeInMB.toFixed(1) + ' MB)';
+        } else {
+          sizeText = ' (' + (size / 1024).toFixed(0) + ' KB)';
+        }
+      }
+
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' + sizeText +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    })
+    .catch(function() {
+      // Basic fallback if we can't get file size
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    });
+
+  // Find where to insert the button (right after the title block)
+  var titleBlock = document.querySelector('.quarto-title-meta');
+  if (titleBlock) {
+    titleBlock.after(downloadBtn);
+  }
+}
+
+
+</script>
+
+<style>
+.pdf-download-button {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+</style>
+
+
+
+
+</body></html>
