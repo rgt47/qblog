@@ -1,0 +1,1970 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.5.45">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ronald ‘Ryy’ G. Thomas">
+<meta name="dcterms.date" content="2026-05-17">
+<meta name="description" content="A new researcher arrives with two macOS laptops and a Linux Mint workstation. This post builds the terminal layer, the shell layer, and the dotfiles repository that keeps all three machines consistent from day one.">
+
+<title>Unix Command-Line Workspace Setup for Data Science Researchers – focusonr</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../../../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../../../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../../../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../../../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../../../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../../../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../../../../">
+<script src="../../../../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../../../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../../../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../../../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../../../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../../../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../../../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../../../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../../../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": true,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "keyboard-shortcut": [
+    "?",
+    "/"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&amp;family=Open+Sans:ital,wght@0,400;0,600;1,400&amp;family=Fira+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<script src="https://kit.fontawesome.com/0fba9333d8.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+
+<!-- Custom meta tags for social sharing -->
+<meta property="og:site_name" content="Thomas Lab">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@rgt47">
+
+<!-- Add responsive features -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<!-- Add analytics if needed -->
+<!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXX');
+</script> -->
+
+<!-- Add custom javascript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Remove code tools button completely
+  const codeButton = document.querySelector('.code-tools-button');
+  if (codeButton) {
+    codeButton.remove();
+  }
+  
+  // Add any custom JavaScript functionality here
+  
+  // Example: Add smooth scrolling
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      
+      document.querySelector(this.getAttribute('href')).scrollIntoView({
+        behavior: 'smooth'
+      });
+    });
+  });
+  
+  // Make sidebar category items clickable (but not TOC items)
+  const categoryLinks = {
+    'Programming & Development': '/posts/?category=Programming+%26+Development',
+    'Data Analysis & Visualization': '/posts/?category=Data+Analysis+%26+Visualization',
+    'Deployment & Operations': '/posts/?category=Deployment+%26+Operations',
+    'Development Environment': '/posts/?category=Development+Environment',
+    'Shiny Applications': '/posts/?category=Shiny+Applications',
+    'AI & Automation': '/posts/?category=AI+%26+Automation',
+    'System Administration': '/posts/?category=System+Administration'
+  };
+  
+  // Only target sidebar items that are not in the TOC
+  document.querySelectorAll('.sidebar-item-section .sidebar-item-text').forEach(item => {
+    // Skip if this is inside the TOC
+    if (item.closest('#TOC')) return;
+    
+    const text = item.textContent.trim();
+    if (categoryLinks[text]) {
+      item.addEventListener('click', function() {
+        window.location.href = categoryLinks[text];
+      });
+    }
+  });
+});
+</script>
+
+
+<meta property="og:title" content="focusonr - Unix Command-Line Workspace Setup for Data Science Researchers">
+<meta property="og:description" content="A new researcher arrives with two macOS laptops and a Linux Mint workstation. This post builds the terminal layer, the shell layer, and the dotfiles repository that keeps all three machines consistent from day one.">
+<meta property="og:image" content="https://focusonr.org/posts/16-wf-unix-workspace-config/wf-unix-workspace-config/analysis/report/media/images/hero.png">
+<meta property="og:site_name" content="focusonr">
+<meta property="og:image:height" content="800">
+<meta property="og:image:width" content="1200">
+</head>
+
+<body class="nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../../../../index.html">
+    <span class="navbar-title">focusonr</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../blog/index.html"> 
+<span class="menu-text">Blog</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="https://rgtlab.org"> 
+<span class="menu-text">rgtlab.org</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47"> <i class="bi bi-twitter" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a>
+  <ul class="collapse">
+  <li><a href="#motivations" id="toc-motivations" class="nav-link" data-scroll-target="#motivations"><span class="header-section-number">1.1</span> Motivations</a></li>
+  <li><a href="#objectives" id="toc-objectives" class="nav-link" data-scroll-target="#objectives"><span class="header-section-number">1.2</span> Objectives</a></li>
+  </ul></li>
+  <li><a href="#what-is-a-unix-workspace" id="toc-what-is-a-unix-workspace" class="nav-link" data-scroll-target="#what-is-a-unix-workspace"><span class="header-section-number">2</span> What is a Unix Workspace?</a></li>
+  <li><a href="#prerequisites" id="toc-prerequisites" class="nav-link" data-scroll-target="#prerequisites"><span class="header-section-number">3</span> Prerequisites</a></li>
+  <li><a href="#layer-1-terminal-emulator" id="toc-layer-1-terminal-emulator" class="nav-link" data-scroll-target="#layer-1-terminal-emulator"><span class="header-section-number">4</span> Layer 1: Terminal Emulator</a>
+  <ul class="collapse">
+  <li><a href="#core-kitty-settings" id="toc-core-kitty-settings" class="nav-link" data-scroll-target="#core-kitty-settings"><span class="header-section-number">4.1</span> Core Kitty Settings</a></li>
+  </ul></li>
+  <li><a href="#layer-2-shell-configuration" id="toc-layer-2-shell-configuration" class="nav-link" data-scroll-target="#layer-2-shell-configuration"><span class="header-section-number">5</span> Layer 2: Shell Configuration</a>
+  <ul class="collapse">
+  <li><a href="#environment-variables-.zshenv" id="toc-environment-variables-.zshenv" class="nav-link" data-scroll-target="#environment-variables-.zshenv"><span class="header-section-number">5.1</span> Environment Variables (.zshenv)</a></li>
+  <li><a href="#shell-configuration-.zshrc" id="toc-shell-configuration-.zshrc" class="nav-link" data-scroll-target="#shell-configuration-.zshrc"><span class="header-section-number">5.2</span> Shell Configuration (.zshrc)</a>
+  <ul class="collapse">
+  <li><a href="#history" id="toc-history" class="nav-link" data-scroll-target="#history"><span class="header-section-number">5.2.1</span> History</a></li>
+  <li><a href="#project-navigation" id="toc-project-navigation" class="nav-link" data-scroll-target="#project-navigation"><span class="header-section-number">5.2.2</span> Project Navigation</a></li>
+  <li><a href="#git-branch-in-the-prompt" id="toc-git-branch-in-the-prompt" class="nav-link" data-scroll-target="#git-branch-in-the-prompt"><span class="header-section-number">5.2.3</span> Git Branch in the Prompt</a></li>
+  <li><a href="#modern-cli-replacements" id="toc-modern-cli-replacements" class="nav-link" data-scroll-target="#modern-cli-replacements"><span class="header-section-number">5.2.4</span> Modern CLI Replacements</a></li>
+  <li><a href="#fuzzy-file-finders" id="toc-fuzzy-file-finders" class="nav-link" data-scroll-target="#fuzzy-file-finders"><span class="header-section-number">5.2.5</span> Fuzzy File Finders</a></li>
+  <li><a href="#readline-configuration-.inputrc" id="toc-readline-configuration-.inputrc" class="nav-link" data-scroll-target="#readline-configuration-.inputrc"><span class="header-section-number">5.2.6</span> Readline Configuration (.inputrc)</a></li>
+  <li><a href="#git-configuration-.gitconfig" id="toc-git-configuration-.gitconfig" class="nav-link" data-scroll-target="#git-configuration-.gitconfig"><span class="header-section-number">5.2.7</span> Git Configuration (.gitconfig)</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#layer-3-the-dotfiles-repository" id="toc-layer-3-the-dotfiles-repository" class="nav-link" data-scroll-target="#layer-3-the-dotfiles-repository"><span class="header-section-number">6</span> Layer 3: The Dotfiles Repository</a>
+  <ul class="collapse">
+  <li><a href="#repository-structure" id="toc-repository-structure" class="nav-link" data-scroll-target="#repository-structure"><span class="header-section-number">6.1</span> Repository Structure</a></li>
+  <li><a href="#write-.gitignore-first" id="toc-write-.gitignore-first" class="nav-link" data-scroll-target="#write-.gitignore-first"><span class="header-section-number">6.2</span> Write .gitignore First</a></li>
+  <li><a href="#initialise-and-push" id="toc-initialise-and-push" class="nav-link" data-scroll-target="#initialise-and-push"><span class="header-section-number">6.3</span> Initialise and Push</a></li>
+  <li><a href="#install.sh" id="toc-install.sh" class="nav-link" data-scroll-target="#install.sh"><span class="header-section-number">6.4</span> install.sh</a></li>
+  <li><a href="#makefile" id="toc-makefile" class="nav-link" data-scroll-target="#makefile"><span class="header-section-number">6.5</span> Makefile</a></li>
+  <li><a href="#sensitive-files-inventory" id="toc-sensitive-files-inventory" class="nav-link" data-scroll-target="#sensitive-files-inventory"><span class="header-section-number">6.6</span> Sensitive Files Inventory</a></li>
+  </ul></li>
+  <li><a href="#bootstrapping-three-machines" id="toc-bootstrapping-three-machines" class="nav-link" data-scroll-target="#bootstrapping-three-machines"><span class="header-section-number">7</span> Bootstrapping Three Machines</a></li>
+  <li><a href="#verification" id="toc-verification" class="nav-link" data-scroll-target="#verification"><span class="header-section-number">8</span> Verification</a></li>
+  <li><a href="#daily-workflow" id="toc-daily-workflow" class="nav-link" data-scroll-target="#daily-workflow"><span class="header-section-number">9</span> Daily Workflow</a></li>
+  <li><a href="#things-to-watch-out-for" id="toc-things-to-watch-out-for" class="nav-link" data-scroll-target="#things-to-watch-out-for"><span class="header-section-number">10</span> Things to Watch Out For</a></li>
+  <li><a href="#uninstall-rollback" id="toc-uninstall-rollback" class="nav-link" data-scroll-target="#uninstall-rollback"><span class="header-section-number">11</span> Uninstall / Rollback</a></li>
+  <li><a href="#what-did-we-learn" id="toc-what-did-we-learn" class="nav-link" data-scroll-target="#what-did-we-learn"><span class="header-section-number">12</span> What Did We Learn?</a>
+  <ul class="collapse">
+  <li><a href="#lessons-learnt" id="toc-lessons-learnt" class="nav-link" data-scroll-target="#lessons-learnt"><span class="header-section-number">12.1</span> Lessons Learnt</a></li>
+  <li><a href="#limitations" id="toc-limitations" class="nav-link" data-scroll-target="#limitations"><span class="header-section-number">12.2</span> Limitations</a></li>
+  <li><a href="#opportunities-for-improvement" id="toc-opportunities-for-improvement" class="nav-link" data-scroll-target="#opportunities-for-improvement"><span class="header-section-number">12.3</span> Opportunities for Improvement</a></li>
+  </ul></li>
+  <li><a href="#wrapping-up" id="toc-wrapping-up" class="nav-link" data-scroll-target="#wrapping-up"><span class="header-section-number">13</span> Wrapping Up</a></li>
+  <li><a href="#see-also" id="toc-see-also" class="nav-link" data-scroll-target="#see-also"><span class="header-section-number">14</span> See Also</a></li>
+  <li><a href="#reproducibility" id="toc-reproducibility" class="nav-link" data-scroll-target="#reproducibility"><span class="header-section-number">15</span> Reproducibility</a></li>
+  <li><a href="#lets-connect" id="toc-lets-connect" class="nav-link" data-scroll-target="#lets-connect"><span class="header-section-number">16</span> Let’s Connect</a>
+  <ul class="collapse">
+  <li><a href="#related-posts-in-this-cluster" id="toc-related-posts-in-this-cluster" class="nav-link" data-scroll-target="#related-posts-in-this-cluster"><span class="header-section-number">16.1</span> Related posts in this cluster</a></li>
+  </ul></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="index.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content column-page-left" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Unix Command-Line Workspace Setup for Data Science Researchers</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">shell</div>
+    <div class="quarto-category">macos</div>
+    <div class="quarto-category">linux</div>
+    <div class="quarto-category">dotfiles</div>
+    <div class="quarto-category">git</div>
+    <div class="quarto-category">workflow</div>
+    <div class="quarto-category">setup</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    A new researcher arrives with two macOS laptops and a Linux Mint workstation. This post builds the terminal layer, the shell layer, and the dotfiles repository that keeps all three machines consistent from day one.
+  </div>
+</div>
+
+
+<div class="quarto-title-meta column-page-left">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ronald ‘Ryy’ G. Thomas </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">May 17, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<!-- ============================================================================
+AUTHOR PROVIDES — concrete inputs the blogger must supply
+
+YAML FRONT MATTER
+  [x] title           — filled in
+  [x] date            — 2026-05-17
+  [x] categories      — shell, macos, dotfiles, git, workflow, setup
+  [x] description     — filled in
+  [x] image           — placeholder; replace with generated hero.png
+  [x] draft: false    — flip when imagery in place and render verified
+
+NARRATIVE INPUTS
+  [x] Hook sentence   — three-laptop pain point
+  [x] Pain point      — configuration divergence across machines
+  [x] Motivations     — 5 bullets
+  [x] Objectives      — 4 verifiable end states
+  [x] What is [the workspace]? — layered model
+  [x] Daily-workflow paragraph — command table
+  [x] Things to Watch Out For — 7 gotchas
+  [x] Lessons Learnt  — conceptual / technical / gotchas
+  [x] Limitations     — 5 bullets
+  [x] Opportunities   — 5 next-step extensions
+  [x] Wrapping Up     — conclusion + main takeaways
+  [x] See Also        — related posts + key resources
+
+CONFIGURATION DELIVERABLES
+  [x] install.sh      — analysis/configs/install.sh
+  [x] Makefile        — analysis/configs/Makefile
+  [x] .gitignore      — analysis/configs/gitignore
+  [x] Verification commands
+  [x] Uninstall / rollback steps
+
+VERSION MATRIX
+  [ ] OS + version tested
+  [ ] Tool versions pinned
+  [ ] Date of last verification
+
+IMAGES (4 total: hero + 3 ambiance, all in media/images/)
+  [ ] Hero image (80% width)
+  [ ] Ambiance image 1 (after Objectives)
+  [ ] Ambiance image 2 (after Configuration)
+  [ ] Ambiance image 3 (before Lessons Learnt)
+  [ ] media/images/README.md updated
+
+CONTACT & METADATA
+  [x] Author name in YAML matches site author
+  [x] Social links in Let's Connect present
+============================================================================ -->
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/hero.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:80.0%"></p>
+</figure>
+</div>
+<p><em>One set of configuration files, two Macs and a Linux workstation: a dotfiles repository turns months of accumulated environment knowledge into a two-command bootstrap.</em></p>
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>Consider the situation that arises, perhaps more often than one might expect, when a new researcher joins a data science and biostatistics laboratory with three machines: a MacBook Pro for primary campus work, a Linux Mint workstation at home for long-running analyses, and a MacBook Air for travel and conferences. On the first day all three are unconfigured. By the third week, the campus MacBook has acquired a custom <code>.zshrc</code>, the Linux machine has accumulated PATH entries and aliases added in the moment and never documented, and the travel Air still presents the default macOS prompt. Six months later, reproducing a particular analysis command on the Linux machine requires either an unusually reliable memory or something closer to archaeology.</p>
+<p>The Unix command-line workspace does not maintain itself. Left to accumulate without deliberate management, three machines will develop three divergent configurations, and the researcher who built them will be the only person with any clear picture of the differences. We have found that the solution is not, in practice, a matter of imposing more discipline on oneself; it is rather a question of establishing the right architecture from the start. That architecture is a version-controlled dotfiles repository, kept in git, that treats each machine as a reproducible deployment of a single authoritative source.</p>
+<p>We shall describe that architecture here in three layers: the terminal emulator, the shell, and the dotfiles repository that ties both together. The presentation is addressed primarily to a researcher arriving with fresh hardware and no existing configuration, though the same procedure applies to anyone who has accumulated an ad-hoc setup and wishes to consolidate it. The three deliverables we shall present (an <code>install.sh</code> installer, a <code>Makefile</code>, and a <code>.gitignore</code> template) are intended as generic starting points; they merit adaptation to the specific tools and conventions of one’s own laboratory, not copying verbatim.</p>
+<section id="motivations" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="motivations"><span class="header-section-number">1.1</span> Motivations</h2>
+<p>We have several reasons for approaching the problem this way. To begin with, three laptops managed by memory alone will diverge within weeks. The researcher who assembled them is, practically speaking, the only person who can reason about the differences, and that person is frequently unavailable at the moment the second machine is needed.</p>
+<p>Beyond simple divergence, reproducing a broken analysis environment on a second machine is among the harder classes of reproducibility failure one encounters in practice. The dependencies are invisible, the state is implicit, and the only documentation is typically the original researcher’s recollection. A new-machine bootstrap that demands several hours of manual configuration is, furthermore, a recurring tax on every hardware refresh, contract renewal, and collaborative handoff in a laboratory of any size.</p>
+<p>We should also note that configuration files accumulated over years of daily use contain hard-won knowledge: project navigation shortcuts, editor settings, safety aliases, job-scheduling patterns. Unfortunately, this knowledge has no other repository. Losing a machine without version control means losing that knowledge entirely, and the cumulative cost of such losses is not trivial.</p>
+<p>Finally, the Unix tools that make a data science workflow genuinely efficient, including fuzzy file finding, consistent vi-mode across all command-line clients, per-project directory jumping, and syntax-highlighted diffs, require deliberate configuration. The default settings are functional; the configured environment is qualitatively different in ways that compound over a working day.</p>
+</section>
+<section id="objectives" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="objectives"><span class="header-section-number">1.2</span> Objectives</h2>
+<p>We have four concrete goals. First, we will configure a modern terminal emulator and shell on the primary machine, with settings documented and placed under version control from the first session. Second, we will create a <code>~/dotfiles</code> git repository outside any cloud-synchronisation path, containing shell configuration, editor settings, git configuration, system scripts, and a sensitive-files inventory. Third, we will write and test an <code>install.sh</code> with <code>--dry-run</code> support that bootstraps a fresh machine to the same state as the primary in under thirty minutes. Fourth, and perhaps most importantly, we will verify the bootstrap on the second machine before the third is needed, so the repository becomes a tested deployment artefact rather than a wishlist.</p>
+<p><img src="media/images/ambiance1.png" class="img-fluid"></p>
+</section>
+</section>
+<section id="what-is-a-unix-workspace" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> What is a Unix Workspace?</h1>
+<p>A Unix command-line workspace is, at bottom, a layered system. Each layer carries a distinct responsibility, configures a distinct set of files, and tends to fail in a distinct way when misconfigured. We have found that understanding the layers is more useful than memorising any particular setting, because the layers generalise across machines, operating-system versions, and tool upgrades.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Layer</th>
+<th>Responsibility</th>
+<th>Configured via</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Terminal emulator</td>
+<td>Window, fonts, GPU rendering, input</td>
+<td><code>kitty.conf</code> or <code>ghostty/config</code></td>
+</tr>
+<tr class="even">
+<td>Shell</td>
+<td>Commands, history, aliases, scripting</td>
+<td><code>.zshrc</code>, <code>.zshenv</code></td>
+</tr>
+<tr class="odd">
+<td>Editor</td>
+<td>Text editing, language servers</td>
+<td><code>.vimrc</code> or <code>nvim/init.lua</code></td>
+</tr>
+<tr class="even">
+<td>Version control</td>
+<td>Diff, history, multi-machine sync</td>
+<td><code>.gitconfig</code>, <code>.gitignore_global</code></td>
+</tr>
+<tr class="odd">
+<td>Line editor</td>
+<td>Vi-mode in R, Python, database clients</td>
+<td><code>.inputrc</code></td>
+</tr>
+<tr class="even">
+<td>Dotfiles repository</td>
+<td>Deploys all of the above reproducibly</td>
+<td><code>install.sh</code>, <code>Makefile</code></td>
+</tr>
+</tbody>
+</table>
+<p>We may think of the dotfiles repository as the source code for the workspace itself. Just as application code can be cloned and built on a fresh server, a dotfiles repository can be cloned and installed on a fresh laptop, and the analogy holds in its details: the repository should live in git, be tested before deployment, and have a clear migration path for breaking changes. The second bootstrap, on a genuinely different machine, is the moment that surfaces assumptions invisible during the first.</p>
+</section>
+<section id="prerequisites" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Prerequisites</h1>
+<p>The primary campus machine and the travel laptop run macOS 13 (Ventura) or later on Apple Silicon. The home analysis machine runs Linux Mint 21 or later (Ubuntu 22.04 base). The shell configuration, dotfiles structure, and core installer logic are shared across all three; we will note macOS-specific and Linux-specific steps where they diverge.</p>
+<p>On the macOS machines, we begin by installing the minimum set of tools required before any configuration can proceed:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Homebrew (if not yet installed)</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">/bin/bash</span> <span class="at">-c</span> <span class="dt">\</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">"</span><span class="va">$(</span><span class="ex">curl</span> <span class="at">-fsSL</span> https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh<span class="va">)</span><span class="st">"</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Core tools</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="ex">brew</span> install git gh pipx</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate an SSH key for GitHub (if none exists)</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh-keygen</span> <span class="at">-t</span> ed25519 <span class="at">-C</span> <span class="st">"your_email@university.edu"</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Then add the public key to your GitHub account settings</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>On Linux Mint, install the equivalents via apt:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt update <span class="kw">&amp;&amp;</span> <span class="fu">sudo</span> apt install <span class="at">-y</span> git pipx</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co"># gh CLI: follow https://cli.github.com/manual/installation</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co"># then: sudo apt install gh</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>On all three machines, confirm that GitHub access is working before continuing:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gh</span> auth login     <span class="co"># follow the browser prompt</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">gh</span> auth status    <span class="co"># should report 'Logged in to github.com'</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>In our experience, the initial setup on the primary machine requires roughly two to three hours, depending on familiarity with the tools; each subsequent machine should take no more than twenty to thirty minutes once the repository is in place.</p>
+</section>
+<section id="layer-1-terminal-emulator" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Layer 1: Terminal Emulator</h1>
+<p>The terminal emulator occupies the outermost layer: it draws the window, renders text through the GPU, and forwards keystrokes to the shell. Two terminals are well suited to a data science workflow across macOS and Linux, and we shall consider both briefly before settling on one for the worked examples.</p>
+<p><strong>Kitty</strong> (<code>brew install --cask kitty</code> on macOS; <code>apt install kitty</code> or the official installer on Linux Mint) is GPU-accelerated with a built-in graphics protocol (<code>kitten icat</code>) that renders matplotlib and R plots inline without a separate display server. Its configuration is a single plain-text file at <code>~/.config/kitty/kitty.conf</code> and is identical across operating systems, which makes it the natural choice for a mixed macOS and Linux setup.</p>
+<p><strong>Ghostty</strong> is available for macOS (<code>brew install --cask ghostty</code>) and Linux. It offers sensible defaults and, on macOS, tighter native system integration. Its configuration lives at <code>~/.config/ghostty/config</code>, and it requires somewhat less initial configuration than Kitty to reach a usable state.</p>
+<p>The choice between them is, in our view, a matter of genuine preference. Kitty is the stronger cross-platform choice here, because its configuration file is identical on the MacBook Pro, the Linux Mint workstation, and the MacBook Air. The worked examples below use Kitty for this reason and because its explicit configuration makes the choices visible.</p>
+<section id="core-kitty-settings" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="core-kitty-settings"><span class="header-section-number">4.1</span> Core Kitty Settings</h2>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ~/.config/kitty/kitty.conf</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Fonts</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="ex">font_family</span>      JetBrainsMono Nerd Font Mono</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="ex">font_size</span>        14.0</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Cursor</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="ex">cursor_shape</span>           block</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="ex">cursor_blink_interval</span>  0</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Clipboard: selecting text copies immediately</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="ex">copy_on_select</span> clipboard</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Splits and tabs</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="ex">map</span> cmd+d   launch <span class="at">--location</span><span class="op">=</span>vsplit <span class="at">--cwd</span><span class="op">=</span>current</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="ex">map</span> cmd+t   new_tab</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="ex">map</span> cmd+w   close_window</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="ex">map</span> cmd+shift+] next_tab</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="ex">map</span> cmd+shift+[ previous_tab</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a><span class="co"># macOS integration</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a><span class="ex">macos_option_as_alt</span>                  yes</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a><span class="ex">macos_quit_when_last_window_closed</span>   yes</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Install the Nerd Font variant required for prompt icons. On macOS:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">brew</span> install <span class="at">--cask</span> font-jetbrains-mono-nerd-font</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>On Linux Mint, download JetBrainsMono Nerd Font from nerdfonts.com, extract the <code>.ttf</code> files to <code>~/.local/share/fonts/</code>, and run <code>fc-cache -fv</code> to register them.</p>
+<p>Among the settings listed, <code>copy_on_select clipboard</code> has the largest day-to-day effect: selecting any text with the mouse copies it to the system clipboard without requiring a separate <code>Cmd+C</code> keystroke.</p>
+</section>
+</section>
+<section id="layer-2-shell-configuration" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Layer 2: Shell Configuration</h1>
+<section id="environment-variables-.zshenv" class="level2" data-number="5.1">
+<h2 data-number="5.1" class="anchored" data-anchor-id="environment-variables-.zshenv"><span class="header-section-number">5.1</span> Environment Variables (.zshenv)</h2>
+<p><code>.zshenv</code> is sourced by every shell instance, interactive or not, which makes it the right place for environment variables that every downstream process will need. We keep it minimal for exactly that reason: a variable that appears here should be one whose absence would break non-interactive shells or background jobs.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ~/.zshenv</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">DOTFILES</span><span class="op">=</span><span class="st">"</span><span class="va">${DOTFILES</span><span class="op">:-</span><span class="va">$HOME</span>/dotfiles<span class="va">}</span><span class="st">"</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">PRJ_ROOT</span><span class="op">=</span><span class="st">"</span><span class="va">${PRJ_ROOT</span><span class="op">:-</span><span class="va">$HOME</span>/projects<span class="va">}</span><span class="st">"</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">EDITOR</span><span class="op">=</span><span class="st">"nvim"</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">VISUAL</span><span class="op">=</span><span class="st">"nvim"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p><code>DOTFILES</code> and <code>PRJ_ROOT</code> are the two variables that all other configuration and project scripts should reference. Setting them here, with defaults, means a fresh machine that has not yet run <code>install.sh</code> will still receive sensible fallback values rather than errors.</p>
+</section>
+<section id="shell-configuration-.zshrc" class="level2" data-number="5.2">
+<h2 data-number="5.2" class="anchored" data-anchor-id="shell-configuration-.zshrc"><span class="header-section-number">5.2</span> Shell Configuration (.zshrc)</h2>
+<section id="history" class="level3" data-number="5.2.1">
+<h3 data-number="5.2.1" class="anchored" data-anchor-id="history"><span class="header-section-number">5.2.1</span> History</h3>
+<div class="sourceCode" id="cb7"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="va">HISTFILE</span><span class="op">=</span><span class="st">"</span><span class="va">$HOME</span><span class="st">/.zsh_history"</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="va">HISTSIZE</span><span class="op">=</span>100000</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="va">SAVEHIST</span><span class="op">=</span>100000</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="ex">setopt</span> SHARE_HISTORY HIST_IGNORE_DUPS</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="ex">setopt</span> INC_APPEND_HISTORY HIST_VERIFY</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>One hundred thousand lines is not, in our view, excessive for research work. Model training runs, pipeline executions, and database queries generate commands worth recalling weeks later. <code>SHARE_HISTORY</code> synchronises history across all open terminal sessions in real time; <code>INC_APPEND_HISTORY</code> writes each command immediately rather than at session end, so a crashed terminal loses nothing.</p>
+</section>
+<section id="project-navigation" class="level3" data-number="5.2.2">
+<h3 data-number="5.2.2" class="anchored" data-anchor-id="project-navigation"><span class="header-section-number">5.2.2</span> Project Navigation</h3>
+<div class="sourceCode" id="cb8"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="va">cdpath</span><span class="op">=</span><span class="va">($PRJ_ROOT</span> <span class="va">$PRJ_ROOT</span>/.. <span class="va">$HOME)</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="ex">setopt</span> auto_cd</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>With <code>cdpath</code> set, typing <code>cd myproject</code> from anywhere causes Zsh to search <code>$PRJ_ROOT/myproject</code> automatically. Combined with <code>auto_cd</code>, which permits typing a directory name alone without the <code>cd</code> prefix, navigating between analysis projects becomes a single word rather than a full path. The <code>$PRJ_ROOT</code> indirection is deliberate: changing the project tree location requires editing one line in <code>.zshenv</code>, not dozens of scripts.</p>
+</section>
+<section id="git-branch-in-the-prompt" class="level3" data-number="5.2.3">
+<h3 data-number="5.2.3" class="anchored" data-anchor-id="git-branch-in-the-prompt"><span class="header-section-number">5.2.3</span> Git Branch in the Prompt</h3>
+<div class="sourceCode" id="cb9"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">autoload</span> <span class="at">-Uz</span> vcs_info</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">precmd()</span> <span class="kw">{</span> <span class="ex">vcs_info</span> }</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="ex">zstyle</span> <span class="st">':vcs_info:git:*'</span> formats <span class="st">'%b '</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="va">PROMPT</span><span class="op">=</span><span class="st">'%F{cyan}%m%f %F{green}%*%f '</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="va">PROMPT</span><span class="op">+=</span><span class="st">'%F{yellow}${${PWD:A}/$HOME/~}%f '</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="va">PROMPT</span><span class="op">+=</span><span class="st">'%F{red}${vcs_info_msg_0_}%f$ '</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>A prompt that shows the current git branch prevents the most common commit error we encounter in research projects: committing to the wrong branch when switching between experiments. The <code>vcs_info</code> hook is lightweight and adds no extra git processes to the shell startup path.</p>
+</section>
+<section id="modern-cli-replacements" class="level3" data-number="5.2.4">
+<h3 data-number="5.2.4" class="anchored" data-anchor-id="modern-cli-replacements"><span class="header-section-number">5.2.4</span> Modern CLI Replacements</h3>
+<p>Several tools have largely superseded the default Unix utilities for interactive use. On macOS, we install them in one step:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">brew</span> install eza bat fd ripgrep zoxide fzf git-delta lazygit <span class="dt">\</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>             shellcheck</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>On Linux Mint, several are available via <code>apt</code> (<code>ripgrep</code>, <code>fd-find</code>, <code>bat</code>, <code>fzf</code>, <code>shellcheck</code>); <code>eza</code>, <code>zoxide</code>, <code>git-delta</code>, and <code>lazygit</code> are best installed from their GitHub releases or via <code>cargo install</code>. Wire each into Zsh with a conditional guard:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># eza: ls with git awareness and tree mode</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="bu">command</span> <span class="at">-v</span> eza <span class="op">&gt;</span> /dev/null <span class="kw">&amp;&amp;</span> <span class="kw">{</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="bu">alias</span> ls=<span class="st">'eza --group-directories-first'</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="bu">alias</span> ll=<span class="st">'eza -l --git --group-directories-first'</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="bu">alias</span> la=<span class="st">'eza -la --git --group-directories-first'</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  <span class="bu">alias</span> lt=<span class="st">'eza --tree --level=2 --git-ignore'</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="co"># bat: syntax-highlighted cat; paging off for pipeline safety</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a><span class="bu">command</span> <span class="at">-v</span> bat <span class="op">&gt;</span> /dev/null <span class="kw">&amp;&amp;</span> <span class="dt">\</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>  <span class="bu">alias</span> cat=<span class="st">'bat --paging=never --style=plain'</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a><span class="co"># delta: side-by-side pager for git diff</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a><span class="bu">command</span> <span class="at">-v</span> delta <span class="op">&gt;</span> /dev/null <span class="kw">&amp;&amp;</span> <span class="dt">\</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>  <span class="bu">export</span> <span class="va">GIT_PAGER</span><span class="op">=</span><span class="st">'delta'</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a><span class="co"># zoxide: frequency-weighted directory jumping</span></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a><span class="bu">command</span> <span class="at">-v</span> zoxide <span class="op">&gt;</span> /dev/null <span class="kw">&amp;&amp;</span> <span class="dt">\</span></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>  <span class="bu">eval</span> <span class="st">"</span><span class="va">$(</span><span class="ex">zoxide</span> init zsh <span class="at">--cmd</span> j<span class="va">)</span><span class="st">"</span></span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a><span class="co"># fzf: fuzzy search, with ripgrep as file source</span></span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a><span class="bu">command</span> <span class="at">-v</span> rg <span class="op">&gt;</span> /dev/null <span class="kw">&amp;&amp;</span> <span class="kw">{</span></span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>  <span class="bu">export</span> <span class="va">FZF_DEFAULT_COMMAND</span><span class="op">=</span><span class="st">'rg --files --hidden'</span></span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a>  <span class="bu">export</span> <span class="va">FZF_DEFAULT_OPTS</span><span class="op">=</span><span class="st">'-m --height 50% --border --reverse'</span></span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The conditional guard (<code>command -v tool &gt; /dev/null &amp;&amp;</code>) is the key portability decision. The same <code>.zshrc</code> can be deployed to a fresh machine before any tools are installed, skipping each alias gracefully until the corresponding package is present. Without this guard, a missing tool produces an error on every shell startup, which is the first indication that an assumption has not been met.</p>
+</section>
+<section id="fuzzy-file-finders" class="level3" data-number="5.2.5">
+<h3 data-number="5.2.5" class="anchored" data-anchor-id="fuzzy-file-finders"><span class="header-section-number">5.2.5</span> Fuzzy File Finders</h3>
+<p>Three short functions cover the most common interactive search patterns we encounter in a research compendium. Note that <code>open</code> in the <code>pp()</code> function is macOS-specific; on Linux Mint substitute <code>xdg-open</code> in its place:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># find any file, cd to its directory</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ff()</span> <span class="kw">{</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="bu">local</span> <span class="va">file</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="va">file</span><span class="op">=</span><span class="va">$(</span><span class="ex">rg</span> <span class="at">--files</span> <span class="st">"</span><span class="va">${1</span><span class="op">:-</span>.<span class="va">}</span><span class="st">"</span> <span class="dv">2</span><span class="op">&gt;</span>/dev/null <span class="dt">\</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>         <span class="kw">|</span> <span class="ex">fzf</span> <span class="at">--select-1</span> <span class="at">--exit-0</span><span class="va">)</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">[[</span> <span class="ot">-n</span> <span class="st">"</span><span class="va">$file</span><span class="st">"</span> <span class="kw">]]</span> <span class="kw">&amp;&amp;</span> <span class="bu">cd</span> <span class="st">"</span><span class="va">$(</span><span class="fu">dirname</span> <span class="st">"</span><span class="va">$file</span><span class="st">"</span><span class="va">)</span><span class="st">"</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="co"># find an R/Rmd/qmd file, open in editor</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a><span class="fu">rr()</span> <span class="kw">{</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>  <span class="bu">local</span> <span class="va">f</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>  <span class="va">f</span><span class="op">=</span><span class="va">$(</span><span class="ex">rg</span> <span class="at">--files</span> <span class="dv">2</span><span class="op">&gt;</span>/dev/null <span class="kw">|</span> <span class="ex">rg</span> <span class="st">'\.(R|Rmd|qmd)$'</span> <span class="kw">|</span> <span class="ex">fzf</span><span class="va">)</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>  <span class="kw">[[</span> <span class="ot">-n</span> <span class="st">"</span><span class="va">$f</span><span class="st">"</span> <span class="kw">]]</span> <span class="kw">&amp;&amp;</span> <span class="va">$EDITOR</span> <span class="st">"</span><span class="va">$f</span><span class="st">"</span></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a><span class="co"># find a PDF, open it</span></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a><span class="fu">pp()</span> <span class="kw">{</span></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>  <span class="bu">local</span> <span class="va">f</span></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>  <span class="va">f</span><span class="op">=</span><span class="va">$(</span><span class="ex">rg</span> <span class="at">--files</span> <span class="dv">2</span><span class="op">&gt;</span>/dev/null <span class="kw">|</span> <span class="ex">rg</span> <span class="st">'\.pdf$'</span> <span class="kw">|</span> <span class="ex">fzf</span><span class="va">)</span></span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>  <span class="kw">[[</span> <span class="ot">-n</span> <span class="st">"</span><span class="va">$f</span><span class="st">"</span> <span class="kw">]]</span> <span class="kw">&amp;&amp;</span> <span class="ex">open</span> <span class="st">"</span><span class="va">$f</span><span class="st">"</span></span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="readline-configuration-.inputrc" class="level3" data-number="5.2.6">
+<h3 data-number="5.2.6" class="anchored" data-anchor-id="readline-configuration-.inputrc"><span class="header-section-number">5.2.6</span> Readline Configuration (.inputrc)</h3>
+<p>Many command-line tools rely on the GNU Readline library for line editing: R, Python’s REPL, <code>psql</code>, and most database clients. Without a <code>.inputrc</code>, each of these uses Emacs-mode keybindings while Zsh uses vi-mode, requiring the researcher to switch mental models with every tool change. This is, in our experience, sufficiently disorienting to warrant the single file that resolves it:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ~/.inputrc</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span> editing-mode vi</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span> show-mode-in-prompt on</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span> vi-ins-mode-string <span class="dt">\1\e</span>[6 q<span class="dt">\2</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span> vi-cmd-mode-string <span class="dt">\1\e</span>[2 q<span class="dt">\2</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span> completion-ignore-case on</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span> show-all-if-ambiguous on</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span> colored-stats on</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a><span class="st">"\e[A"</span><span class="ex">:</span> history-search-backward</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="st">"\e[B"</span><span class="ex">:</span> history-search-forward</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The cursor shape changes between insert mode (thin bar) and command mode (block), providing a persistent visual indicator that removes any ambiguity about the current editing state.</p>
+</section>
+<section id="git-configuration-.gitconfig" class="level3" data-number="5.2.7">
+<h3 data-number="5.2.7" class="anchored" data-anchor-id="git-configuration-.gitconfig"><span class="header-section-number">5.2.7</span> Git Configuration (.gitconfig)</h3>
+<div class="sourceCode" id="cb14"><pre class="sourceCode ini code-with-copy"><code class="sourceCode ini"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="kw">[init]</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="dt">    defaultBranch </span><span class="ot">=</span><span class="st"> main</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="kw">[core]</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="dt">    editor </span><span class="ot">=</span><span class="st"> nvim</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="dt">    excludesfile </span><span class="ot">=</span><span class="st"> ~/.gitignore_global</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="dt">    pager </span><span class="ot">=</span><span class="st"> delta</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a><span class="kw">[pull]</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a><span class="dt">    rebase </span><span class="ot">=</span><span class="st"> </span><span class="kw">false</span></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a><span class="kw">[alias]</span></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a><span class="dt">    st  </span><span class="ot">=</span><span class="st"> status --short</span></span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a><span class="dt">    lg  </span><span class="ot">=</span><span class="st"> log --oneline --graph --decorate -20</span></span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a><span class="dt">    co  </span><span class="ot">=</span><span class="st"> checkout</span></span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a><span class="dt">    br  </span><span class="ot">=</span><span class="st"> branch</span></span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a><span class="kw">[diff]</span></span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a><span class="dt">    colorMoved </span><span class="ot">=</span><span class="st"> </span><span class="kw">default</span></span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a><span class="kw">[merge]</span></span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a><span class="dt">    conflictstyle </span><span class="ot">=</span><span class="st"> diff3</span></span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a><span class="kw">[credential "https://github.com"]</span></span>
+<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a><span class="dt">    helper </span><span class="ot">=</span></span>
+<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a><span class="dt">    helper </span><span class="ot">=</span><span class="st"> !/opt/homebrew/bin/gh auth git-credential</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The <code>gh auth git-credential</code> helper delegates all GitHub authentication to the GitHub CLI. After <code>gh auth login</code> has run once on a given machine, no personal access tokens or SSH key passphrases are required for subsequent git operations on that machine. On Linux Mint, the <code>gh</code> binary lives at <code>/usr/bin/gh</code> rather than <code>/opt/homebrew/bin/gh</code>; replace the helper path in <code>.gitconfig</code> accordingly, or use <code>$(which gh)</code> to make it portable across both operating systems.</p>
+</section>
+</section>
+</section>
+<section id="layer-3-the-dotfiles-repository" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Layer 3: The Dotfiles Repository</h1>
+<p>With the configuration files defined, we turn to the question of putting them under version control so that they can be deployed reproducibly to all three machines.</p>
+<section id="repository-structure" class="level2" data-number="6.1">
+<h2 data-number="6.1" class="anchored" data-anchor-id="repository-structure"><span class="header-section-number">6.1</span> Repository Structure</h2>
+<pre><code>~/dotfiles/
+├── README.md
+├── install.sh           # deployment script
+├── Makefile             # convenience targets
+├── .gitignore           # blocks sensitive files
+├── shell/
+│   ├── zshrc
+│   ├── zshenv
+│   └── inputrc
+├── git/
+│   ├── gitconfig
+│   └── gitignore_global
+├── editors/
+│   └── vimrc
+├── config/
+│   ├── kitty/
+│   │   └── kitty.conf
+│   └── ghostty/         # alternative terminal
+├── bin/
+│   └── &lt;custom scripts&gt;
+├── launchd/             # macOS scheduled jobs
+│   └── *.plist
+├── packages/
+│   ├── Brewfile
+│   └── pipx-tools.txt
+└── secrets/
+    └── README.md        # inventory only; no secrets in git</code></pre>
+<p>We store files without leading dots (<code>zshrc</code>, not <code>.zshrc</code>). The installation script adds the dot prefix when creating symlinks in <code>$HOME</code>, making the mapping explicit and the repository contents visible in standard directory listings without requiring <code>ls -a</code>.</p>
+</section>
+<section id="write-.gitignore-first" class="level2" data-number="6.2">
+<h2 data-number="6.2" class="anchored" data-anchor-id="write-.gitignore-first"><span class="header-section-number">6.2</span> Write .gitignore First</h2>
+<p>The <code>.gitignore</code> must be in place before the first <code>git add</code>. One commit with a credential in history requires a full <code>git filter-repo</code> rewrite and rotation of every exposed secret. Unfortunately, this is not a hypothetical concern; it is a predictable outcome of skipping this step. The template is at <code>analysis/configs/gitignore</code>. Key patterns include:</p>
+<pre class="gitignore"><code># Sensitive: never commit
+secrets/*
+!secrets/README.md
+**/.env
+**/.env.local
+**/credentials*
+**/*.pem
+**/*.key
+**/id_rsa*
+**/id_ed25519*
+
+# Per-machine state
+*.backup.*
+.DS_Store
+.zsh_history
+.zcompdump*
+
+# Editor plugin directories (regenerated at install time)
+config/vim/bundle/
+config/vim/plugged/
+config/nvim/plugged/
+config/nvim/coc/</code></pre>
+</section>
+<section id="initialise-and-push" class="level2" data-number="6.3">
+<h2 data-number="6.3" class="anchored" data-anchor-id="initialise-and-push"><span class="header-section-number">6.3</span> Initialise and Push</h2>
+<div class="sourceCode" id="cb17"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ~/dotfiles</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> init</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> add .</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> status       <span class="co"># review; confirm no sensitive files present</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">'initial dotfiles import'</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="ex">gh</span> repo create yourhandle/dotfiles <span class="at">--private</span> <span class="at">--source</span><span class="op">=</span>. <span class="at">--push</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The repository should be private. Even a <code>.gitconfig</code> that contains no credentials reveals preferred tooling, organisational paths, and workflow patterns that are, in our view, the researcher’s own rather than public property.</p>
+<p><img src="media/images/ambiance2.png" class="img-fluid"></p>
+</section>
+<section id="install.sh" class="level2" data-number="6.4">
+<h2 data-number="6.4" class="anchored" data-anchor-id="install.sh"><span class="header-section-number">6.4</span> install.sh</h2>
+<p>The installer creates symlinks from <code>~/dotfiles</code> into <code>$HOME</code>, handles launchd plist parameterisation on macOS, and installs packages via Homebrew and pipx where those tools are present. The full source is at <code>analysis/configs/install.sh</code>. On Linux Mint, where Homebrew is not standard, the Homebrew section is skipped silently by the conditional guard (<code>command -v brew &gt; /dev/null</code>); package installation there falls to <code>apt</code> and is handled separately. Several other design decisions in the script merit brief comment.</p>
+<p>The <code>--dry-run</code> flag causes every action to be printed without execution. We recommend always running the dry-run on a new machine before the real install; it surfaces every hardcoded assumption that does not hold on the new hardware, and the cost of reviewing the output is small relative to the cost of diagnosing a failed deploy.</p>
+<p>Before creating a symlink, existing files are moved to <code>filename.backup.TIMESTAMP</code>. This makes the installer idempotent: it can be re-run on an already-deployed machine without destroying local changes accumulated since the last install.</p>
+<p>For <code>~/bin</code>, the installer creates one symlink per script (<code>~/bin/script -&gt; ~/dotfiles/bin/script</code>) rather than a top-level directory link (<code>~/bin -&gt; ~/dotfiles/bin</code>). A top-level symlink appears to work on the machine where it was created but dangles silently on any machine where the absolute path differs.</p>
+<p>On macOS, <code>launchd</code> does not expand <code>~</code> in plist files. The installer substitutes the <code>__USER__</code> placeholder with the value of <code>$USER</code> when writing plist files to <code>~/Library/LaunchAgents/</code>, keeping the source templates machine-agnostic.</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./install.sh</span> <span class="at">--dry-run</span>   <span class="co"># review all planned actions</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./install.sh</span>             <span class="co"># execute</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="makefile" class="level2" data-number="6.5">
+<h2 data-number="6.5" class="anchored" data-anchor-id="makefile"><span class="header-section-number">6.5</span> Makefile</h2>
+<p>The Makefile provides a stable, memorable interface for common operations. The full source is at <code>analysis/configs/Makefile</code>.</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Target</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>make install</code></td>
+<td>create symlinks; install Homebrew and pipx packages</td>
+</tr>
+<tr class="even">
+<td><code>make update</code></td>
+<td><code>git pull</code> then re-run <code>install.sh</code></td>
+</tr>
+<tr class="odd">
+<td><code>make lint</code></td>
+<td><code>shellcheck</code> on <code>bin/</code>; <code>zsh -n</code> on shell files</td>
+</tr>
+<tr class="even">
+<td><code>make test</code></td>
+<td>dry-run + lint</td>
+</tr>
+<tr class="odd">
+<td><code>make help</code></td>
+<td>list all targets</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="sensitive-files-inventory" class="level2" data-number="6.6">
+<h2 data-number="6.6" class="anchored" data-anchor-id="sensitive-files-inventory"><span class="header-section-number">6.6</span> Sensitive Files Inventory</h2>
+<p>Before the first <code>git add</code>, we recommend auditing <code>$HOME</code> for sensitive material:</p>
+<pre><code>~/.aws/           AWS credentials
+~/.ssh/           SSH private keys
+~/.gnupg/         GPG private keys
+~/.docker/        registry authentication tokens
+~/.npmrc          npm registry token
+~/.config/rclone/ OAuth tokens for cloud storage
+~/.env            project secrets sourced into shell
+~/.password-store pass encrypted credential store</code></pre>
+<p>None of these items belong in git. Add each to <code>.gitignore</code> before the first commit. Create a <code>secrets/README.md</code> listing each item and its restore mechanism, whether that is 1Password, pass, or manual transfer via an encrypted drive. On a new machine, secrets are restored manually after <code>install.sh</code> runs; the installer prints a reminder checklist as its final output.</p>
+</section>
+</section>
+<section id="bootstrapping-three-machines" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Bootstrapping Three Machines</h1>
+<p>With the dotfiles repository on GitHub, bootstrapping the second and third machines is reduced to two commands:</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># On the new machine, after installing Homebrew and git:</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone git@github.com:yourhandle/dotfiles ~/dotfiles</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ~/dotfiles <span class="kw">&amp;&amp;</span> <span class="ex">./install.sh</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Sensitive files are then restored manually from secure storage; the installer prints a checklist derived from <code>secrets/README.md</code> as its final step.</p>
+<p>We suggest the following sequence. First, on the MacBook Pro (Machine 1), complete the full setup described in this post, commit, and push to GitHub. Second, on the Linux Mint workstation (Machine 2), clone the repository, run <code>install.sh --dry-run</code>, inspect the output carefully, and only then execute the real install. Fix any failures before proceeding; the Linux machine is where cross-platform assumptions surface, and failures here almost always reflect something hardcoded for macOS that was invisible on Machine 1. Third, on the MacBook Air (Machine 3), clone and run. Because it shares the same operating system as Machine 1, it should be silent if Machine 2 succeeded.</p>
+<p>The second bootstrap is, in our view, the most informative step in the entire process, and the fact that it runs on a different operating system makes it more informative still. It is the moment that converts the repository from a local configuration into a tested, cross-platform deployment artefact.</p>
+</section>
+<section id="verification" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Verification</h1>
+<p>After each bootstrap, we verify the key invariants:</p>
+<div class="sourceCode" id="cb21"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Symlinks resolve correctly</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ls</span> <span class="at">-la</span> ~/.zshrc ~/.gitconfig ~/.config/kitty</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Environment variables are set</span></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"</span><span class="va">$DOTFILES</span><span class="st">"</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">"</span><span class="va">$PRJ_ROOT</span><span class="st">"</span></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. CLI tools are available</span></span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> t <span class="kw">in</span> eza bat fd rg fzf zoxide delta lazygit<span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>  <span class="bu">command</span> <span class="at">-v</span> <span class="st">"</span><span class="va">$t</span><span class="st">"</span> <span class="op">&gt;</span> /dev/null <span class="dt">\</span></span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">&amp;&amp;</span> <span class="bu">echo</span> <span class="st">"</span><span class="va">$t</span><span class="st">: ok"</span> <span class="kw">||</span> <span class="bu">echo</span> <span class="st">"</span><span class="va">$t</span><span class="st">: missing"</span></span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a><span class="co"># 4. Git prompt shows branches in a repo</span></span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /path/to/any/git/repo</span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Branch name should appear in prompt in red</span></span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a><span class="co"># 5. Readline vi-mode works in R</span></span>
+<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a><span class="ex">R</span> <span class="at">--quiet</span></span>
+<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Press Escape; cursor should change to a block</span></span>
+<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Press k to move up in history</span></span>
+<span id="cb21-22"><a href="#cb21-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Press i to return to insert mode</span></span>
+<span id="cb21-23"><a href="#cb21-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-24"><a href="#cb21-24" aria-hidden="true" tabindex="-1"></a><span class="co"># 6. Dry-run and lint pass cleanly</span></span>
+<span id="cb21-25"><a href="#cb21-25" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ~/dotfiles <span class="kw">&amp;&amp;</span> <span class="fu">make</span> test</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>A clean <code>make test</code> with no warnings confirms that the repository is in a deployable state and can be trusted for subsequent machines.</p>
+</section>
+<section id="daily-workflow" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> Daily Workflow</h1>
+<p>After setup, the dotfiles repository is maintained as a standard git project.</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Command</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>cd ~/dotfiles &amp;&amp; git diff</code></td>
+<td>Review uncommitted config changes</td>
+</tr>
+<tr class="even">
+<td><code>make test</code></td>
+<td>Lint and dry-run before committing</td>
+</tr>
+<tr class="odd">
+<td><code>make install</code></td>
+<td>Re-link after adding a new config file</td>
+</tr>
+<tr class="even">
+<td><code>make update</code></td>
+<td>Pull from GitHub and re-run install</td>
+</tr>
+<tr class="odd">
+<td><code>brew bundle dump --force</code></td>
+<td>Refresh Brewfile after new installs</td>
+</tr>
+<tr class="even">
+<td><code>j &lt;partial&gt;</code></td>
+<td>Jump to a frequently visited directory</td>
+</tr>
+<tr class="odd">
+<td><code>ll</code> / <code>lt</code></td>
+<td>eza long listing / tree view</td>
+</tr>
+<tr class="even">
+<td><code>rr</code></td>
+<td>Fuzzy-find and open an R/Rmd/qmd file</td>
+</tr>
+<tr class="odd">
+<td><code>pp</code></td>
+<td>Fuzzy-find and open a PDF</td>
+</tr>
+<tr class="even">
+<td><code>ff</code></td>
+<td>Fuzzy-find any file, cd to its directory</td>
+</tr>
+</tbody>
+</table>
+<p><code>brew bundle dump --force</code> applies only to the macOS machines; on the Linux Mint workstation, package state is managed through <code>apt</code> and there is no direct equivalent for snapshotting installed packages into the dotfiles repository. The remaining commands in the table are cross-platform.</p>
+<p>The single most useful habit we have found is running <code>make update</code> on each machine at the start of every work session. The operation takes roughly ten seconds and ensures that a setting committed on the primary machine the previous day is available everywhere by the time the next session begins.</p>
+</section>
+<section id="things-to-watch-out-for" class="level1" data-number="10">
+<h1 data-number="10"><span class="header-section-number">10</span> Things to Watch Out For</h1>
+<ol type="1">
+<li><p><strong>Write <code>.gitignore</code> before <code>git init</code>, not after.</strong> If any sensitive file is committed even once, removing it requires a full <code>git filter-repo</code> rewrite and rotation of every exposed credential. Unfortunately this is not a recoverable situation in any practical sense; the secret must be treated as compromised regardless of how briefly the commit was visible. The template in <code>analysis/configs/gitignore</code> covers the standard sensitive categories and merits careful review before running <code>git add .</code>.</p></li>
+<li><p><strong>Do not place the dotfiles repository inside Dropbox, iCloud, or Google Drive.</strong> Git writes to <code>.git/index</code>, <code>.git/HEAD</code>, and ref files on every operation. A cloud provider racing to synchronise those writes can corrupt the index or truncate files to zero bytes. We have observed this failure mode. The repository must be local to each machine; git with a GitHub remote is the synchronisation mechanism, not the cloud provider.</p></li>
+<li><p><strong>Run <code>install.sh --dry-run</code> on the second machine before the real run.</strong> The first dry-run on a fresh environment surfaces every hardcoded assumption that was invisible on the primary machine. Look especially for paths that reference a directory that does not exist on the new hardware; these tend to produce silent failures rather than useful errors.</p></li>
+<li><p><strong>Do not track editor plugin directories.</strong> The directories where plugin managers deposit downloaded code, <code>~/.config/vim/bundle/</code> or <code>~/.config/nvim/plugged/</code> for instance, are large, platform-specific, and regenerated automatically on first launch. Track only the plugin manifest (the <code>vimrc</code> <code>Plug</code> lines or <code>nvim/lua/plugins.lua</code>) and add the download directories to <code>.gitignore</code> before the first commit. A reliable heuristic: if a directory is regenerated by running a tool, it is not user configuration.</p></li>
+<li><p><strong>Per-file symlinks in <code>~/bin</code>, not a top-level directory link.</strong> A <code>~/bin -&gt; ~/dotfiles/bin</code> symlink appears to work on the machine where it was created but dangles silently on any machine where the absolute path differs. The installer creates one symlink per script; this is more verbose but correct across all machines.</p></li>
+<li><p><strong>The launchd <code>__USER__</code> substitution is macOS-only; it produces no output on Linux Mint.</strong> On the MacBook Pro and MacBook Air, the installer writes substituted plists to <code>~/Library/LaunchAgents/</code>. To modify a plist, edit the source template in <code>~/dotfiles/launchd/</code> and re-run the installer. Editing the substituted copy in <code>~/Library/LaunchAgents/</code> directly is problematic: it is overwritten on the next <code>install.sh</code> run and the change is lost. On the Linux Mint workstation, the equivalent mechanism is systemd user units; see Opportunities for the extension path.</p></li>
+<li><p><strong><code>SHARE_HISTORY</code> propagates across all terminal sessions in real time.</strong> A command typed in one tab is immediately available in all others, which is useful but produces interleaved history when several sessions are active concurrently. If this behaviour proves disorienting, replacing <code>SHARE_HISTORY</code> with <code>INC_APPEND_HISTORY</code> alone restricts sharing to session boundaries rather than individual commands.</p></li>
+</ol>
+</section>
+<section id="uninstall-rollback" class="level1" data-number="11">
+<h1 data-number="11"><span class="header-section-number">11</span> Uninstall / Rollback</h1>
+<p>To remove the dotfiles installation and restore the previous state:</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Reverse symlinks (restore .backup.TIMESTAMP files)</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> f <span class="kw">in</span> ~/.zshrc ~/.zshenv ~/.gitconfig <span class="dt">\</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>          ~/.gitignore_global ~/.inputrc<span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>  <span class="va">backup</span><span class="op">=</span><span class="va">$(</span><span class="fu">ls</span> <span class="st">"</span><span class="va">${f}</span><span class="st">.backup."</span><span class="pp">*</span> <span class="dv">2</span><span class="op">&gt;</span>/dev/null <span class="kw">|</span> <span class="fu">tail</span> <span class="at">-1</span><span class="va">)</span></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">[</span> <span class="ot">-L</span> <span class="st">"</span><span class="va">$f</span><span class="st">"</span> <span class="bu">]</span> <span class="kw">&amp;&amp;</span> <span class="bu">[</span> <span class="ot">-n</span> <span class="st">"</span><span class="va">$backup</span><span class="st">"</span> <span class="bu">]</span><span class="kw">;</span> <span class="cf">then</span></span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rm</span> <span class="st">"</span><span class="va">$f</span><span class="st">"</span> <span class="kw">&amp;&amp;</span> <span class="fu">mv</span> <span class="st">"</span><span class="va">$backup</span><span class="st">"</span> <span class="st">"</span><span class="va">$f</span><span class="st">"</span></span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">fi</span></span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Remove per-file ~/bin symlinks</span></span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a><span class="fu">find</span> ~/bin <span class="at">-maxdepth</span> 1 <span class="at">-type</span> l <span class="at">-delete</span></span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Unload and remove launchd agents (macOS only)</span></span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a><span class="ex">launchctl</span> bootout gui/<span class="va">$UID</span> <span class="dt">\</span></span>
+<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a>  ~/Library/LaunchAgents/local.<span class="pp">*</span>.plist <span class="dv">2</span><span class="op">&gt;</span>/dev/null</span>
+<span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span> <span class="at">-f</span> ~/Library/LaunchAgents/local.<span class="pp">*</span>.plist</span>
+<span id="cb22-17"><a href="#cb22-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-18"><a href="#cb22-18" aria-hidden="true" tabindex="-1"></a><span class="co"># 4. Remove ~/dotfiles (optional)</span></span>
+<span id="cb22-19"><a href="#cb22-19" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span> <span class="at">-rf</span> ~/dotfiles</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>If no <code>.backup.TIMESTAMP</code> files exist, as is the case on a first-run against a machine with no prior dotfiles, step 1 will leave empty broken symlinks that must be removed manually. The <code>--dry-run</code> flag shows exactly which files would be backed up before the real install, which is the most reliable way to confirm the rollback path before committing to a production machine.</p>
+<p><img src="media/images/ambiance3.png" class="img-fluid"></p>
+</section>
+<section id="what-did-we-learn" class="level1" data-number="12">
+<h1 data-number="12"><span class="header-section-number">12</span> What Did We Learn?</h1>
+<section id="lessons-learnt" class="level2" data-number="12.1">
+<h2 data-number="12.1" class="anchored" data-anchor-id="lessons-learnt"><span class="header-section-number">12.1</span> Lessons Learnt</h2>
+<p><strong>Conceptual Understanding:</strong></p>
+<p>We began with a model in which the workspace is a single undifferentiated collection of files. We leave with a layered model: the terminal emulator, shell, editor, line editor, and dotfiles repository are independent layers, each with independent configuration files and independent failure modes. Treating them as a coherent system from the start produces a qualitatively different working environment from one assembled ad hoc.</p>
+<p>We also found, perhaps more clearly than expected, that cloud sync and git are not substitutes. Cloud sync provides availability across machines; git provides history, diff, rollback, and the ability to deploy a specific state to a specific machine. The dotfiles repository needs git.</p>
+<p>On the question of the three-machine requirement, we shall emphasise it once more: the second bootstrap is more informative than the first. Setting up the primary machine is configuration; setting up the second machine is testing. Assumptions invisible on the primary surface immediately on the second, and this is the mechanism by which the requirement earns its cost.</p>
+<p>A sensitive-files inventory written before the first commit is a one-time investment that prevents a class of irreversible errors. Credential rotation after an accidental git commit is, at a minimum, a half-day operation, and it must be assumed thorough regardless of how briefly the commit was visible.</p>
+<p><strong>Technical Skills:</strong></p>
+<p>The <code>link_file</code> pattern, which backs up existing files with a timestamp before creating a symlink, makes <code>install.sh</code> idempotent: it can be re-run on an already-deployed machine without destroying local changes. The <code>--dry-run</code> flag is inexpensive to implement and essential for validating any installer before committing to a production machine. Ten seconds of review prevents an afternoon of recovery.</p>
+<p>Conditional tool guards (<code>command -v tool &gt; /dev/null &amp;&amp;</code>) in <code>.zshrc</code> allow the same configuration file to deploy before tools are installed and to a fully-configured machine without producing errors. The <code>$OSTYPE</code> detection pattern (<code>case "$OSTYPE" in darwin*) ... linux*) ... esac</code>) allows a single <code>.zshrc</code> to configure different <code>PATH</code> and alias settings for macOS and Linux without forking the repository into two maintenance paths.</p>
+<p><strong>Gotchas and Pitfalls:</strong></p>
+<p>The order of operations is not negotiable: <code>.gitignore</code> before <code>git init</code>, <code>git status</code> review before <code>git add</code>, dry-run before the real run. Each shortcut creates a harder problem to undo, and the hardest of them, a committed credential, cannot be undone at all.</p>
+<p>Editor plugin directories in <code>~/.config/vim/</code> or <code>~/.config/nvim/</code> are large, platform-specific, and silently break cross-machine deploys if tracked in git. The reliable rule is: if a directory is regenerated by running a tool, it is not user configuration.</p>
+<p>We should note one dependency that is not obvious: <code>delta</code> as a git pager requires both <code>export GIT_PAGER='delta'</code> in <code>.zshrc</code> and <code>[core] pager = delta</code> in <code>.gitconfig</code>. Either setting alone is insufficient.</p>
+</section>
+<section id="limitations" class="level2" data-number="12.2">
+<h2 data-number="12.2" class="anchored" data-anchor-id="limitations"><span class="header-section-number">12.2</span> Limitations</h2>
+<p>Several limitations of the current approach merit explicit statement.</p>
+<p>The configuration has been tested on macOS 15.4 (Sequoia) with Apple Silicon and on Linux Mint 21.3 (Ubuntu 22.04 base). Other distributions, NixOS, and enterprise-managed workstations may require adjustments to <code>PATH</code>, plugin paths, and package names that we have not yet worked out.</p>
+<p>The <code>install.sh</code> deploys to <code>$HOME</code> only; system-level configuration, including <code>/etc/</code> files and system-wide launchd daemons, is out of scope. The launchd plist handling is macOS-only; on Linux Mint the equivalent mechanism is systemd user units, which require a separate code path in the installer (noted under Opportunities).</p>
+<p>The secrets workflow is manual throughout. The installer prints a reminder but provides no automation for restoring <code>~/.ssh</code>, <code>~/.aws</code>, or <code>~/.gnupg</code> on a new machine. This is by design, in that automating credential restoration raises its own security concerns, but it does mean that the bootstrap is not fully hands-off.</p>
+<p>Finally, no automated CI is applied to the repository itself. A GitHub Actions workflow that runs <code>install.sh --dry-run</code> on macOS and Ubuntu runners after every push would catch cross-platform breakage before it propagates to a live machine bootstrap.</p>
+</section>
+<section id="opportunities-for-improvement" class="level2" data-number="12.3">
+<h2 data-number="12.3" class="anchored" data-anchor-id="opportunities-for-improvement"><span class="header-section-number">12.3</span> Opportunities for Improvement</h2>
+<p>Several extensions would meaningfully improve the setup described here.</p>
+<p>First, a <code>bootstrap.sh</code> that installs Homebrew and git before cloning would reduce the first command on a fresh machine to a single <code>curl | bash</code> invocation. We note that reviewing the script content before running it is essential in this pattern, but the convenience is real.</p>
+<p>Second, a GitHub Actions workflow that runs <code>install.sh --dry-run</code> and <code>make lint</code> on macOS and Ubuntu runners after every push would catch cross-platform breakage before it reaches a live machine. This is perhaps the highest-value addition for anyone maintaining the repository across multiple operating systems.</p>
+<p>Third, writing a systemd user-unit equivalent of the launchd plist section, conditioned on <code>linux*</code> in <code>$OSTYPE</code>, would allow the repository to serve Linux development servers without a separate maintenance path.</p>
+<p>Fourth, <code>git-crypt</code> merits evaluation for a small set of near-sensitive configuration files, rclone config and mbsyncrc for instance, that are not credentials but are not entirely public either. The alternative, manual scrubbing before each commit, is problematic at scale.</p>
+<p>Fifth, completing the editor plugin manifest and adding a post-install hook that runs <code>:PlugInstall</code> in headless vim would make the editor ready on a new machine without manual intervention.</p>
+</section>
+</section>
+<section id="wrapping-up" class="level1" data-number="13">
+<h1 data-number="13"><span class="header-section-number">13</span> Wrapping Up</h1>
+<p>The three-laptop problem is a microcosm of the reproducibility problem that motivates most of the Unix best-practice literature. A workflow that exists only in a researcher’s memory cannot be audited, handed off, or recovered from hardware failure. A workflow that exists in a version-controlled repository can be all three.</p>
+<p>The investment described in this post is roughly a few hours on day one. It pays every time a machine is refreshed, every time a new collaborator joins the laboratory, and every time the primary laptop requires repair. In conclusion, four points are worth emphasising.</p>
+<p>First, a dotfiles repository is, in the fullest sense, the source code for the workspace. It should live in git, be tested before deployment, and have a clear migration path for breaking changes. Second, cloud sync is not version control. A dotfiles repository inside Dropbox or iCloud has no history, no diff, no rollback, and is subject to sync-race corruption that git does not protect against. The repository must be local to each machine, with GitHub as the remote. Third, write <code>.gitignore</code> before <code>git init</code>. This is a prerequisite, not a best practice; one sensitive commit requires a full rewrite and credential rotation. Fourth, verify on the second machine before the third is needed. The second bootstrap surfaces every assumption invisible on the primary machine, and the time to find those assumptions is before the third machine is needed, not during it.</p>
+</section>
+<section id="see-also" class="level1" data-number="14">
+<h1 data-number="14"><span class="header-section-number">14</span> See Also</h1>
+<p><strong>Related posts on this site:</strong></p>
+<ul>
+<li><a href="https://focusonr.org/posts/64-migrating-off-dropbox/">Migrating Off Dropbox: Beyond Dotfiles</a> (post 64): the broader context, covering project content, append-only history files, and the three-layer framework for workflow independence from cloud sync.</li>
+<li><a href="https://focusonr.org/posts/65-multi-laptop-bootstrap/">Multi-Laptop macOS Bootstrap</a> (post 65): a deeper audit of three specific blockers encountered when executing the dotfiles migration on a real workflow.</li>
+<li><a href="https://focusonr.org/posts/66-unix-pass-setup/">Setting Up pass, the Unix Password Manager</a> (post 66): GPG key generation, pass initialisation, and migration of credentials out of cloud sync.</li>
+<li><a href="https://focusonr.org/posts/67-multi-laptop-security/">Multi-Laptop Security: Hardening the Bootstrap</a> (post 67): a security audit of the infrastructure built in this post, covering FileVault, GPG subkey architecture, and per-machine SSH keys.</li>
+<li><a href="https://focusonr.org/posts/53-modern-cli-replacements/">Modern CLI Replacements</a> (post 53): the full reference for <code>eza</code>, <code>bat</code>, <code>fd</code>, <code>zoxide</code>, <code>delta</code>, and <code>lazygit</code>.</li>
+<li><a href="https://focusonr.org/posts/55-secrets-management/">Secrets Management for Data Scientists</a> (post 55): the three-tier credentials scheme that extends the sensitive-files inventory introduced here.</li>
+</ul>
+<p><strong>Key resources:</strong></p>
+<ul>
+<li><a href="https://dotfiles.github.io/">Dotfiles community guide</a>: curated showcase of community dotfiles repositories</li>
+<li><a href="https://www.atlassian.com/git/tutorials/dotfiles">Atlassian dotfiles guide</a>: alternative bare-repository approach without <code>install.sh</code></li>
+<li><a href="https://www.shellcheck.net/">shellcheck</a>: static analysis for bash scripts; used by <code>make lint</code></li>
+<li><a href="https://zsh.sourceforge.io/Doc/">Zsh documentation</a>: official manual for options, completion, and scripting</li>
+<li><a href="https://www.launchd.info/">launchd.info</a>: comprehensive reference for macOS launchd plist format</li>
+<li><a href="https://github.com/newren/git-filter-repo">git-filter-repo</a>: the correct tool for removing sensitive data from git history</li>
+</ul>
+</section>
+<section id="reproducibility" class="level1" data-number="15">
+<h1 data-number="15"><span class="header-section-number">15</span> Reproducibility</h1>
+<p><strong>Tested configuration:</strong></p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Component</th>
+<th>Version</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Operating system</td>
+<td>macOS 15.4 / Linux Mint 21.3</td>
+</tr>
+<tr class="even">
+<td>zsh</td>
+<td>5.9</td>
+</tr>
+<tr class="odd">
+<td>git</td>
+<td>2.45.x</td>
+</tr>
+<tr class="even">
+<td>Homebrew</td>
+<td>4.3.x</td>
+</tr>
+<tr class="odd">
+<td>Kitty</td>
+<td>0.36.x</td>
+</tr>
+<tr class="even">
+<td>eza</td>
+<td>0.18.x</td>
+</tr>
+<tr class="odd">
+<td>bat</td>
+<td>0.24.x</td>
+</tr>
+<tr class="even">
+<td>ripgrep</td>
+<td>14.x</td>
+</tr>
+<tr class="odd">
+<td>fzf</td>
+<td>0.54.x</td>
+</tr>
+<tr class="even">
+<td>zoxide</td>
+<td>0.9.x</td>
+</tr>
+<tr class="odd">
+<td>delta</td>
+<td>0.17.x</td>
+</tr>
+<tr class="even">
+<td>shellcheck</td>
+<td>0.10.x</td>
+</tr>
+<tr class="odd">
+<td>Last verified</td>
+<td>2026-05-31</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Configuration deliverables:</strong></p>
+<ul>
+<li><code>analysis/configs/install.sh</code> (full installer source)</li>
+<li><code>analysis/configs/Makefile</code> (build targets)</li>
+<li><code>analysis/configs/gitignore</code> (<code>.gitignore</code> template)</li>
+</ul>
+<p><strong>To reproduce on a new machine:</strong></p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone git@github.com:yourhandle/dotfiles ~/dotfiles</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ~/dotfiles</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> test       <span class="co"># dry-run + lint</span></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> install    <span class="co"># deploy symlinks and packages</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<hr>
+<p><em>Rendered on 2026-05-17 at 16:18 PDT.</em><br> <em>Source: ~/prj/qblog/posts/68-unix-workspace-setup/unix-workspace-setup/analysis/report/index.qmd</em></p>
+<hr>
+</section>
+<section id="lets-connect" class="level1" data-number="16">
+<h1 data-number="16"><span class="header-section-number">16</span> Let’s Connect</h1>
+<p>I would enjoy hearing from readers who are setting up a research computing environment and have questions about adapting this configuration to a different toolchain, who use a different secrets mechanism or synchronisation strategy and wish to compare notes, who have extended the launchd section to work with systemd on Linux and are willing to share the approach, or who have spotted an error or a better approach to any of the code presented here. - You just want to say hello and connect.</p>
+<ul>
+<li><strong>GitHub:</strong> <a href="https://github.com/rgt47">rgt47</a></li>
+<li><strong>LinkedIn:</strong> <a href="https://linkedin.com/in/rgthomaslab">Ronald Glenn Thomas</a></li>
+<li><strong>Email:</strong> rgthomas47@gmail.com</li>
+</ul>
+<hr>
+<!-- ============================================================================
+PRE-PUBLISH QA CHECKLIST: verify each item BEFORE setting draft: false
+
+[ ] YAML
+    [ ] title, date, categories, description, image filled in
+    [x] document-type: 'blog'
+    [x] draft: false
+
+[ ] Narrative complete (no [bracketed] placeholders remaining)
+    [ ] grep '\[' index.qmd returns only legitimate code/links
+
+[ ] Configuration artifacts present and tested
+    [ ] install.sh at analysis/configs/install.sh
+    [ ] Makefile at analysis/configs/Makefile
+    [ ] .gitignore template at analysis/configs/gitignore
+    [ ] install.sh tested with --dry-run on primary machine
+    [ ] install.sh tested on a second machine or fresh user account
+    [ ] Verification commands produce the documented output
+
+[ ] Things to Watch Out For
+    [ ] At least 5 gotchas, each with symptom and fix
+
+[ ] Visual design
+    [ ] 1 hero image (width=80%, fig-align=center)
+    [ ] 3 ambiance images (.img-fluid only, no width attribute)
+    [ ] Captions describe actual images (not placeholder text)
+    [ ] media/images/README.md attributes every image
+
+[ ] Content quality
+    [ ] Zero emoji
+    [ ] Zero em dashes
+    [ ] Single quotes in prose
+    [ ] 78-character line wrap throughout
+
+[ ] Reproducibility
+    [ ] Version matrix 'Last verified' field filled in
+    [ ] Config files committed under analysis/configs/
+
+[ ] Render verification
+    [ ] quarto render produces clean HTML with no warnings
+    [ ] PDF renders without overflow or missing images
+    [x] Hero image displays in /blog/ listing card
+    [ ] Internal links resolve
+============================================================================ -->
+<section id="related-posts-in-this-cluster" class="level2" data-number="16.1">
+<h2 data-number="16.1" class="anchored" data-anchor-id="related-posts-in-this-cluster"><span class="header-section-number">16.1</span> Related posts in this cluster</h2>
+<p>This post is part of the <em>Workflow Construct</em> series. Recommended reading order:</p>
+<ol type="1">
+<li>Post 15: <a href="../15-wf-construct-overview-anchor/">A Workflow Construct for the Modern Data Scientist</a></li>
+<li><strong>Post 16: Unix Command-Line Workspace Setup for Data Science</strong> (this post)</li>
+<li>Post 17: <a href="../17-wf-multi-laptop-dotfiles-bootstrap/">Multi-Laptop macOS Bootstrap</a></li>
+<li>Post 18: <a href="../18-wf-git-for-data-science/">Setting Up Git for Data Science Workflows</a></li>
+<li>Post 19: <a href="../19-wf-neovim-data-science-ide/">Setting Up Neovim as a Data Science IDE</a></li>
+<li>Post 20: <a href="../20-wf-r-vim-latex-workflow/">Extending the R-Vim Workflow with LaTeX</a></li>
+<li>Post 21: <a href="../21-wf-modern-cli-tools/">Modern CLI Replacements for the Shell Layer</a></li>
+<li>Post 22: <a href="../22-wf-claude-code-in-shell/">LLM-Augmented Editing for the Workflow Construct</a></li>
+<li>Post 23: <a href="../23-wf-yabai-tiling-window-manager/">Configuring Yabai as a Tiling Window Manager</a></li>
+<li>Post 24: <a href="../24-wf-pocket-terminal-ttyd-tailscale/">A pocket terminal with ttyd and Tailscale</a></li>
+<li>Post 25: <a href="../25-wf-linux-mint-on-macbook/">Install Linux Mint on a MacBook Air</a></li>
+</ol>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp("https:\/\/focusonr\.org");
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<script src="https://giscus.app/client.js" data-repo="rgt47/qblog" data-repo-id="R_kgDOH6TO7A" data-category="General" data-category-id="DIC_kwDOH6TO7M4CXqIi" data-mapping="pathname" data-reactions-enabled="1" data-emit-metadata="0" data-input-position="bottom" data-theme="light" data-lang="en" crossorigin="anonymous" async="">
+</script>
+<input type="hidden" id="giscus-base-theme" value="light">
+<input type="hidden" id="giscus-alt-theme" value="light">
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Copyright 2023-2026, Ronald ‘Ryy’ G. Thomas. The lab’s other activities live at <a href="https://rgtlab.org">rgtlab.org</a>.</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47">
+      <i class="bi bi-github" role="img">
+</i> 
+    </a>
+  </li>  
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47">
+      <i class="bi bi-twitter" role="img">
+</i> 
+    </a>
+  </li>  
+</ul>
+    </div>
+  </div>
+</footer>
+<!-- Fix for Quarto category encoding issue -->
+<script>
+// Fix category encoding for Quarto listing functionality
+(function() {
+  function fixAllCategoryEncoding() {
+    // Only run on pages that have Quarto listings
+    if (!document.querySelector('.quarto-listing')) {
+      return;
+    }
+    
+    // Fix sidebar category data-category attributes
+    const categoryEls = document.querySelectorAll('.quarto-listing-category .category[data-category]');
+    
+    categoryEls.forEach((categoryEl) => {
+      const category = categoryEl.getAttribute('data-category');
+      
+      if (category && category !== '') {
+        // Check if it contains only base64 characters and proper length
+        const isBase64 = /^[A-Za-z0-9+/]*={0,2}$/.test(category) && category.length % 4 === 0;
+        
+        if (isBase64) {
+          try {
+            const decoded = decodeURIComponent(atob(category));
+            // Verify it decoded to something reasonable (no control characters)
+            if (!decoded.match(/^[A-Za-z0-9\s\-,]+$/)) {
+              // Invalid encoding, re-encode from original text
+              const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+              categoryEl.setAttribute('data-category', encodedCategory);
+            }
+          } catch (e) {
+            // Base64 decode failed, re-encode from original text
+            const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
+            categoryEl.setAttribute('data-category', encodedCategory);
+          }
+        } else {
+          // Not base64, encode it
+          const encodedCategory = btoa(encodeURIComponent(category));
+          categoryEl.setAttribute('data-category', encodedCategory);
+        }
+      }
+    });
+    
+    // Fix listing item data-categories attributes  
+    const listingItems = document.querySelectorAll('[data-categories]');
+    
+    listingItems.forEach((item) => {
+      const categories = item.getAttribute('data-categories');
+      
+      if (categories && categories !== '') {
+        // Check if it's already base64 encoded
+        try {
+          decodeURIComponent(atob(categories));
+          // Already encoded and valid
+        } catch (e) {
+          // Not encoded, fix it
+          const encodedCategories = btoa(encodeURIComponent(categories));
+          item.setAttribute('data-categories', encodedCategories);
+        }
+      }
+    });
+    
+    // Fix post-specific category tag click handlers
+    const postCategoryTags = document.querySelectorAll('.listing-category[onclick]');
+    
+    postCategoryTags.forEach((tag) => {
+      const categoryText = tag.textContent.trim();
+      
+      // Replace the onclick handler to use encoded category
+      tag.onclick = () => {
+        const encodedCategory = btoa(encodeURIComponent(categoryText));
+        window.quartoListingCategory(encodedCategory);
+        return false;
+      };
+    });
+  }
+  
+  // Run immediately
+  fixAllCategoryEncoding();
+  
+  // Also run when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fixAllCategoryEncoding);
+  }
+})();
+</script>
+
+<!-- PDF view/download button for blog posts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Only add the button on post pages
+  if (window.location.pathname.includes('/posts/') && !window.location.pathname.endsWith('/posts/') && !window.location.pathname.endsWith('/posts/index.html')) {
+    var currentPath = window.location.pathname;
+    // Handle both /posts/name/ and /posts/name/index.html formats
+    var pdfPath;
+    if (currentPath.endsWith('/')) {
+      pdfPath = currentPath + 'index.pdf';
+    } else {
+      pdfPath = currentPath.replace('.html', '.pdf');
+    }
+
+    // Check if PDF exists first
+    fetch(pdfPath, { method: 'HEAD' })
+      .then(function(response) {
+        if (response.ok) {
+          // PDF exists, show download button
+          showDownloadButton(pdfPath);
+        }
+        // If PDF doesn't exist, don't show any button
+      })
+      .catch(function(error) {
+        // Error checking PDF, don't show any button
+      });
+  }
+});
+
+function showDownloadButton(pdfPath) {
+  var downloadBtn = document.createElement('div');
+  downloadBtn.className = 'pdf-download-button';
+
+  // Get file size if possible
+  fetch(pdfPath, { method: 'HEAD' })
+    .then(function(response) {
+      var size = response.headers.get('Content-Length');
+      var sizeText = '';
+
+      if (size) {
+        // Convert to MB or KB
+        var sizeInMB = size / (1024 * 1024);
+        if (sizeInMB >= 1) {
+          sizeText = ' (' + sizeInMB.toFixed(1) + ' MB)';
+        } else {
+          sizeText = ' (' + (size / 1024).toFixed(0) + ' KB)';
+        }
+      }
+
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' + sizeText +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    })
+    .catch(function() {
+      // Basic fallback if we can't get file size
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    });
+
+  // Find where to insert the button (right after the title block)
+  var titleBlock = document.querySelector('.quarto-title-meta');
+  if (titleBlock) {
+    titleBlock.after(downloadBtn);
+  }
+}
+
+
+</script>
+
+<!-- Cluster filtering for blog page -->
+<script>
+(function() {
+  // Cluster color scheme (matching Quarto's default colors)
+  const clusterColors = {
+    'zzcollab-compendia': '#0d3472',
+    'workflow-construct': '#4986e7',
+    'penguins-arc': '#f691b3',
+    'security-and-sync': '#f2c960',
+    'r-packages': '#8e63ce',
+    'publishing': '#43d692',
+    'clinical-and-cloud': '#a4c2f4',
+    'shiny': '#ffad47',
+    'shell-and-git': '#6d9eeb',
+    'r-language': '#fcda83'
+  };
+
+  // Human-readable cluster names
+  const clusterNames = {
+    'zzcollab-compendia': 'ZZCOLLAB Compendia',
+    'workflow-construct': 'Workflow Construct',
+    'penguins-arc': 'Penguins Arc',
+    'security-and-sync': 'Security & Sync',
+    'r-packages': 'R Packages',
+    'publishing': 'Publishing',
+    'clinical-and-cloud': 'Clinical & Cloud',
+    'shiny': 'Shiny',
+    'shell-and-git': 'Shell & Git',
+    'r-language': 'R Language'
+  };
+
+  async function initClusterFiltering() {
+    // Only run on blog listing pages
+    if (!document.querySelector('.quarto-listing')) {
+      return;
+    }
+
+    const sidebarContainer = document.getElementById('cluster-sidebar');
+    if (!sidebarContainer) {
+      return;
+    }
+
+    // Get all post links
+    const postLinks = document.querySelectorAll('.quarto-listing-item a[href*="/posts/"]');
+    if (postLinks.length === 0) {
+      return;
+    }
+
+    // Collect cluster data from posts
+    const clusterMap = new Map(); // cluster -> array of post URLs
+    const postClusterMap = new Map(); // post URL -> cluster
+
+    for (const link of postLinks) {
+      const href = link.getAttribute('href');
+      if (!href) continue;
+
+      try {
+        // Extract post path and fetch cluster info
+        const postPath = href.split('?')[0]; // Remove query params
+        const indexUrl = postPath.endsWith('/')
+          ? postPath + 'index.qmd'
+          : postPath.replace(/\/+$/, '') + '/index.qmd';
+
+        const response = await fetch(indexUrl);
+        if (!response.ok) continue;
+
+        const content = await response.text();
+
+        // Extract cluster from YAML front matter
+        const clusterMatch = content.match(/^cluster:\s*(.+?)$/m);
+        if (clusterMatch) {
+          const cluster = clusterMatch[1].trim();
+          postClusterMap.set(href, cluster);
+
+          if (!clusterMap.has(cluster)) {
+            clusterMap.set(cluster, []);
+          }
+          clusterMap.get(cluster).push(href);
+        }
+      } catch (e) {
+        // Continue on fetch errors
+      }
+    }
+
+    if (clusterMap.size === 0) {
+      return; // No clusters found
+    }
+
+    // Create clusters sidebar HTML
+    const sidebar = document.createElement('div');
+    sidebar.className = 'quarto-listing-category card';
+    sidebar.innerHTML = '<div class="card-body"><strong>Clusters</strong></div>';
+
+    const clusterList = document.createElement('div');
+    clusterList.className = 'list-group list-group-flush';
+
+    // Sort clusters by count (descending)
+    const sortedClusters = Array.from(clusterMap.entries())
+      .sort((a, b) => b[1].length - a[1].length);
+
+    // Add "All" option
+    const allButton = document.createElement('button');
+    allButton.className = 'list-group-item list-group-item-action category active';
+    allButton.textContent = `All (${postLinks.length})`;
+    allButton.style.color = '#495057';
+    allButton.onclick = (e) => {
+      e.preventDefault();
+      resetClusterFilter();
+      updateActiveCluster(allButton);
+    };
+    clusterList.appendChild(allButton);
+
+    // Add cluster buttons
+    for (const [cluster, posts] of sortedClusters) {
+      const button = document.createElement('button');
+      button.className = 'list-group-item list-group-item-action category';
+      button.textContent = `${clusterNames[cluster] || cluster} (${posts.length})`;
+      button.style.color = clusterColors[cluster] || '#495057';
+      button.style.fontWeight = '500';
+      button.dataset.cluster = cluster;
+
+      button.onclick = (e) => {
+        e.preventDefault();
+        filterByCluster(cluster, postClusterMap);
+        updateActiveCluster(button);
+      };
+
+      clusterList.appendChild(button);
+    }
+
+    sidebar.appendChild(clusterList);
+    sidebarContainer.appendChild(sidebar);
+
+    // Add CSS styles
+    if (!document.getElementById('cluster-sidebar-styles')) {
+      const style = document.createElement('style');
+      style.id = 'cluster-sidebar-styles';
+      style.textContent = `
+        #cluster-sidebar {
+          margin-top: 2rem;
+        }
+        .cluster-hidden {
+          display: none !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }
+
+  function filterByCluster(cluster, postClusterMap) {
+    const items = document.querySelectorAll('.quarto-listing-item');
+
+    items.forEach(item => {
+      const link = item.querySelector('a[href*="/posts/"]');
+      if (!link) {
+        item.classList.add('cluster-hidden');
+        return;
+      }
+
+      const href = link.getAttribute('href');
+      const itemCluster = postClusterMap.get(href);
+
+      if (itemCluster === cluster) {
+        item.classList.remove('cluster-hidden');
+      } else {
+        item.classList.add('cluster-hidden');
+      }
+    });
+  }
+
+  function resetClusterFilter() {
+    const items = document.querySelectorAll('.quarto-listing-item');
+    items.forEach(item => {
+      item.classList.remove('cluster-hidden');
+    });
+  }
+
+  function updateActiveCluster(activeButton) {
+    const buttons = document.querySelectorAll('#cluster-sidebar .category');
+    buttons.forEach(btn => {
+      btn.classList.remove('active');
+    });
+    activeButton.classList.add('active');
+  }
+
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initClusterFiltering);
+  } else {
+    initClusterFiltering();
+  }
+})();
+</script>
+
+<style>
+.pdf-download-button {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+</style>
+
+
+
+
+</body></html>
