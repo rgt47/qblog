@@ -1628,6 +1628,200 @@ function showDownloadButton(pdfPath) {
 
 </script>
 
+<!-- Cluster filtering for blog page -->
+<script>
+(function() {
+  // Cluster color scheme (matching Quarto's default colors)
+  const clusterColors = {
+    'zzcollab-compendia': '#0d3472',
+    'workflow-construct': '#4986e7',
+    'penguins-arc': '#f691b3',
+    'security-and-sync': '#f2c960',
+    'r-packages': '#8e63ce',
+    'publishing': '#43d692',
+    'clinical-and-cloud': '#a4c2f4',
+    'shiny': '#ffad47',
+    'shell-and-git': '#6d9eeb',
+    'r-language': '#fcda83'
+  };
+
+  // Human-readable cluster names
+  const clusterNames = {
+    'zzcollab-compendia': 'ZZCOLLAB Compendia',
+    'workflow-construct': 'Workflow Construct',
+    'penguins-arc': 'Penguins Arc',
+    'security-and-sync': 'Security & Sync',
+    'r-packages': 'R Packages',
+    'publishing': 'Publishing',
+    'clinical-and-cloud': 'Clinical & Cloud',
+    'shiny': 'Shiny',
+    'shell-and-git': 'Shell & Git',
+    'r-language': 'R Language'
+  };
+
+  async function initClusterFiltering() {
+    // Only run on blog listing pages
+    if (!document.querySelector('.quarto-listing')) {
+      return;
+    }
+
+    const sidebarContainer = document.getElementById('cluster-sidebar');
+    if (!sidebarContainer) {
+      return;
+    }
+
+    // Get all post links
+    const postLinks = document.querySelectorAll('.quarto-listing-item a[href*="/posts/"]');
+    if (postLinks.length === 0) {
+      return;
+    }
+
+    // Collect cluster data from posts
+    const clusterMap = new Map(); // cluster -> array of post URLs
+    const postClusterMap = new Map(); // post URL -> cluster
+
+    for (const link of postLinks) {
+      const href = link.getAttribute('href');
+      if (!href) continue;
+
+      try {
+        // Extract post path and fetch cluster info
+        const postPath = href.split('?')[0]; // Remove query params
+        const indexUrl = postPath.endsWith('/')
+          ? postPath + 'index.qmd'
+          : postPath.replace(/\/+$/, '') + '/index.qmd';
+
+        const response = await fetch(indexUrl);
+        if (!response.ok) continue;
+
+        const content = await response.text();
+
+        // Extract cluster from YAML front matter
+        const clusterMatch = content.match(/^cluster:\s*(.+?)$/m);
+        if (clusterMatch) {
+          const cluster = clusterMatch[1].trim();
+          postClusterMap.set(href, cluster);
+
+          if (!clusterMap.has(cluster)) {
+            clusterMap.set(cluster, []);
+          }
+          clusterMap.get(cluster).push(href);
+        }
+      } catch (e) {
+        // Continue on fetch errors
+      }
+    }
+
+    if (clusterMap.size === 0) {
+      return; // No clusters found
+    }
+
+    // Create clusters sidebar HTML
+    const sidebar = document.createElement('div');
+    sidebar.className = 'quarto-listing-category card';
+    sidebar.innerHTML = '<div class="card-body"><strong>Clusters</strong></div>';
+
+    const clusterList = document.createElement('div');
+    clusterList.className = 'list-group list-group-flush';
+
+    // Sort clusters by count (descending)
+    const sortedClusters = Array.from(clusterMap.entries())
+      .sort((a, b) => b[1].length - a[1].length);
+
+    // Add "All" option
+    const allButton = document.createElement('button');
+    allButton.className = 'list-group-item list-group-item-action category active';
+    allButton.textContent = `All (${postLinks.length})`;
+    allButton.style.color = '#495057';
+    allButton.onclick = (e) => {
+      e.preventDefault();
+      resetClusterFilter();
+      updateActiveCluster(allButton);
+    };
+    clusterList.appendChild(allButton);
+
+    // Add cluster buttons
+    for (const [cluster, posts] of sortedClusters) {
+      const button = document.createElement('button');
+      button.className = 'list-group-item list-group-item-action category';
+      button.textContent = `${clusterNames[cluster] || cluster} (${posts.length})`;
+      button.style.color = clusterColors[cluster] || '#495057';
+      button.style.fontWeight = '500';
+      button.dataset.cluster = cluster;
+
+      button.onclick = (e) => {
+        e.preventDefault();
+        filterByCluster(cluster, postClusterMap);
+        updateActiveCluster(button);
+      };
+
+      clusterList.appendChild(button);
+    }
+
+    sidebar.appendChild(clusterList);
+    sidebarContainer.appendChild(sidebar);
+
+    // Add CSS styles
+    if (!document.getElementById('cluster-sidebar-styles')) {
+      const style = document.createElement('style');
+      style.id = 'cluster-sidebar-styles';
+      style.textContent = `
+        #cluster-sidebar {
+          margin-top: 2rem;
+        }
+        .cluster-hidden {
+          display: none !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }
+
+  function filterByCluster(cluster, postClusterMap) {
+    const items = document.querySelectorAll('.quarto-listing-item');
+
+    items.forEach(item => {
+      const link = item.querySelector('a[href*="/posts/"]');
+      if (!link) {
+        item.classList.add('cluster-hidden');
+        return;
+      }
+
+      const href = link.getAttribute('href');
+      const itemCluster = postClusterMap.get(href);
+
+      if (itemCluster === cluster) {
+        item.classList.remove('cluster-hidden');
+      } else {
+        item.classList.add('cluster-hidden');
+      }
+    });
+  }
+
+  function resetClusterFilter() {
+    const items = document.querySelectorAll('.quarto-listing-item');
+    items.forEach(item => {
+      item.classList.remove('cluster-hidden');
+    });
+  }
+
+  function updateActiveCluster(activeButton) {
+    const buttons = document.querySelectorAll('#cluster-sidebar .category');
+    buttons.forEach(btn => {
+      btn.classList.remove('active');
+    });
+    activeButton.classList.add('active');
+  }
+
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initClusterFiltering);
+  } else {
+    initClusterFiltering();
+  }
+})();
+</script>
+
 <style>
 .pdf-download-button {
   margin-top: 1rem;
