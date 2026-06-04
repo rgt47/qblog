@@ -1073,6 +1073,58 @@ function showDownloadButton(pdfPath) {
 <!-- Cluster filtering for blog page -->
 <script>
 (function() {
+  // Hardcoded cluster mapping based on post directory names
+  const clusterMapping = {
+    '01-zc': 'zzcollab-compendia',
+    '02-zc': 'zzcollab-compendia',
+    '03-zc': 'zzcollab-compendia',
+    '04-zc': 'zzcollab-compendia',
+    '05-zc': 'zzcollab-compendia',
+    '06-zc': 'zzcollab-compendia',
+    '07-zc': 'zzcollab-compendia',
+    '08-zc': 'zzcollab-compendia',
+    '15-wf': 'workflow-construct',
+    '16-wf': 'workflow-construct',
+    '17-wf': 'workflow-construct',
+    '18-wf': 'workflow-construct',
+    '19-wf': 'workflow-construct',
+    '20-wf': 'workflow-construct',
+    '21-wf': 'workflow-construct',
+    '22-wf': 'workflow-construct',
+    '23-wf': 'workflow-construct',
+    '24-wf': 'workflow-construct',
+    '25-wf': 'workflow-construct',
+    '31-sec': 'security-and-sync',
+    '32-sec': 'security-and-sync',
+    '33-sec': 'security-and-sync',
+    '34-sec': 'security-and-sync',
+    '35-sec': 'security-and-sync',
+    '41-sh': 'shell-and-git',
+    '43-sh': 'shell-and-git',
+    '50-pp': 'penguins-arc',
+    '51-pp': 'penguins-arc',
+    '52-pp': 'penguins-arc',
+    '53-pp': 'penguins-arc',
+    '54-pp': 'penguins-arc',
+    '55-pp': 'penguins-arc',
+    '56-pp': 'penguins-arc',
+    '62-rl': 'r-language',
+    '63-rl': 'r-language',
+    '70-rp': 'r-packages',
+    '72-rp': 'r-packages',
+    '73-rp': 'r-packages',
+    '74-rp': 'r-packages',
+    '80-pub': 'publishing',
+    '81-pub': 'publishing',
+    '83-pub': 'publishing',
+    '84-pub': 'publishing',
+    '90-shy': 'shiny',
+    '91-shy': 'shiny',
+    '95-cln': 'clinical-and-cloud',
+    '96-cln': 'clinical-and-cloud',
+    '97-cln': 'clinical-and-cloud'
+  };
+
   // Cluster color scheme (matching Quarto's default colors)
   const clusterColors = {
     'zzcollab-compendia': '#0d3472',
@@ -1101,7 +1153,7 @@ function showDownloadButton(pdfPath) {
     'r-language': 'R Language'
   };
 
-  async function initClusterFiltering() {
+  function initClusterFiltering() {
     // Only run on blog listing pages
     if (!document.querySelector('.quarto-listing')) {
       return;
@@ -1113,44 +1165,40 @@ function showDownloadButton(pdfPath) {
     }
 
     // Get all post links
-    const postLinks = document.querySelectorAll('.quarto-listing-item a[href*="/posts/"]');
+    const postLinks = document.querySelectorAll('a[href*="posts/"]');
     if (postLinks.length === 0) {
       return;
     }
 
-    // Collect cluster data from posts
-    const clusterMap = new Map(); // cluster -> array of post URLs
-    const postClusterMap = new Map(); // post URL -> cluster
+    // Build cluster map from post names (deduplicate)
+    const clusterMap = new Map();
+    const postClusterMap = new Map();
+    const seenPosts = new Set();
 
     for (const link of postLinks) {
       const href = link.getAttribute('href');
-      if (!href) continue;
+      if (!href || !href.includes('posts/')) continue;
 
-      try {
-        // Extract post path and fetch cluster info
-        const postPath = href.split('?')[0]; // Remove query params
-        const indexUrl = postPath.endsWith('/')
-          ? postPath + 'index.qmd'
-          : postPath.replace(/\/+$/, '') + '/index.qmd';
+      // Extract post name (e.g., "25-wf-linux-mint-on-macbook")
+      const postNameMatch = href.match(/posts\/(\d+-[a-z]+)/);
+      if (!postNameMatch) continue;
 
-        const response = await fetch(indexUrl);
-        if (!response.ok) continue;
+      const postName = postNameMatch[1];
 
-        const content = await response.text();
+      // Skip if we've already processed this post
+      if (seenPosts.has(postName)) continue;
+      seenPosts.add(postName);
 
-        // Extract cluster from YAML front matter
-        const clusterMatch = content.match(/^cluster:\s*(.+?)$/m);
-        if (clusterMatch) {
-          const cluster = clusterMatch[1].trim();
-          postClusterMap.set(href, cluster);
+      const prefix = postName.substring(0, 5); // e.g., "25-wf"
 
-          if (!clusterMap.has(cluster)) {
-            clusterMap.set(cluster, []);
-          }
-          clusterMap.get(cluster).push(href);
+      const cluster = clusterMapping[prefix];
+      if (cluster) {
+        postClusterMap.set(postName, cluster);
+
+        if (!clusterMap.has(cluster)) {
+          clusterMap.set(cluster, []);
         }
-      } catch (e) {
-        // Continue on fetch errors
+        clusterMap.get(cluster).push(postName);
       }
     }
 
@@ -1210,6 +1258,49 @@ function showDownloadButton(pdfPath) {
       style.textContent = `
         #cluster-sidebar {
           margin-top: 2rem;
+          margin-bottom: 2rem;
+        }
+        #cluster-sidebar .card {
+          border: 1px solid #dee2e6;
+          border-radius: 0.375rem;
+        }
+        #cluster-sidebar .card-body {
+          padding: 1rem;
+          font-weight: 600;
+          color: #0d3472;
+        }
+        #cluster-sidebar .list-group {
+          border: none;
+        }
+        #cluster-sidebar .list-group-item {
+          border: none;
+          border-bottom: 1px solid #e9ecef;
+          padding: 0.5rem 0;
+          background: transparent;
+        }
+        #cluster-sidebar .list-group-item:last-child {
+          border-bottom: none;
+        }
+        #cluster-sidebar .list-group-item.active {
+          background-color: #e7f1ff;
+          color: #0d3472;
+          border-color: transparent;
+          font-weight: 600;
+        }
+        #cluster-sidebar .category {
+          cursor: pointer;
+          color: #0d3472;
+          padding: 0.375rem 0;
+          display: block;
+          text-decoration: none;
+          transition: color 0.15s ease-in-out;
+        }
+        #cluster-sidebar .category:hover {
+          text-decoration: underline;
+        }
+        #cluster-sidebar .category.active {
+          font-weight: 600;
+          color: #0d3472;
         }
         .cluster-hidden {
           display: none !important;
@@ -1220,22 +1311,27 @@ function showDownloadButton(pdfPath) {
   }
 
   function filterByCluster(cluster, postClusterMap) {
-    const items = document.querySelectorAll('.quarto-listing-item');
+    // Hide all post elements first
+    const allLinks = document.querySelectorAll('a[href*="posts/"]');
+    const hiddenPosts = new Set();
 
-    items.forEach(item => {
-      const link = item.querySelector('a[href*="/posts/"]');
-      if (!link) {
-        item.classList.add('cluster-hidden');
-        return;
-      }
-
+    allLinks.forEach(link => {
       const href = link.getAttribute('href');
-      const itemCluster = postClusterMap.get(href);
+      const postNameMatch = href.match(/posts\/(\d+-[a-z\-]+)/);
+      if (!postNameMatch) return;
 
-      if (itemCluster === cluster) {
-        item.classList.remove('cluster-hidden');
-      } else {
-        item.classList.add('cluster-hidden');
+      const postName = postNameMatch[1];
+      const itemCluster = postClusterMap.get(postName);
+
+      // Hide the parent quarto-post element if cluster doesn't match
+      let postElement = link.closest('.quarto-post');
+      if (postElement) {
+        if (itemCluster !== cluster) {
+          postElement.classList.add('cluster-hidden');
+          hiddenPosts.add(postName);
+        } else {
+          postElement.classList.remove('cluster-hidden');
+        }
       }
     });
   }
