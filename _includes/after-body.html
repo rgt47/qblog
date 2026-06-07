@@ -1,87 +1,55 @@
-<!-- Fix for Quarto category encoding issue -->
+
+<!-- Fix category filtering to work with plain-text categories -->
 <script>
-// Fix category encoding for Quarto listing functionality
-(function() {
-  function fixAllCategoryEncoding() {
-    // Only run on pages that have Quarto listings
-    if (!document.querySelector('.quarto-listing')) {
-      return;
+window.addEventListener('DOMContentLoaded', function() {
+  setTimeout(function() {
+    // Override filterListingCategory to work with plain-text categories
+    if (typeof window.filterListingCategory !== 'undefined') {
+      return; // Already patched
     }
 
-    // Fix sidebar category data-category attributes
-    const categoryEls = document.querySelectorAll('.quarto-listing-category .category[data-category]');
+    // Store original function if it exists
+    window.filterListingCategory = function(category) {
+      const listingIds = Object.keys(window['quarto-listings']);
+      for (const listingId of listingIds) {
+        const list = window['quarto-listings'][listingId];
+        if (list) {
+          if (category === '') {
+            // resets the filter
+            list.filter();
+          } else {
+            // filter to this category - handle both plain text and base64
+            list.filter(function (item) {
+              const itemValues = item.values();
+              if (itemValues.categories !== null && itemValues.categories !== undefined) {
+                let categories;
 
-    categoryEls.forEach((categoryEl) => {
-      const category = categoryEl.getAttribute('data-category');
+                try {
+                  // Try to decode as base64 first
+                  categories = decodeURIComponent(atob(itemValues.categories)).split(",");
+                } catch(e) {
+                  // If that fails, assume it's plain text
+                  categories = itemValues.categories.split(",");
+                }
 
-      if (category && category !== '') {
-        // Check if it contains only base64 characters and proper length
-        const isBase64 = /^[A-Za-z0-9+/]*={0,2}$/.test(category) && category.length % 4 === 0;
-
-        if (isBase64) {
-          try {
-            const decoded = decodeURIComponent(atob(category));
-            // Verify it decoded to something reasonable (no control characters)
-            if (!decoded.match(/^[A-Za-z0-9\s\-,]+$/)) {
-              // Invalid encoding, re-encode from original text
-              const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
-              categoryEl.setAttribute('data-category', encodedCategory);
-            }
-          } catch (e) {
-            // Base64 decode failed, re-encode from original text
-            const encodedCategory = btoa(encodeURIComponent(categoryEl.textContent.trim()));
-            categoryEl.setAttribute('data-category', encodedCategory);
+                // Trim whitespace from categories
+                categories = categories.map(c => c.trim());
+                return categories.includes(category);
+              } else {
+                return false;
+              }
+            });
           }
-        } else {
-          // Not base64, encode it
-          const encodedCategory = btoa(encodeURIComponent(category));
-          categoryEl.setAttribute('data-category', encodedCategory);
         }
       }
-    });
+    };
 
-    // Fix listing item data-categories attributes
-    const listingItems = document.querySelectorAll('[data-categories]');
-
-    listingItems.forEach((item) => {
-      const categories = item.getAttribute('data-categories');
-
-      if (categories && categories !== '') {
-        // Check if it's already base64 encoded
-        try {
-          decodeURIComponent(atob(categories));
-          // Already encoded and valid
-        } catch (e) {
-          // Not encoded, fix it
-          const encodedCategories = btoa(encodeURIComponent(categories));
-          item.setAttribute('data-categories', encodedCategories);
-        }
-      }
-    });
-
-    // Fix post-specific category tag click handlers
-    const postCategoryTags = document.querySelectorAll('.listing-category[onclick]');
-
-    postCategoryTags.forEach((tag) => {
-      const categoryText = tag.textContent.trim();
-
-      // Replace the onclick handler to use encoded category
-      tag.onclick = () => {
-        const encodedCategory = btoa(encodeURIComponent(categoryText));
-        window.quartoListingCategory(encodedCategory);
-        return false;
-      };
-    });
-  }
-
-  // Run immediately
-  fixAllCategoryEncoding();
-
-  // Also run when DOM is ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', fixAllCategoryEncoding);
-  }
-})();
+    // Trigger the listing-loaded handler to use the patched filter
+    if (window['quarto-listing-loaded']) {
+      window['quarto-listing-loaded']();
+    }
+  }, 500);
+});
 </script>
 
 <!-- PDF view/download button for blog posts -->
