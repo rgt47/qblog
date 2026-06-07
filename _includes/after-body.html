@@ -7,17 +7,17 @@
     if (!document.querySelector('.quarto-listing')) {
       return;
     }
-    
+
     // Fix sidebar category data-category attributes
     const categoryEls = document.querySelectorAll('.quarto-listing-category .category[data-category]');
-    
+
     categoryEls.forEach((categoryEl) => {
       const category = categoryEl.getAttribute('data-category');
-      
+
       if (category && category !== '') {
         // Check if it contains only base64 characters and proper length
         const isBase64 = /^[A-Za-z0-9+/]*={0,2}$/.test(category) && category.length % 4 === 0;
-        
+
         if (isBase64) {
           try {
             const decoded = decodeURIComponent(atob(category));
@@ -39,13 +39,13 @@
         }
       }
     });
-    
-    // Fix listing item data-categories attributes  
+
+    // Fix listing item data-categories attributes
     const listingItems = document.querySelectorAll('[data-categories]');
-    
+
     listingItems.forEach((item) => {
       const categories = item.getAttribute('data-categories');
-      
+
       if (categories && categories !== '') {
         // Check if it's already base64 encoded
         try {
@@ -58,13 +58,13 @@
         }
       }
     });
-    
+
     // Fix post-specific category tag click handlers
     const postCategoryTags = document.querySelectorAll('.listing-category[onclick]');
-    
+
     postCategoryTags.forEach((tag) => {
       const categoryText = tag.textContent.trim();
-      
+
       // Replace the onclick handler to use encoded category
       tag.onclick = () => {
         const encodedCategory = btoa(encodeURIComponent(categoryText));
@@ -73,10 +73,10 @@
       };
     });
   }
-  
+
   // Run immediately
   fixAllCategoryEncoding();
-  
+
   // Also run when DOM is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', fixAllCategoryEncoding);
@@ -158,404 +158,11 @@ function showDownloadButton(pdfPath) {
     titleBlock.after(downloadBtn);
   }
 }
-
-
-</script>
-
-<!-- Cluster filtering for blog page -->
-<script>
-(function() {
-  // Hardcoded cluster mapping based on post directory names
-  const clusterMapping = {
-    '01-zc': 'zzcollab-compendia',
-    '02-zc': 'zzcollab-compendia',
-    '03-zc': 'zzcollab-compendia',
-    '04-zc': 'zzcollab-compendia',
-    '05-zc': 'zzcollab-compendia',
-    '06-zc': 'zzcollab-compendia',
-    '07-zc': 'zzcollab-compendia',
-    '08-zc': 'zzcollab-compendia',
-    '15-wf': 'workflow-construct',
-    '16-wf': 'workflow-construct',
-    '17-wf': 'workflow-construct',
-    '18-wf': 'workflow-construct',
-    '19-wf': 'workflow-construct',
-    '20-wf': 'workflow-construct',
-    '21-wf': 'workflow-construct',
-    '22-wf': 'workflow-construct',
-    '23-wf': 'workflow-construct',
-    '24-wf': 'workflow-construct',
-    '25-wf': 'workflow-construct',
-    '31-sec': 'security-and-sync',
-    '32-sec': 'security-and-sync',
-    '33-sec': 'security-and-sync',
-    '34-sec': 'security-and-sync',
-    '35-sec': 'security-and-sync',
-    '41-sh': 'shell-and-git',
-    '43-sh': 'shell-and-git',
-    '50-pp': 'penguins-arc',
-    '51-pp': 'penguins-arc',
-    '52-pp': 'penguins-arc',
-    '53-pp': 'penguins-arc',
-    '54-pp': 'penguins-arc',
-    '55-pp': 'penguins-arc',
-    '56-pp': 'penguins-arc',
-    '62-rl': 'r-language',
-    '63-rl': 'r-language',
-    '70-rp': 'r-packages',
-    '72-rp': 'r-packages',
-    '73-rp': 'r-packages',
-    '74-rp': 'r-packages',
-    '80-pub': 'publishing',
-    '81-pub': 'publishing',
-    '83-pub': 'publishing',
-    '84-pub': 'publishing',
-    '90-shy': 'shiny',
-    '91-shy': 'shiny',
-    '95-cln': 'clinical-and-cloud',
-    '96-cln': 'clinical-and-cloud',
-    '97-cln': 'clinical-and-cloud'
-  };
-
-  // Cluster color scheme (matching Quarto's default colors)
-  const clusterColors = {
-    'zzcollab-compendia': '#0d3472',
-    'workflow-construct': '#4986e7',
-    'penguins-arc': '#f691b3',
-    'security-and-sync': '#f2c960',
-    'r-packages': '#8e63ce',
-    'publishing': '#43d692',
-    'clinical-and-cloud': '#a4c2f4',
-    'shiny': '#ffad47',
-    'shell-and-git': '#6d9eeb',
-    'r-language': '#fcda83'
-  };
-
-  // Human-readable cluster names
-  const clusterNames = {
-    'zzcollab-compendia': 'ZZCOLLAB Compendia',
-    'workflow-construct': 'Workflow Construct',
-    'penguins-arc': 'Penguins Arc',
-    'security-and-sync': 'Security & Sync',
-    'r-packages': 'R Packages',
-    'publishing': 'Publishing',
-    'clinical-and-cloud': 'Clinical & Cloud',
-    'shiny': 'Shiny',
-    'shell-and-git': 'Shell & Git',
-    'r-language': 'R Language'
-  };
-
-  function initClusterFiltering() {
-    // Only run on blog listing pages
-    if (!document.querySelector('.quarto-listing')) {
-      return;
-    }
-
-    // Get all post links
-    const postLinks = document.querySelectorAll('a[href*="posts/"]');
-    if (postLinks.length === 0) {
-      return;
-    }
-
-    // Build cluster map from post names (deduplicate)
-    const clusterMap = new Map();
-    const postClusterMap = new Map();
-    const seenPosts = new Set();
-
-    for (const link of postLinks) {
-      const href = link.getAttribute('href');
-      if (!href || !href.includes('posts/')) continue;
-
-      // Extract post name (e.g., "25-wf-linux-mint-on-macbook")
-      const postNameMatch = href.match(/posts\/(\d+-[a-z]+)/);
-      if (!postNameMatch) continue;
-
-      const postName = postNameMatch[1];
-
-      // Skip if we've already processed this post
-      if (seenPosts.has(postName)) continue;
-      seenPosts.add(postName);
-
-      const prefix = postName.substring(0, 5); // e.g., "25-wf"
-
-      const cluster = clusterMapping[prefix];
-      if (cluster) {
-        postClusterMap.set(postName, cluster);
-
-        if (!clusterMap.has(cluster)) {
-          clusterMap.set(cluster, []);
-        }
-        clusterMap.get(cluster).push(postName);
-      }
-    }
-
-    if (clusterMap.size === 0) {
-      return; // No clusters found
-    }
-
-    // Find the categories sidebar and inject tabs into it
-    const categoriesSidebar = document.querySelector('.quarto-listing-category');
-    if (!categoriesSidebar) {
-      return;
-    }
-
-    // Get original categories list before we modify the DOM
-    const originalListGroup = categoriesSidebar.querySelector('.list-group');
-    if (!originalListGroup) {
-      return;
-    }
-
-    // Clone the original categories list
-    const categoriesList = originalListGroup.cloneNode(true);
-
-    // Create tab structure
-    const tabContainer = document.createElement('div');
-    tabContainer.className = 'filter-tabs';
-    tabContainer.innerHTML = `
-      <div class="tab-buttons">
-        <button class="tab-btn active" data-tab="clusters">Clusters</button>
-        <button class="tab-btn" data-tab="categories">Categories</button>
-      </div>
-    `;
-
-    // Create clusters tab content
-    const clustersContent = document.createElement('div');
-    clustersContent.className = 'tab-content active';
-    clustersContent.id = 'clusters-tab';
-
-    const clusterList = document.createElement('div');
-    clusterList.className = 'list-group list-group-flush';
-
-    // Sort clusters by count (descending)
-    const sortedClusters = Array.from(clusterMap.entries())
-      .sort((a, b) => b[1].length - a[1].length);
-
-    // Add "All" option for clusters
-    const allClusterButton = document.createElement('button');
-    allClusterButton.className = 'list-group-item list-group-item-action category active';
-    allClusterButton.textContent = `All (${seenPosts.size})`;
-    allClusterButton.style.color = '#495057';
-    allClusterButton.onclick = (e) => {
-      e.preventDefault();
-      resetClusterFilter();
-      updateActiveCluster(allClusterButton);
-    };
-    clusterList.appendChild(allClusterButton);
-
-    // Add cluster buttons
-    for (const [cluster, posts] of sortedClusters) {
-      const button = document.createElement('button');
-      button.className = 'list-group-item list-group-item-action category';
-      button.textContent = `${clusterNames[cluster] || cluster} (${posts.length})`;
-      button.style.color = clusterColors[cluster] || '#495057';
-      button.style.fontWeight = '500';
-      button.dataset.cluster = cluster;
-
-      button.onclick = (e) => {
-        e.preventDefault();
-        filterByCluster(cluster, postClusterMap);
-        updateActiveCluster(allClusterButton);
-      };
-
-      clusterList.appendChild(button);
-    }
-
-    clustersContent.appendChild(clusterList);
-
-    // Create categories tab content (wrap cloned content)
-    const categoriesContent = document.createElement('div');
-    categoriesContent.className = 'tab-content';
-    categoriesContent.id = 'categories-tab';
-    categoriesContent.appendChild(categoriesList);
-
-    // Clear sidebar and rebuild with tabs
-    categoriesSidebar.innerHTML = '<div class="card-body"><strong>Filters</strong></div>';
-    categoriesSidebar.appendChild(tabContainer);
-    categoriesSidebar.appendChild(clustersContent);
-    categoriesSidebar.appendChild(categoriesContent);
-
-    console.log('Filters tab interface created successfully');
-
-    // Add tab switching functionality
-    const tabButtons = tabContainer.querySelectorAll('.tab-btn');
-    tabButtons.forEach(btn => {
-      btn.onclick = (e) => {
-        e.preventDefault();
-        const tabName = btn.dataset.tab;
-
-        // Update active tab button
-        tabButtons.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-
-        // Update active tab content
-        document.querySelectorAll('.tab-content').forEach(content => {
-          content.classList.remove('active');
-        });
-        document.getElementById(tabName + '-tab').classList.add('active');
-      };
-    });
-
-    // Remove original cluster-sidebar div if it exists
-    const sidebarContainer = document.getElementById('cluster-sidebar');
-    if (sidebarContainer && sidebarContainer.parentElement) {
-      sidebarContainer.parentElement.removeChild(sidebarContainer);
-    }
-
-    // Add CSS styles
-    if (!document.getElementById('cluster-sidebar-styles')) {
-      const style = document.createElement('style');
-      style.id = 'cluster-sidebar-styles';
-      style.textContent = `
-        #cluster-sidebar {
-          margin-bottom: 1.5rem;
-        }
-        #cluster-sidebar .card {
-          border: 1px solid #dee2e6;
-          border-radius: 0.375rem;
-        }
-        #cluster-sidebar .card-body {
-          padding: 1rem;
-          font-weight: 600;
-          color: #0d3472;
-        }
-        #cluster-sidebar .list-group {
-          border: none;
-        }
-        #cluster-sidebar .list-group-item {
-          border: none;
-          border-bottom: 1px solid #e9ecef;
-          padding: 0.5rem 0;
-          background: transparent;
-        }
-        #cluster-sidebar .list-group-item:last-child {
-          border-bottom: none;
-        }
-        #cluster-sidebar .list-group-item.active {
-          background-color: #e7f1ff;
-          color: #0d3472;
-          border-color: transparent;
-          font-weight: 600;
-        }
-        #cluster-sidebar .category {
-          cursor: pointer;
-          color: #0d3472;
-          padding: 0.375rem 0;
-          display: block;
-          text-decoration: none;
-          transition: color 0.15s ease-in-out;
-        }
-        #cluster-sidebar .category:hover {
-          text-decoration: underline;
-        }
-        #cluster-sidebar .category.active {
-          font-weight: 600;
-          color: #0d3472;
-        }
-        .cluster-hidden {
-          display: none !important;
-        }
-      `;
-      document.head.appendChild(style);
-    }
-  }
-
-  function filterByCluster(cluster, postClusterMap) {
-    // Hide all post elements first
-    const allLinks = document.querySelectorAll('a[href*="posts/"]');
-    const hiddenPosts = new Set();
-
-    allLinks.forEach(link => {
-      const href = link.getAttribute('href');
-      const postNameMatch = href.match(/posts\/(\d+-[a-z\-]+)/);
-      if (!postNameMatch) return;
-
-      const postName = postNameMatch[1];
-      const itemCluster = postClusterMap.get(postName);
-
-      // Hide the parent quarto-post element if cluster doesn't match
-      let postElement = link.closest('.quarto-post');
-      if (postElement) {
-        if (itemCluster !== cluster) {
-          postElement.classList.add('cluster-hidden');
-          hiddenPosts.add(postName);
-        } else {
-          postElement.classList.remove('cluster-hidden');
-        }
-      }
-    });
-  }
-
-  function resetClusterFilter() {
-    const items = document.querySelectorAll('.quarto-listing-item');
-    items.forEach(item => {
-      item.classList.remove('cluster-hidden');
-    });
-  }
-
-  function updateActiveCluster(activeButton) {
-    const buttons = document.querySelectorAll('#cluster-sidebar .category');
-    buttons.forEach(btn => {
-      btn.classList.remove('active');
-    });
-    activeButton.classList.add('active');
-  }
-
-  // Initialize when DOM is ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initClusterFiltering);
-  } else {
-    initClusterFiltering();
-  }
-})();
 </script>
 
 <style>
 .pdf-download-button {
   margin-top: 1rem;
   margin-bottom: 1rem;
-}
-
-.filter-tabs {
-  margin-bottom: 1rem;
-}
-
-.tab-buttons {
-  display: flex;
-  gap: 0;
-  border-bottom: 2px solid #dee2e6;
-  margin: -1rem -1rem 0 -1rem;
-}
-
-.tab-btn {
-  flex: 1;
-  padding: 0.75rem 1rem;
-  border: none;
-  background: transparent;
-  color: #495057;
-  cursor: pointer;
-  font-weight: 500;
-  border-bottom: 3px solid transparent;
-  margin-bottom: -2px;
-  transition: all 0.2s ease;
-}
-
-.tab-btn:hover {
-  background-color: #f8f9fa;
-  color: #0d3472;
-}
-
-.tab-btn.active {
-  color: #0d3472;
-  border-bottom-color: #0d3472;
-  font-weight: 600;
-}
-
-.tab-content {
-  display: none;
-  margin-top: 1rem;
-}
-
-.tab-content.active {
-  display: block;
 }
 </style>
