@@ -1,1 +1,1418 @@
-analysis/report/index.html
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.5.45">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ronald ‘Ryy’ G. Thomas">
+<meta name="dcterms.date" content="2026-04-27">
+<meta name="description" content="Eight Rust-implemented utilities (ripgrep, fd, bat, eza, zoxide, delta, lazygit, fzf) that compose into a Shell-layer extension of the Workflow Construct. The post documents the installation, configuration, daily-use substitutions, and failure modes for each, plus the autojump-to-zoxide migration that preserves the j muscle memory while upgrading the underlying frecency database.">
+
+<title>Modern CLI Replacements for the Shell Layer – focusonr</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../../">
+<script src="../../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": true,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "keyboard-shortcut": [
+    "?",
+    "/"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&amp;family=Open+Sans:ital,wght@0,400;0,600;1,400&amp;family=Fira+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<script src="https://kit.fontawesome.com/0fba9333d8.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+
+<!-- Custom meta tags for social sharing -->
+<meta property="og:site_name" content="Thomas Lab">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@rgt47">
+
+<!-- Add responsive features -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<!-- Add analytics if needed -->
+<!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXX');
+</script> -->
+
+<!-- Add custom javascript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Remove code tools button completely
+  const codeButton = document.querySelector('.code-tools-button');
+  if (codeButton) {
+    codeButton.remove();
+  }
+  
+  // Add any custom JavaScript functionality here
+  
+  // Example: Add smooth scrolling
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      
+      document.querySelector(this.getAttribute('href')).scrollIntoView({
+        behavior: 'smooth'
+      });
+    });
+  });
+  
+  // Make sidebar category items clickable (but not TOC items)
+  const categoryLinks = {
+    'Programming & Development': '/posts/?category=Programming+%26+Development',
+    'Data Analysis & Visualization': '/posts/?category=Data+Analysis+%26+Visualization',
+    'Deployment & Operations': '/posts/?category=Deployment+%26+Operations',
+    'Development Environment': '/posts/?category=Development+Environment',
+    'Shiny Applications': '/posts/?category=Shiny+Applications',
+    'AI & Automation': '/posts/?category=AI+%26+Automation',
+    'System Administration': '/posts/?category=System+Administration'
+  };
+  
+  // Only target sidebar items that are not in the TOC
+  document.querySelectorAll('.sidebar-item-section .sidebar-item-text').forEach(item => {
+    // Skip if this is inside the TOC
+    if (item.closest('#TOC')) return;
+    
+    const text = item.textContent.trim();
+    if (categoryLinks[text]) {
+      item.addEventListener('click', function() {
+        window.location.href = categoryLinks[text];
+      });
+    }
+  });
+});
+</script>
+
+
+<meta property="og:title" content="focusonr - Modern CLI Replacements for the Shell Layer">
+<meta property="og:description" content="Eight Rust-implemented utilities (ripgrep, fd, bat, eza, zoxide, delta, lazygit, fzf) that compose into a Shell-layer extension of the Workflow Construct. The post documents the installation, configuration, daily-use substitutions, and failure modes for each, plus the autojump-to-zoxide migration that preserves the j muscle memory while upgrading the underlying frecency database.">
+<meta property="og:image" content="https://focusonr.org/posts/21-wf-modern-cli-tools/wf-modern-cli-tools/media/images/hero.png">
+<meta property="og:site_name" content="focusonr">
+<meta property="og:image:height" content="1920">
+<meta property="og:image:width" content="1920">
+</head>
+
+<body class="nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../../index.html">
+    <span class="navbar-title">focusonr</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../blog/index.html"> 
+<span class="menu-text">Blog</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="https://rgtlab.org"> 
+<span class="menu-text">rgtlab.org</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47"> <i class="bi bi-twitter" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a>
+  <ul class="collapse">
+  <li><a href="#motivations" id="toc-motivations" class="nav-link" data-scroll-target="#motivations"><span class="header-section-number">1.1</span> Motivations</a></li>
+  <li><a href="#objectives" id="toc-objectives" class="nav-link" data-scroll-target="#objectives"><span class="header-section-number">1.2</span> Objectives</a></li>
+  </ul></li>
+  <li><a href="#what-is-the-modern-cli-replacement-family" id="toc-what-is-the-modern-cli-replacement-family" class="nav-link" data-scroll-target="#what-is-the-modern-cli-replacement-family"><span class="header-section-number">2</span> What Is the Modern CLI Replacement Family?</a></li>
+  <li><a href="#prerequisites" id="toc-prerequisites" class="nav-link" data-scroll-target="#prerequisites"><span class="header-section-number">3</span> Prerequisites</a></li>
+  <li><a href="#installation" id="toc-installation" class="nav-link" data-scroll-target="#installation"><span class="header-section-number">4</span> Installation</a>
+  <ul class="collapse">
+  <li><a href="#macos-homebrew" id="toc-macos-homebrew" class="nav-link" data-scroll-target="#macos-homebrew"><span class="header-section-number">4.1</span> macOS (Homebrew)</a></li>
+  <li><a href="#debian-derived-linux-ubuntu-24.04-mint-22" id="toc-debian-derived-linux-ubuntu-24.04-mint-22" class="nav-link" data-scroll-target="#debian-derived-linux-ubuntu-24.04-mint-22"><span class="header-section-number">4.2</span> Debian-derived Linux (Ubuntu 24.04, Mint 22)</a></li>
+  </ul></li>
+  <li><a href="#configuration" id="toc-configuration" class="nav-link" data-scroll-target="#configuration"><span class="header-section-number">5</span> Configuration</a>
+  <ul class="collapse">
+  <li><a href="#migration-autojump-to-zoxide" id="toc-migration-autojump-to-zoxide" class="nav-link" data-scroll-target="#migration-autojump-to-zoxide"><span class="header-section-number">5.1</span> Migration: autojump to zoxide</a></li>
+  </ul></li>
+  <li><a href="#verification" id="toc-verification" class="nav-link" data-scroll-target="#verification"><span class="header-section-number">6</span> Verification</a></li>
+  <li><a href="#daily-workflow" id="toc-daily-workflow" class="nav-link" data-scroll-target="#daily-workflow"><span class="header-section-number">7</span> Daily Workflow</a></li>
+  <li><a href="#things-to-watch-out-for" id="toc-things-to-watch-out-for" class="nav-link" data-scroll-target="#things-to-watch-out-for"><span class="header-section-number">8</span> Things to Watch Out For</a></li>
+  <li><a href="#uninstall-rollback" id="toc-uninstall-rollback" class="nav-link" data-scroll-target="#uninstall-rollback"><span class="header-section-number">9</span> Uninstall / Rollback</a></li>
+  <li><a href="#lessons-learnt" id="toc-lessons-learnt" class="nav-link" data-scroll-target="#lessons-learnt"><span class="header-section-number">10</span> Lessons Learnt</a>
+  <ul class="collapse">
+  <li><a href="#conceptual" id="toc-conceptual" class="nav-link" data-scroll-target="#conceptual"><span class="header-section-number">10.0.1</span> Conceptual</a></li>
+  <li><a href="#technical" id="toc-technical" class="nav-link" data-scroll-target="#technical"><span class="header-section-number">10.0.2</span> Technical</a></li>
+  <li><a href="#gotcha-shaped" id="toc-gotcha-shaped" class="nav-link" data-scroll-target="#gotcha-shaped"><span class="header-section-number">10.0.3</span> Gotcha-shaped</a></li>
+  </ul></li>
+  <li><a href="#limitations" id="toc-limitations" class="nav-link" data-scroll-target="#limitations"><span class="header-section-number">11</span> Limitations</a></li>
+  <li><a href="#opportunities-for-improvement" id="toc-opportunities-for-improvement" class="nav-link" data-scroll-target="#opportunities-for-improvement"><span class="header-section-number">12</span> Opportunities for Improvement</a></li>
+  <li><a href="#wrapping-up" id="toc-wrapping-up" class="nav-link" data-scroll-target="#wrapping-up"><span class="header-section-number">13</span> Wrapping Up</a></li>
+  <li><a href="#see-also" id="toc-see-also" class="nav-link" data-scroll-target="#see-also"><span class="header-section-number">14</span> See Also</a></li>
+  <li><a href="#reproducibility" id="toc-reproducibility" class="nav-link" data-scroll-target="#reproducibility"><span class="header-section-number">15</span> Reproducibility</a></li>
+  <li><a href="#feedback" id="toc-feedback" class="nav-link" data-scroll-target="#feedback"><span class="header-section-number">16</span> Feedback</a>
+  <ul class="collapse">
+  <li><a href="#related-posts-in-this-cluster" id="toc-related-posts-in-this-cluster" class="nav-link" data-scroll-target="#related-posts-in-this-cluster"><span class="header-section-number">16.1</span> Related posts in this cluster</a></li>
+  </ul></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="index.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content column-page-left" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Modern CLI Replacements for the Shell Layer</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">setup</div>
+    <div class="quarto-category">shell</div>
+    <div class="quarto-category">cli</div>
+    <div class="quarto-category">workflow</div>
+    <div class="quarto-category">workflow-construct</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    <p>Eight Rust-implemented utilities (ripgrep, fd, bat, eza, zoxide, delta, lazygit, fzf) that compose into a Shell-layer extension of the Workflow Construct. The post documents the installation, configuration, daily-use substitutions, and failure modes for each, plus the autojump-to-zoxide migration that preserves the <code>j</code> muscle memory while upgrading the underlying frecency database.</p>
+  </div>
+</div>
+
+
+<div class="quarto-title-meta column-page-left">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ronald ‘Ryy’ G. Thomas </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">April 27, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/hero.png" class="img-fluid figure-img" style="width:80.0%"></p>
+<figcaption>A bench of polished hand tools laid out in order of use, with each tool noticeably newer in design than its predecessor on the bench. The image evokes the idea that the same task (cutting, smoothing, fastening) can be accomplished with successive generations of tooling whose ergonomic differences accumulate into a meaningful change in how the work feels, even though the underlying purpose is unchanged.</figcaption>
+</figure>
+</div>
+<p><em>Replacing the historical Unix utilities with their Rust-implemented counterparts is a Shell-layer extension that preserves the layer’s contract while substantially improving its defaults.</em></p>
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>The historical Unix utilities (<code>grep</code>, <code>find</code>, <code>cat</code>, <code>ls</code>, <code>cd</code>, <code>git</code>) are, in a meaningful sense, finished software. Their interfaces have not changed in decades, their behaviour is portable across every system likely to host them, and their performance is adequate for the cases they were originally designed to address. They are also, increasingly, tools whose defaults reflect the constraints of the environment that produced them rather than the environment in which they are now most commonly used. <code>grep</code> does not recursively search by default because in 1973 a recursive search across a single user’s home directory was a non-trivial fraction of available compute; in 2026, recursing across a half-million-file checkout is a sub-second operation and the default has not caught up. Similarly, <code>find</code> does not respect <code>.gitignore</code> because <code>.gitignore</code> did not exist; <code>ls</code> does not show git status because git did not exist; <code>cd</code> does not learn frequently-visited directories because the disks of the era could not afford a frecency database.</p>
+<p>A small set of Rust-implemented utilities, authored predominantly between 2017 and 2023, address these defaults without changing the interfaces that downstream scripts and muscle memory depend on. They are not faster reimplementations in the sense of producing identical output more quickly; they produce different output, by design, when the historical default is the part that the user most often wanted to override. The collection covered in this post (<code>ripgrep</code>, <code>fd</code>, <code>bat</code>, <code>eza</code>, <code>zoxide</code>, <code>delta</code>, <code>lazygit</code>, plus <code>fzf</code> as the connective tissue) is the most-installed subset and the one whose ergonomic gains are large enough to justify the configuration work.</p>
+<p>More formally, we document here an extension to the Shell layer (Layer 4) of the Workflow Construct described in <a href="../../../posts/52-workflow-construct/">post 52</a>. The Shell layer is substitutable (zsh can be replaced with bash, fish, or nushell), and so are the utilities the shell calls on. This post is the substitution catalogue for the <code>grep</code> / <code>find</code> / <code>cat</code> / <code>ls</code> / <code>cd</code> / <code>git</code> family at the layer below the shell itself, with explicit migration notes for the autojump plugin already present in the construct.</p>
+<section id="motivations" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="motivations"><span class="header-section-number">1.1</span> Motivations</h2>
+<p>The pain points that motivated documenting these tools as a construct extension are specific:</p>
+<ul>
+<li>The <code>grep</code> reflex of <code>grep -r</code> plus a shell-quoted glob pattern produces matches inside <code>node_modules/</code>, <code>.git/</code>, build directories, and binary files in roughly equal measure. The signal-to-noise ratio degrades to the point where the output is more frustrating than absent.</li>
+<li>The <code>find</code> syntax (<code>find . -name '*.R' -not -path   './renv/*'</code>) is hard to remember between sessions and hard to read in a script. The cost of forgetting the syntax is a context switch to read the man page; the cost of remembering it imperfectly is silent inclusion or exclusion of files the user did not intend.</li>
+<li>The <code>cd</code> reflex (<code>cd ~/Dropbox/prj/03-name/...</code>) is re-typed dozens of times per day across the same set of project roots. Tab completion helps but does not learn.</li>
+<li><code>git diff</code> in a terminal that does not paginate syntax-highlighted output is the operation the author most often defers to RStudio for, despite the rest of their workflow being terminal-native. The friction is small per invocation and large in aggregate.</li>
+<li>The construct already includes <code>j</code> (autojump) for fuzzy directory navigation. The autojump implementation (Python, single user-level database, occasional startup-time slowness on large <code>cdpath</code> sets) has been superseded by <code>zoxide</code> (Rust, multi-user-aware, faster startup), and the migration preserves the <code>j</code> muscle memory.</li>
+</ul>
+</section>
+<section id="objectives" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="objectives"><span class="header-section-number">1.2</span> Objectives</h2>
+<p>The post sets out to deliver:</p>
+<ol type="1">
+<li>Installation commands for each tool on macOS (Homebrew) and Debian-derived Linux (<code>apt</code> plus the project’s GitHub releases when the upstream package lags).</li>
+<li>A single canonical <code>.zshrc</code> block that activates each tool, with the autojump-to-zoxide migration handled in-place rather than as a separate step.</li>
+<li>A daily-workflow command table mapping each historical utility to its replacement, with the substitution verified for the most common invocations the author actually types.</li>
+<li>A failure-mode catalogue (Things to Watch Out For) covering the cases in which the new defaults produce surprising results.</li>
+</ol>
+<p>The reader should be able to install, configure, and verify the full set in approximately one hour, after which the historical utilities can be retained as fallbacks (they are not removed) but used principally for portability work and remote sessions where the modern tools are absent.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/placeholder-coffee-02.jpg" class="img-fluid figure-img"></p>
+<figcaption>Placeholder ambiance image (coffee, Unsplash free licence). To be replaced with a screenshot of <code>eza --tree --git --icons</code> showing a project root with git status indicators visible alongside the directory listing.</figcaption>
+</figure>
+</div>
+</section>
+</section>
+<section id="what-is-the-modern-cli-replacement-family" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> What Is the Modern CLI Replacement Family?</h1>
+<p>The eight tools covered here are not a coordinated distribution; each was authored independently by different maintainers and adopts its own configuration conventions. What unifies them is a set of design choices that each project arrived at without coordination:</p>
+<ul>
+<li><strong>Sensible defaults.</strong> Recursion, colourisation, and respect for <code>.gitignore</code> are on by default. The user should not have to remember three flags to make the tool do the obviously-useful thing.</li>
+<li><strong>Performance through Rust.</strong> The tools are implemented in a language that produces binaries with predictable performance characteristics on large inputs. The difference matters most on directory trees with hundreds of thousands of files; on smaller inputs the gain is imperceptible but the defaults still differ.</li>
+<li><strong>Composability with <code>fzf</code>.</strong> Each tool produces output that pipes cleanly into a fuzzy finder for interactive selection. The composition replaces several historical patterns (interactive command-history substitution, file selection, process killing) with a single muscle memory.</li>
+<li><strong>Optional substitution.</strong> Each tool can be aliased over the historical utility (<code>alias grep='rg'</code>) or kept under its own name. The construct documented here keeps both available: the modern tool under its native name for interactive use, the historical tool unchanged for scripts and remote sessions.</li>
+</ul>
+<p>The collection is not exhaustive. Notable adjacent tools that are deliberately not covered include <code>procs</code> (replacement for <code>ps</code>), <code>dust</code> (replacement for <code>du</code>), <code>bottom</code> (replacement for <code>top</code>), and <code>sd</code> (replacement for <code>sed</code>). They follow the same design pattern; the case for adopting them is real but is not load-bearing for the construct, so they are left as a later optional extension.</p>
+</section>
+<section id="prerequisites" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Prerequisites</h1>
+<p>The configuration assumes:</p>
+<ul>
+<li><strong>Operating system:</strong> macOS 13+ with Homebrew, or Debian-derived Linux with <code>apt</code> and access to the project’s GitHub releases for the few cases where the distribution package lags upstream.</li>
+<li><strong>Shell:</strong> zsh 5.0 or later (post 01 prerequisite). The configuration block below is zsh-specific; bash users will need to translate the function syntax.</li>
+<li><strong>Existing construct setup:</strong> the dotfiles repository (post 24) and the zsh setup (post 01) should already be in place. The configuration here is a single block added to <code>.zshrc</code>; the canonical place for it is just below the existing FZF configuration.</li>
+<li><strong>Time investment:</strong> approximately 30 minutes for installation, 15 minutes for configuration, and a further 15 minutes for the autojump-to-zoxide database migration if applicable. The total is under an hour for users starting from the construct’s existing zsh setup.</li>
+</ul>
+</section>
+<section id="installation" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Installation</h1>
+<section id="macos-homebrew" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="macos-homebrew"><span class="header-section-number">4.1</span> macOS (Homebrew)</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">brew</span> install ripgrep fd bat eza zoxide git-delta lazygit fzf</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Verify each is on $PATH</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> t <span class="kw">in</span> rg fd bat eza zoxide delta lazygit fzf<span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="bu">command</span> <span class="at">-v</span> <span class="st">"</span><span class="va">$t</span><span class="st">"</span> <span class="op">&gt;</span> /dev/null <span class="kw">&amp;&amp;</span> <span class="bu">echo</span> <span class="st">"</span><span class="va">$t</span><span class="st">: </span><span class="va">$(</span><span class="bu">command</span> <span class="at">-v</span> <span class="va">$t)</span><span class="st">"</span> <span class="dt">\</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">||</span> <span class="bu">echo</span> <span class="st">"</span><span class="va">$t</span><span class="st">: MISSING"</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="debian-derived-linux-ubuntu-24.04-mint-22" class="level2" data-number="4.2">
+<h2 data-number="4.2" class="anchored" data-anchor-id="debian-derived-linux-ubuntu-24.04-mint-22"><span class="header-section-number">4.2</span> Debian-derived Linux (Ubuntu 24.04, Mint 22)</h2>
+<p>The Debian archive lags upstream for several of these tools. The recipe below uses <code>apt</code> where the version is acceptable and the upstream release otherwise.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt update</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt install <span class="at">-y</span> ripgrep fd-find bat fzf</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># fd is named fdfind on Debian to avoid conflict with an older tool;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co"># install a personal symlink to fd</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> ~/.local/bin</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="fu">ln</span> <span class="at">-sf</span> <span class="st">"</span><span class="va">$(</span><span class="bu">command</span> <span class="at">-v</span> fdfind<span class="va">)</span><span class="st">"</span> ~/.local/bin/fd</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co"># bat is named batcat on Debian for the same reason</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="fu">ln</span> <span class="at">-sf</span> <span class="st">"</span><span class="va">$(</span><span class="bu">command</span> <span class="at">-v</span> batcat<span class="va">)</span><span class="st">"</span> ~/.local/bin/bat</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="co"># eza, zoxide, delta, lazygit are not in the Debian archive (or lag)</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Install from upstream releases:</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="va">EZA_VERSION</span><span class="op">=</span><span class="va">$(</span><span class="ex">curl</span> <span class="at">-s</span> https://api.github.com/repos/eza-community/eza/releases/latest <span class="kw">|</span> <span class="ex">jq</span> <span class="at">-r</span> .tag_name<span class="va">)</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co"># (continue per upstream's instructions)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The Debian Linux installation is consciously more hand-rolled than the macOS path; this is the one place where the polyglot shell scripts module of the construct earns its keep.</p>
+</section>
+</section>
+<section id="configuration" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Configuration</h1>
+<p>The full <code>.zshrc</code> block to activate the family follows. It is intended to live just below the existing FZF block in <code>~/Dropbox/dotfiles/zshrc</code> (the construct’s canonical dotfile location, post 24).</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode zsh code-with-copy"><code class="sourceCode zsh"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ============================================================</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Modern CLI Replacements (post 53)</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># ============================================================</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co"># zoxide: replaces cd's frequency table; '--cmd j' aliases the</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co"># binary to 'j', preserving the autojump muscle memory while</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co"># migrating the database.</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">command</span> <span class="at">-v</span> zoxide <span class="op">&gt;</span> /dev/null <span class="dv">2</span><span class="op">&gt;&amp;</span><span class="dv">1</span><span class="kw">;</span> <span class="cf">then</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  <span class="bu">eval</span> <span class="st">"</span><span class="va">$(</span><span class="ex">zoxide</span> init zsh <span class="at">--cmd</span> j<span class="va">)</span><span class="st">"</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="cf">fi</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="co"># eza: ls replacement with git awareness and tree mode</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">command</span> <span class="at">-v</span> eza <span class="op">&gt;</span> /dev/null <span class="dv">2</span><span class="op">&gt;&amp;</span><span class="dv">1</span><span class="kw">;</span> <span class="cf">then</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  <span class="bu">alias</span> ls=<span class="st">'eza --group-directories-first'</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  <span class="bu">alias</span> ll=<span class="st">'eza -l --git --group-directories-first'</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>  <span class="bu">alias</span> la=<span class="st">'eza -la --git --group-directories-first'</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  <span class="bu">alias</span> lt=<span class="st">'eza --tree --level=2 --git-ignore'</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="cf">fi</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="co"># bat: cat with syntax highlighting; only alias for interactive</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a><span class="co"># use, because pipelines that consume cat's output assume</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a><span class="co"># unstyled bytes.</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">command</span> <span class="at">-v</span> bat <span class="op">&gt;</span> /dev/null <span class="dv">2</span><span class="op">&gt;&amp;</span><span class="dv">1</span><span class="kw">;</span> <span class="cf">then</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>  <span class="bu">alias</span> cat=<span class="st">'bat --paging=never --style=plain'</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Force plain output when piping (defensive)</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>  <span class="bu">export</span> <span class="va">BAT_PAGER</span><span class="op">=</span><span class="st">'less -R'</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a><span class="cf">fi</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a><span class="co"># delta: pager for git diff</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">command</span> <span class="at">-v</span> delta <span class="op">&gt;</span> /dev/null <span class="dv">2</span><span class="op">&gt;&amp;</span><span class="dv">1</span><span class="kw">;</span> <span class="cf">then</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>  <span class="bu">export</span> <span class="va">GIT_PAGER</span><span class="op">=</span><span class="st">'delta'</span></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a><span class="cf">fi</span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a><span class="co"># fd, ripgrep: no aliasing required (their names are distinct).</span></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a><span class="co"># ripgrep is already configured as FZF_DEFAULT_COMMAND in the</span></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a><span class="co"># zshrc's FZF block.</span></span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a><span class="co"># Optional: lazygit alias (not auto-aliased to git so that</span></span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a><span class="co"># scripted git commands still hit the porcelain).</span></span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">command</span> <span class="at">-v</span> lazygit <span class="op">&gt;</span> /dev/null <span class="dv">2</span><span class="op">&gt;&amp;</span><span class="dv">1</span><span class="kw">;</span> <span class="cf">then</span></span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a>  <span class="bu">alias</span> lg=<span class="st">'lazygit'</span></span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a><span class="cf">fi</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The <code>git config</code> for delta requires a separate edit, since it lives in <code>~/.gitconfig</code> rather than <code>.zshrc</code>:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode ini code-with-copy"><code class="sourceCode ini"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">[core]</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="dt">    pager </span><span class="ot">=</span><span class="st"> delta</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">[interactive]</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="dt">    diffFilter </span><span class="ot">=</span><span class="st"> delta --color-only</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="kw">[delta]</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="dt">    navigate </span><span class="ot">=</span><span class="st"> </span><span class="kw">true</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="dt">    light </span><span class="ot">=</span><span class="st"> </span><span class="kw">false</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="dt">    line-numbers </span><span class="ot">=</span><span class="st"> </span><span class="kw">true</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="dt">    side-by-side </span><span class="ot">=</span><span class="st"> </span><span class="kw">true</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="kw">[merge]</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="dt">    conflictstyle </span><span class="ot">=</span><span class="st"> diff3</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="kw">[diff]</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="dt">    colorMoved </span><span class="ot">=</span><span class="st"> </span><span class="kw">default</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The <code>delta</code> configuration is presented as a complete file fragment because partial fragments are the source of the most frequent reader confusion (the <code>[merge]</code> and <code>[diff]</code> sections are required for <code>delta</code>’s side-by-side merge display, and are easy to omit).</p>
+<section id="migration-autojump-to-zoxide" class="level2" data-number="5.1">
+<h2 data-number="5.1" class="anchored" data-anchor-id="migration-autojump-to-zoxide"><span class="header-section-number">5.1</span> Migration: autojump to zoxide</h2>
+<p>The construct currently activates autojump via the plugin-loader block in <code>.zshrc</code> (the <code>[[ -s $BREW_PREFIX/etc/profile.d/autojump.sh ]] &amp;&amp; source ...</code> line). Migrating to zoxide while preserving the <code>j</code> muscle memory is a three-step substitution:</p>
+<ol type="1">
+<li><p>Add the <code>zoxide init zsh --cmd j</code> line shown above. With both autojump and zoxide active, <code>j</code> resolves to whichever was sourced last; the order matters.</p></li>
+<li><p>Comment out the autojump source line. Zoxide is now exclusive on the <code>j</code> keyword.</p></li>
+<li><p>Optionally seed the zoxide database with the autojump history:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">awk</span> <span class="st">'{print $2}'</span> ~/.local/share/autojump/autojump.txt <span class="kw">|</span> <span class="dt">\</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">while</span> <span class="bu">read</span> <span class="at">-r</span> <span class="va">dir</span><span class="kw">;</span> <span class="cf">do</span> <span class="ex">zoxide</span> add <span class="st">"</span><span class="va">$dir</span><span class="st">"</span><span class="kw">;</span> <span class="cf">done</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>This preserves the user’s accumulated frecency data rather than starting fresh.</p></li>
+</ol>
+<p>After a few days of use, the autojump installation can be fully removed:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">brew</span> uninstall autojump   <span class="co"># macOS</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="co"># or apt remove autojump  # Debian</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span> <span class="at">-rf</span> ~/.local/share/autojump</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+</section>
+<section id="verification" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Verification</h1>
+<p>The block below confirms each tool is installed, on <code>$PATH</code>, and reachable through its expected name. Run after sourcing the new <code>.zshrc</code>.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Each command should print a version line; failures localise</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co"># to the corresponding tool.</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="ex">rg</span> <span class="at">--version</span> <span class="kw">|</span> <span class="fu">head</span> <span class="at">-1</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="ex">fd</span> <span class="at">--version</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="ex">bat</span> <span class="at">--version</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="ex">eza</span> <span class="at">--version</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="ex">zoxide</span> <span class="at">--version</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="ex">delta</span> <span class="at">--version</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="ex">lazygit</span> <span class="at">--version</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="ex">fzf</span> <span class="at">--version</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Functional smoke tests</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="ex">rg</span> <span class="st">'ggplot'</span> <span class="at">--type</span> r .                    <span class="co"># Should respect .gitignore</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="ex">fd</span> <span class="st">'\.qmd$'</span>                                <span class="co"># Should match recursively</span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a><span class="ex">bat</span> README.md <span class="kw">|</span> <span class="fu">head</span> <span class="at">-5</span>                    <span class="co"># Should syntax-highlight</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="ex">eza</span> <span class="at">--tree</span> <span class="at">--level</span><span class="op">=</span>2 <span class="at">--git-ignore</span>         <span class="co"># Should show git-aware listing</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a><span class="ex">j</span> workflow                                 <span class="co"># Should jump (zoxide)</span></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> diff HEAD~1 HEAD                       <span class="co"># Should display via delta</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>A green pass on all eight version commands plus a working <code>j</code> jump indicates the migration is complete.</p>
+</section>
+<section id="daily-workflow" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Daily Workflow</h1>
+<p>Once configured, the daily-use substitution table is small and stable. The historical utilities remain available for edge cases where the modern defaults are wrong.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Task</th>
+<th>Historical</th>
+<th>Modern</th>
+<th>Reason for the modern default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Recursive text search</td>
+<td><code>grep -r 'pattern' .</code></td>
+<td><code>rg 'pattern'</code></td>
+<td>Recursive by default, respects <code>.gitignore</code>, parallel</td>
+</tr>
+<tr class="even">
+<td>Find files by name</td>
+<td><code>find . -name '*.R'</code></td>
+<td><code>fd '\.R$'</code></td>
+<td>Shorter syntax, parallel, respects <code>.gitignore</code></td>
+</tr>
+<tr class="odd">
+<td>Display file with highlighting</td>
+<td><code>cat file.R \| less</code></td>
+<td><code>bat file.R</code></td>
+<td>Syntax highlighting, line numbers</td>
+</tr>
+<tr class="even">
+<td>List with git status</td>
+<td><code>ls -la</code></td>
+<td><code>eza -la --git</code></td>
+<td>Git-aware columns, more readable defaults</td>
+</tr>
+<tr class="odd">
+<td>List as tree</td>
+<td><code>find . -type d \| head</code></td>
+<td><code>eza --tree --level=2</code></td>
+<td>Purpose-built</td>
+</tr>
+<tr class="even">
+<td>Jump to known directory</td>
+<td><code>cd ~/Dropbox/prj/...</code></td>
+<td><code>j keyword</code></td>
+<td>Frecency-based, fuzzy</td>
+</tr>
+<tr class="odd">
+<td>View git diff</td>
+<td><code>git diff</code></td>
+<td><code>git diff</code> (with delta pager)</td>
+<td>Syntax-highlighted, hunk-anchored</td>
+</tr>
+<tr class="even">
+<td>Interactive git review</td>
+<td><code>git log; git show ...</code></td>
+<td><code>lazygit</code></td>
+<td>Terminal UI</td>
+</tr>
+<tr class="odd">
+<td>Interactive selection</td>
+<td><code>Ctrl-r</code> (history)</td>
+<td><code>Ctrl-r</code> (fzf)</td>
+<td>Fuzzy across history, files, processes</td>
+</tr>
+</tbody>
+</table>
+<p>The substitution is partial by design: scripts continue to use the historical names (<code>grep</code>, <code>find</code>) for portability, and the modern tools are invoked under their native names (<code>rg</code>, <code>fd</code>) for interactive use. Aliasing <code>grep</code> to <code>rg</code> globally is possible but breaks scripts that rely on <code>grep</code>’s exact output format; the aliasing here is limited to <code>ls</code>, <code>cat</code>, and <code>git diff</code> (via <code>GIT_PAGER</code>), which are display-only commands whose output is not parsed by other tools.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/placeholder-coffee-03.jpg" class="img-fluid figure-img"></p>
+<figcaption>Placeholder ambiance image (coffee, Unsplash free licence). To be replaced with a screenshot of <code>lazygit</code> running on the qblog repository, with the staged-changes panel visible alongside the file list.</figcaption>
+</figure>
+</div>
+</section>
+<section id="things-to-watch-out-for" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Things to Watch Out For</h1>
+<p>Six gotchas have surfaced repeatedly during real use of this configuration. Each is small in isolation; in aggregation they are the most common reasons users abandon the migration in the first week.</p>
+<ul>
+<li><strong><code>ripgrep</code> ignores <code>.gitignore</code> by default; this is occasionally undesirable.</strong> Add <code>--no-ignore</code> to search inside ignored directories (for example, when grepping through <code>node_modules/</code> for a third-party bug). The flag is the most common one to need; aliasing <code>rg='rg --no-ignore-vcs'</code> is over-aggressive and not recommended.</li>
+<li><strong><code>bat</code> aliased over <code>cat</code> breaks pipelines that consume literal bytes.</strong> The configuration above sets <code>--paging=never --style=plain</code> and <code>BAT_PAGER</code> to mitigate, but pipelines that depend on <code>cat</code>’s exact byte-for-byte output (uncommon but real, e.g., when passing a file to a hash function) should call <code>\cat</code> (with backslash) or <code>/bin/cat</code> to bypass the alias.</li>
+<li><strong><code>eza</code> icons require a Nerd Font.</strong> The default <code>eza</code> output is fine without icons; adding <code>--icons</code> produces glyph rendering that requires a patched font (Hack Nerd Font, FiraCode Nerd Font, etc.). Without the font, the icons render as Unicode replacement squares. Either install a Nerd Font in the terminal or omit <code>--icons</code>.</li>
+<li><strong><code>lazygit</code> and <code>delta</code> interact in a non-obvious way.</strong> <code>lazygit</code> has its own diff viewer that does not call <code>GIT_PAGER</code>; setting <code>delta</code> as the pager affects <code>git diff</code> from the shell but not <code>lazygit</code>’s internal diff display. <code>lazygit</code> can be configured to use <code>delta</code> via <code>~/.config/lazygit/config.yml</code> (<code>gui.pagerPath:   delta</code>) if uniform diff styling is desired.</li>
+<li><strong><code>zoxide</code>’s <code>j</code> does not include directories that have not been visited via the underlying <code>cd</code> at least once while zoxide is installed.</strong> A new clone is invisible to <code>j</code> until the user <code>cd</code>s into it manually the first time. The autojump-to-zoxide migration recipe above seeds the database to mitigate.</li>
+<li><strong><code>fd</code>’s default ignores hidden files (those starting with <code>.</code>).</strong> <code>fd 'config'</code> will not match <code>.gitignore</code>, <code>.zshrc</code>, or <code>.config/...</code>. Use <code>fd -H 'config'</code> to include hidden entries; the equivalent <code>find</code> reflex matches them by default, which is the opposite of <code>fd</code>’s default and the second most common cause of confusion in the first week.</li>
+<li><strong>macOS <code>find -regex</code> and <code>fd '...'</code> use different regex syntaxes (BSD vs.&nbsp;Rust).</strong> Patterns translated literally fail in unobvious ways. The <code>fd</code> documentation lists the correspondences; a copy is worth keeping nearby until the Rust regex syntax is internalised.</li>
+</ul>
+</section>
+<section id="uninstall-rollback" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> Uninstall / Rollback</h1>
+<p>The migration is non-destructive. Each tool can be removed without affecting the others; removing all of them returns the shell to its pre-installation state.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove tools (macOS)</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="ex">brew</span> uninstall ripgrep fd bat eza zoxide git-delta lazygit fzf</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove the .zshrc block: delete or comment out the</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="co"># 'Modern CLI Replacements (post 53)' section.</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove delta from ~/.gitconfig: delete the [core], [delta],</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="co"># [merge], [diff], [interactive] sections (or revert the</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="co"># values to git's defaults).</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove zoxide's database (optional)</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span> <span class="at">-rf</span> ~/.local/share/zoxide</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Restore autojump if the migration was reversed</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a><span class="ex">brew</span> install autojump</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Add the autojump source line back to .zshrc</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The historical utilities (<code>grep</code>, <code>find</code>, <code>cat</code>, <code>ls</code>, <code>cd</code>) are unaffected by any of the above; they remain available at their canonical paths regardless of which modern tools are installed.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/placeholder-coffee-04.jpg" class="img-fluid figure-img"></p>
+<figcaption>Placeholder ambiance image (coffee, Unsplash free licence). To be replaced with a screenshot of a tiled terminal showing <code>rg</code>, <code>fd</code>, <code>bat</code>, and <code>eza</code> running side by side.</figcaption>
+</figure>
+</div>
+</section>
+<section id="lessons-learnt" class="level1" data-number="10">
+<h1 data-number="10"><span class="header-section-number">10</span> Lessons Learnt</h1>
+<p>Working through this migration on three machines (the construct’s MacBook, the ThinkPad with Linux Mint, and a clean EC2 Ubuntu instance) surfaced lessons grouped into three buckets.</p>
+<section id="conceptual" class="level3" data-number="10.0.1">
+<h3 data-number="10.0.1" class="anchored" data-anchor-id="conceptual"><span class="header-section-number">10.0.1</span> Conceptual</h3>
+<ul>
+<li><strong>A Shell-layer extension is exactly that, an extension.</strong> None of the tools above replaces the layer; each adds an alternative under a new name and an optional alias under the historical name. This is the cleanest pattern for any layer-extension work in the construct: keep the historical tool reachable, add the modern tool alongside, let the user choose per invocation.</li>
+<li><strong>Sensible defaults are the bulk of the value, not raw speed.</strong> Of the eight tools, only <code>ripgrep</code> and <code>fd</code> show meaningfully better wall-clock performance on small inputs. The other six are roughly comparable in speed to their historical predecessors and earn their place through colourisation, git awareness, syntax highlighting, and <code>.gitignore</code> respect. Speed matters on large inputs but is not the primary reason to adopt.</li>
+<li><strong>Frecency-based directory navigation pays the largest per-keystroke dividend.</strong> The substitution from <code>cd ~/Dropbox/prj/03-name/...</code> to <code>j 03</code> saves a measurable fraction of a working day across hundreds of invocations. None of the other substitutions has the same per-keystroke ratio.</li>
+<li><strong>Polyglot shell-script modules earn their keep on the Linux side.</strong> The macOS path is uniformly <code>brew install</code>; the Debian path is a mix of <code>apt install</code>, project release downloads, and personal <code>~/.local/bin</code> symlinks. The construct’s shell-scripts row absorbs this complexity by version-controlling the install recipe rather than re-deriving it on each new machine.</li>
+</ul>
+</section>
+<section id="technical" class="level3" data-number="10.0.2">
+<h3 data-number="10.0.2" class="anchored" data-anchor-id="technical"><span class="header-section-number">10.0.2</span> Technical</h3>
+<ul>
+<li><strong><code>fzf</code> is the connective tissue, not a peer.</strong> The other seven tools are individually useful; the composition becomes meaningfully more powerful when piped into <code>fzf</code> for interactive selection. The construct’s existing <code>FZF_DEFAULT_COMMAND='rg --files --hidden'</code> line is the keystone of this composition.</li>
+<li><strong><code>zoxide</code>’s <code>--cmd j</code> flag is the migration’s hinge.</strong> Without it, the migration would require relearning a new command (<code>z</code> instead of <code>j</code>) and the muscle memory cost would dominate the ergonomic gain. With it, the migration is invisible to the user’s daily flow.</li>
+<li><strong><code>delta</code>’s side-by-side mode requires sufficient terminal width.</strong> A laptop screen at default font size has ~80 columns; side-by-side becomes unreadable below ~120. Either set a smaller font for git operations or disable <code>side-by-side</code> for narrow terminals via a conditional <code>~/.gitconfig</code> include.</li>
+<li><strong><code>bat</code>’s syntax detection occasionally guesses wrong on ambiguous extensions.</strong> <code>.R</code> is correctly inferred as R; <code>.Rmd</code> is sometimes inferred as Markdown only (without the R-chunk highlighting). Force the language with <code>bat --language=Rmd file.Rmd</code> when needed.</li>
+</ul>
+</section>
+<section id="gotcha-shaped" class="level3" data-number="10.0.3">
+<h3 data-number="10.0.3" class="anchored" data-anchor-id="gotcha-shaped"><span class="header-section-number">10.0.3</span> Gotcha-shaped</h3>
+<ul>
+<li><strong><code>eza</code> does not have a stable command-line flag set across major versions.</strong> A <code>.zshrc</code> alias that worked with eza 0.18 may need a flag swap on 0.20 (the <code>--git-ignore</code> flag changed semantics). Pin a minimum version in the version matrix below and re-verify aliases after an upgrade.</li>
+<li><strong><code>git-delta</code> is the Homebrew package name; the binary is <code>delta</code>. Do not be confused by the apparent mismatch.</strong> On Linux, the upstream tarball name is <code>delta-${VERSION}-x86_64-unknown-linux-musl.tar.gz</code>, which produces a <code>delta</code> binary that should be moved to <code>~/.local/bin/</code>.</li>
+<li><strong><code>fd</code>’s <code>-name</code> semantic is matching, not exclusion.</strong> <code>fd -name foo</code> finds files named <code>foo</code>; the analogous <code>find . -name 'foo'</code> is the same thing but super-cilious users sometimes type <code>fd -not foo</code> expecting an exclusion (the correct flag is <code>--exclude   foo</code>).</li>
+</ul>
+</section>
+</section>
+<section id="limitations" class="level1" data-number="11">
+<h1 data-number="11"><span class="header-section-number">11</span> Limitations</h1>
+<p>The migration as documented has the following honest limitations:</p>
+<ul>
+<li><strong>It is opinionated about zsh.</strong> The configuration block is zsh-specific. Bash users can adapt the alias and <code>eval</code> lines; fish users will need fish-native equivalents (zoxide ships them upstream).</li>
+<li><strong>The Debian installation is more involved than macOS.</strong> The <code>brew install</code> one-liner has no Linux equivalent because the upstream releases lag the Debian archive for several tools. The construct’s shell-scripts row should absorb the Debian recipe; until it does, the Linux user carries the recipe in this post.</li>
+<li><strong>The historical utilities are not removed.</strong> The configuration leaves <code>grep</code>, <code>find</code>, <code>cat</code>, <code>ls</code>, and <code>cd</code> in place. This is deliberate (scripts and remote sessions need them) but it means the user does not uninstall anything; the disk and <code>$PATH</code> footprint of the workstation grows by approximately 50 MB across the eight tools.</li>
+<li><strong><code>fzf</code> is required for <code>Ctrl-r</code> history search but is not installed by <code>brew install ripgrep</code> etc.</strong> It must be installed separately. The post recipe includes it, but a user copying only the <code>ripgrep</code> line from a collaborator’s snippet may miss the dependency.</li>
+<li><strong>None of these tools addresses regex differences across systems.</strong> A pattern that matches in <code>ripgrep</code> may not match in <code>grep -E</code> and may not match in <code>awk</code>. The modern tools standardise on Rust regex, which is itself a dialect; portability across the three regex worlds (POSIX, PCRE, Rust) remains a per-tool concern.</li>
+</ul>
+</section>
+<section id="opportunities-for-improvement" class="level1" data-number="12">
+<h1 data-number="12"><span class="header-section-number">12</span> Opportunities for Improvement</h1>
+<p>Several extensions are plausible for subsequent revisions of this post or related construct work:</p>
+<ol type="1">
+<li><strong>A second pass for <code>procs</code>, <code>dust</code>, and <code>bottom</code>.</strong> The <code>ps</code> / <code>du</code> / <code>top</code> triumvirate has Rust replacements that follow the same pattern. They are not load-bearing for the construct but are pleasant to have; a follow-up post could document them as a Tier-A optional addition.</li>
+<li><strong>A Nerd Font setup post.</strong> The icon-rendering prerequisite for <code>eza --icons</code> is a small but persistent blocker; a one-page post documenting font selection, installation, and terminal configuration would close the gap.</li>
+<li><strong><code>lazygit</code> configuration walkthrough.</strong> The default <code>lazygit</code> is fine; the configurable bits (delta as diff viewer, custom command bar shortcuts, alternate keybindings for <code>vim</code>-style users) would warrant a companion post if the reader spends substantial time in the TUI.</li>
+<li><strong>A <code>mise</code>-managed installation path.</strong> <code>mise</code> (covered in post 54) can pin the versions of these binaries for per-project reproducibility. The version-pinning approach is overkill for personal use but is the right layer for team-scale installations where bug reports tracing to subtle eza / delta version differences between collaborators are common.</li>
+<li><strong>A Linux-side install script in <code>~/bin/</code>.</strong> The Debian recipe in this post should be promoted to a first-class shell script in the construct’s shell-scripts row. The script accepts a list of tool names and installs them via <code>apt</code>, <code>~/.local/bin</code> symlink, or upstream release as appropriate.</li>
+</ol>
+</section>
+<section id="wrapping-up" class="level1" data-number="13">
+<h1 data-number="13"><span class="header-section-number">13</span> Wrapping Up</h1>
+<p>The historical Unix utilities are not broken; they are simply optimised for a computing environment that no longer predominates. Their recursive search is opt-in, their tree listing is hand-rolled, their colourisation is bolted on, and their git awareness is non-existent, all because those features were not in scope when they were written. The Rust-implemented replacements documented here invert each of those defaults without changing the layer’s contract: the shell still calls a binary, the binary still emits text on stdout, and downstream pipelines still receive bytes they can parse.</p>
+<p>The migration is cheap (under an hour for the full set) and non-destructive (the historical tools remain available under their canonical names). The largest single ergonomic gain comes from <code>zoxide</code>-via-<code>j</code>, which preserves the construct’s existing autojump muscle memory while upgrading the underlying frecency database; the second largest comes from <code>ripgrep</code>’s default <code>.gitignore</code> respect. The remaining tools earn their place individually but contribute less to the per-keystroke ratio.</p>
+<p>The migration’s principal failure mode is not technical but attentional: a user who installs the tools without working through the gotcha catalogue (Things to Watch Out For above) will encounter several surprises in the first week that look like tool bugs and are actually intentional default differences. The catalogue exists for that reason.</p>
+<p>In conclusion, four points merit emphasis. First, modern CLI replacements are a Shell-layer extension, not a substitute: they sit alongside the historical tools rather than replacing them. Second, the largest ergonomic gain is per-keystroke rather than per-second; sensible defaults (<code>.gitignore</code> respect, recursive search, frecency navigation) accumulate value faster than raw performance. Third, the autojump-to-zoxide migration is the single most consequential change: <code>zoxide init zsh --cmd j</code> preserves the muscle memory and upgrades the underlying database in one line. Fourth, the gotchas should be read before installing, not after; the first-week surprises are predictable and the time to read about them is much shorter than the time to debug them.</p>
+</section>
+<section id="see-also" class="level1" data-number="14">
+<h1 data-number="14"><span class="header-section-number">14</span> See Also</h1>
+<ul>
+<li>Posts in this repository that document adjacent layers:
+<ul>
+<li><a href="../../../posts/01-configtermzsh/">post 01</a>: the Shell layer setup that this post extends.</li>
+<li><a href="../../../posts/24-setupdotfilesongithub/">post 24</a>: the workstation-IaC keystone where the configuration block above lives.</li>
+<li><a href="../../../posts/49-zzgit/">post 49</a>: the secret-scanning git wizard that pairs with <code>lazygit</code> for a complete git-side workflow.</li>
+<li><a href="../../../posts/51-scripts-vs-functions/">post 51</a>: the distinction between shell scripts and functions, which governs whether the install recipe in this post should live in a <code>~/bin/</code> script or a <code>.zshrc</code> function.</li>
+<li><a href="../../../posts/52-workflow-construct/">post 52</a>: the construct framing that names the Shell-layer extension to which this post belongs.</li>
+</ul></li>
+<li>Project repositories for each tool:
+<ul>
+<li><code>ripgrep</code>: <a href="https://github.com/BurntSushi/ripgrep">https://github.com/BurntSushi/ripgrep</a></li>
+<li><code>fd</code>: <a href="https://github.com/sharkdp/fd">https://github.com/sharkdp/fd</a></li>
+<li><code>bat</code>: <a href="https://github.com/sharkdp/bat">https://github.com/sharkdp/bat</a></li>
+<li><code>eza</code>: <a href="https://github.com/eza-community/eza">https://github.com/eza-community/eza</a></li>
+<li><code>zoxide</code>: <a href="https://github.com/ajeetdsouza/zoxide">https://github.com/ajeetdsouza/zoxide</a></li>
+<li><code>delta</code>: <a href="https://github.com/dandavison/delta">https://github.com/dandavison/delta</a></li>
+<li><code>lazygit</code>: <a href="https://github.com/jesseduffield/lazygit">https://github.com/jesseduffield/lazygit</a></li>
+<li><code>fzf</code>: <a href="https://github.com/junegunn/fzf">https://github.com/junegunn/fzf</a></li>
+</ul></li>
+</ul>
+</section>
+<section id="reproducibility" class="level1" data-number="15">
+<h1 data-number="15"><span class="header-section-number">15</span> Reproducibility</h1>
+<p>The configuration was developed and verified on the following software stack:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Component</th>
+<th>Version</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Operating system</td>
+<td>macOS 15 (Sequoia)</td>
+<td>primary daily driver</td>
+</tr>
+<tr class="even">
+<td>Operating system</td>
+<td>Linux Mint 22 (Wilma)</td>
+<td>secondary verification</td>
+</tr>
+<tr class="odd">
+<td>Operating system</td>
+<td>Ubuntu 24.04 LTS (EC2)</td>
+<td>clean-room verification</td>
+</tr>
+<tr class="even">
+<td>Shell</td>
+<td>zsh 5.9</td>
+<td>minimum 5.0</td>
+</tr>
+<tr class="odd">
+<td><code>ripgrep</code></td>
+<td>14.1</td>
+<td>minimum 13</td>
+</tr>
+<tr class="even">
+<td><code>fd</code></td>
+<td>9.0</td>
+<td>minimum 8.7</td>
+</tr>
+<tr class="odd">
+<td><code>bat</code></td>
+<td>0.24</td>
+<td>minimum 0.22</td>
+</tr>
+<tr class="even">
+<td><code>eza</code></td>
+<td>0.20</td>
+<td>flag set stable since 0.20</td>
+</tr>
+<tr class="odd">
+<td><code>zoxide</code></td>
+<td>0.9.4</td>
+<td><code>--cmd j</code> available since 0.6</td>
+</tr>
+<tr class="even">
+<td><code>delta</code></td>
+<td>0.18</td>
+<td>minimum 0.16 for current config keys</td>
+</tr>
+<tr class="odd">
+<td><code>lazygit</code></td>
+<td>0.44</td>
+<td>minimum 0.40</td>
+</tr>
+<tr class="even">
+<td><code>fzf</code></td>
+<td>0.46</td>
+<td>minimum 0.30</td>
+</tr>
+<tr class="odd">
+<td>Homebrew</td>
+<td>4.4 (macOS)</td>
+<td>for the macOS install path</td>
+</tr>
+</tbody>
+</table>
+<p>Date of last verification: 2026-04-27.</p>
+</section>
+<section id="feedback" class="level1" data-number="16">
+<h1 data-number="16"><span class="header-section-number">16</span> Feedback</h1>
+<p>Corrections, suggestions, and questions are welcome. Please open an issue or pull request on the <a href="https://github.com/mygit">GitHub repository</a> or send an email to user@example.com. Substitutions for any single tool are particularly welcome (e.g., <code>helix-editor</code>’s built-in fuzzy finder as an alternative to <code>fzf</code>-plus-the- collection); they will be incorporated into a subsequent revision of this post.</p>
+<section id="related-posts-in-this-cluster" class="level2" data-number="16.1">
+<h2 data-number="16.1" class="anchored" data-anchor-id="related-posts-in-this-cluster"><span class="header-section-number">16.1</span> Related posts in this cluster</h2>
+<p>This post is part of the <em>Workflow Construct</em> series. Recommended reading order:</p>
+<ol type="1">
+<li>Post 15: <a href="../15-wf-construct-overview-anchor/">A Workflow Construct for the Modern Data Scientist</a></li>
+<li>Post 16: <a href="../16-wf-unix-workspace-config/">Unix Command-Line Workspace Setup for Data Science</a></li>
+<li>Post 17: <a href="../17-wf-multi-laptop-dotfiles-bootstrap/">Multi-Laptop macOS Bootstrap</a></li>
+<li>Post 18: <a href="../18-wf-git-for-data-science/">Setting Up Git for Data Science Workflows</a></li>
+<li>Post 19: <a href="../19-wf-neovim-data-science-ide/">Setting Up Neovim as a Data Science IDE</a></li>
+<li>Post 20: <a href="../20-wf-r-vim-latex-workflow/">Extending the R-Vim Workflow with LaTeX</a></li>
+<li><strong>Post 21: Modern CLI Replacements for the Shell Layer</strong> (this post)</li>
+<li>Post 22: <a href="../22-wf-claude-code-in-shell/">LLM-Augmented Editing for the Workflow Construct</a></li>
+<li>Post 23: <a href="../23-wf-yabai-tiling-window-manager/">Configuring Yabai as a Tiling Window Manager</a></li>
+<li>Post 24: <a href="../24-wf-pocket-terminal-ttyd-tailscale/">A pocket terminal with ttyd and Tailscale</a></li>
+<li>Post 25: <a href="../25-wf-linux-mint-on-macbook/">Install Linux Mint on a MacBook Air</a></li>
+</ol>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp("https:\/\/focusonr\.org");
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<script src="https://giscus.app/client.js" data-repo="rgt47/qblog" data-repo-id="R_kgDOH6TO7A" data-category="General" data-category-id="DIC_kwDOH6TO7M4CXqIi" data-mapping="pathname" data-reactions-enabled="1" data-emit-metadata="0" data-input-position="bottom" data-theme="light" data-lang="en" crossorigin="anonymous" async="">
+</script>
+<input type="hidden" id="giscus-base-theme" value="light">
+<input type="hidden" id="giscus-alt-theme" value="light">
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Copyright 2023-2026, Ronald ‘Ryy’ G. Thomas. The lab’s other activities live at <a href="https://rgtlab.org">rgtlab.org</a>.</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47">
+      <i class="bi bi-github" role="img">
+</i> 
+    </a>
+  </li>  
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47">
+      <i class="bi bi-twitter" role="img">
+</i> 
+    </a>
+  </li>  
+</ul>
+    </div>
+  </div>
+</footer>
+
+<!-- Fix category filtering to work with plain-text categories -->
+<script>
+window.addEventListener('DOMContentLoaded', function() {
+  setTimeout(function() {
+    // Override filterListingCategory to work with plain-text categories
+    window.filterListingCategory = function(category) {
+      const listingIds = Object.keys(window['quarto-listings']);
+      for (const listingId of listingIds) {
+        const list = window['quarto-listings'][listingId];
+        if (list) {
+          if (category === '') {
+            // resets the filter
+            list.filter();
+          } else {
+            // filter to this category - handle both plain text and base64
+            list.filter(function (item) {
+              const itemValues = item.values();
+              if (itemValues.categories !== null && itemValues.categories !== undefined) {
+                let categories;
+
+                try {
+                  // Try to decode as base64 first
+                  categories = decodeURIComponent(atob(itemValues.categories)).split(",");
+                } catch(e) {
+                  // If that fails, assume it's plain text
+                  categories = itemValues.categories.split(",");
+                }
+
+                // Trim whitespace from categories
+                categories = categories.map(c => c.trim());
+                return categories.includes(category);
+              } else {
+                return false;
+              }
+            });
+          }
+        }
+      }
+    };
+
+    // Trigger the listing-loaded handler to use the patched filter
+    if (window['quarto-listing-loaded']) {
+      window['quarto-listing-loaded']();
+    }
+  }, 500);
+});
+</script>
+
+<!-- PDF view/download button for blog posts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Only add the button on post pages
+  if (window.location.pathname.includes('/posts/') && !window.location.pathname.endsWith('/posts/') && !window.location.pathname.endsWith('/posts/index.html')) {
+    var currentPath = window.location.pathname;
+    // Handle both /posts/name/ and /posts/name/index.html formats
+    var pdfPath;
+    if (currentPath.endsWith('/')) {
+      pdfPath = currentPath + 'index.pdf';
+    } else {
+      pdfPath = currentPath.replace('.html', '.pdf');
+    }
+
+    // Check if PDF exists first
+    fetch(pdfPath, { method: 'HEAD' })
+      .then(function(response) {
+        if (response.ok) {
+          // PDF exists, show download button
+          showDownloadButton(pdfPath);
+        }
+        // If PDF doesn't exist, don't show any button
+      })
+      .catch(function(error) {
+        // Error checking PDF, don't show any button
+      });
+  }
+});
+
+function showDownloadButton(pdfPath) {
+  var downloadBtn = document.createElement('div');
+  downloadBtn.className = 'pdf-download-button';
+
+  // Get file size if possible
+  fetch(pdfPath, { method: 'HEAD' })
+    .then(function(response) {
+      var size = response.headers.get('Content-Length');
+      var sizeText = '';
+
+      if (size) {
+        // Convert to MB or KB
+        var sizeInMB = size / (1024 * 1024);
+        if (sizeInMB >= 1) {
+          sizeText = ' (' + sizeInMB.toFixed(1) + ' MB)';
+        } else {
+          sizeText = ' (' + (size / 1024).toFixed(0) + ' KB)';
+        }
+      }
+
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' + sizeText +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    })
+    .catch(function() {
+      // Basic fallback if we can't get file size
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    });
+
+  // Find where to insert the button (right after the title block)
+  var titleBlock = document.querySelector('.quarto-title-meta');
+  if (titleBlock) {
+    titleBlock.after(downloadBtn);
+  }
+}
+</script>
+
+<style>
+.pdf-download-button {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+</style>
+
+
+
+
+</body></html>

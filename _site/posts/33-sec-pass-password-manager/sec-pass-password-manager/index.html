@@ -1,1 +1,1639 @@
-analysis/report/index.html
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.5.45">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ronald ‘Ryy’ G. Thomas">
+<meta name="dcterms.date" content="2026-05-17">
+<meta name="description" content="I did not appreciate how fragile browser-based password storage was until I migrated 600 credentials to an encrypted, version-controlled store in a single afternoon.">
+
+<title>Setting Up pass: a Unix Password Manager – focusonr</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../../">
+<script src="../../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": true,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "keyboard-shortcut": [
+    "?",
+    "/"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&amp;family=Open+Sans:ital,wght@0,400;0,600;1,400&amp;family=Fira+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<script src="https://kit.fontawesome.com/0fba9333d8.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+
+<!-- Custom meta tags for social sharing -->
+<meta property="og:site_name" content="Thomas Lab">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@rgt47">
+
+<!-- Add responsive features -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<!-- Add analytics if needed -->
+<!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXX');
+</script> -->
+
+<!-- Add custom javascript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Remove code tools button completely
+  const codeButton = document.querySelector('.code-tools-button');
+  if (codeButton) {
+    codeButton.remove();
+  }
+  
+  // Add any custom JavaScript functionality here
+  
+  // Example: Add smooth scrolling
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      
+      document.querySelector(this.getAttribute('href')).scrollIntoView({
+        behavior: 'smooth'
+      });
+    });
+  });
+  
+  // Make sidebar category items clickable (but not TOC items)
+  const categoryLinks = {
+    'Programming & Development': '/posts/?category=Programming+%26+Development',
+    'Data Analysis & Visualization': '/posts/?category=Data+Analysis+%26+Visualization',
+    'Deployment & Operations': '/posts/?category=Deployment+%26+Operations',
+    'Development Environment': '/posts/?category=Development+Environment',
+    'Shiny Applications': '/posts/?category=Shiny+Applications',
+    'AI & Automation': '/posts/?category=AI+%26+Automation',
+    'System Administration': '/posts/?category=System+Administration'
+  };
+  
+  // Only target sidebar items that are not in the TOC
+  document.querySelectorAll('.sidebar-item-section .sidebar-item-text').forEach(item => {
+    // Skip if this is inside the TOC
+    if (item.closest('#TOC')) return;
+    
+    const text = item.textContent.trim();
+    if (categoryLinks[text]) {
+      item.addEventListener('click', function() {
+        window.location.href = categoryLinks[text];
+      });
+    }
+  });
+});
+</script>
+
+
+<meta property="og:title" content="focusonr - Setting Up pass: a Unix Password Manager">
+<meta property="og:description" content="I did not appreciate how fragile browser-based password storage was until I migrated 600 credentials to an encrypted, version-controlled store in a single afternoon.">
+<meta property="og:image" content="https://focusonr.org/posts/33-sec-pass-password-manager/sec-pass-password-manager/media/images/hero.png">
+<meta property="og:site_name" content="focusonr">
+<meta property="og:image:height" content="893">
+<meta property="og:image:width" content="1600">
+</head>
+
+<body class="nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../../index.html">
+    <span class="navbar-title">focusonr</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../blog/index.html"> 
+<span class="menu-text">Blog</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="https://rgtlab.org"> 
+<span class="menu-text">rgtlab.org</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47"> <i class="bi bi-twitter" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a>
+  <ul class="collapse">
+  <li><a href="#motivations" id="toc-motivations" class="nav-link" data-scroll-target="#motivations"><span class="header-section-number">1.1</span> Motivations</a></li>
+  <li><a href="#objectives" id="toc-objectives" class="nav-link" data-scroll-target="#objectives"><span class="header-section-number">1.2</span> Objectives</a></li>
+  </ul></li>
+  <li><a href="#what-is-pass" id="toc-what-is-pass" class="nav-link" data-scroll-target="#what-is-pass"><span class="header-section-number">2</span> What is pass?</a></li>
+  <li><a href="#prerequisites" id="toc-prerequisites" class="nav-link" data-scroll-target="#prerequisites"><span class="header-section-number">3</span> Prerequisites</a></li>
+  <li><a href="#installation" id="toc-installation" class="nav-link" data-scroll-target="#installation"><span class="header-section-number">4</span> Installation</a></li>
+  <li><a href="#configuration" id="toc-configuration" class="nav-link" data-scroll-target="#configuration"><span class="header-section-number">5</span> Configuration</a>
+  <ul class="collapse">
+  <li><a href="#step-1-generate-a-gpg-key" id="toc-step-1-generate-a-gpg-key" class="nav-link" data-scroll-target="#step-1-generate-a-gpg-key"><span class="header-section-number">5.1</span> Step 1: Generate a GPG Key</a></li>
+  <li><a href="#step-2-initialise-the-password-store" id="toc-step-2-initialise-the-password-store" class="nav-link" data-scroll-target="#step-2-initialise-the-password-store"><span class="header-section-number">5.2</span> Step 2: Initialise the Password Store</a></li>
+  <li><a href="#step-3-insert-and-retrieve-a-credential" id="toc-step-3-insert-and-retrieve-a-credential" class="nav-link" data-scroll-target="#step-3-insert-and-retrieve-a-credential"><span class="header-section-number">5.3</span> Step 3: Insert and Retrieve a Credential</a></li>
+  <li><a href="#step-4-initialise-git-tracking" id="toc-step-4-initialise-git-tracking" class="nav-link" data-scroll-target="#step-4-initialise-git-tracking"><span class="header-section-number">5.4</span> Step 4: Initialise git Tracking</a></li>
+  <li><a href="#step-5-guard-the-store-against-accidental-git-commits" id="toc-step-5-guard-the-store-against-accidental-git-commits" class="nav-link" data-scroll-target="#step-5-guard-the-store-against-accidental-git-commits"><span class="header-section-number">5.5</span> Step 5: Guard the Store Against Accidental git Commits</a></li>
+  </ul></li>
+  <li><a href="#migration-from-1password" id="toc-migration-from-1password" class="nav-link" data-scroll-target="#migration-from-1password"><span class="header-section-number">6</span> Migration from 1Password</a></li>
+  <li><a href="#verification" id="toc-verification" class="nav-link" data-scroll-target="#verification"><span class="header-section-number">7</span> Verification</a></li>
+  <li><a href="#daily-workflow" id="toc-daily-workflow" class="nav-link" data-scroll-target="#daily-workflow"><span class="header-section-number">8</span> Daily Workflow</a>
+  <ul class="collapse">
+  <li><a href="#new-laptop-bootstrap-position" id="toc-new-laptop-bootstrap-position" class="nav-link" data-scroll-target="#new-laptop-bootstrap-position"><span class="header-section-number">8.1</span> New-Laptop Bootstrap Position</a></li>
+  </ul></li>
+  <li><a href="#things-to-watch-out-for" id="toc-things-to-watch-out-for" class="nav-link" data-scroll-target="#things-to-watch-out-for"><span class="header-section-number">9</span> Things to Watch Out For</a></li>
+  <li><a href="#uninstall-rollback" id="toc-uninstall-rollback" class="nav-link" data-scroll-target="#uninstall-rollback"><span class="header-section-number">10</span> Uninstall / Rollback</a></li>
+  <li><a href="#what-did-we-learn" id="toc-what-did-we-learn" class="nav-link" data-scroll-target="#what-did-we-learn"><span class="header-section-number">11</span> What Did We Learn?</a>
+  <ul class="collapse">
+  <li><a href="#lessons-learnt" id="toc-lessons-learnt" class="nav-link" data-scroll-target="#lessons-learnt"><span class="header-section-number">11.1</span> Lessons Learnt</a></li>
+  <li><a href="#limitations" id="toc-limitations" class="nav-link" data-scroll-target="#limitations"><span class="header-section-number">11.2</span> Limitations</a></li>
+  <li><a href="#opportunities-for-improvement" id="toc-opportunities-for-improvement" class="nav-link" data-scroll-target="#opportunities-for-improvement"><span class="header-section-number">11.3</span> Opportunities for Improvement</a></li>
+  </ul></li>
+  <li><a href="#wrapping-up" id="toc-wrapping-up" class="nav-link" data-scroll-target="#wrapping-up"><span class="header-section-number">12</span> Wrapping Up</a></li>
+  <li><a href="#see-also" id="toc-see-also" class="nav-link" data-scroll-target="#see-also"><span class="header-section-number">13</span> See Also</a></li>
+  <li><a href="#reproducibility" id="toc-reproducibility" class="nav-link" data-scroll-target="#reproducibility"><span class="header-section-number">14</span> Reproducibility</a></li>
+  <li><a href="#appendix-a" id="toc-appendix-a" class="nav-link" data-scroll-target="#appendix-a"><span class="header-section-number">15</span> Appendix A: iOS Sync with Pass for iOS</a>
+  <ul class="collapse">
+  <li><a href="#a.1-confirm-the-remote-is-set-up" id="toc-a.1-confirm-the-remote-is-set-up" class="nav-link" data-scroll-target="#a.1-confirm-the-remote-is-set-up"><span class="header-section-number">15.1</span> A.1 Confirm the Remote is Set Up</a></li>
+  <li><a href="#a.2-export-the-gpg-key" id="toc-a.2-export-the-gpg-key" class="nav-link" data-scroll-target="#a.2-export-the-gpg-key"><span class="header-section-number">15.2</span> A.2 Export the GPG Key</a></li>
+  <li><a href="#a.3-configure-the-ios-app" id="toc-a.3-configure-the-ios-app" class="nav-link" data-scroll-target="#a.3-configure-the-ios-app"><span class="header-section-number">15.3</span> A.3 Configure the iOS App</a></li>
+  <li><a href="#a.4-import-the-gpg-key-and-sync" id="toc-a.4-import-the-gpg-key-and-sync" class="nav-link" data-scroll-target="#a.4-import-the-gpg-key-and-sync"><span class="header-section-number">15.4</span> A.4 Import the GPG Key and Sync</a></li>
+  <li><a href="#a.5-common-snags" id="toc-a.5-common-snags" class="nav-link" data-scroll-target="#a.5-common-snags"><span class="header-section-number">15.5</span> A.5 Common Snags</a></li>
+  </ul></li>
+  <li><a href="#appendix-b" id="toc-appendix-b" class="nav-link" data-scroll-target="#appendix-b"><span class="header-section-number">16</span> Appendix B: Security Considerations</a>
+  <ul class="collapse">
+  <li><a href="#b.1-gpg-subkey-architecture" id="toc-b.1-gpg-subkey-architecture" class="nav-link" data-scroll-target="#b.1-gpg-subkey-architecture"><span class="header-section-number">16.1</span> B.1 GPG Subkey Architecture</a></li>
+  <li><a href="#b.2-aws-and-api-credentials-via-pass" id="toc-b.2-aws-and-api-credentials-via-pass" class="nav-link" data-scroll-target="#b.2-aws-and-api-credentials-via-pass"><span class="header-section-number">16.2</span> B.2 AWS and API Credentials via pass</a></li>
+  <li><a href="#b.3-filevault" id="toc-b.3-filevault" class="nav-link" data-scroll-target="#b.3-filevault"><span class="header-section-number">16.3</span> B.3 FileVault</a></li>
+  <li><a href="#b.4-ssh-key-policy-for-multi-laptop-setups" id="toc-b.4-ssh-key-policy-for-multi-laptop-setups" class="nav-link" data-scroll-target="#b.4-ssh-key-policy-for-multi-laptop-setups"><span class="header-section-number">16.4</span> B.4 SSH Key Policy for Multi-Laptop Setups</a></li>
+  </ul></li>
+  <li><a href="#lets-connect" id="toc-lets-connect" class="nav-link" data-scroll-target="#lets-connect"><span class="header-section-number">17</span> Let’s Connect</a>
+  <ul class="collapse">
+  <li><a href="#related-posts-in-this-cluster" id="toc-related-posts-in-this-cluster" class="nav-link" data-scroll-target="#related-posts-in-this-cluster"><span class="header-section-number">17.1</span> Related posts in this cluster</a></li>
+  </ul></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="index.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content column-page-left" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Setting Up pass: a Unix Password Manager</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">unix</div>
+    <div class="quarto-category">shell</div>
+    <div class="quarto-category">gpg</div>
+    <div class="quarto-category">security</div>
+    <div class="quarto-category">setup</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    I did not appreciate how fragile browser-based password storage was until I migrated 600 credentials to an encrypted, version-controlled store in a single afternoon.
+  </div>
+</div>
+
+
+<div class="quarto-title-meta column-page-left">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ronald ‘Ryy’ G. Thomas </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">May 17, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<!-- ============================================================================
+AUTHOR PROVIDES — concrete inputs the blogger must supply
+
+Every item below maps to a placeholder in the body. Fill in this checklist
+FIRST, then paste your answers into the matching `[bracketed]` slots. Do not
+publish until every box is ticked.
+
+YAML FRONT MATTER (lines 1-20)
+  [x] title           — '[Tool]' replaced with actual tool name, < 70 chars
+  [x] subtitle        — one-line elaboration of what the post sets up
+  [x] date            — YYYY-MM-DD of intended publication
+  [x] categories      — include `setup`, the tool name, and host OS
+  [x] description     — 1-2 sentences for blog listing card
+  [ ] image           — path to hero image (relative to this .qmd)
+  [x] draft: false    — flip when ready
+
+NARRATIVE INPUTS
+  [x] Hook sentence   — 'I didn't know how to configure [tool] until [trigger]'
+  [x] Pain point      — the specific friction the tool removes
+  [x] Motivations     — exactly 4-5 bullets (workflow gap, frustration,
+                         curiosity, learning)
+  [x] Objectives      — exactly 4 numbered, verifiable end states
+  [x] What is pass?   — 1-sentence definition + 1 analogy + 1 concrete example
+  [x] Daily-workflow paragraph — how this tool fits into your routine after
+                                  setup
+  [x] Things to Watch Out For — 5-7 gotchas (required; setup posts need this)
+  [x] Lessons Learnt  — 4 conceptual + 4 technical + 4 gotcha bullets
+  [x] Limitations     — 4-6 bullets (what this setup does NOT solve)
+  [x] Opportunities for Improvement — 5-6 numbered next-step extensions
+  [x] Wrapping Up     — 2-3 paragraph conclusion + 'Main takeaways'
+  [x] See Also        — 3-5 links (official docs + 1-2 related blog posts)
+
+CONFIGURATION DELIVERABLES (real, working artifacts, not snippets)
+  [x] Prerequisites list — OS version, hardware, prior knowledge,
+                           dependent tools
+  [x] Installation block — exact bash commands, tested on a clean machine
+  [x] Complete config file(s) — verbatim, copy-pasteable, with inline
+                                  comments
+        Place under: analysis/configs/<filename>
+  [x] Verification commands — `pass ls` plus 1-2 functional smoke tests
+  [x] Optional keybinding/command reference table — markdown table for
+                                                     daily use
+  [x] Uninstall / rollback steps — how the reader undoes what you just did
+  [ ] Optional appendices — 1Password migration, gitignore guard
+
+VERSION MATRIX (Reproducibility section)
+  [x] OS + version tested        (macOS 25.4 / Darwin)
+  [x] Tool version pinned        (pass 1.7.4, gpg 2.4)
+  [x] Dependency versions        (homebrew, pinentry-mac)
+  [ ] Date of last verification
+
+IMAGES (4 total: hero + 3 ambiance, all in media/images/)
+  [ ] Hero image (80% width)        — workspace/tool logo, sets tone
+  [ ] Ambiance image 1 (100% width) — after Objectives (workspace shot)
+  [ ] Ambiance image 2 (100% width) — after Configuration (terminal/editor)
+  [ ] Ambiance image 3 (100% width) — before Lessons Learnt (workflow scene)
+  [ ] media/images/README.md        — sources + attribution for every image
+
+CONTACT & METADATA
+  [x] Author name in YAML matches site author
+  [x] Social links in 'Let's Connect' updated (or removed)
+  [x] Giscus comments enabled (inherited from _quarto.yml)
+
+============================================================================ -->
+<!-- ============================================================================
+HERO IMAGE
+============================================================================ -->
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/hero.png" class="img-fluid figure-img" style="width:80.0%"></p>
+<figcaption>A small wooden box with a brass clasp, lid slightly ajar to reveal index tabs within, a brass key resting beside it on pale stone.</figcaption>
+</figure>
+</div>
+<p><em>A private, organised credential store: accessible only by key, each entry discrete and retrievable.</em></p>
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>I did not really appreciate how little control I had over my passwords until I tried to export them. I had accumulated over 600 credentials across a combination of 1Password, iCloud Keychain, and Chrome’s built-in password manager: three separate systems with no coherent policy, no consistent backup strategy, and no way to inspect the storage format without paying for a subscription.</p>
+<p>The turning point came when I discovered <code>pass</code>, the standard Unix password manager. It stores every password as a GPG-encrypted file in a plain directory tree. The store lives in <code>~/.password-store/</code> (a non-cloud-mounted path, outside any Dropbox or iCloud hierarchy), can be tracked in a private git repository, and requires no proprietary client to read: any machine with GPG installed can decrypt an entry. The architecture is almost comically simple, which is precisely what makes it trustworthy.</p>
+<p>This post documents the setup procedure: generating a GPG key, installing <code>pass</code>, initialising the store, and migrating a 1Password vault. It also records the incident that followed the migration: accidentally committing <code>.password-store</code> to a public dotfiles repository. That incident was a symptom of a prior architectural error: the store had been placed under a Dropbox-synced path, which is wrong on two grounds. First, a git repository in a cloud-mounted directory is subject to index corruption from sync races (a point developed in <a href="https://focusonr.org/posts/64-migrating-off-dropbox/">post 64</a>). Second, an encrypted credential store belongs to no one’s sync pipeline but your own. This post corrects both errors.</p>
+<section id="motivations" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="motivations"><span class="header-section-number">1.1</span> Motivations</h2>
+<ul>
+<li>Browser-based password managers (Chrome, iCloud Keychain) are opaque: the storage format is proprietary, the export options are limited, and the data is commingled with browser state.</li>
+<li>Storing credentials in a paid subscription service creates a single point of failure: if the service changes its pricing or closes, migrating 600 entries becomes an urgent, unplanned task.</li>
+<li>A plain-file store tracked with git provides a full audit trail: every addition, deletion, and edit is a commit with a timestamp.</li>
+<li>GPG encryption is the same mechanism that protects software release signatures; using it for daily credential storage is a concrete way to build familiarity with the toolchain.</li>
+<li>A terminal-native workflow integrates naturally with the rest of a command-line research environment without requiring a browser extension or GUI application.</li>
+</ul>
+</section>
+<section id="objectives" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="objectives"><span class="header-section-number">1.2</span> Objectives</h2>
+<ol type="1">
+<li>Generate a GPG key and confirm it is stored in the system keyring.</li>
+<li>Install <code>pass</code> and initialise a new password store keyed to that GPG identity.</li>
+<li>Insert at least one credential by hand and retrieve it via clipboard copy.</li>
+<li>Migrate an existing 1Password CSV export into the store using the <code>1password2pass.rb</code> conversion script.</li>
+</ol>
+<p>This post documents the author’s own learning process. Errors spotted or better approaches are welcome in the comment thread below.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance1.png" class="img-fluid figure-img"></p>
+<figcaption>Workspace ambiance: a desk with a terminal window open, a small keyring visible to the side.</figcaption>
+</figure>
+</div>
+</section>
+</section>
+<section id="what-is-pass" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> What is pass?</h1>
+<p><code>pass</code> is a shell script that wraps GPG file encryption and presents a password store as a directory tree of <code>.gpg</code> files. Think of it as a filing cabinet where every drawer is sealed with your GPG key: only someone who holds the corresponding private key can open a drawer, and the cabinet itself is just a folder on your hard drive. A concrete example: <code>pass insert email/gmail</code> encrypts whatever you type at the prompt and writes the ciphertext to <code>~/.password-store/email/gmail.gpg</code>; <code>pass -c email/gmail</code> decrypts that file and copies the first line (the password) to the clipboard for 45 seconds before clearing it.</p>
+</section>
+<section id="prerequisites" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Prerequisites</h1>
+<p>This post assumes:</p>
+<ul>
+<li><strong>Operating system:</strong> macOS 13+ (Apple Silicon or x86_64) or a Linux distribution with bash 5+</li>
+<li><strong>Already installed:</strong> Homebrew (macOS); GPG is installed as a dependency automatically</li>
+<li><strong>Background knowledge:</strong> comfort running shell commands and editing dotfiles; basic understanding of public-key cryptography is helpful but not required</li>
+<li><strong>1Password export (optional):</strong> a CSV export of an existing vault, needed only for the migration section</li>
+<li><strong>Time required:</strong> approximately 20 minutes for install, GPG key generation, and a first smoke test; the migration step depends on vault size</li>
+</ul>
+<p>On Linux, substitute <code>apt install pass gnupg</code> for the Homebrew commands below.</p>
+</section>
+<section id="installation" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Installation</h1>
+<p>On macOS, Homebrew installs <code>pass</code> and its GPG dependencies in a single command. The <code>pinentry-mac</code> package provides the graphical passphrase dialog that macOS requires for GPG operations outside a terminal session.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">brew</span> install pass gnupg pinentry-mac</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Confirm that <code>pass</code> is available:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pass</span> <span class="at">--version</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Expected: pass 1.7.4 or later</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="ex">gpg</span> <span class="at">--version</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Expected: gpg (GnuPG) 2.4.x</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="configuration" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Configuration</h1>
+<section id="step-1-generate-a-gpg-key" class="level2" data-number="5.1">
+<h2 data-number="5.1" class="anchored" data-anchor-id="step-1-generate-a-gpg-key"><span class="header-section-number">5.1</span> Step 1: Generate a GPG Key</h2>
+<p><code>pass</code> requires a GPG key to encrypt and decrypt entries. Generate one interactively:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gpg</span> <span class="at">--full-gen-key</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>At the prompts, select:</p>
+<ul>
+<li><strong>Key type:</strong> ECC (sign and encrypt, the default in GnuPG 2.4+). Ed25519 / Curve 25519 is the correct choice for new keys in 2026: constant-time operations, smaller keys, and equivalent or stronger security than RSA 4096. RSA remains an option but is not recommended for new keys.</li>
+<li><strong>Curve:</strong> Curve 25519 (default when ECC is selected)</li>
+<li><strong>Expiration:</strong> 2y (two years) rather than 0. A key that never expires remains valid indefinitely if compromised; a two-year expiration creates a forced review point. Add the renewal date to a calendar immediately. See Gotcha 3 for what happens when a key lapses.</li>
+<li><strong>Real name:</strong> your name as you want it associated with the key</li>
+<li><strong>Email address:</strong> the address you will use to identify the key when initialising the store</li>
+<li><strong>Passphrase:</strong> a minimum of six random words (diceware) or a 25-character random string. Avoid sentences constructed from real phrases: dictionary attacks against GPG keys use pattern-aware wordlists. The passphrase protects every credential in the store.</li>
+</ul>
+<p>After generation, verify the key is visible:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gpg</span> <span class="at">--list-keys</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The output will show a block beginning with <code>pub</code>, followed by the key fingerprint. Note the email address; it will be used in the next step.</p>
+</section>
+<section id="step-2-initialise-the-password-store" class="level2" data-number="5.2">
+<h2 data-number="5.2" class="anchored" data-anchor-id="step-2-initialise-the-password-store"><span class="header-section-number">5.2</span> Step 2: Initialise the Password Store</h2>
+<p>Initialise <code>pass</code> with the email address associated with the GPG key:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pass</span> init your@email.address</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>This creates <code>~/.password-store/</code> and writes a <code>.gpg-id</code> file containing your email. Every subsequent <code>pass insert</code> call will encrypt to this identity.</p>
+</section>
+<section id="step-3-insert-and-retrieve-a-credential" class="level2" data-number="5.3">
+<h2 data-number="5.3" class="anchored" data-anchor-id="step-3-insert-and-retrieve-a-credential"><span class="header-section-number">5.3</span> Step 3: Insert and Retrieve a Credential</h2>
+<p>Insert a password by name:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pass</span> insert Microsoft</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p><code>pass</code> will prompt for the password (and confirmation) and write the encrypted file to <code>~/.password-store/Microsoft.gpg</code>.</p>
+<p>To copy the password to the clipboard without printing it:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pass</span> <span class="at">-c</span> Microsoft</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The clipboard is cleared automatically after 45 seconds. To print to standard output instead (use with caution in shared terminal sessions):</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pass</span> Microsoft</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Entries can be organised into subdirectories:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pass</span> insert email/gmail</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">pass</span> insert finance/chase</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="ex">pass</span> ls</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p><code>pass ls</code> displays the full tree of stored entries.</p>
+</section>
+<section id="step-4-initialise-git-tracking" class="level2" data-number="5.4">
+<h2 data-number="5.4" class="anchored" data-anchor-id="step-4-initialise-git-tracking"><span class="header-section-number">5.4</span> Step 4: Initialise git Tracking</h2>
+<p><code>pass</code> can manage a git repository inside the store automatically. Every <code>pass insert</code>, <code>pass edit</code>, and <code>pass rm</code> is then committed without any extra steps.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pass</span> git init</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Use <code>pass git log</code> to review history. To push to a remote (for off-site backup), add one now:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pass</span> git remote add origin git@your-private-host:password-store.git</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="ex">pass</span> git push <span class="at">-u</span> origin main</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p><strong>Choose the remote carefully.</strong> The post-64 framework (see <a href="https://focusonr.org/posts/64-migrating-off-dropbox/">Migrating Off Dropbox</a>) treats credentials as outside the sync layers that project content uses. The password store should not go to a public cloud git host, even in a ‘private’ repository: the entry names are metadata (they reveal which services you have accounts with) and a breach of the host exposes that metadata and the ciphertext. Prefer one of:</p>
+<ul>
+<li>A self-hosted Gitea or Forgejo instance on a home server or NAS.</li>
+<li>A VPS you control, accessed over SSH.</li>
+<li>No remote at all, with periodic offline exports of the GPG key and store as the backup strategy (see Uninstall / Rollback).</li>
+</ul>
+<p>Accepting per-machine state for the password store (no remote sync, manual key import on each new machine) is architecturally honest and the simplest option for single-laptop setups.</p>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Warning
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Do not use GitHub, GitLab.com, or any third-party-hosted git service as the remote for your password store. Even a ‘private’ repository on those services places your credential metadata and ciphertext under a third party’s access controls.</p>
+</div>
+</div>
+</section>
+<section id="step-5-guard-the-store-against-accidental-git-commits" class="level2" data-number="5.5">
+<h2 data-number="5.5" class="anchored" data-anchor-id="step-5-guard-the-store-against-accidental-git-commits"><span class="header-section-number">5.5</span> Step 5: Guard the Store Against Accidental git Commits</h2>
+<p>Post 65’s sensitive-files inventory (Blocker 3) lists <code>~/.password-store</code> explicitly alongside <code>~/.gnupg</code>, <code>~/.ssh</code>, and <code>~/.aws</code> as items that ‘must never be committed to git, even in a private repository.’ Write the <code>.gitignore</code> entry before the first <code>git add</code> in any dotfiles repository; after the first commit the only remediation is a full <code>git filter-repo</code> rewrite and credential rotation.</p>
+<p>For any <code>dotfiles</code> repository in use, add <code>.password-store</code> and <code>.gnupg</code> to its <code>.gitignore</code> before <code>git init</code>:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># In ~/dotfiles/.gitignore, before git init:</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="ex">.password-store</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="ex">.gnupg</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="ex">.ssh</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="ex">.aws</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="ex">secrets/*</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="ex">!secrets/README.md</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>This step was missed during the original migration. Recovery after an accidental commit to a local-only repository:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> rm <span class="at">--cached</span> <span class="at">-r</span> <span class="st">'.password-store'</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">'removed .pass'</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>If the data reached a public remote, <code>git rm --cached</code> is insufficient: use <code>git filter-repo</code> to rewrite history and rotate any credentials the ciphertext could represent. See <a href="https://github.com/newren/git-filter-repo">git-filter-repo</a> and post 65’s Limitations section for the full procedure.</p>
+<p>The encrypted files are GPG-protected and would require the private key and passphrase to decrypt, but publishing them publicly is still inadvisable: the entry names reveal which services you have accounts with and the ciphertext is material for offline cryptanalysis.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance2.png" class="img-fluid figure-img"></p>
+<figcaption>A terminal window showing the pass tree, with a .gitignore file open in a neighbouring split.</figcaption>
+</figure>
+</div>
+</section>
+</section>
+<section id="migration-from-1password" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Migration from 1Password</h1>
+<p><code>pass</code> ships with a collection of import scripts for common password managers. For 1Password, use the <code>1password2pass.rb</code> Ruby script.</p>
+<p><strong>Step 1:</strong> Export from 1Password. In the 1Password desktop app, choose <em>File &gt; Export</em> and export in CSV format. Rename the file for convenience:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mv</span> <span class="st">'1Password 2021-03-14, 04_47 PM (648 items and 1 folders).csv'</span> <span class="dt">\</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  onepass.csv</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p><strong>Step 2:</strong> Download and run the conversion script:</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Obtain the script from the pass import collection</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="co"># (see https://www.passwordstore.org/#other)</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="fu">chmod</span> +x 1password2pass.rb</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./1password2pass.rb</span> onepass.csv</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The script creates one <code>.gpg</code> file per entry in <code>~/.password-store/</code>, preserving folder structure where present. A 648-entry vault typically completes in under two minutes.</p>
+<p><strong>Step 3:</strong> Verify a sample entry:</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pass</span> ls <span class="kw">|</span> <span class="fu">head</span> <span class="at">-20</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="ex">pass</span> <span class="at">-c</span> Amazon</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Warning
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Delete the plaintext CSV export after migration. It contains every password in unencrypted form. On macOS, <code>rm</code> does not overwrite file content on APFS/SSD; the data persists until the block is reused. If FileVault full-disk encryption is enabled (it should be), the block is protected at rest. If FileVault is not enabled, use a secure-delete tool before discarding the machine. In either case, ensure <code>~/Downloads/</code> is not synced to iCloud Drive before running the export.</p>
+</div>
+</div>
+</section>
+<section id="verification" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Verification</h1>
+<p>After installation and initial population, run the following checks:</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. List all entries (confirms store is readable)</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="ex">pass</span> ls</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Insert a test entry and retrieve it</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="ex">pass</span> insert test/smoke-test</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="ex">pass</span> <span class="at">-c</span> test/smoke-test   <span class="co"># copies to clipboard</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Confirm GPG identity is correct</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> ~/.password-store/.gpg-id</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>If <code>pass ls</code> renders a tree and <code>pass -c</code> copies to the clipboard without a decryption error, the setup is correct.</p>
+</section>
+<section id="daily-workflow" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Daily Workflow</h1>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 42%">
+<col style="width: 57%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Command</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>pass ls</code></td>
+<td>List all entries</td>
+</tr>
+<tr class="even">
+<td><code>pass insert name</code></td>
+<td>Insert a new credential</td>
+</tr>
+<tr class="odd">
+<td><code>pass insert -m name</code></td>
+<td>Insert a multi-line entry (notes, TOTP)</td>
+</tr>
+<tr class="even">
+<td><code>pass -c name</code></td>
+<td>Copy password to clipboard (clears in 45s)</td>
+</tr>
+<tr class="odd">
+<td><code>pass generate name 20</code></td>
+<td>Generate a 20-character random password</td>
+</tr>
+<tr class="even">
+<td><code>pass edit name</code></td>
+<td>Open entry in <code>$EDITOR</code></td>
+</tr>
+<tr class="odd">
+<td><code>pass rm name</code></td>
+<td>Delete an entry</td>
+</tr>
+<tr class="even">
+<td><code>pass mv old new</code></td>
+<td>Rename or move an entry</td>
+</tr>
+<tr class="odd">
+<td><code>pass git log</code></td>
+<td>Show the git history of the store</td>
+</tr>
+<tr class="even">
+<td><code>gpg --list-keys</code></td>
+<td>Confirm your key is still present</td>
+</tr>
+</tbody>
+</table>
+<p>After a short adjustment period, these commands displace the muscle memory built up around a GUI password manager. The clipboard-copy workflow (<code>pass -c name</code>) integrates cleanly with browser login fields and terminal credential prompts alike.</p>
+<section id="new-laptop-bootstrap-position" class="level2" data-number="8.1">
+<h2 data-number="8.1" class="anchored" data-anchor-id="new-laptop-bootstrap-position"><span class="header-section-number">8.1</span> New-Laptop Bootstrap Position</h2>
+<p>In the three-layer bootstrap sequence from <a href="https://focusonr.org/posts/64-migrating-off-dropbox/">post 64</a>, credentials must be available before any credential-dependent step (IMAP sync, cloud storage auth, API key injection) can run. The pass setup therefore belongs immediately after the dotfiles layer, before any service authentication:</p>
+<pre><code>1. git clone git@github.com:rgt47/dotfiles ~/dotfiles
+2. cd ~/dotfiles &amp;&amp; ./install.sh
+   # Installer prints: "Restore ~/.aws, ~/.ssh, ~/.gnupg
+   #                    from secure storage"
+3. gpg --import private-key.asc          # from offline backup
+4. pass git clone git@your-host:pass.git ~/.password-store
+5. pass ls                                # verify store is readable
+6. mbsync -a                             # now IMAP credentials exist
+7. ... (remaining bootstrap steps)</code></pre>
+<p>Step 2 is the <code>install.sh</code> from post 65, which deploys dotfiles symlinks and prints a reminder to restore <code>~/.gnupg</code> before any credential-dependent step runs. The offline GPG key backup (<code>gpg --export-secret-keys --armor ...</code>) is a prerequisite for step 3 on any new machine; keep it on encrypted removable media, not in cloud storage.</p>
+</section>
+</section>
+<section id="things-to-watch-out-for" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> Things to Watch Out For</h1>
+<ol type="1">
+<li><p><strong>The <code>.password-store</code> directory must not appear in any public git repository.</strong> Even though files are GPG-encrypted, their names reveal which services you have accounts with. Add <code>.password-store</code> to <code>.gitignore</code> in your dotfiles repo before doing anything else. This step was missed during the original migration and required a history rewrite to correct.</p></li>
+<li><p><strong>GPG passphrase prompts can fail silently on macOS without <code>pinentry-mac</code>.</strong> If <code>pass insert</code> appears to succeed but subsequent <code>pass</code> commands fail with a decryption error, the GPG agent may not have cached the passphrase correctly. Install <code>pinentry-mac</code> and add this to <code>~/.gnupg/gpg-agent.conf</code>:</p>
+<pre><code>pinentry-program /opt/homebrew/bin/pinentry-mac
+default-cache-ttl 300
+max-cache-ttl 600</code></pre>
+<p>The path <code>/opt/homebrew/bin/pinentry-mac</code> is correct for Apple Silicon. On Intel Macs, Homebrew installs to <code>/usr/local/bin/</code>; substitute accordingly, or use <code>$(brew --prefix)/bin/pinentry-mac</code> in a setup script. The <code>default-cache-ttl</code> (300 s) controls how long after the last use the passphrase stays cached; <code>max-cache-ttl</code> (600 s) is the absolute ceiling. Omitting these leaves the default at 600 s, which is long for an unattended machine.</p></li>
+<li><p><strong>The GPG key expiration date applies to all stored credentials.</strong> A key set to expire that is not renewed will make every entry unreadable. Either set no expiration or establish a calendar reminder to extend the validity date before it lapses.</p></li>
+<li><p><strong><code>pass -c</code> clears the clipboard after 45 seconds, but clipboard managers bypass this entirely.</strong> On macOS this requires <code>pbcopy</code>, which is present by default. On Linux it requires <code>xclip</code> or <code>xsel</code>. If neither is available, <code>pass -c</code> will fail. More importantly: any clipboard manager (Alfred, Raycast, ClipMenu, the macOS Universal Clipboard synced via iCloud) captures the <code>pass -c</code> output before the 45-second timer fires and stores it permanently, possibly syncing it to other devices. Disable clipboard history, or exclude <code>pass</code> invocations, in any clipboard manager running on the system. On a two-laptop setup with iCloud Universal Clipboard enabled, every <code>pass -c</code> on one machine appears in plaintext on the other.</p></li>
+<li><p><strong>The <code>1password2pass.rb</code> migration script handles standard CSV exports but may mangle multi-line secure notes or custom field names.</strong> Review a sample of migrated entries for completeness before deleting the source vault.</p></li>
+<li><p><strong>The store is as secure as your GPG private key.</strong> If the private key is stored unencrypted, or if the passphrase is weak, the GPG layer provides limited protection. Use a passphrase of at least 20 characters.</p></li>
+<li><p><strong>Renaming the GPG key email address after store initialisation requires re-encrypting every entry.</strong> The <code>.gpg-id</code> file stores the recipient identity; changing it with <code>pass init new@email</code> triggers a batch re-encryption of the whole store.</p></li>
+<li><p><strong>Pass for iOS generates its own SSH key pair; add that key to your self-hosted server, not your desktop key.</strong> A common mistake is copying the desktop SSH public key to the server’s <code>authorized_keys</code> while the iOS app is using a different key it generated internally. The symptom is a ‘permission denied (publickey)’ error on every sync attempt. Go to the app’s Settings, copy the displayed public key, and append it to <code>~/.ssh/authorized_keys</code> on the git server as a separate entry. Also verify that the GPG key fingerprint shown in the app matches the fingerprint in <code>~/.password-store/.gpg-id</code>.</p></li>
+</ol>
+</section>
+<section id="uninstall-rollback" class="level1" data-number="10">
+<h1 data-number="10"><span class="header-section-number">10</span> Uninstall / Rollback</h1>
+<p>To remove <code>pass</code> and its configuration from the workstation:</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Remove the password store (IRREVERSIBLE without a backup)</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="co">#    Only run this if you have exported or backed up all credentials.</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span> <span class="at">-rf</span> ~/.password-store</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Remove the GPG key (IRREVERSIBLE)</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a><span class="ex">gpg</span> <span class="at">--list-keys</span>                           <span class="co"># note the key ID</span></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a><span class="ex">gpg</span> <span class="at">--delete-secret-and-public-key</span> KEYID</span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Uninstall the tools</span></span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a><span class="ex">brew</span> uninstall pass gnupg pinentry-mac</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Warning
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Back up the password store and the GPG private key before uninstalling. Export the private key with <code>gpg --export-secret-keys --armor your@email &gt; key-backup.asc</code> and store the file offline.</p>
+</div>
+</div>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance3.png" class="img-fluid figure-img"></p>
+<figcaption>A small lockbox closed on a wooden surface, symbolising credentials secured and at rest.</figcaption>
+</figure>
+</div>
+</section>
+<section id="what-did-we-learn" class="level1" data-number="11">
+<h1 data-number="11"><span class="header-section-number">11</span> What Did We Learn?</h1>
+<section id="lessons-learnt" class="level2" data-number="11.1">
+<h2 data-number="11.1" class="anchored" data-anchor-id="lessons-learnt"><span class="header-section-number">11.1</span> Lessons Learnt</h2>
+<p><strong>Conceptual Understanding:</strong></p>
+<ul>
+<li><code>pass</code> is thin by design: it delegates all cryptographic work to GPG and all version control to git, composing two well-audited tools rather than reimplementing them.</li>
+<li>A GPG identity is portable: the same key pair can encrypt and decrypt entries across any machine where the private key is installed, which is the correct model for multi-device credential access.</li>
+<li>Password store organisation mirrors filesystem organisation: the mental model for <code>pass insert email/gmail</code> is identical to <code>mkdir email &amp;&amp; touch email/gmail</code>, which makes navigation intuitive for anyone comfortable at a terminal.</li>
+<li>Accidental publication of encrypted data is still a security event: ciphertext reveals metadata (entry names, creation dates) and provides material for offline cryptanalysis.</li>
+</ul>
+<p><strong>Technical Skills:</strong></p>
+<ul>
+<li>Generating a GPG key with <code>gpg --full-gen-key</code> and inspecting it with <code>gpg --list-keys</code> are foundational skills that transfer to signing git commits, verifying software releases, and encrypting arbitrary files.</li>
+<li>The <code>pass git</code> subcommand proxies any git command against the password store repository, making it easy to push the store to a private remote for backup.</li>
+<li><code>git rm --cached -r</code> removes a tracked directory from the index without deleting the local copy, which is the correct recovery command when a sensitive directory is accidentally staged.</li>
+<li><code>pinentry-mac</code> bridges the macOS graphical environment and the GPG agent; configuring it correctly eliminates most passphrase prompt failures.</li>
+</ul>
+<p><strong>Gotchas and Pitfalls:</strong></p>
+<ul>
+<li>Forgetting to add <code>.password-store</code> to <code>.gitignore</code> before the first <code>git add .</code> in a dotfiles repo is the most common first-week mistake.</li>
+<li>A GPG key that has expired will cause all <code>pass</code> operations to fail with a non-obvious error message; check <code>gpg --list-keys</code> first when debugging decryption failures.</li>
+<li>The 1Password CSV export may contain entries whose names include characters that are invalid in filenames (<code>/</code>, <code>:</code>, <code>?</code>); the migration script silently truncates or skips these.</li>
+<li>The clipboard-clear timer (<code>45s</code>) runs in a background process; it will not fire if the shell exits before the timer elapses.</li>
+</ul>
+</section>
+<section id="limitations" class="level2" data-number="11.2">
+<h2 data-number="11.2" class="anchored" data-anchor-id="limitations"><span class="header-section-number">11.2</span> Limitations</h2>
+<ul>
+<li><strong>Multi-device synchronisation is manual.</strong> <code>pass</code> can push and pull from a git remote, but the user must manage this explicitly; there is no background sync daemon.</li>
+<li><strong>Mobile access requires a companion app and key transfer.</strong> Pass for iOS exists and syncs via a git remote, but it requires importing the GPG private key to the device. The key transfer itself (AirDrop or similar) is a security event: the private key is briefly in plaintext and in transit. See Appendix A for the full procedure.</li>
+<li><strong>No breach monitoring.</strong> Unlike some commercial managers, <code>pass</code> does not check credentials against known-breached password lists.</li>
+<li><strong>Bulk password generation is not built in.</strong> Generating unique passwords for 600 migrated entries is a manual process; the migration script imports existing passwords but does not regenerate them.</li>
+<li><strong>The security model depends entirely on the GPG key.</strong> Loss of the private key, or compromise of the passphrase, results in loss of access to all credentials. Offline key backups are essential but add operational complexity.</li>
+</ul>
+</section>
+<section id="opportunities-for-improvement" class="level2" data-number="11.3">
+<h2 data-number="11.3" class="anchored" data-anchor-id="opportunities-for-improvement"><span class="header-section-number">11.3</span> Opportunities for Improvement</h2>
+<ol type="1">
+<li>Push the store to a private self-hosted remote (Gitea, Forgejo, or a bare git repository on a NAS) using <code>pass git init</code> and <code>pass git remote add</code> (covered in Configuration Step 4). Avoid third-party cloud git hosts even with private repositories.</li>
+<li>Install and configure Pass for iOS to enable mobile access; see Appendix A for the git sync, GPG key export, and SSH configuration procedure.</li>
+<li>Configure the GPG agent to use a hardware security key (YubiKey) so the private key never exists in plaintext on disk.</li>
+<li>Add a shell alias (e.g., <code>alias p='pass -c'</code>) to reduce the keystrokes for the most common operation.</li>
+<li>Periodically audit the store with <code>pass ls</code> to remove stale entries for defunct accounts and services.</li>
+<li>Enable <code>pass git</code> push as a post-commit hook so the remote backup is updated automatically after every change.</li>
+</ol>
+</section>
+</section>
+<section id="wrapping-up" class="level1" data-number="12">
+<h1 data-number="12"><span class="header-section-number">12</span> Wrapping Up</h1>
+<p>Switching to <code>pass</code> from a combination of browser password managers and a commercial vault took one afternoon and produced a credential store that is simpler, more auditable, and more portable than anything it replaced. The migration of 648 entries from 1Password was completed in under two minutes using the <code>1password2pass.rb</code> script. The entire store is a directory of GPG-encrypted files: no proprietary format, no subscription required to read it.</p>
+<p>The most instructive moment in the setup was the accidental commit to a public repository. Recovering from it was straightforward, but the incident made concrete a rule that had previously felt theoretical: sensitive directories belong in <code>.gitignore</code> before the repository is created, not after.</p>
+<p>In conclusion, four points merit emphasis. First, <code>pass</code> stores passwords as GPG-encrypted files in a plain directory tree, composing GPG and git rather than replacing them. Second, the store must be added to <code>.gitignore</code> in any dotfiles repository before the first commit; this step is easy to miss and non-trivial to reverse. Third, <code>pinentry-mac</code> is required on macOS for reliable passphrase prompts outside the terminal and must be configured in <code>~/.gnupg/gpg-agent.conf</code>. Fourth, the <code>1password2pass.rb</code> script migrates a 1Password CSV export to the store in one command; the plaintext CSV should be deleted afterwards.</p>
+</section>
+<section id="see-also" class="level1" data-number="13">
+<h1 data-number="13"><span class="header-section-number">13</span> See Also</h1>
+<p><strong>Official documentation:</strong></p>
+<ul>
+<li><a href="https://www.passwordstore.org/">passwordstore.org</a>: the official <code>pass</code> homepage with install instructions and the full list of compatible import scripts</li>
+<li><a href="https://www.passwordstore.org/#other">passwordstore.org/#other</a>: companion apps and import scripts, including <code>1password2pass.rb</code></li>
+<li><a href="https://www.gnupg.org/documentation/">GnuPG documentation</a></li>
+</ul>
+<p><strong>Related posts:</strong></p>
+<ul>
+<li>Post 64, <a href="https://focusonr.org/posts/64-migrating-off-dropbox/">Migrating Off Dropbox: Beyond Dotfiles</a>: the three-layer framework that defines where the password store belongs in a multi-laptop workflow and why cloud-mounted git repos are structurally wrong.</li>
+<li>Post 65, <a href="https://focusonr.org/posts/65-multi-laptop-bootstrap/">Multi-Laptop macOS Bootstrap</a>: the concrete implementation of post 64’s framework: the <code>install.sh</code> that deploys dotfiles and prints the ‘restore <code>~/.gnupg</code> from secure storage’ reminder that step 3 of this post’s bootstrap sequence depends on. Also lists <code>~/.password-store</code> explicitly in its sensitive-files inventory.</li>
+<li>Post 24, <a href="https://focusonr.org/posts/24-setupdotfilesongithub/">Creating a GitHub Dotfiles Repository</a>: the architectural design that post 65 implements and that this post’s bootstrap sequence builds on.</li>
+<li><a href="https://focusonr.org/posts/setupgit/">Setting Up Git on a New Machine</a>: relevant if you plan to track the password store in a private self-hosted git remote.</li>
+</ul>
+<hr>
+</section>
+<section id="reproducibility" class="level1" data-number="14">
+<h1 data-number="14"><span class="header-section-number">14</span> Reproducibility</h1>
+<p><strong>Tested configuration:</strong></p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Component</th>
+<th>Version</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Operating system</td>
+<td>macOS 15.4 (Sequoia)</td>
+</tr>
+<tr class="even">
+<td>pass</td>
+<td>1.7.4</td>
+</tr>
+<tr class="odd">
+<td>gnupg</td>
+<td>2.4.x</td>
+</tr>
+<tr class="even">
+<td>pinentry-mac</td>
+<td>1.3.x</td>
+</tr>
+<tr class="odd">
+<td>Shell</td>
+<td>zsh 5.9</td>
+</tr>
+<tr class="even">
+<td>Homebrew</td>
+<td>4.x</td>
+</tr>
+<tr class="odd">
+<td>Last verified</td>
+<td>2026-05-17</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Configuration files:</strong></p>
+<ul>
+<li><code>analysis/configs/gpg-agent.conf</code>: <code>pinentry-mac</code> configuration</li>
+<li><code>analysis/configs/gitignore-guard.sh</code>: one-liner to add <code>.password-store</code> to an existing dotfiles <code>.gitignore</code></li>
+</ul>
+<p><strong>To reproduce the core setup:</strong></p>
+<div class="sourceCode" id="cb21"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="ex">brew</span> install pass gnupg pinentry-mac</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="ex">gpg</span> <span class="at">--full-gen-key</span>         <span class="co"># follow prompts</span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="ex">pass</span> init your@email.com</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="ex">pass</span> insert test/smoke</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a><span class="ex">pass</span> <span class="at">-c</span> test/smoke         <span class="co"># confirm clipboard copy works</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<hr>
+</section>
+<section id="appendix-a" class="level1" data-number="15">
+<h1 data-number="15"><span class="header-section-number">15</span> Appendix A: iOS Sync with Pass for iOS</h1>
+<p>The Pass for iOS app reads the same GPG-encrypted <code>.gpg</code> files that the desktop <code>pass</code> command produces. Once the store is in a private git remote (Configuration Step 4), the iOS app can pull and decrypt entries on the device. The procedure has four parts.</p>
+<section id="a.1-confirm-the-remote-is-set-up" class="level2" data-number="15.1">
+<h2 data-number="15.1" class="anchored" data-anchor-id="a.1-confirm-the-remote-is-set-up"><span class="header-section-number">15.1</span> A.1 Confirm the Remote is Set Up</h2>
+<p>From the desktop:</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pass</span> git remote <span class="at">-v</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Should show: origin  git@your-private-host:password-store.git</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="ex">pass</span> git push</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>If no remote is configured, add one first (see Configuration Step 4). Note that this remote should be a self-hosted server, not a public cloud service. The iOS app will pull directly from the same remote.</p>
+</section>
+<section id="a.2-export-the-gpg-key" class="level2" data-number="15.2">
+<h2 data-number="15.2" class="anchored" data-anchor-id="a.2-export-the-gpg-key"><span class="header-section-number">15.2</span> A.2 Export the GPG Key</h2>
+<p>The app needs your private key to decrypt entries. Export both the public and private key to armored text files:</p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gpg</span> <span class="at">--export-armor</span> YOUR_KEY_ID <span class="op">&gt;</span> public.asc</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="ex">gpg</span> <span class="at">--export-secret-keys</span> <span class="at">--armor</span> YOUR_KEY_ID <span class="op">&gt;</span> private.asc</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Transfer <code>private.asc</code> to the iPhone securely. AirDrop is acceptable for this step: the file is protected only by your GPG passphrase, so ensure the passphrase is strong before transferring. Delete the <code>.asc</code> files from the desktop immediately after transfer.</p>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Warning
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>The exported private key is a sensitive file. Do not email it, do not store it in Dropbox or iCloud unencrypted, and delete it from the Files app on the iPhone after importing into Pass.</p>
+</div>
+</div>
+</section>
+<section id="a.3-configure-the-ios-app" class="level2" data-number="15.3">
+<h2 data-number="15.3" class="anchored" data-anchor-id="a.3-configure-the-ios-app"><span class="header-section-number">15.3</span> A.3 Configure the iOS App</h2>
+<p>Install <strong>Pass - Password Store</strong> from the App Store. In the app:</p>
+<ol type="1">
+<li>Go to <strong>Settings → Password Store</strong>.</li>
+<li>Set the <strong>Git Repository URL</strong> to your self-hosted remote.</li>
+</ol>
+<p><strong>SSH (recommended for a self-hosted remote):</strong></p>
+<ul>
+<li>The app generates its own SSH key pair. Go to <strong>Settings → SSH Key</strong>, copy the displayed public key, and add it to <code>~/.ssh/authorized_keys</code> on your self-hosted git server. Do not copy your desktop key; the iOS app generates a separate key internally.</li>
+</ul>
+<p><strong>HTTPS (if your remote supports it):</strong></p>
+<ul>
+<li>Use the credentials for your self-hosted service (Gitea, Forgejo, etc.). If the service supports tokens, use a token scoped to the password-store repository only rather than your account password.</li>
+</ul>
+</section>
+<section id="a.4-import-the-gpg-key-and-sync" class="level2" data-number="15.4">
+<h2 data-number="15.4" class="anchored" data-anchor-id="a.4-import-the-gpg-key-and-sync"><span class="header-section-number">15.4</span> A.4 Import the GPG Key and Sync</h2>
+<ol type="1">
+<li>In the app, go to <strong>Settings → PGP Key → Import Key</strong>.</li>
+<li>Select the <code>private.asc</code> file from Files.</li>
+<li>Enter your GPG passphrase when prompted.</li>
+<li>Tap <strong>Sync</strong>. The app pulls the repository and decrypts the entry list.</li>
+</ol>
+<p>Confirm that a known entry is visible and tappable. Tapping an entry copies the password to the iOS clipboard.</p>
+</section>
+<section id="a.5-common-snags" class="level2" data-number="15.5">
+<h2 data-number="15.5" class="anchored" data-anchor-id="a.5-common-snags"><span class="header-section-number">15.5</span> A.5 Common Snags</h2>
+<ul>
+<li><strong>‘Permission denied (publickey)’ on sync:</strong> the app’s SSH key has not been added to your self-hosted server’s <code>authorized_keys</code>. Copy the public key from Settings → SSH Key in the app and append it to <code>~/.ssh/authorized_keys</code> on the git server.</li>
+<li><strong>‘No secret key’ decryption error:</strong> the fingerprint in the app does not match the <code>.gpg-id</code> in the repository. Check both values: <code>cat ~/.password-store/.gpg-id</code> on the desktop, Settings → PGP Key in the app.</li>
+<li><strong>HTTPS 401 error:</strong> the Personal Access Token has expired or was not granted write access to the repository. Regenerate it.</li>
+</ul>
+<hr>
+</section>
+</section>
+<section id="appendix-b" class="level1" data-number="16">
+<h1 data-number="16"><span class="header-section-number">16</span> Appendix B: Security Considerations</h1>
+<p>The following items do not fit neatly into the setup steps but materially affect the security posture of the overall credential architecture. Post 67 addresses these topics in depth; this appendix summarises the key points for quick reference.</p>
+<section id="b.1-gpg-subkey-architecture" class="level2" data-number="16.1">
+<h2 data-number="16.1" class="anchored" data-anchor-id="b.1-gpg-subkey-architecture"><span class="header-section-number">16.1</span> B.1 GPG Subkey Architecture</h2>
+<p>The setup above creates a single key pair used for both certification and encryption. The correct operational model for daily use is:</p>
+<ul>
+<li><strong>Master key (certify only):</strong> signs new subkeys and revocation certificates. Generated once, then moved to offline storage or a hardware security key (YubiKey). Never used in daily operation.</li>
+<li><strong>Encryption subkey:</strong> the only key needed by <code>pass</code> for day-to-day encrypt/decrypt operations. Shorter expiry than the master.</li>
+<li><strong>Signing subkey (optional):</strong> used for <code>git commit --gpg-sign</code>.</li>
+</ul>
+<p>With this architecture, the master private key never needs to exist on the laptop’s disk during normal operation. A compromised laptop exposes only the encryption subkey, which can be revoked by signing a new revocation certificate with the (offline) master key. This is the mechanism by which hardware security keys (Opportunity #3) work. Implementing the full subkey architecture is beyond this post’s scope but is the recommended next step after the basic setup is stable.</p>
+</section>
+<section id="b.2-aws-and-api-credentials-via-pass" class="level2" data-number="16.2">
+<h2 data-number="16.2" class="anchored" data-anchor-id="b.2-aws-and-api-credentials-via-pass"><span class="header-section-number">16.2</span> B.2 AWS and API Credentials via pass</h2>
+<p>The <code>~/.aws/credentials</code> file is plaintext on disk. Having a working <code>pass</code> store makes it straightforward to remove it:</p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Store AWS credentials in pass</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a><span class="ex">pass</span> insert aws/access-key-id</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a><span class="ex">pass</span> insert aws/secret-access-key</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Retrieve on demand via a shell function in ~/.zshrc:</span></span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a><span class="fu">aws_env()</span> <span class="kw">{</span></span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>  <span class="bu">export</span> <span class="va">AWS_ACCESS_KEY_ID</span><span class="op">=</span><span class="va">$(</span><span class="ex">pass</span> aws/access-key-id<span class="va">)</span></span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>  <span class="bu">export</span> <span class="va">AWS_SECRET_ACCESS_KEY</span><span class="op">=</span><span class="va">$(</span><span class="ex">pass</span> aws/secret-access-key<span class="va">)</span></span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Call <code>aws_env</code> at the start of a session that needs AWS access. The plaintext credentials are in memory only, not on disk. Remove <code>~/.aws/credentials</code> after confirming the function works. The same pattern applies to any plaintext credential file (<code>~/.npmrc</code> tokens, <code>~/.config/rclone/rclone.conf</code>, API keys in <code>~/.env</code>).</p>
+</section>
+<section id="b.3-filevault" class="level2" data-number="16.3">
+<h2 data-number="16.3" class="anchored" data-anchor-id="b.3-filevault"><span class="header-section-number">16.3</span> B.3 FileVault</h2>
+<p>Full-disk encryption (FileVault on macOS) is a prerequisite, not an enhancement, for any local credential store. The GPG encrypted files in <code>~/.password-store/</code> are strong, but the GPG agent caches the decrypted private key in memory; if the machine is lost while unlocked, or if a swap file captures memory, the cached key is readable without FileVault. Confirm FileVault status:</p>
+<div class="sourceCode" id="cb25"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="ex">fdesetup</span> status</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Expected: FileVault is On.</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>If FileVault is not enabled, enable it before populating the password store.</p>
+</section>
+<section id="b.4-ssh-key-policy-for-multi-laptop-setups" class="level2" data-number="16.4">
+<h2 data-number="16.4" class="anchored" data-anchor-id="b.4-ssh-key-policy-for-multi-laptop-setups"><span class="header-section-number">16.4</span> B.4 SSH Key Policy for Multi-Laptop Setups</h2>
+<p>Post 65’s bootstrap sequence says ‘Restore <code>~/.ssh</code> from secure storage.’ For SSH private keys, the correct multi-machine policy is NOT to copy keys between machines but to generate a new key pair on each machine:</p>
+<div class="sourceCode" id="cb26"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh-keygen</span> <span class="at">-t</span> ed25519 <span class="at">-C</span> <span class="st">"</span><span class="va">$(</span><span class="fu">hostname</span><span class="va">)</span><span class="st">-</span><span class="va">$(</span><span class="fu">date</span> +%Y%m<span class="va">)</span><span class="st">"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Then add the new public key to GitHub, servers, and anywhere the previous key was authorised. This is more work initially, but it means a compromised laptop exposes only that machine’s key, and revocation is surgical. Copying a private key between machines means all machines are compromised if any one of them is.</p>
+<p>The one exception is the GPG private key, which is a single identity and must be the same across machines by design. The mitigant is the subkey architecture described above, which limits the blast radius of any single machine compromise.</p>
+<hr>
+</section>
+</section>
+<section id="lets-connect" class="level1" data-number="17">
+<h1 data-number="17"><span class="header-section-number">17</span> Let’s Connect</h1>
+<p><em>Have questions, suggestions, or spot an error? Let me know.</em></p>
+<ul>
+<li><strong>GitHub:</strong> <a href="https://github.com/rgt47">rgt47</a></li>
+<li><strong>Twitter/X:</strong> <a href="https://twitter.com/rgt47"><span class="citation" data-cites="rgt47">@rgt47</span></a></li>
+<li><strong>LinkedIn:</strong> <a href="https://linkedin.com/in/rgthomaslab">Ronald Glenn Thomas</a></li>
+</ul>
+<p>I would enjoy hearing from you if:</p>
+<ul>
+<li>You spot an error or a better approach to any of the steps above.</li>
+<li>You have suggestions for topics you would like to see covered.</li>
+<li>You use a different OS or password manager and want to compare notes.</li>
+</ul>
+<hr>
+<p><em>Rendered on 2026-05-17 at 09:08 PDT.</em><br> <em>Source: ~/prj/qblog/posts/66-unix-pass-setup/unix-pass-setup/analysis/report/index.qmd</em></p>
+<hr>
+<!-- ============================================================================
+PRE-PUBLISH QA CHECKLIST: verify each item BEFORE setting draft: false
+
+This is the verification pass that mirrors the AUTHOR PROVIDES list at the
+top of this file. If anything below is unchecked, the post is not ready.
+
+[ ] YAML
+    [ ] title, subtitle, date, categories, description, image filled in
+    [x] document-type: 'blog'
+    [x] draft: false
+
+[ ] Narrative complete (no remaining `[bracketed]` placeholders)
+    [ ] grep '\[' index.qmd returns only legitimate code/links
+
+[ ] Configuration artifacts present and tested
+    [ ] Full config file shown verbatim, not snippets
+    [ ] Install commands tested on a clean machine (or VM)
+    [ ] Verification commands produce the documented output
+    [ ] Uninstall / rollback steps documented
+
+[ ] Things to Watch Out For
+    [ ] At least 5 gotchas listed (setup posts require this)
+    [ ] Each gotcha has both a symptom AND a fix
+
+[ ] Visual design
+    [ ] 1 hero image (width=80%) immediately after AUTHOR PROVIDES block
+    [ ] Exactly 3 ambiance images ({.img-fluid} only, no width=NN%,
+        no fig-align): after Objectives, after Configuration, before
+        Lessons Learnt
+    [ ] Hero and ambiance captions describe the actual image (not a
+        placeholder description)
+    [ ] No hand-coded "Download PDF" link in body. The site auto-injects
+        one via _includes/after-body.html for any post with format: pdf
+        in YAML.
+    [ ] media/images/README.md attributes every image
+
+[ ] Content quality
+    [ ] Learner voice: author positioned as peer, not expert
+    [ ] Zero emoji anywhere (narrative, comments, captions)
+    [ ] Zero em dashes (forbidden per house style; use parens or commas)
+    [ ] Single quotes preferred over double quotes in prose
+    [ ] Each command and config setting interpreted in plain language
+
+[ ] Reproducibility
+    [ ] Version matrix table filled in (OS, tool, dependencies, date)
+    [ ] Config files committed under analysis/configs/
+    [ ] Install script (if provided) is runnable on a clean machine
+
+[ ] Render verification
+    [x] quarto render index.qmd produces clean HTML with no warnings
+    [x] Hero image displays in /blog/ listing card
+    [ ] Internal links resolve
+
+============================================================================ -->
+<section id="related-posts-in-this-cluster" class="level2" data-number="17.1">
+<h2 data-number="17.1" class="anchored" data-anchor-id="related-posts-in-this-cluster"><span class="header-section-number">17.1</span> Related posts in this cluster</h2>
+<p>This post is part of the <em>Security, Backup, and Sync</em> series. Recommended reading order:</p>
+<ol type="1">
+<li>Post 31: <a href="../31-sec-three-tier-backup-architecture/">Research Backup Architecture</a></li>
+<li>Post 32: <a href="../32-sec-dropbox-to-portable-sync/">Migrating Off Dropbox: Beyond Dotfiles</a></li>
+<li><strong>Post 33: Setting Up pass: a Unix Password Manager</strong> (this post)</li>
+<li>Post 34: <a href="../34-sec-aws-and-pass-secrets/">Secrets Management for the Workflow Construct</a></li>
+<li>Post 35: <a href="../35-sec-multi-laptop-threat-model/">Security Foundations for a Multi-Laptop Research Cluster</a></li>
+</ol>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp("https:\/\/focusonr\.org");
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<script src="https://giscus.app/client.js" data-repo="rgt47/qblog" data-repo-id="R_kgDOH6TO7A" data-category="General" data-category-id="DIC_kwDOH6TO7M4CXqIi" data-mapping="pathname" data-reactions-enabled="1" data-emit-metadata="0" data-input-position="bottom" data-theme="light" data-lang="en" crossorigin="anonymous" async="">
+</script>
+<input type="hidden" id="giscus-base-theme" value="light">
+<input type="hidden" id="giscus-alt-theme" value="light">
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Copyright 2023-2026, Ronald ‘Ryy’ G. Thomas. The lab’s other activities live at <a href="https://rgtlab.org">rgtlab.org</a>.</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47">
+      <i class="bi bi-github" role="img">
+</i> 
+    </a>
+  </li>  
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47">
+      <i class="bi bi-twitter" role="img">
+</i> 
+    </a>
+  </li>  
+</ul>
+    </div>
+  </div>
+</footer>
+
+<!-- Fix category filtering to work with plain-text categories -->
+<script>
+window.addEventListener('DOMContentLoaded', function() {
+  setTimeout(function() {
+    // Override filterListingCategory to work with plain-text categories
+    window.filterListingCategory = function(category) {
+      const listingIds = Object.keys(window['quarto-listings']);
+      for (const listingId of listingIds) {
+        const list = window['quarto-listings'][listingId];
+        if (list) {
+          if (category === '') {
+            // resets the filter
+            list.filter();
+          } else {
+            // filter to this category - handle both plain text and base64
+            list.filter(function (item) {
+              const itemValues = item.values();
+              if (itemValues.categories !== null && itemValues.categories !== undefined) {
+                let categories;
+
+                try {
+                  // Try to decode as base64 first
+                  categories = decodeURIComponent(atob(itemValues.categories)).split(",");
+                } catch(e) {
+                  // If that fails, assume it's plain text
+                  categories = itemValues.categories.split(",");
+                }
+
+                // Trim whitespace from categories
+                categories = categories.map(c => c.trim());
+                return categories.includes(category);
+              } else {
+                return false;
+              }
+            });
+          }
+        }
+      }
+    };
+
+    // Trigger the listing-loaded handler to use the patched filter
+    if (window['quarto-listing-loaded']) {
+      window['quarto-listing-loaded']();
+    }
+  }, 500);
+});
+</script>
+
+<!-- PDF view/download button for blog posts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Only add the button on post pages
+  if (window.location.pathname.includes('/posts/') && !window.location.pathname.endsWith('/posts/') && !window.location.pathname.endsWith('/posts/index.html')) {
+    var currentPath = window.location.pathname;
+    // Handle both /posts/name/ and /posts/name/index.html formats
+    var pdfPath;
+    if (currentPath.endsWith('/')) {
+      pdfPath = currentPath + 'index.pdf';
+    } else {
+      pdfPath = currentPath.replace('.html', '.pdf');
+    }
+
+    // Check if PDF exists first
+    fetch(pdfPath, { method: 'HEAD' })
+      .then(function(response) {
+        if (response.ok) {
+          // PDF exists, show download button
+          showDownloadButton(pdfPath);
+        }
+        // If PDF doesn't exist, don't show any button
+      })
+      .catch(function(error) {
+        // Error checking PDF, don't show any button
+      });
+  }
+});
+
+function showDownloadButton(pdfPath) {
+  var downloadBtn = document.createElement('div');
+  downloadBtn.className = 'pdf-download-button';
+
+  // Get file size if possible
+  fetch(pdfPath, { method: 'HEAD' })
+    .then(function(response) {
+      var size = response.headers.get('Content-Length');
+      var sizeText = '';
+
+      if (size) {
+        // Convert to MB or KB
+        var sizeInMB = size / (1024 * 1024);
+        if (sizeInMB >= 1) {
+          sizeText = ' (' + sizeInMB.toFixed(1) + ' MB)';
+        } else {
+          sizeText = ' (' + (size / 1024).toFixed(0) + ' KB)';
+        }
+      }
+
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' + sizeText +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    })
+    .catch(function() {
+      // Basic fallback if we can't get file size
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    });
+
+  // Find where to insert the button (right after the title block)
+  var titleBlock = document.querySelector('.quarto-title-meta');
+  if (titleBlock) {
+    titleBlock.after(downloadBtn);
+  }
+}
+</script>
+
+<style>
+.pdf-download-button {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+</style>
+
+
+
+
+</body></html>

@@ -1,1 +1,1468 @@
-analysis/report/index.html
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.5.45">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ronald ‘Ryy’ G. Thomas">
+<meta name="dcterms.date" content="2026-05-07">
+<meta name="description" content="Post 24 establishes a portable dotfiles repository. This post extends the same goal to the rest of a single-user research workflow: project content, backup-pipeline source paths, and the append-only history files that Dropbox handles particularly badly. Frames the problem as three layers and walks through trade-offs for each.">
+
+<title>Migrating Off Dropbox: Beyond Dotfiles – focusonr</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../../">
+<script src="../../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": true,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "keyboard-shortcut": [
+    "?",
+    "/"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&amp;family=Open+Sans:ital,wght@0,400;0,600;1,400&amp;family=Fira+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<script src="https://kit.fontawesome.com/0fba9333d8.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+
+<!-- Custom meta tags for social sharing -->
+<meta property="og:site_name" content="Thomas Lab">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@rgt47">
+
+<!-- Add responsive features -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<!-- Add analytics if needed -->
+<!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXX');
+</script> -->
+
+<!-- Add custom javascript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Remove code tools button completely
+  const codeButton = document.querySelector('.code-tools-button');
+  if (codeButton) {
+    codeButton.remove();
+  }
+  
+  // Add any custom JavaScript functionality here
+  
+  // Example: Add smooth scrolling
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      
+      document.querySelector(this.getAttribute('href')).scrollIntoView({
+        behavior: 'smooth'
+      });
+    });
+  });
+  
+  // Make sidebar category items clickable (but not TOC items)
+  const categoryLinks = {
+    'Programming & Development': '/posts/?category=Programming+%26+Development',
+    'Data Analysis & Visualization': '/posts/?category=Data+Analysis+%26+Visualization',
+    'Deployment & Operations': '/posts/?category=Deployment+%26+Operations',
+    'Development Environment': '/posts/?category=Development+Environment',
+    'Shiny Applications': '/posts/?category=Shiny+Applications',
+    'AI & Automation': '/posts/?category=AI+%26+Automation',
+    'System Administration': '/posts/?category=System+Administration'
+  };
+  
+  // Only target sidebar items that are not in the TOC
+  document.querySelectorAll('.sidebar-item-section .sidebar-item-text').forEach(item => {
+    // Skip if this is inside the TOC
+    if (item.closest('#TOC')) return;
+    
+    const text = item.textContent.trim();
+    if (categoryLinks[text]) {
+      item.addEventListener('click', function() {
+        window.location.href = categoryLinks[text];
+      });
+    }
+  });
+});
+</script>
+
+
+<meta property="og:title" content="focusonr - Migrating Off Dropbox: Beyond Dotfiles">
+<meta property="og:description" content="Post 24 establishes a portable dotfiles repository. This post extends the same goal to the rest of a single-user research workflow: project content, backup-pipeline source paths, and the append-only history files that Dropbox handles particularly badly. Frames the problem as three layers and walks through trade-offs for each.">
+<meta property="og:image" content="https://focusonr.org/posts/32-sec-dropbox-to-portable-sync/sec-dropbox-to-portable-sync/media/images/hero.png">
+<meta property="og:site_name" content="focusonr">
+<meta property="og:image:height" content="893">
+<meta property="og:image:width" content="1600">
+</head>
+
+<body class="nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../../index.html">
+    <span class="navbar-title">focusonr</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../blog/index.html"> 
+<span class="menu-text">Blog</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="https://rgtlab.org"> 
+<span class="menu-text">rgtlab.org</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47"> <i class="bi bi-twitter" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a>
+  <ul class="collapse">
+  <li><a href="#motivations" id="toc-motivations" class="nav-link" data-scroll-target="#motivations"><span class="header-section-number">1.1</span> Motivations</a></li>
+  <li><a href="#objectives" id="toc-objectives" class="nav-link" data-scroll-target="#objectives"><span class="header-section-number">1.2</span> Objectives</a></li>
+  </ul></li>
+  <li><a href="#what-is-the-problem" id="toc-what-is-the-problem" class="nav-link" data-scroll-target="#what-is-the-problem"><span class="header-section-number">2</span> What is the Problem?</a></li>
+  <li><a href="#prerequisites" id="toc-prerequisites" class="nav-link" data-scroll-target="#prerequisites"><span class="header-section-number">3</span> Prerequisites</a></li>
+  <li><a href="#the-three-layers" id="toc-the-three-layers" class="nav-link" data-scroll-target="#the-three-layers"><span class="header-section-number">4</span> The Three Layers</a>
+  <ul class="collapse">
+  <li><a href="#layer-1-dotfiles-distribution" id="toc-layer-1-dotfiles-distribution" class="nav-link" data-scroll-target="#layer-1-dotfiles-distribution"><span class="header-section-number">4.1</span> Layer 1: Dotfiles distribution</a></li>
+  <li><a href="#layer-2-project-content-sync" id="toc-layer-2-project-content-sync" class="nav-link" data-scroll-target="#layer-2-project-content-sync"><span class="header-section-number">4.2</span> Layer 2: Project content sync</a>
+  <ul class="collapse">
+  <li><a href="#reconstructable-local-caches-the-maildir-case" id="toc-reconstructable-local-caches-the-maildir-case" class="nav-link" data-scroll-target="#reconstructable-local-caches-the-maildir-case"><span class="header-section-number">4.2.1</span> Reconstructable local caches: the Maildir case</a></li>
+  <li><a href="#worked-example-relocating-an-existing-maildir-to-.localsharemail" id="toc-worked-example-relocating-an-existing-maildir-to-.localsharemail" class="nav-link" data-scroll-target="#worked-example-relocating-an-existing-maildir-to-.localsharemail"><span class="header-section-number">4.2.2</span> Worked example: relocating an existing Maildir to ~/.local/share/mail/</a></li>
+  </ul></li>
+  <li><a href="#layer-3-append-only-history-files" id="toc-layer-3-append-only-history-files" class="nav-link" data-scroll-target="#layer-3-append-only-history-files"><span class="header-section-number">4.3</span> Layer 3: Append-only history files</a></li>
+  </ul></li>
+  <li><a href="#the-decision-worksheet" id="toc-the-decision-worksheet" class="nav-link" data-scroll-target="#the-decision-worksheet"><span class="header-section-number">5</span> The Decision Worksheet</a></li>
+  <li><a href="#migration-sequence" id="toc-migration-sequence" class="nav-link" data-scroll-target="#migration-sequence"><span class="header-section-number">6</span> Migration Sequence</a></li>
+  <li><a href="#things-to-watch-out-for" id="toc-things-to-watch-out-for" class="nav-link" data-scroll-target="#things-to-watch-out-for"><span class="header-section-number">7</span> Things to Watch Out For</a></li>
+  <li><a href="#uninstall-rollback" id="toc-uninstall-rollback" class="nav-link" data-scroll-target="#uninstall-rollback"><span class="header-section-number">8</span> Uninstall / Rollback</a></li>
+  <li><a href="#what-did-we-learn" id="toc-what-did-we-learn" class="nav-link" data-scroll-target="#what-did-we-learn"><span class="header-section-number">9</span> What Did We Learn?</a>
+  <ul class="collapse">
+  <li><a href="#lessons-learnt" id="toc-lessons-learnt" class="nav-link" data-scroll-target="#lessons-learnt"><span class="header-section-number">9.1</span> Lessons Learnt</a></li>
+  <li><a href="#limitations" id="toc-limitations" class="nav-link" data-scroll-target="#limitations"><span class="header-section-number">9.2</span> Limitations</a></li>
+  <li><a href="#opportunities-for-improvement" id="toc-opportunities-for-improvement" class="nav-link" data-scroll-target="#opportunities-for-improvement"><span class="header-section-number">9.3</span> Opportunities for Improvement</a></li>
+  </ul></li>
+  <li><a href="#wrapping-up" id="toc-wrapping-up" class="nav-link" data-scroll-target="#wrapping-up"><span class="header-section-number">10</span> Wrapping Up</a>
+  <ul class="collapse">
+  <li><a href="#expected-outcomes" id="toc-expected-outcomes" class="nav-link" data-scroll-target="#expected-outcomes"><span class="header-section-number">10.1</span> Expected outcomes</a></li>
+  </ul></li>
+  <li><a href="#see-also" id="toc-see-also" class="nav-link" data-scroll-target="#see-also"><span class="header-section-number">11</span> See Also</a></li>
+  <li><a href="#reproducibility" id="toc-reproducibility" class="nav-link" data-scroll-target="#reproducibility"><span class="header-section-number">12</span> Reproducibility</a></li>
+  <li><a href="#lets-connect" id="toc-lets-connect" class="nav-link" data-scroll-target="#lets-connect"><span class="header-section-number">13</span> Let’s Connect</a>
+  <ul class="collapse">
+  <li><a href="#related-posts-in-this-cluster" id="toc-related-posts-in-this-cluster" class="nav-link" data-scroll-target="#related-posts-in-this-cluster"><span class="header-section-number">13.1</span> Related posts in this cluster</a></li>
+  </ul></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="index.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content column-page-left" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Migrating Off Dropbox: Beyond Dotfiles</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">workflow</div>
+    <div class="quarto-category">sync</div>
+    <div class="quarto-category">migration</div>
+    <div class="quarto-category">dropbox</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    <p>Post 24 establishes a portable dotfiles repository. This post extends the same goal to the rest of a single-user research workflow: project content, backup-pipeline source paths, and the append-only history files that Dropbox handles particularly badly. Frames the problem as three layers and walks through trade-offs for each.</p>
+  </div>
+</div>
+
+
+<div class="quarto-title-meta column-page-left">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ronald ‘Ryy’ G. Thomas </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">May 7, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<!-- ============================================================================
+AUTHOR PROVIDES — concrete inputs the blogger must supply
+
+Every item below maps to a placeholder in the body. Fill in this checklist
+FIRST, then paste your answers into the matching `[bracketed]` slots. Do not
+publish until every box is ticked.
+
+YAML FRONT MATTER (lines 1-20)
+  [x] title           — 'Migrating Off Dropbox: Beyond Dotfiles'
+  [x] subtitle        — decision framework for the rest of the workflow
+  [x] date            — 2026-05-07
+  [x] categories      — workflow, sync, migration, dropbox
+  [x] description     — set
+  [x] image           — media/images/hero.png (Imagen 3, 2026-05-07)
+  [x] draft: false    — flip when imagery in place and render verified
+
+NARRATIVE INPUTS
+  [x] Hook sentence   — 'I did not really appreciate how much of my
+        workflow depended on Dropbox until I tried to leave it.'
+  [x] Pain point      — half-portable dotfiles + Dropbox-bound everything
+                        else; new laptop without Dropbox is broken
+  [x] Motivations     — five bullets
+  [x] Objectives      — four verifiable end states
+  [x] What is [the problem]? — three-layer model
+  [x] Daily-workflow paragraph — how the post-migration setup feels
+  [x] Things to Watch Out For — six gotchas
+  [x] Lessons Learnt  — conceptual / technical / gotchas
+  [x] Limitations     — six bullets
+  [x] Opportunities for Improvement — five next steps
+  [x] Wrapping Up     — conclusion + main takeaways
+  [x] See Also        — post 24, post 20, plus key external links
+
+CONFIGURATION DELIVERABLES (real, working artifacts, not snippets)
+  [x] Prerequisites list — listed in body
+  [ ] Installation block — N/A (this post is a framework, not an install)
+  [x] Complete deliverable — docs/migration-decision-worksheet.qmd
+  [ ] Verification commands — N/A (post-specific commands inline)
+  [ ] Optional keybinding/command reference table — not applicable
+  [x] Uninstall / rollback steps — covered as 'staying with Dropbox' path
+  [ ] Optional appendices — see-also section serves this role
+
+VERSION MATRIX (Reproducibility section)
+  [x] OS + version tested        — macOS 15.4 (Sequoia)
+  [x] Tool versions              — git 2.45+, rsync 3.2+, Syncthing 1.27+
+  [x] Date of last verification  — 2026-05-07
+
+IMAGES (4 total: hero + 3 ambiance, all in media/images/)
+  [ ] Hero image (80% width)        — placeholders in place; prompts ready
+  [ ] Ambiance image 1 (100% width)
+  [ ] Ambiance image 2 (100% width)
+  [ ] Ambiance image 3 (100% width)
+  [ ] media/images/README.md        — update with new prompts and dates
+
+CONTACT & METADATA
+  [x] Author name in YAML matches site author
+  [x] Social links in 'Let's Connect' updated (or removed)
+  [x] Giscus comments enabled (inherited from _quarto.yml)
+
+============================================================================ -->
+<!-- ============================================================================
+HERO IMAGE
+============================================================================ -->
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/hero.png" class="img-fluid figure-img" style="width:80.0%"></p>
+<figcaption>A wooden tray on a plain workbench, with one large compartment on the left holding a single round glass weight and three narrower compartments on the right holding three different small objects, suggesting a single category being separated into three purpose-fit ones.</figcaption>
+</figure>
+</div>
+<p><em>A portable dotfiles repository is only the first half of leaving Dropbox. The other half is the rest of the workflow.</em></p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><strong>Multi-Machine Setup Series</strong> (recommended reading order): <a href="../../../posts/64-migrating-off-dropbox/">Part 1: Migrating off Dropbox</a> | <a href="../../../posts/65-multi-laptop-bootstrap/">Part 2: Multi-Laptop Bootstrap</a> | <a href="../../../posts/67-multi-laptop-security/">Part 3: Security Audit</a></p>
+</div>
+</div>
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>I did not really appreciate how much of my daily workflow depended on Dropbox until I tried to leave it. The dotfiles migration described in <a href="https://focusonr.org/posts/24-setupdotfilesongithub/">post 24</a> is the obvious half: pull the configuration files out of a cloud-mounted directory, put them under git, write an installer that creates symlinks. Once that work is committed, every dotfile in <code>$HOME</code> becomes version-controlled and reproducible on a new laptop with two commands.</p>
+<p>The non-obvious half is everything else. The dotfiles deploy cleanly on a fresh machine, then the new shell tries to <code>cd ~/prj/some-project</code> and fails because the project tree still lives at <code>~/Library/CloudStorage/Dropbox/prj/</code>. Backup scripts hardcode the same Dropbox path. AI-tool history files live under a Dropbox-synced symlink and accumulate conflict copies on every overlapping write between machines. The configuration is portable; the workflow is not.</p>
+<p>This post is the second half of post 24. It frames the problem as three independent layers (dotfiles, project content, append-only history), surveys the sync mechanisms each layer can use, and walks through a migration sequence that does not break a running pipeline mid-move. The companion deliverable is a decision worksheet that takes a reader from current state to a concrete migration plan. The choice of whether to leave Dropbox at all is left to the reader; this post is about doing it deliberately rather than partially.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Status of this migration
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>This post documents an ongoing migration on the author’s own setup. At time of writing, Layer 1 (dotfiles) is complete: the repository exists at <code>~/dotfiles/</code>, the installer is written and dry-run-tested, and the architecture below has been exercised end-to-end on this laptop. Layer 2 (project content) and Layer 3 (append-only history) are in progress. The framework is presented as it stands today; the ‘After completing this migration’ results section near the end is labelled as expected outcomes rather than claimed ones, and will be updated with measured numbers once the migration reaches a fresh laptop. The companion plan tracking this work is available in the dotfiles repository as <code>MULTI_LAPTOP_PLAN.md</code>.</p>
+</div>
+</div>
+<section id="motivations" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="motivations"><span class="header-section-number">1.1</span> Motivations</h2>
+<ul>
+<li>A new laptop bootstrap should be a one-command operation. Today, after running the dotfiles installer, half the workflow still requires installing Dropbox, signing in, and waiting for several gigabytes to materialise before anything functional happens.</li>
+<li>Dropbox sync of append-only files (shell history, AI-tool history, editor undo files) routinely produces conflict copies on multi-machine setups. The 12 conflict copies of <code>history.jsonl</code> discovered in this account on 2026-05-02 are one symptom of an architectural mismatch.</li>
+<li>Project content directories under Dropbox commingle with cloud-only artefacts that should not be synced (model output, large derived data, machine-specific caches). Excluding them via <code>.dropboxignore</code> is fragile and error-prone.</li>
+<li>The set of services that compete for <code>$HOME</code> (Dropbox, iCloud Drive, Google Drive, OneDrive) keeps growing, and choosing one default for everything is increasingly suboptimal as each service specialises.</li>
+<li>The work to reach ‘workflow independence’ is largely the same work as ‘workflow modernisation’: separating concerns by layer, choosing sync mechanisms that match each layer’s semantics, and documenting each move so it can be audited later.</li>
+</ul>
+</section>
+<section id="objectives" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="objectives"><span class="header-section-number">1.2</span> Objectives</h2>
+<ol type="1">
+<li>Inventory the workflow against three layers (dotfiles, project content, append-only history) and classify every sync-relevant artefact into exactly one layer.</li>
+<li>Produce a decision worksheet that, for each layer, names the candidate sync mechanisms and the trade-offs that distinguish them.</li>
+<li>Sequence the migration so that the backup pipeline never points at a stale source path and the launchd jobs stay valid throughout the move.</li>
+<li>Establish a fresh-machine bootstrap that does not require Dropbox and verifies the entire workflow end to end.</li>
+</ol>
+<p>This post documents the author’s own migration. If errors are spotted or better approaches are known, the comment thread below is the right place to note them.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance1.png" class="img-fluid figure-img"></p>
+<figcaption>A wooden desk seen from above with three small index cards arranged in a horizontal row, each card showing a hand-drawn symbol, suggesting classification before action.</figcaption>
+</figure>
+</div>
+</section>
+</section>
+<section id="what-is-the-problem" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> What is the Problem?</h1>
+<p>The problem is that ‘sync everything via one cloud provider’ was a reasonable default in 2014, when Dropbox was the only practical option for arbitrary file sync, but it now bundles three semantically distinct concerns into a single mechanism. The three concerns:</p>
+<ul>
+<li><strong>Configuration distribution</strong> wants version history, atomic deploys, and the ability to roll back. Git solves this; cloud sync only approximates it.</li>
+<li><strong>Project content sync</strong> wants block-level diffs for large files, conflict semantics that match the file format, and the option to exclude derived artefacts. Different sync mechanisms handle these very differently.</li>
+<li><strong>Append-only history</strong> wants either single-machine writes or a sync mechanism that understands append semantics. Cloud sync writes the whole file on every change and produces a conflict copy on every overlap.</li>
+</ul>
+<p>A useful analogy: it is the same reason a research compendium separates <code>data/</code>, <code>R/</code>, and <code>analysis/</code>. Each directory has different rules about what changes, how it changes, and who is allowed to change it. Lumping them all into one sync mechanism enforces no useful constraint and produces friction at the boundary.</p>
+<p>A concrete example from this migration: the file <code>~/.claude/history.jsonl</code> is an append-only log of prompts entered into the Claude Code CLI. Five machines (athena, Joe, julia.local, MacBook-Air.local, and the author’s primary laptop) write to it through a Dropbox-synced symlink. Most days, only one machine is active and the file syncs cleanly. The day two machines write within the same minute, Dropbox cannot merge the two append streams and creates a conflict copy. Across April 2026 alone, this produced four new conflict copies on this account, each holding several hundred KB of unique prompts; the running total since January is eleven. The file format is not the problem; the choice to sync an append log via a whole-file cloud provider is.</p>
+</section>
+<section id="prerequisites" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Prerequisites</h1>
+<p>This post assumes:</p>
+<ul>
+<li><strong>Operating system:</strong> macOS 13+ or a recent Linux distribution. The sync-mechanism table is applicable to both, but specific path conventions reference macOS.</li>
+<li><strong>Already in place:</strong> a working dotfiles repository per <a href="https://focusonr.org/posts/24-setupdotfilesongithub/">post 24</a>. The architecture below builds on that foundation; without it, half the moves cannot be made cleanly.</li>
+<li><strong>Background knowledge:</strong> comfort with git remotes, basic launchd plist structure, rclone or rsync at the level of a single sync command. The post does not require expertise in any of these.</li>
+<li><strong>Hardware:</strong> a single primary laptop is sufficient. A second machine (or VM) is useful for the migration’s verification step but is not required.</li>
+<li><strong>Time required:</strong> about a day’s careful work to inventory and decide; about a half-day to execute the moves once the decisions are made.</li>
+</ul>
+<p>On a single-machine setup where conflict copies have never appeared, the migration’s payoff is smaller and may not warrant the undertaking. The framework still applies, but Dropbox is unlikely to be causing friction in that scenario.</p>
+</section>
+<section id="the-three-layers" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> The Three Layers</h1>
+<p>Treat the workflow as three layers. Each layer has its own sync semantics, its own candidate mechanisms, and its own failure modes.</p>
+<section id="layer-1-dotfiles-distribution" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="layer-1-dotfiles-distribution"><span class="header-section-number">4.1</span> Layer 1: Dotfiles distribution</h2>
+<p>Solved by post 24. The summary, for reference: configuration files live in a git repository at <code>~/dotfiles/</code> (outside any cloud-mounted path), an <code>install.sh</code> creates symlinks into <code>$HOME</code> per machine, secrets stay out of the repository entirely. New-machine bootstrap is <code>git clone … ~/dotfiles &amp;&amp; cd ~/dotfiles &amp;&amp; ./install.sh</code>.</p>
+<p>This layer is the easiest to migrate because the files are small, change infrequently, and are nearly always edited from a single machine. Git handles the multi-machine merge cleanly when overlap does occur.</p>
+<p>What post 24 explicitly does not address: project content (the next layer), backup-pipeline source paths (also next layer), and append-only history (the third layer). Those failures show up only after the dotfiles layer is migrated, which is why this post exists.</p>
+</section>
+<section id="layer-2-project-content-sync" class="level2" data-number="4.2">
+<h2 data-number="4.2" class="anchored" data-anchor-id="layer-2-project-content-sync"><span class="header-section-number">4.2</span> Layer 2: Project content sync</h2>
+<p>Project content is the directory tree that holds research repositories, data, drafts, and archives. On a Dropbox-bound workflow this is <code>~/Dropbox/prj/</code> and similar siblings (<code>docs/</code>, <code>sbx/</code>, <code>work/</code>, <code>shr/</code>).</p>
+<p>Project content has different sync characteristics from dotfiles:</p>
+<ul>
+<li>It is much larger (tens of GB is typical).</li>
+<li>It contains both small text (R, Quarto) and large binary (data, figures, PDFs).</li>
+<li>It changes frequently, often on a single machine within a session.</li>
+<li>It includes derived artefacts that should not be synced at all (renv libraries, model output, caches).</li>
+</ul>
+<p>The candidate sync mechanisms, with the dimensions that matter:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Mechanism</th>
+<th>Strength</th>
+<th>Weakness</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Per-project git remotes (GitHub, GitLab, Codeberg)</strong></td>
+<td>Diff-aware history, atomic deploys, free for small repos</td>
+<td>Bad with large binary files (Git LFS quotas), each project must be a repo</td>
+</tr>
+<tr class="even">
+<td><strong>Syncthing (peer-to-peer, no cloud)</strong></td>
+<td>No middleman, no quotas, sync-to-LAN is fast, files are local-first</td>
+<td>Two machines must be online together to sync; conflict semantics are simpler than Dropbox’s but still file-level</td>
+</tr>
+<tr class="odd">
+<td><strong>rsync over SSH to a NAS or VPS</strong></td>
+<td>Bandwidth-efficient, deterministic, scriptable</td>
+<td>One-way push (or hand-coded bidirectional); requires the destination to exist; no version history without extra work</td>
+</tr>
+<tr class="even">
+<td><strong>iCloud Drive (native macOS)</strong></td>
+<td>Tight macOS integration, included with Apple ID</td>
+<td>macOS-only; opaque sync timing; cannot exclude subdirectories cleanly</td>
+</tr>
+<tr class="odd">
+<td><strong>Google Drive (rclone or native)</strong></td>
+<td>Effectively unlimited storage on enterprise plans</td>
+<td>Same whole-file model as Dropbox; conflicts behave the same way</td>
+</tr>
+</tbody>
+</table>
+<p>Most readers benefit from a hybrid: per-project git remotes for code (the bulk of the value) and Syncthing or rsync for the data that does not belong in a public or even private repo. The hybrid wins because it lets each artefact go to the mechanism that matches its semantics.</p>
+<p>The single most consequential observation in this migration: ‘project content’ is not a homogeneous category. Splitting it into ‘code’ and ‘data’ before choosing a mechanism makes every subsequent decision easier.</p>
+<section id="reconstructable-local-caches-the-maildir-case" class="level3" data-number="4.2.1">
+<h3 data-number="4.2.1" class="anchored" data-anchor-id="reconstructable-local-caches-the-maildir-case"><span class="header-section-number">4.2.1</span> Reconstructable local caches: the Maildir case</h3>
+<p>A subset of what looks like Layer 2 data is in fact a local cache of a canonical source that already lives elsewhere. For these, the right move is not to choose a sync mechanism at all; it is to let each machine rebuild its copy from the authoritative source on demand.</p>
+<p>The worked example: a Maildir-based mail setup with mutt, mbsync, and notmuch. The IMAP server holds the canonical mailbox. <code>mbsync</code> mirrors a subset of folders into a local Maildir at <code>~/.local/share/mail/</code> (or any other non-synced path; the XDG <code>~/.local/share/&lt;app&gt;/</code> location is a sensible default). <code>notmuch new</code> indexes the Maildir into a local Xapian database. <code>mutt</code> reads the Maildir directly. On a second laptop, the same configs deploy via Layer 1, the same <code>mbsync</code> runs from a launchd job, the local Maildir gets repopulated from IMAP, and <code>notmuch new</code> rebuilds the index. There is nothing to sync between the two laptops; the IMAP server is doing the synchronisation by being the canonical source.</p>
+<p>Putting the Maildir in Dropbox is wrong on four counts. It duplicates the work IMAP already does. It triples the disk footprint (IMAP + Dropbox + local). Maildir’s one-message-per-file format produces hundreds of thousands of small files that strain cloud-sync engines. And the notmuch Xapian database is a B-tree-on-disk format that is not safe to share between processes on different machines via file sync.</p>
+<p>The same pattern applies to a broader class of local artefacts: Homebrew’s package cache (<code>~/Library/Caches/Homebrew/</code>), language-server indexes, browser caches, ccache, AI-model caches that hash to the same content given the same prompts. None of these need to be synced between machines; each is a derivative of an authoritative source and is rebuilt cheaply on demand. Treat them as per-machine state, exclude them from any sync mechanism, and add the rebuild step to the new-machine bootstrap if it does not happen automatically.</p>
+<p>The new-laptop bootstrap for the Maildir case, after <code>install.sh</code> has deployed the configs:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Restore IMAP/SMTP credentials (manual; from pass / keychain / 1Password).</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Then:</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">mbsync</span> <span class="at">-a</span>                        <span class="co"># populate ~/.local/share/mail/</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="ex">notmuch</span> new                      <span class="co"># build the Xapian index</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="ex">launchctl</span> bootstrap <span class="st">"gui/</span><span class="va">$UID</span><span class="st">"</span> <span class="dt">\</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  ~/Library/LaunchAgents/local.mbsync.plist</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="ex">launchctl</span> bootstrap <span class="st">"gui/</span><span class="va">$UID</span><span class="st">"</span> <span class="dt">\</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  ~/Library/LaunchAgents/local.notmuch.new.plist</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Time depends on mailbox size; a 3 GB mailbox over residential broadband is roughly 30-60 minutes. The two scheduled jobs keep the Maildir current thereafter.</p>
+<p>The one cost of this pattern is that mail is not available offline until the first <code>mbsync -a</code> completes. For mutt users this is rarely a meaningful constraint; for users who need immediate offline access on a fresh laptop, an <code>rsync</code> of a recent Maildir snapshot from the previous laptop into <code>~/.local/share/mail/</code> skips the IMAP fetch step.</p>
+</section>
+<section id="worked-example-relocating-an-existing-maildir-to-.localsharemail" class="level3" data-number="4.2.2">
+<h3 data-number="4.2.2" class="anchored" data-anchor-id="worked-example-relocating-an-existing-maildir-to-.localsharemail"><span class="header-section-number">4.2.2</span> Worked example: relocating an existing Maildir to ~/.local/share/mail/</h3>
+<p>A common starting point for long-time mutt users is a Maildir at <code>~/Mail/</code> (the convention from before the XDG Base Directory specification existed). The relocation to <code>~/.local/share/mail/</code> is mechanical, and the cache-and-index can be moved in place rather than re-downloaded. The steps below assume mutt + mbsync + notmuch and a single Gmail account at <code>~/Mail/gmail/</code>; generalisation to other layouts is direct.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Stop any running mbsync. If a launchd job runs mbsync on a</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co">#    schedule, bootout it temporarily.</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="ex">pkill</span> <span class="at">-f</span> mbsync <span class="kw">||</span> <span class="fu">true</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="ex">launchctl</span> bootout <span class="st">"gui/</span><span class="va">$UID</span><span class="st">/local.mbsync"</span> <span class="dv">2</span><span class="op">&gt;</span>/dev/null <span class="kw">||</span> <span class="fu">true</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Cheap insurance: dump the notmuch tag database. Tags are user</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co">#    state; the message index can be rebuilt, the tags cannot.</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="ex">notmuch</span> dump <span class="at">--output</span><span class="op">=</span><span class="st">"</span><span class="va">$HOME</span><span class="st">/notmuch-dump-</span><span class="va">$(</span><span class="fu">date</span> +%Y%m%d<span class="va">)</span><span class="st">.txt"</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Move the Maildir AND .notmuch together. They must move</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co">#    atomically to keep the Xapian database's relative paths valid.</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> ~/.local/share/mail</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="fu">mv</span> ~/Mail/gmail   ~/.local/share/mail/gmail</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="fu">mv</span> ~/Mail/.notmuch ~/.local/share/mail/.notmuch</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="co"># 4. Update the dotfiles repo (Layer 1, single source of truth)</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="co">#    BEFORE editing any live config under $HOME. Edit:</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="co">#       ~/dotfiles/editors/notmuch-config         (path = $HOME/.local/share/mail)</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="co">#       ~/dotfiles/config/mutt/muttrc             (folder, spoolfile, postponed, record)</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="co">#       ~/dotfiles/mbsyncrc                        (Path, Inbox under each MaildirStore)</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="co">#    Commit and push. (The dotfiles repo is OUTSIDE cloud-mounted</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="co">#    paths per Layer 1, so in-place editors are safe to use here.)</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="co"># 5. Reflect the dotfiles changes into $HOME (idempotent).</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ~/dotfiles <span class="kw">&amp;&amp;</span> <span class="ex">./install.sh</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a><span class="co"># 6. Verify.</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a><span class="ex">mbsync</span> <span class="at">-a</span>                  <span class="co"># Resumes incrementally; should NOT re-download.</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a><span class="ex">notmuch</span> search <span class="st">'*'</span> <span class="kw">|</span> <span class="fu">head</span>  <span class="co"># Confirms the index resolves message paths.</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="ex">mutt</span> <span class="at">-e</span> <span class="st">'exit'</span>             <span class="co"># Opens and exits cleanly with the new paths.</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a><span class="co"># 7. Re-enable the scheduled mbsync once verification passes.</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a><span class="ex">launchctl</span> bootstrap <span class="st">"gui/</span><span class="va">$UID</span><span class="st">"</span> <span class="dt">\</span></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>    ~/Library/LaunchAgents/local.mbsync.plist</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Two points worth flagging:</p>
+<ul>
+<li>The notmuch Xapian database stores message paths relative to <code>database.path</code>. Moving the Maildir and <code>.notmuch</code> together preserves those relative paths, so <code>notmuch new</code> is not required. If the two directories are moved separately for any reason, the index becomes invalid and <code>notmuch new</code> is needed to rebuild it.</li>
+<li>Step 4 (update the dotfiles repo first) is the step the obvious version of this recipe omits. Editing the live <code>~/.config/mutt/muttrc</code> directly before updating the repo copy makes the two diverge. A second laptop bootstrapped from the repo today would deploy a muttrc that points at a Maildir that does not exist. Always edit the repo file, then <code>install.sh</code>.</li>
+</ul>
+<p>The pre-XDG location (<code>~/Mail/</code>) can be deleted after a few days of confirmed working state; keep it around briefly as a rollback target.</p>
+</section>
+</section>
+<section id="layer-3-append-only-history-files" class="level2" data-number="4.3">
+<h2 data-number="4.3" class="anchored" data-anchor-id="layer-3-append-only-history-files"><span class="header-section-number">4.3</span> Layer 3: Append-only history files</h2>
+<p>This layer is small in bytes but disproportionate in friction. The relevant files:</p>
+<ul>
+<li><code>~/.zsh_history</code> (shell command history)</li>
+<li><code>~/.viminfo</code> (vim’s last-used files, registers, marks)</li>
+<li><code>~/.claude/history.jsonl</code> (Claude Code prompt history)</li>
+<li>Editor undo files (<code>~/.local/state/vim/undo/</code>)</li>
+<li>AI-tool histories from any other tools (<code>~/.gemini/</code>, etc.)</li>
+</ul>
+<p>Each is append-only at the application level and whole-file at the sync layer. That mismatch is what produces conflict copies. There are three architecturally honest choices:</p>
+<ol type="1">
+<li><strong>Per-machine state.</strong> Do not sync these files at all. Accept that arrow-key history on one laptop does not include commands typed on another. Simplest; works for most users; what most non-Dropbox dotfile setups assume.</li>
+<li><strong>Single-machine writes.</strong> Designate one machine as the canonical owner; the others write to local files that are never synced. Practical only if the user genuinely uses one machine 95% of the time.</li>
+<li><strong>Append-aware sync.</strong> A few sync mechanisms (atuin for shell history, custom JSONL mergers for AI logs) understand append semantics and can merge two divergent streams. More moving parts, but eliminates the conflict-copy class entirely.</li>
+</ol>
+<p>The right choice depends on the user. Most readers will be happiest with option 1 plus, optionally, atuin for shell history because it is genuinely useful across machines and well-engineered for the multi-machine case.</p>
+</section>
+</section>
+<section id="the-decision-worksheet" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> The Decision Worksheet</h1>
+<p>The companion deliverable for this post is a Quarto document at <code>docs/migration-decision-worksheet.qmd</code>. It walks the reader through:</p>
+<ol type="1">
+<li><strong>Inventory.</strong> List every sync-relevant artefact in <code>$HOME</code> and <code>~/Dropbox/</code>. Classify each into one of the three layers.</li>
+<li><strong>Mechanism selection.</strong> For each layer, pick a sync mechanism (or ‘no sync, per-machine’) from the table above.</li>
+<li><strong>Migration order.</strong> Sequence the moves so the backup pipeline never points at a stale path. The general rule is: dotfiles first (already done if post 24 was followed), then a single project as a pilot, then the rest of project content, then history files.</li>
+<li><strong>Verification.</strong> Bootstrap a clean user account or VM and confirm the full workflow comes up without Dropbox.</li>
+</ol>
+<p>The worksheet is generic; it does not assume any particular project structure or sync mechanism. Completing it for a given setup converts the migration into a series of small, audited moves rather than a single large rewrite.</p>
+</section>
+<section id="migration-sequence" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Migration Sequence</h1>
+<p>The order of operations matters because the backup pipeline must remain valid at every intermediate step. The sequence below comes from running this migration on a real workflow.</p>
+<ol type="1">
+<li><strong>Confirm dotfiles foundation.</strong> Verify post 24’s repository works. Run <code>install.sh --dry-run</code> on a clean account or VM. Resolve any failures before proceeding.</li>
+<li><strong>Introduce a path-abstraction env var.</strong> Add <code>PRJ_ROOT</code> to <code>~/.zshenv</code> with a fallback that resolves to <code>~/Dropbox/prj</code> for now. Replace literal <code>~/Dropbox/prj</code> references in scripts and configs with <code>$PRJ_ROOT</code>. Nothing visible changes, but the next move is now a single-line edit.</li>
+<li><strong>Pilot one project.</strong> Pick a single small repo. Move it from <code>~/Dropbox/prj/&lt;project&gt;/</code> to <code>~/prj/&lt;project&gt;/</code> (real path, outside cloud). Push to a private git remote if it is not already. Confirm the workflow on it.</li>
+<li><strong>Migrate the rest of project content in batches.</strong> A batch a day prevents the backup pipeline from going stale. For each batch: move, repoint any in-script paths, push to remotes, verify.</li>
+<li><strong>Repoint backup sources.</strong> Once <code>$PRJ_ROOT</code> resolves to the new path, edit <code>backup-gdrive</code> and <code>backup-icloud</code> (or their equivalents) to source from <code>$PRJ_ROOT</code> instead of the literal Dropbox path. The launchd plists themselves do not change; only the scripts they call.</li>
+<li><strong>Resolve append-only history.</strong> Pick option 1, 2, or 3 from the previous section. Apply per-file. Document the choice in the dotfiles repo’s README for future reference.</li>
+<li><strong>Verify on a clean account.</strong> Boot a fresh user, clone dotfiles, run installer, set up project remotes, confirm the workflow. The first surprise reveals the assumption that was hiding.</li>
+<li><strong>Optional: uninstall Dropbox.</strong> Most users do not need to actually remove Dropbox. Once the workflow is independent, Dropbox can stay installed as a backup or for sharing files with colleagues, without being load-bearing for the workflow itself.</li>
+</ol>
+<p>The sequence is robust to interruption. Stopping after step 3 leaves a working pilot with the backup pipeline intact. Stopping after step 5 leaves the workflow independent; the history-file decision can be deferred.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance2.png" class="img-fluid figure-img"></p>
+<figcaption>Two open-top boxes side by side on a workbench, the left box full of mixed objects and the right box divided into three sorted compartments, with a single object mid-transfer between them.</figcaption>
+</figure>
+</div>
+</section>
+<section id="things-to-watch-out-for" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Things to Watch Out For</h1>
+<p>Seven gotchas to anticipate during the migration. Each lists the symptom and the fix.</p>
+<ol type="1">
+<li><strong>The backup pipeline goes stale silently.</strong> Symptom: <code>backup-gdrive</code> runs every night, exits 0, but the syncthing folder it backs up has not changed in a week because the source path no longer exists. Fix: <code>rclone sync</code> exits 0 even when the source is empty, so add an explicit <code>[[ -d $PRJ_ROOT ]]</code> guard at the top of every backup script and fail loud on missing source.</li>
+<li><strong>Cloud-mounted git working trees corrupt their indexes.</strong> Symptom: <code>git status</code> reports phantom changes; <code>git fsck</code> finds dangling refs; the working tree is inconsistent. Fix: never put <code>~/dotfiles/</code> inside <code>~/Dropbox/</code>, <code>~/Library/CloudStorage/...</code>, or <code>~/Library/Mobile Documents/</code>. Git’s frequent writes to <code>.git/index</code> race with the cloud provider’s sync engine. The repo MUST be on a non-synced filesystem path.</li>
+<li><strong>Symlinks to Dropbox break asymmetrically across machines.</strong> Symptom: <code>~/.config/git -&gt; ~/Library/CloudStorage/Dropbox/dotfiles/config/git</code> on machine A, but on machine B the same symlink is dangling because Dropbox is at a different path or not installed. Fix: symlinks created by <code>install.sh</code> should target <code>$DOTFILES</code> (an env var resolved at install time), not literal Dropbox paths.</li>
+<li><strong>Append-only history conflict copies do not announce themselves.</strong> Symptom: a file named <code>history (machine's conflicted copy YYYY-MM-DD).jsonl</code> appears next to the canonical file, with no notification, no error, no merge prompt. Fix: a weekly grep for ‘conflicted copy’ across the Dropbox tree, or an explicit migration of the affected files out of cloud sync.</li>
+<li><strong>launchd plist substitutions overwrite themselves.</strong> Symptom: an edit to <code>~/dotfiles/launchd/local.backup.research.plist</code> does not change the running job, because <code>install.sh</code> sed-substitutes <code>__USER__</code> to <code>$USER</code> when writing to <code>~/Library/LaunchAgents/</code>, and the active plist is the substituted copy. Fix: do not edit the active plist directly; edit the source in <code>~/dotfiles/launchd/</code>, then re-run <code>install.sh</code> plus <code>launchctl bootout</code> and <code>launchctl bootstrap</code>.</li>
+<li><strong>Project content includes runtime artefacts that should not move.</strong> Symptom: a 200 MB <code>renv/library/</code> directory comes along with a project move and now lives at <code>~/prj/&lt;project&gt;/renv/library/</code>, where renv expects to manage it. Fix: confirm <code>.gitignore</code> excludes the right paths before pushing; add <code>**/renv/library/</code> to the dotfiles repo’s <code>.gitignore</code> if one is accidentally tracked.</li>
+<li><strong>In-place editors race with cloud sync and truncate files to zero bytes.</strong> Symptom: <code>sed -i.bak file</code>, <code>awk -i inplace</code>, or <code>perl -i</code> against a path under <code>~/Library/CloudStorage/...</code> returns 0 but leaves the file empty. The <code>.bak</code> saved by <code>-i.bak</code> is also placed in cloud storage and is subject to the same race; on the incident that produced this gotcha, both the file and its backup were lost locally and required Dropbox version-history restore. Fix: never run <code>-i</code>-style editors on cloud-mounted paths. Either use the Edit tool / a real editor, or copy to <code>/tmp</code>, edit, and <code>mv</code> back. (If the dotfiles repo is on a non-synced path per gotcha 2, this hazard is confined to scripts that touch <code>~/Library/CloudStorage/...</code> from elsewhere.)</li>
+</ol>
+</section>
+<section id="uninstall-rollback" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Uninstall / Rollback</h1>
+<p>The most common ‘undo’ is not ‘reinstall Dropbox’ but ‘put project content back under Dropbox while keeping dotfiles independent’. The architecture supports this directly because the layers are independent.</p>
+<p>To roll project content back into Dropbox:</p>
+<ol type="1">
+<li>Move <code>~/prj/&lt;project&gt;/</code> back to <code>~/Dropbox/prj/&lt;project&gt;/</code>.</li>
+<li>Update <code>~/.zshenv</code> so <code>PRJ_ROOT</code> resolves to the Dropbox path.</li>
+<li>The dotfiles repo, backup scripts, and launchd plists do not need any change because they reference <code>$PRJ_ROOT</code>.</li>
+</ol>
+<p>This is also the recommended path for a reader who completed the dotfiles work but is not yet ready to migrate project content. Set up the env var, leave the path pointing at Dropbox, defer the project move until later.</p>
+<p>To roll back the entire migration: the dotfiles installer’s <code>--dry-run</code> should never have shipped destructively, so the rollback is just <code>rm -rf ~/dotfiles</code> plus restoring <code>$HOME</code> from a Time Machine backup. Most readers will not need this.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance3.png" class="img-fluid figure-img"></p>
+<figcaption>A closed wooden chest with three small brass clasps on a stone surface, an open notebook and a capped fountain pen beside it, suggesting a deliberate and completed reorganisation.</figcaption>
+</figure>
+</div>
+</section>
+<section id="what-did-we-learn" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> What Did We Learn?</h1>
+<section id="lessons-learnt" class="level2" data-number="9.1">
+<h2 data-number="9.1" class="anchored" data-anchor-id="lessons-learnt"><span class="header-section-number">9.1</span> Lessons Learnt</h2>
+<p><strong>Conceptual:</strong></p>
+<ul>
+<li>The ‘sync everything via one cloud provider’ default conflates three independent concerns. Separating them makes each easier to reason about.</li>
+<li>Migration sequencing matters more than mechanism choice. The wrong mechanism is correctable; a half-migrated workflow is hard to leave for a year.</li>
+<li>Per-machine state is a feature, not a bug, for many file types. The right answer for shell history is often ‘do not sync’, not ‘sync better’.</li>
+</ul>
+<p><strong>Technical:</strong></p>
+<ul>
+<li>A single environment variable (<code>$PRJ_ROOT</code>) provides enough indirection to migrate path references in two passes: first introduce the variable while it still resolves to Dropbox, then change what it resolves to.</li>
+<li>launchd plists with <code>__USER__</code> placeholders deploy cleanly across machines via <code>install.sh</code> sed-substitution; bootstrapping the substituted copy avoids machine-specific files in the dotfiles repo.</li>
+<li>Atomic git operations on a non-synced filesystem are reliable; the same operations on a cloud-synced filesystem race with the sync engine and produce subtle corruption.</li>
+</ul>
+<p><strong>Gotchas:</strong></p>
+<ul>
+<li>‘rclone sync exits 0’ does not mean the sync succeeded; it can mean the source had nothing to send because the path is wrong.</li>
+<li>A symlink created on one machine resolves correctly on that machine but may dangle on another. Always test the new-machine case.</li>
+<li>Conflict copies of append-only files accumulate silently. Periodic auditing is the only way to notice.</li>
+</ul>
+</section>
+<section id="limitations" class="level2" data-number="9.2">
+<h2 data-number="9.2" class="anchored" data-anchor-id="limitations"><span class="header-section-number">9.2</span> Limitations</h2>
+<ul>
+<li>The migration described here covers a single-user workflow. Team setups (where the same Dropbox folder is shared with collaborators) need additional considerations not addressed in this post.</li>
+<li>Project content moved from Dropbox to per-project git remotes is now subject to GitHub or GitLab quotas, including LFS limits for binary files. Plan accordingly.</li>
+<li>The decision worksheet is a generic framework; it does not generate scripts for any particular sync mechanism. Each reader still has to write the rclone or rsync commands for their setup.</li>
+<li>Append-aware history sync (option 3) requires either an existing tool (atuin works for shell history) or hand-rolled mergers for proprietary log formats. The post does not provide those mergers.</li>
+<li>Migrating off Dropbox does not, by itself, improve the security posture of credentials. Files like <code>~/.aws/credentials</code> should be addressed separately; cloud sync was not their only exposure.</li>
+<li>The post assumes macOS or Linux. Windows-specific path conventions and sync semantics are out of scope.</li>
+</ul>
+</section>
+<section id="opportunities-for-improvement" class="level2" data-number="9.3">
+<h2 data-number="9.3" class="anchored" data-anchor-id="opportunities-for-improvement"><span class="header-section-number">9.3</span> Opportunities for Improvement</h2>
+<ol type="1">
+<li>Extend the decision worksheet into a small CLI tool that audits a current setup and generates a draft migration plan.</li>
+<li>Build an atuin (or atuin-equivalent) integration template for the dotfiles repo, so option 3 from layer 3 becomes a one-line opt-in.</li>
+<li>Add a <code>verify.sh</code> to the dotfiles repo that runs the end-to-end check (dotfiles installed, <code>$PRJ_ROOT</code> valid, backup scripts pointing at it, launchd jobs loaded) on demand and reports pass/fail.</li>
+<li>Document a canonical ‘two-laptop’ setup with Syncthing replacing the Dropbox role for shared project content.</li>
+<li>Generalise the worksheet’s mechanism table into a maintained list (a small repo or a wiki page) that adds new tools as the ecosystem evolves (Filen, S3-backed, etc.).</li>
+</ol>
+</section>
+</section>
+<section id="wrapping-up" class="level1" data-number="10">
+<h1 data-number="10"><span class="header-section-number">10</span> Wrapping Up</h1>
+<p>A portable dotfiles repository is the first half of a Dropbox-free workflow; this post is the framework for the second half. The key idea: stop treating sync as a single dimension and start treating it as three layers (configuration, project content, append-only history) with different semantics and different right answers.</p>
+<p>Most of the work is in the inventory and decision step, not in the moves themselves. Once each artefact is classified and each layer has a chosen mechanism, the actual migration is a sequence of small file moves and a few text edits. The pieces that take time are testing the new-machine bootstrap, deciding what to do about history files, and resisting the temptation to migrate everything in one weekend.</p>
+<section id="expected-outcomes" class="level2" data-number="10.1">
+<h2 data-number="10.1" class="anchored" data-anchor-id="expected-outcomes"><span class="header-section-number">10.1</span> Expected outcomes</h2>
+<p>The architecture aims to deliver three measurable end states. The first is verifiable now (Layer 1 is complete on the author’s primary laptop); the other two will be confirmed and updated with measured numbers when Layer 2 and Layer 3 land.</p>
+<ul>
+<li><strong>New-laptop setup</strong> is <code>git clone … ~/dotfiles &amp;&amp; ./install.sh &amp;&amp; (per-project git clones)</code>. The plan budget is roughly 30 minutes from clean machine to working environment; the actual figure will be added after a fresh-VM bootstrap is run.</li>
+<li><strong>Conflict copies of <code>history.jsonl</code> and similar files</strong> should stop recurring once the affected files are moved out of Dropbox sync. The post will be updated with the post-migration count once Layer 3 is applied.</li>
+<li><strong>Backup pipelines</strong> will source from <code>$PRJ_ROOT</code>, which can point anywhere; once Layer 2 lands, Dropbox is no longer load-bearing for the workflow.</li>
+</ul>
+<p>In conclusion, four points merit emphasis. First, the dotfiles layer is the wedge, not the goal; once it is in place, the rest of the migration is mechanical. Second, ‘project content’ is two layers in disguise (code, which wants git, and data, which wants something else); the two should be separated before a mechanism is chosen. Third, some of what looks like ‘data’ is actually a local cache of an authoritative source elsewhere (Maildir from IMAP, Homebrew cache, language-server indexes); for these the right answer is not to sync at all, but to rebuild on each machine from the canonical source. Fourth, append-only files are the only category that benefits from sophisticated sync; for everything else, simpler is better.</p>
+</section>
+</section>
+<section id="see-also" class="level1" data-number="11">
+<h1 data-number="11"><span class="header-section-number">11</span> See Also</h1>
+<ul>
+<li>Post 24, <a href="https://focusonr.org/posts/24-setupdotfilesongithub/">Creating a GitHub Dotfiles Repository</a> — the prerequisite. This post is its sequel.</li>
+<li>Post 65, <a href="https://focusonr.org/posts/65-multi-laptop-bootstrap/">Multi-Laptop Bootstrap: Dotfiles Repository</a> — the next post in this series; implements the dotfiles layer with <code>install.sh</code>, <code>Makefile</code>, and a sensitive-files inventory.</li>
+<li>Post 66, <a href="https://focusonr.org/posts/66-unix-pass-setup/">Setting Up pass, the Unix Password Manager</a> — covers GPG key generation, pass initialisation, and migrating credentials identified in this post’s Layer 1 inventory.</li>
+<li>Post 67, <a href="https://focusonr.org/posts/67-multi-laptop-security/">Multi-Laptop Security: Hardening the Bootstrap</a> — a security audit of the full infrastructure established across posts 64-66.</li>
+<li>Post 20, <a href="https://focusonr.org/posts/20-researchbackupsystem/">Setting Up a Comprehensive Research Backup System on macOS</a> — three-tier backup architecture; most of the relevant launchd-plist patterns originate there.</li>
+<li>Post 22, <a href="https://focusonr.org/posts/22-serversetupawscli/">Launching AWS EC2 Instances with Bash Scripts and the AWS CLI</a> — the worked example of <code>__USER__</code> substitution and CLI-driven deployment.</li>
+<li><code>MULTI_LAPTOP_PLAN.md</code> (in the dotfiles repository) — the live action plan tracking this migration, with done-marks and effort estimates for each step. <code>MIGRATION_NOTES.md</code> in the same repository captures what was copied and what was deliberately excluded during the Layer 1 move.</li>
+<li><a href="https://docs.syncthing.net/">Syncthing documentation</a> — peer-to-peer sync, the most-recommended Dropbox replacement for project content.</li>
+<li><a href="https://atuin.sh/">Atuin</a> — the cleanest answer to ‘I want my shell history across machines’; an example of append-aware sync done right.</li>
+<li><a href="https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html">The XDG Base Directory Specification</a> — the underlying convention that determines where each XDG-aware tool actually puts its files; relevant when choosing between <code>~/.cache</code>, <code>~/.local/share</code>, and <code>~/.local/state</code>.</li>
+</ul>
+</section>
+<section id="reproducibility" class="level1" data-number="12">
+<h1 data-number="12"><span class="header-section-number">12</span> Reproducibility</h1>
+<p>Tested on:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Component</th>
+<th>Version</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>OS</td>
+<td>macOS 15.4 (Sequoia)</td>
+</tr>
+<tr class="even">
+<td>Shell</td>
+<td>zsh 5.9</td>
+</tr>
+<tr class="odd">
+<td>git</td>
+<td>2.45</td>
+</tr>
+<tr class="even">
+<td>rclone</td>
+<td>1.68</td>
+</tr>
+<tr class="odd">
+<td>Syncthing</td>
+<td>1.27</td>
+</tr>
+<tr class="even">
+<td>flock (homebrew)</td>
+<td>2.40</td>
+</tr>
+<tr class="odd">
+<td>Date verified</td>
+<td>2026-05-07</td>
+</tr>
+</tbody>
+</table>
+<p>The decision worksheet is a generic Quarto document and does not depend on any particular tool versions; the table above captures the environment in which the framework was developed and validated.</p>
+</section>
+<section id="lets-connect" class="level1" data-number="13">
+<h1 data-number="13"><span class="header-section-number">13</span> Let’s Connect</h1>
+<p>I would enjoy hearing from you if:</p>
+<ul>
+<li>You have made the same migration with different sync-mechanism choices and want to compare notes.</li>
+<li>You see a gotcha I missed, especially in the append-only-history layer.</li>
+<li>You use Linux or Windows and want to extend the worksheet to your environment.</li>
+<li>You just want to say hello and connect.</li>
+</ul>
+<hr>
+<p><em>Rendered on 2026-05-08 at 06:10 PDT.</em><br> <em>Source: ~/Dropbox/prj/qblog/posts/64-migrating-off-dropbox/migrating-off-dropbox/analysis/report/index.qmd</em></p>
+<!-- ============================================================================
+PRE-PUBLISH QA CHECKLIST: verify each item BEFORE setting draft: false
+
+This is the verification pass that mirrors the AUTHOR PROVIDES list at the
+top of this file. If anything below is unchecked, the post is not ready.
+
+[ ] YAML
+    [ ] title, subtitle, date, categories, description, image filled in
+    [x] document-type: 'blog'
+    [x] draft: false
+
+[ ] Narrative complete (no remaining `[bracketed]` placeholders)
+    [ ] grep '\[' index.qmd returns only legitimate code/links
+
+[ ] Configuration artifacts present and tested
+    [ ] Full config file shown verbatim, not snippets
+    [ ] Install commands tested on a clean machine (or VM)
+    [ ] Verification commands produce the documented output
+    [ ] Uninstall / rollback steps documented
+
+[ ] Things to Watch Out For
+    [ ] At least 5 gotchas listed (setup posts require this)
+    [ ] Each gotcha has both a symptom AND a fix
+
+[ ] Visual design
+    [ ] 1 hero image (width=80%) immediately after AUTHOR PROVIDES block
+    [ ] Exactly 3 ambiance images ({.img-fluid} only, no width=NN%,
+        no fig-align): after Objectives, after Configuration, before
+        Lessons Learnt
+    [ ] Hero and ambiance captions describe the actual image (not a
+        placeholder description)
+    [ ] No hand-coded "Download PDF" link in body. The site auto-injects
+        one via _includes/after-body.html for any post with format: pdf
+        in YAML.
+    [ ] media/images/README.md attributes every image
+
+[ ] Content quality
+    [ ] Learner voice: author positioned as peer, not expert
+    [ ] Zero emoji anywhere (narrative, comments, captions)
+    [ ] Zero em dashes (forbidden per house style; use parens or commas)
+    [ ] Single quotes preferred over double quotes in prose
+    [ ] Each command and config setting interpreted in plain language
+
+[ ] Reproducibility
+    [ ] Version matrix table filled in (OS, tool, dependencies, date)
+    [ ] Config files committed under analysis/configs/
+    [ ] Install script (if provided) is runnable on a clean machine
+
+[ ] Render verification
+    [x] quarto render index.qmd produces clean HTML with no warnings
+    [x] Hero image displays in /blog/ listing card
+    [ ] Internal links resolve
+============================================================================ -->
+<section id="related-posts-in-this-cluster" class="level2" data-number="13.1">
+<h2 data-number="13.1" class="anchored" data-anchor-id="related-posts-in-this-cluster"><span class="header-section-number">13.1</span> Related posts in this cluster</h2>
+<p>This post is part of the <em>Security, Backup, and Sync</em> series. Recommended reading order:</p>
+<ol type="1">
+<li>Post 31: <a href="../31-sec-three-tier-backup-architecture/">Research Backup Architecture</a></li>
+<li><strong>Post 32: Migrating Off Dropbox: Beyond Dotfiles</strong> (this post)</li>
+<li>Post 33: <a href="../33-sec-pass-password-manager/">Setting Up pass: a Unix Password Manager</a></li>
+<li>Post 34: <a href="../34-sec-aws-and-pass-secrets/">Secrets Management for the Workflow Construct</a></li>
+<li>Post 35: <a href="../35-sec-multi-laptop-threat-model/">Security Foundations for a Multi-Laptop Research Cluster</a></li>
+</ol>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp("https:\/\/focusonr\.org");
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<script src="https://giscus.app/client.js" data-repo="rgt47/qblog" data-repo-id="R_kgDOH6TO7A" data-category="General" data-category-id="DIC_kwDOH6TO7M4CXqIi" data-mapping="pathname" data-reactions-enabled="1" data-emit-metadata="0" data-input-position="bottom" data-theme="light" data-lang="en" crossorigin="anonymous" async="">
+</script>
+<input type="hidden" id="giscus-base-theme" value="light">
+<input type="hidden" id="giscus-alt-theme" value="light">
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Copyright 2023-2026, Ronald ‘Ryy’ G. Thomas. The lab’s other activities live at <a href="https://rgtlab.org">rgtlab.org</a>.</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47">
+      <i class="bi bi-github" role="img">
+</i> 
+    </a>
+  </li>  
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47">
+      <i class="bi bi-twitter" role="img">
+</i> 
+    </a>
+  </li>  
+</ul>
+    </div>
+  </div>
+</footer>
+
+<!-- Fix category filtering to work with plain-text categories -->
+<script>
+window.addEventListener('DOMContentLoaded', function() {
+  setTimeout(function() {
+    // Override filterListingCategory to work with plain-text categories
+    window.filterListingCategory = function(category) {
+      const listingIds = Object.keys(window['quarto-listings']);
+      for (const listingId of listingIds) {
+        const list = window['quarto-listings'][listingId];
+        if (list) {
+          if (category === '') {
+            // resets the filter
+            list.filter();
+          } else {
+            // filter to this category - handle both plain text and base64
+            list.filter(function (item) {
+              const itemValues = item.values();
+              if (itemValues.categories !== null && itemValues.categories !== undefined) {
+                let categories;
+
+                try {
+                  // Try to decode as base64 first
+                  categories = decodeURIComponent(atob(itemValues.categories)).split(",");
+                } catch(e) {
+                  // If that fails, assume it's plain text
+                  categories = itemValues.categories.split(",");
+                }
+
+                // Trim whitespace from categories
+                categories = categories.map(c => c.trim());
+                return categories.includes(category);
+              } else {
+                return false;
+              }
+            });
+          }
+        }
+      }
+    };
+
+    // Trigger the listing-loaded handler to use the patched filter
+    if (window['quarto-listing-loaded']) {
+      window['quarto-listing-loaded']();
+    }
+  }, 500);
+});
+</script>
+
+<!-- PDF view/download button for blog posts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Only add the button on post pages
+  if (window.location.pathname.includes('/posts/') && !window.location.pathname.endsWith('/posts/') && !window.location.pathname.endsWith('/posts/index.html')) {
+    var currentPath = window.location.pathname;
+    // Handle both /posts/name/ and /posts/name/index.html formats
+    var pdfPath;
+    if (currentPath.endsWith('/')) {
+      pdfPath = currentPath + 'index.pdf';
+    } else {
+      pdfPath = currentPath.replace('.html', '.pdf');
+    }
+
+    // Check if PDF exists first
+    fetch(pdfPath, { method: 'HEAD' })
+      .then(function(response) {
+        if (response.ok) {
+          // PDF exists, show download button
+          showDownloadButton(pdfPath);
+        }
+        // If PDF doesn't exist, don't show any button
+      })
+      .catch(function(error) {
+        // Error checking PDF, don't show any button
+      });
+  }
+});
+
+function showDownloadButton(pdfPath) {
+  var downloadBtn = document.createElement('div');
+  downloadBtn.className = 'pdf-download-button';
+
+  // Get file size if possible
+  fetch(pdfPath, { method: 'HEAD' })
+    .then(function(response) {
+      var size = response.headers.get('Content-Length');
+      var sizeText = '';
+
+      if (size) {
+        // Convert to MB or KB
+        var sizeInMB = size / (1024 * 1024);
+        if (sizeInMB >= 1) {
+          sizeText = ' (' + sizeInMB.toFixed(1) + ' MB)';
+        } else {
+          sizeText = ' (' + (size / 1024).toFixed(0) + ' KB)';
+        }
+      }
+
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' + sizeText +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    })
+    .catch(function() {
+      // Basic fallback if we can't get file size
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    });
+
+  // Find where to insert the button (right after the title block)
+  var titleBlock = document.querySelector('.quarto-title-meta');
+  if (titleBlock) {
+    titleBlock.after(downloadBtn);
+  }
+}
+</script>
+
+<style>
+.pdf-download-button {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+</style>
+
+
+
+
+</body></html>
