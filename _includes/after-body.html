@@ -251,11 +251,6 @@ function showDownloadButton(pdfPath) {
       return;
     }
 
-    const sidebarContainer = document.getElementById('cluster-sidebar');
-    if (!sidebarContainer) {
-      return;
-    }
-
     // Get all post links
     const postLinks = document.querySelectorAll('a[href*="posts/"]');
     if (postLinks.length === 0) {
@@ -298,10 +293,30 @@ function showDownloadButton(pdfPath) {
       return; // No clusters found
     }
 
-    // Create clusters sidebar HTML
-    const sidebar = document.createElement('div');
-    sidebar.className = 'quarto-listing-category card';
-    sidebar.innerHTML = '<div class="card-body"><strong>Clusters</strong></div>';
+    // Find the categories sidebar and inject tabs into it
+    const categoriesSidebar = document.querySelector('.quarto-listing-category');
+    if (!categoriesSidebar) {
+      return;
+    }
+
+    // Store original categories content
+    const originalCardBody = categoriesSidebar.querySelector('.card-body');
+    const originalListGroup = categoriesSidebar.querySelector('.list-group');
+
+    // Create tab structure
+    const tabContainer = document.createElement('div');
+    tabContainer.className = 'filter-tabs';
+    tabContainer.innerHTML = `
+      <div class="tab-buttons">
+        <button class="tab-btn active" data-tab="clusters">Clusters</button>
+        <button class="tab-btn" data-tab="categories">Categories</button>
+      </div>
+    `;
+
+    // Create clusters tab content
+    const clustersContent = document.createElement('div');
+    clustersContent.className = 'tab-content active';
+    clustersContent.id = 'clusters-tab';
 
     const clusterList = document.createElement('div');
     clusterList.className = 'list-group list-group-flush';
@@ -310,17 +325,17 @@ function showDownloadButton(pdfPath) {
     const sortedClusters = Array.from(clusterMap.entries())
       .sort((a, b) => b[1].length - a[1].length);
 
-    // Add "All" option
-    const allButton = document.createElement('button');
-    allButton.className = 'list-group-item list-group-item-action category active';
-    allButton.textContent = `All (${seenPosts.size})`;
-    allButton.style.color = '#495057';
-    allButton.onclick = (e) => {
+    // Add "All" option for clusters
+    const allClusterButton = document.createElement('button');
+    allClusterButton.className = 'list-group-item list-group-item-action category active';
+    allClusterButton.textContent = `All (${seenPosts.size})`;
+    allClusterButton.style.color = '#495057';
+    allClusterButton.onclick = (e) => {
       e.preventDefault();
       resetClusterFilter();
-      updateActiveCluster(allButton);
+      updateActiveCluster(allClusterButton);
     };
-    clusterList.appendChild(allButton);
+    clusterList.appendChild(allClusterButton);
 
     // Add cluster buttons
     for (const [cluster, posts] of sortedClusters) {
@@ -334,23 +349,49 @@ function showDownloadButton(pdfPath) {
       button.onclick = (e) => {
         e.preventDefault();
         filterByCluster(cluster, postClusterMap);
-        updateActiveCluster(button);
+        updateActiveCluster(allClusterButton);
       };
 
       clusterList.appendChild(button);
     }
 
-    sidebar.appendChild(clusterList);
+    clustersContent.appendChild(clusterList);
 
-    // Remove cluster sidebar from original container (blog/index.qmd location)
+    // Create categories tab content (wrap original content)
+    const categoriesContent = document.createElement('div');
+    categoriesContent.className = 'tab-content';
+    categoriesContent.id = 'categories-tab';
+    categoriesContent.appendChild(originalListGroup.cloneNode(true));
+
+    // Clear sidebar and rebuild with tabs
+    categoriesSidebar.innerHTML = '<div class="card-body"><strong>Filters</strong></div>';
+    categoriesSidebar.appendChild(tabContainer);
+    categoriesSidebar.appendChild(clustersContent);
+    categoriesSidebar.appendChild(categoriesContent);
+
+    // Add tab switching functionality
+    const tabButtons = tabContainer.querySelectorAll('.tab-btn');
+    tabButtons.forEach(btn => {
+      btn.onclick = (e) => {
+        e.preventDefault();
+        const tabName = btn.dataset.tab;
+
+        // Update active tab button
+        tabButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        // Update active tab content
+        document.querySelectorAll('.tab-content').forEach(content => {
+          content.classList.remove('active');
+        });
+        document.getElementById(tabName + '-tab').classList.add('active');
+      };
+    });
+
+    // Remove original cluster-sidebar div if it exists
+    const sidebarContainer = document.getElementById('cluster-sidebar');
     if (sidebarContainer && sidebarContainer.parentElement) {
       sidebarContainer.parentElement.removeChild(sidebarContainer);
-    }
-
-    // Find the categories sidebar parent and insert cluster before it
-    const categoriesSidebar = document.querySelector('.quarto-listing-category');
-    if (categoriesSidebar && categoriesSidebar.parentElement) {
-      categoriesSidebar.parentElement.insertBefore(sidebar, categoriesSidebar);
     }
 
     // Add CSS styles
@@ -465,5 +506,49 @@ function showDownloadButton(pdfPath) {
 .pdf-download-button {
   margin-top: 1rem;
   margin-bottom: 1rem;
+}
+
+.filter-tabs {
+  margin-bottom: 1rem;
+}
+
+.tab-buttons {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid #dee2e6;
+  margin: -1rem -1rem 0 -1rem;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: transparent;
+  color: #495057;
+  cursor: pointer;
+  font-weight: 500;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s ease;
+}
+
+.tab-btn:hover {
+  background-color: #f8f9fa;
+  color: #0d3472;
+}
+
+.tab-btn.active {
+  color: #0d3472;
+  border-bottom-color: #0d3472;
+  font-weight: 600;
+}
+
+.tab-content {
+  display: none;
+  margin-top: 1rem;
+}
+
+.tab-content.active {
+  display: block;
 }
 </style>
