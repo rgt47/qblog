@@ -900,6 +900,36 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <script>
 window.addEventListener('DOMContentLoaded', function() {
   setTimeout(function() {
+    // Patch sidebar click handlers to use plain-text categories
+    const categoryEls = document.querySelectorAll(
+      ".quarto-listing-category .category"
+    );
+
+    for (const categoryEl of categoryEls) {
+      // Get the plain-text category value directly
+      const category = categoryEl.getAttribute("data-category");
+
+      categoryEl.onclick = () => {
+        window.filterListingCategory(category);
+        // Set hash with encoded category
+        const encodedCategory = btoa(encodeURIComponent(category));
+        window.history.pushState(null, null, `#category=${encodedCategory}`);
+        return false;
+      };
+    }
+
+    // Also patch the category title click handler
+    const categoryTitleEls = document.querySelectorAll(
+      ".quarto-listing-category-title"
+    );
+    for (const categoryTitleEl of categoryTitleEls) {
+      categoryTitleEl.onclick = () => {
+        window.filterListingCategory("");
+        window.history.pushState(null, null, "#");
+        return false;
+      };
+    }
+
     // Override filterListingCategory to work with plain-text categories
     window.filterListingCategory = function(category) {
       const listingIds = Object.keys(window['quarto-listings']);
@@ -936,7 +966,7 @@ window.addEventListener('DOMContentLoaded', function() {
       }
     };
 
-    // Trigger the listing-loaded handler to use the patched filter
+    // Trigger the listing-loaded handler
     if (window['quarto-listing-loaded']) {
       window['quarto-listing-loaded']();
     }

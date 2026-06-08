@@ -1,0 +1,1643 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.5.45">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ronald ‘Ryy’ G. Thomas">
+<meta name="dcterms.date" content="2026-05-18">
+<meta name="description" content="Not all zzcollab repos need the same CI. A manuscript-package compendium requires both an R CMD check workflow and a report-rendering workflow; a data-analysis compendium needs only the latter; a blog-post compendium needs neither. This post maps the three workspace types to their correct workflow combinations and walks through each YAML file line by line.">
+
+<title>GitHub Actions workflows for zzcollab research compendia – focusonr</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../../../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../../../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../../../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../../../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../../../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../../../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../../../../">
+<script src="../../../../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../../../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../../../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../../../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../../../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../../../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../../../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../../../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../../../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": true,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "keyboard-shortcut": [
+    "?",
+    "/"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&amp;family=Open+Sans:ital,wght@0,400;0,600;1,400&amp;family=Fira+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<script src="https://kit.fontawesome.com/0fba9333d8.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+
+<!-- Custom meta tags for social sharing -->
+<meta property="og:site_name" content="Thomas Lab">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@rgt47">
+
+<!-- Add responsive features -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<!-- Add analytics if needed -->
+<!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXX');
+</script> -->
+
+<!-- Add custom javascript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Remove code tools button completely
+  const codeButton = document.querySelector('.code-tools-button');
+  if (codeButton) {
+    codeButton.remove();
+  }
+  
+  // Add any custom JavaScript functionality here
+  
+  // Example: Add smooth scrolling
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      
+      document.querySelector(this.getAttribute('href')).scrollIntoView({
+        behavior: 'smooth'
+      });
+    });
+  });
+  
+  // Make sidebar category items clickable (but not TOC items)
+  const categoryLinks = {
+    'Programming & Development': '/posts/?category=Programming+%26+Development',
+    'Data Analysis & Visualization': '/posts/?category=Data+Analysis+%26+Visualization',
+    'Deployment & Operations': '/posts/?category=Deployment+%26+Operations',
+    'Development Environment': '/posts/?category=Development+Environment',
+    'Shiny Applications': '/posts/?category=Shiny+Applications',
+    'AI & Automation': '/posts/?category=AI+%26+Automation',
+    'System Administration': '/posts/?category=System+Administration'
+  };
+  
+  // Only target sidebar items that are not in the TOC
+  document.querySelectorAll('.sidebar-item-section .sidebar-item-text').forEach(item => {
+    // Skip if this is inside the TOC
+    if (item.closest('#TOC')) return;
+    
+    const text = item.textContent.trim();
+    if (categoryLinks[text]) {
+      item.addEventListener('click', function() {
+        window.location.href = categoryLinks[text];
+      });
+    }
+  });
+});
+</script>
+
+
+<meta property="og:title" content="focusonr - GitHub Actions workflows for zzcollab research compendia">
+<meta property="og:description" content="Not all zzcollab repos need the same CI. A manuscript-package compendium requires both an R CMD check workflow and a report-rendering workflow; a data-analysis compendium needs only the latter; a blog-post compendium needs neither. This post maps the three workspace types to their correct workflow combinations and walks through each YAML file line by line.">
+<meta property="og:image" content="https://focusonr.org/posts/08-zc-github-actions-workflows/zc-github-actions-workflows/analysis/report/media/images/hero.png">
+<meta property="og:site_name" content="focusonr">
+<meta property="og:image:height" content="768">
+<meta property="og:image:width" content="1376">
+</head>
+
+<body class="nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../../../../index.html">
+    <span class="navbar-title">focusonr</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../../../../blog/index.html"> 
+<span class="menu-text">Blog</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="https://rgtlab.org"> 
+<span class="menu-text">rgtlab.org</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47"> <i class="bi bi-twitter" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a>
+  <ul class="collapse">
+  <li><a href="#motivations" id="toc-motivations" class="nav-link" data-scroll-target="#motivations"><span class="header-section-number">1.1</span> Motivations</a></li>
+  <li><a href="#objectives" id="toc-objectives" class="nav-link" data-scroll-target="#objectives"><span class="header-section-number">1.2</span> Objectives</a></li>
+  </ul></li>
+  <li><a href="#what-is-a-zzcollab-workflow" id="toc-what-is-a-zzcollab-workflow" class="nav-link" data-scroll-target="#what-is-a-zzcollab-workflow"><span class="header-section-number">2</span> What is a zzcollab workflow?</a></li>
+  <li><a href="#prerequisites" id="toc-prerequisites" class="nav-link" data-scroll-target="#prerequisites"><span class="header-section-number">3</span> Prerequisites</a></li>
+  <li><a href="#the-three-workspace-types" id="toc-the-three-workspace-types" class="nav-link" data-scroll-target="#the-three-workspace-types"><span class="header-section-number">4</span> The Three Workspace Types</a></li>
+  <li><a href="#the-r-cmd-check-workflow-r-package.yml" id="toc-the-r-cmd-check-workflow-r-package.yml" class="nav-link" data-scroll-target="#the-r-cmd-check-workflow-r-package.yml"><span class="header-section-number">5</span> The R CMD Check Workflow: <code>r-package.yml</code></a>
+  <ul class="collapse">
+  <li><a href="#why-a-host-runner-not-the-project-container" id="toc-why-a-host-runner-not-the-project-container" class="nav-link" data-scroll-target="#why-a-host-runner-not-the-project-container"><span class="header-section-number">5.1</span> Why a host runner, not the project container?</a></li>
+  <li><a href="#key-decisions-in-r-package.yml" id="toc-key-decisions-in-r-package.yml" class="nav-link" data-scroll-target="#key-decisions-in-r-package.yml"><span class="header-section-number">5.2</span> Key decisions in <code>r-package.yml</code></a></li>
+  </ul></li>
+  <li><a href="#the-report-rendering-workflow-render-report.yml" id="toc-the-report-rendering-workflow-render-report.yml" class="nav-link" data-scroll-target="#the-report-rendering-workflow-render-report.yml"><span class="header-section-number">6</span> The Report-Rendering Workflow: <code>render-report.yml</code></a>
+  <ul class="collapse">
+  <li><a href="#key-decisions-in-render-report.yml" id="toc-key-decisions-in-render-report.yml" class="nav-link" data-scroll-target="#key-decisions-in-render-report.yml"><span class="header-section-number">6.1</span> Key decisions in <code>render-report.yml</code></a></li>
+  </ul></li>
+  <li><a href="#verification" id="toc-verification" class="nav-link" data-scroll-target="#verification"><span class="header-section-number">7</span> Verification</a>
+  <ul class="collapse">
+  <li><a href="#diagnosing-common-failures" id="toc-diagnosing-common-failures" class="nav-link" data-scroll-target="#diagnosing-common-failures"><span class="header-section-number">7.1</span> Diagnosing common failures</a></li>
+  </ul></li>
+  <li><a href="#daily-workflow" id="toc-daily-workflow" class="nav-link" data-scroll-target="#daily-workflow"><span class="header-section-number">8</span> Daily Workflow</a></li>
+  <li><a href="#things-to-watch-out-for" id="toc-things-to-watch-out-for" class="nav-link" data-scroll-target="#things-to-watch-out-for"><span class="header-section-number">9</span> Things to Watch Out For</a></li>
+  <li><a href="#uninstall-rollback" id="toc-uninstall-rollback" class="nav-link" data-scroll-target="#uninstall-rollback"><span class="header-section-number">10</span> Uninstall / Rollback</a></li>
+  <li><a href="#what-did-we-learn" id="toc-what-did-we-learn" class="nav-link" data-scroll-target="#what-did-we-learn"><span class="header-section-number">11</span> What Did We Learn?</a>
+  <ul class="collapse">
+  <li><a href="#lessons-learnt" id="toc-lessons-learnt" class="nav-link" data-scroll-target="#lessons-learnt"><span class="header-section-number">11.1</span> Lessons Learnt</a></li>
+  <li><a href="#limitations" id="toc-limitations" class="nav-link" data-scroll-target="#limitations"><span class="header-section-number">11.2</span> Limitations</a></li>
+  <li><a href="#opportunities-for-improvement" id="toc-opportunities-for-improvement" class="nav-link" data-scroll-target="#opportunities-for-improvement"><span class="header-section-number">11.3</span> Opportunities for Improvement</a></li>
+  </ul></li>
+  <li><a href="#wrapping-up" id="toc-wrapping-up" class="nav-link" data-scroll-target="#wrapping-up"><span class="header-section-number">12</span> Wrapping Up</a></li>
+  <li><a href="#see-also" id="toc-see-also" class="nav-link" data-scroll-target="#see-also"><span class="header-section-number">13</span> See Also</a></li>
+  <li><a href="#glossary" id="toc-glossary" class="nav-link" data-scroll-target="#glossary"><span class="header-section-number">14</span> Glossary</a></li>
+  <li><a href="#reproducibility" id="toc-reproducibility" class="nav-link" data-scroll-target="#reproducibility"><span class="header-section-number">15</span> Reproducibility</a></li>
+  <li><a href="#lets-connect" id="toc-lets-connect" class="nav-link" data-scroll-target="#lets-connect"><span class="header-section-number">16</span> Let’s Connect</a>
+  <ul class="collapse">
+  <li><a href="#related-posts-in-this-cluster" id="toc-related-posts-in-this-cluster" class="nav-link" data-scroll-target="#related-posts-in-this-cluster"><span class="header-section-number">16.1</span> Related posts in this cluster</a></li>
+  </ul></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="index.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content column-page-left" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">GitHub Actions workflows for zzcollab research compendia</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">ci</div>
+    <div class="quarto-category">github-actions</div>
+    <div class="quarto-category">zzcollab-compendia</div>
+    <div class="quarto-category">reproducibility</div>
+    <div class="quarto-category">r-package</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    Not all zzcollab repos need the same CI. A manuscript-package compendium requires both an R CMD check workflow and a report-rendering workflow; a data-analysis compendium needs only the latter; a blog-post compendium needs neither. This post maps the three workspace types to their correct workflow combinations and walks through each YAML file line by line.
+  </div>
+</div>
+
+
+<div class="quarto-title-meta column-page-left">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ronald ‘Ryy’ G. Thomas </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">May 18, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<!-- ============================================================================
+AUTHOR PROVIDES — concrete inputs the blogger must supply
+
+Every item below maps to a placeholder in the body. Fill in this checklist
+FIRST, then paste your answers into the matching `[bracketed]` slots. Do not
+publish until every box is ticked.
+
+YAML FRONT MATTER (lines 1-20)
+  [x] title           — '[Tool]' replaced with actual tool name, < 70 chars
+  [x] subtitle        — one-line elaboration of what the post sets up
+  [x] date            — YYYY-MM-DD of intended publication
+  [x] categories      — include `setup`, the tool name, and host OS
+  [x] description     — 1-2 sentences for blog listing card
+  [x] image           — path to hero image (relative to this .qmd)
+  [x] draft: false    — flip when ready
+
+NARRATIVE INPUTS
+  [x] Hook sentence   — 'I didn't know how to configure [tool] until [trigger]'
+  [x] Pain point      — the specific friction the tool removes
+  [x] Motivations     — exactly 4-5 bullets (workflow gap, frustration, curiosity, learning)
+  [x] Objectives      — exactly 4 numbered, verifiable end states
+  [x] What is [Tool]? — 1-sentence definition + 1 analogy + 1 concrete example
+  [x] Daily-workflow paragraph — how this tool fits into your routine after setup
+  [x] Things to Watch Out For — 5-7 gotchas (required; setup posts need this)
+  [x] Lessons Learnt  — 4 conceptual + 4 technical + 4 gotcha bullets
+  [x] Limitations     — 4-6 bullets (what this setup does NOT solve)
+  [x] Opportunities for Improvement — 5-6 numbered next-step extensions
+  [x] Wrapping Up     — 2-3 paragraph conclusion + 'Main takeaways'
+  [x] See Also        — 3-5 links (official docs + 1-2 related blog posts)
+
+CONFIGURATION DELIVERABLES (real, working artifacts, not snippets)
+  [x] Prerequisites list — OS version, hardware, prior knowledge, dependent tools
+  [x] Complete config file(s) — verbatim, copy-pasteable, with inline comments
+        Place under: docs/r-package.yml and docs/render-report.yml
+  [x] Verification commands — trigger CI and confirm green
+  [x] Uninstall / rollback steps — how the reader undoes what you just did
+
+VERSION MATRIX (Reproducibility section)
+  [x] OS + version tested        (macOS 15.4, Ubuntu 24.04 in container)
+  [x] Tool version pinned        (actions/checkout@v6, actions/cache@v5)
+  [x] Date of last verification
+
+IMAGES (4 total: hero + 3 ambiance, all in media/images/)
+  [ ] Hero image (80% width)        — workspace/tool logo, sets tone
+  [ ] Ambiance image 1 (100% width) — after Objectives (workspace shot)
+  [ ] Ambiance image 2 (100% width) — after Configuration (terminal/editor)
+  [ ] Ambiance image 3 (100% width) — before Lessons Learnt (workflow scene)
+  [ ] media/images/README.md        — sources + attribution for every image
+
+CONTACT & METADATA
+  [x] Author name in YAML matches site author
+  [x] Social links in 'Let's Connect' updated (or removed)
+  [x] Giscus comments enabled (inherited from _quarto.yml)
+
+============================================================================ -->
+<!-- ============================================================================
+EXEMPLAR SETUP / TOOLING POST TEMPLATE
+
+This post documents the GitHub Actions CI workflow setup for zzcollab
+research compendia. It covers two workflow files: r-package.yml (R CMD
+check on a bare host runner) and render-report.yml (Docker build using
+rocker/verse plus Rmd rendering). It explains which combination of files applies
+to each of the three zzc workspace types: manuscript-package,
+data-analysis, and blog-post.
+
+Deliverables live in docs/:
+  docs/r-package.yml       — annotated generic workflow
+  docs/render-report.yml   — annotated generic workflow
+
+============================================================================ -->
+<!-- ============================================================================
+HERO IMAGE
+============================================================================ -->
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/hero.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:80.0%"></p>
+</figure>
+</div>
+<p><em>Two workflow files, three workspace types: knowing which CI to apply is the first step toward a reproducible research pipeline.</em></p>
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>I did not realise that my zzcollab repos had inconsistent CI until I tried to distribute a single working workflow file across 45 projects and watched the results diverge in unexpected ways. Some repos needed R CMD check. Some needed Rmd rendering. Some needed both. A few needed neither. There was no single file that was right for all of them.</p>
+<p>The problem was not the YAML itself; it was that I had treated all zzc workspaces as equivalent. A manuscript-package compendium (an R package plus a companion Rmd report) has genuinely different CI needs from a data-analysis compendium (scripts and data, no package) or a blog-post compendium (Quarto source, no R package at all). Applying the wrong workflow to the wrong workspace type either misses real errors or runs unnecessary steps on every push.</p>
+<p>This post maps the three workspace types to their correct workflow combinations, annotates each YAML file in detail, and documents the key configuration decisions that determine whether CI passes or fails.</p>
+<section id="motivations" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="motivations"><span class="header-section-number">1.1</span> Motivations</h2>
+<ul>
+<li>Distributing a single workflow file across all repos exposed the fact that ‘one size fits all’ CI does not work when workspace structure varies.</li>
+<li>A repo running R CMD check against packages that are not declared in DESCRIPTION will fail with a cryptic ‘packages not available’ error that takes time to diagnose.</li>
+<li>The <code>RENV_CONFIG_REPOS_OVERRIDE</code> variable is not in the zzcollab template by default, yet without it renv may restore from a binary repo pinned to the wrong Ubuntu release.</li>
+<li>Version-controlling CI alongside the compendium means every collaborator gets the same check, not just the person who happens to have the tools installed locally.</li>
+<li>Surveying 45 repos revealed that five were missing the <code># Profile:</code> comment that <code>make r</code> requires, and seven were using the wrong base workflow for their workspace type.</li>
+</ul>
+</section>
+<section id="objectives" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="objectives"><span class="header-section-number">1.2</span> Objectives</h2>
+<ol type="1">
+<li>Understand the three zzc workspace types and which CI workflows each requires.</li>
+<li>Deploy <code>r-package.yml</code> correctly, including the <code>RENV_CONFIG_REPOS_OVERRIDE</code> fix, in any manuscript-package or data-analysis compendium.</li>
+<li>Deploy <code>render-report.yml</code> correctly in any workspace that contains <code>analysis/**/report.Rmd</code> files.</li>
+<li>Verify that CI passes on GitHub Actions after deploying the correct workflow combination.</li>
+</ol>
+<p><img src="media/images/ambiance1.png" class="img-fluid"></p>
+</section>
+</section>
+<section id="what-is-a-zzcollab-workflow" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> What is a zzcollab workflow?</h1>
+<p>A zzcollab workflow is a GitHub Actions YAML file that validates R package structure, renders manuscripts, or both, triggered automatically on every push to <code>main</code>. The two workflow files serve distinct purposes and use different execution environments by design.</p>
+<p><code>r-package.yml</code> runs on a bare GitHub-hosted Ubuntu runner and reads dependencies from <code>DESCRIPTION</code>. It answers the question: is this a well-formed R package with all declared dependencies resolvable? It does not test the Docker environment and does not use <code>renv.lock</code>.</p>
+<p><code>render-report.yml</code> builds the project’s own Docker image and runs <code>renv::restore()</code> inside it before rendering manuscripts. It answers the question: does the fully pinned, containerised environment produce a rendered output? It is the CI equivalent of <code>make r</code> followed by <code>rmarkdown::render()</code>.</p>
+<p>Keeping the two concerns separate means a package structural error (missing documentation, undeclared import) is caught by one workflow, and an environment reproducibility error (broken lockfile, Docker build failure) is caught by the other.</p>
+</section>
+<section id="prerequisites" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Prerequisites</h1>
+<p>This post assumes:</p>
+<ul>
+<li><strong>zzcollab version</strong>: v2.4.0 or later (the <code>.zzcollab/manifest.json</code> marker is present).</li>
+<li><strong>GitHub</strong>: the repo is hosted on GitHub with Actions enabled.</li>
+<li><strong>Workspace type</strong>: the repo’s workspace type (manuscript-package, data-analysis, or blog-post compendium) is known (see the decision table below).</li>
+<li><strong>renv</strong>: an <code>renv.lock</code> file is present and up to date.</li>
+<li><strong>Dockerfile</strong>: the repo has a <code>Dockerfile</code> with a <code># Profile:</code> comment in the first 20 lines.</li>
+</ul>
+<p>If the <code>Dockerfile</code> is missing the <code># Profile:</code> comment, <code>make r</code> will abort with ‘Could not detect profile from Dockerfile’. Add the comment before proceeding.</p>
+</section>
+<section id="the-three-workspace-types" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> The Three Workspace Types</h1>
+<p>zzcollab repos fall into three structural categories. The correct CI combination follows from the category.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 14%">
+<col style="width: 28%">
+<col style="width: 16%">
+<col style="width: 20%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Workspace type</th>
+<th style="text-align: center;">Has R package</th>
+<th style="text-align: center;">Has <code>analysis/**/report.Rmd</code></th>
+<th style="text-align: center;"><code>r-package.yml</code></th>
+<th style="text-align: center;"><code>render-report.yml</code></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Manuscript-package</td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">yes</td>
+</tr>
+<tr class="even">
+<td>Data-analysis</td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">no</td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">no</td>
+</tr>
+<tr class="odd">
+<td>Blog-post</td>
+<td style="text-align: center;">no</td>
+<td style="text-align: center;">no (Quarto source)</td>
+<td style="text-align: center;">no</td>
+<td style="text-align: center;">no</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Manuscript-package</strong> (most common): an R package that implements the analysis, plus one or more <code>analysis/*/report.Rmd</code> manuscripts. Needs both workflows: <code>r-package.yml</code> checks the package, <code>render-report.yml</code> renders the manuscripts.</p>
+<p><strong>Data-analysis</strong>: an R package used for a self-contained analysis but without companion manuscripts. Needs <code>r-package.yml</code> only.</p>
+<p><strong>Blog-post</strong> (qblog compendia): a Quarto document with supporting R code but no R package structure. Neither workflow applies; Quarto rendering is handled by a separate <code>quarto-publish.yml</code> if needed.</p>
+<p>The zzcollab doctor (<code>zzc doctor</code>) reports <code>r-package.yml</code> as a required file for manuscript-package and data-analysis repos. It does not currently scaffold <code>render-report.yml</code> automatically.</p>
+</section>
+<section id="the-r-cmd-check-workflow-r-package.yml" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> The R CMD Check Workflow: <code>r-package.yml</code></h1>
+<p>Place this file at <code>.github/workflows/r-package.yml</code>. It is the standard zzcollab CI workflow for any repo that contains an R package.</p>
+<p>The key architectural decision in v2.7.0 is that this workflow runs on a bare GitHub-hosted Ubuntu runner, not inside the project’s Docker container. Its sole purpose is to validate R package structure: can the package be installed, do declared dependencies resolve, and do the tests pass? Exact version pinning and container reproducibility are <code>render-report.yml</code>’s responsibility, not this workflow’s.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># zzcollab r-package.yml v2.7.0</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Validates R package structure via R CMD check on a host runner.</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Dependencies installed from DESCRIPTION (not renv.lock); exact version</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># pinning and container reproducibility are covered by render-report.yml.</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">name</span><span class="kw">:</span><span class="at"> R Package Check</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">on</span><span class="kw">:</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">push</span><span class="kw">:</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">branches</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at"> main</span><span class="kw">,</span><span class="at"> master </span><span class="kw">]</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">pull_request</span><span class="kw">:</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">branches</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at"> main</span><span class="kw">,</span><span class="at"> master </span><span class="kw">]</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co">    # No paths: filter here — every push triggers a package check because</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co">    # any source change can break R CMD check. Path filtering is reserved</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="co">    # for render-report.yml, whose Docker build is expensive.</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="fu">jobs</span><span class="kw">:</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">check</span><span class="kw">:</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">runs-on</span><span class="kw">:</span><span class="at"> ubuntu-latest</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="co">    # WHY host runner, not the project container: the zzcollab .Rprofile</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="co">    # suppresses renv when ZZCOLLAB_CONTAINER=true is absent. Running on a</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="co">    # bare host runner and reading from DESCRIPTION sidesteps this entirely.</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">env</span><span class="kw">:</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">GITHUB_PAT</span><span class="kw">:</span><span class="at"> ${{ secrets.GITHUB_TOKEN }}</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a><span class="co">      # GITHUB_TOKEN is auto-provided by Actions; exposing it as GITHUB_PAT</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="co">      # allows r-lib actions to authenticate against GitHub Package Registry</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a><span class="co">      # when resolving dependencies declared in DESCRIPTION.</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">R_KEEP_PKG_SOURCE</span><span class="kw">:</span><span class="at"> </span><span class="ch">yes</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a><span class="co">      # Retains source packages after installation so R CMD check can</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a><span class="co">      # inspect them; without this, check artefacts may be incomplete.</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">steps</span><span class="kw">:</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">uses</span><span class="kw">:</span><span class="at"> actions/checkout@v6</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> Install system dependencies</span></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a><span class="fu">        run</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>          sudo apt-get update -q</span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>          sudo apt-get install -y --no-install-recommends \</span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>            libcurl4-openssl-dev libssl-dev libxml2-dev \</span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>            libblas-dev liblapack-dev libnlopt-dev \</span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>            libfontconfig1-dev libfreetype6-dev \</span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>            libharfbuzz-dev libfribidi-dev \</span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>            libgit2-dev cmake</span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a>          # These are the C/C++ system libraries that R packages link against</span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a>          # at compile time. They are not in DESCRIPTION; they must be</span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a>          # installed manually before setup-r-dependencies runs.</span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">uses</span><span class="kw">:</span><span class="at"> r-lib/actions/setup-pandoc@v2</span></span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a><span class="co">        # Required for vignettes and Rmd-based documentation that calls</span></span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a><span class="co">        # pandoc during R CMD check.</span></span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">uses</span><span class="kw">:</span><span class="at"> r-lib/actions/setup-r@v2</span></span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">with</span><span class="kw">:</span></span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">use-public-rspm</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
+<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a><span class="co">          # Points R at Posit Package Manager, which serves pre-compiled</span></span>
+<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a><span class="co">          # Linux binaries. Without this, every package compiles from</span></span>
+<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a><span class="co">          # source, adding 10-30 minutes to the run.</span></span>
+<span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-60"><a href="#cb1-60" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">uses</span><span class="kw">:</span><span class="at"> r-lib/actions/setup-r-dependencies@v2</span></span>
+<span id="cb1-61"><a href="#cb1-61" aria-hidden="true" tabindex="-1"></a><span class="co">        # WHY not setup-renv: this action reads DESCRIPTION, not renv.lock.</span></span>
+<span id="cb1-62"><a href="#cb1-62" aria-hidden="true" tabindex="-1"></a><span class="co">        # Using setup-renv would call renv::restore(), which the zzcollab</span></span>
+<span id="cb1-63"><a href="#cb1-63" aria-hidden="true" tabindex="-1"></a><span class="co">        # .Rprofile silently skips on a host runner (no ZZCOLLAB_CONTAINER).</span></span>
+<span id="cb1-64"><a href="#cb1-64" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">with</span><span class="kw">:</span></span>
+<span id="cb1-65"><a href="#cb1-65" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">extra-packages</span><span class="kw">:</span><span class="at"> any::rcmdcheck</span></span>
+<span id="cb1-66"><a href="#cb1-66" aria-hidden="true" tabindex="-1"></a><span class="co">          # rcmdcheck is a CI tool, not a project dependency; it is absent</span></span>
+<span id="cb1-67"><a href="#cb1-67" aria-hidden="true" tabindex="-1"></a><span class="co">          # from DESCRIPTION and must be declared here explicitly.</span></span>
+<span id="cb1-68"><a href="#cb1-68" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">needs</span><span class="kw">:</span><span class="at"> check</span></span>
+<span id="cb1-69"><a href="#cb1-69" aria-hidden="true" tabindex="-1"></a><span class="co">          # Tells the action this is a check workflow; it installs Suggests</span></span>
+<span id="cb1-70"><a href="#cb1-70" aria-hidden="true" tabindex="-1"></a><span class="co">          # packages in addition to Imports, matching what R CMD check tests.</span></span>
+<span id="cb1-71"><a href="#cb1-71" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-72"><a href="#cb1-72" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">uses</span><span class="kw">:</span><span class="at"> r-lib/actions/check-r-package@v2</span></span>
+<span id="cb1-73"><a href="#cb1-73" aria-hidden="true" tabindex="-1"></a><span class="co">        # Wraps rcmdcheck::rcmdcheck() with sensible CI defaults. Fails on</span></span>
+<span id="cb1-74"><a href="#cb1-74" aria-hidden="true" tabindex="-1"></a><span class="co">        # any ERROR or </span><span class="al">WARNING</span><span class="co"> (including undocumented exported objects).</span></span>
+<span id="cb1-75"><a href="#cb1-75" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">with</span><span class="kw">:</span></span>
+<span id="cb1-76"><a href="#cb1-76" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">upload-snapshots</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
+<span id="cb1-77"><a href="#cb1-77" aria-hidden="true" tabindex="-1"></a><span class="co">          # Uploads testthat snapshots as artefacts so failures can be</span></span>
+<span id="cb1-78"><a href="#cb1-78" aria-hidden="true" tabindex="-1"></a><span class="co">          # inspected without re-running locally.</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<section id="why-a-host-runner-not-the-project-container" class="level2" data-number="5.1">
+<h2 data-number="5.1" class="anchored" data-anchor-id="why-a-host-runner-not-the-project-container"><span class="header-section-number">5.1</span> Why a host runner, not the project container?</h2>
+<p>Earlier zzcollab CI templates (v2.4.0) ran R CMD check inside the project’s <code>rocker/tidyverse</code> container. This felt natural, since <code>make r</code> uses the same container for local development. The approach worked until the zzcollab <code>.Rprofile</code> was updated to suppress renv activation outside the Docker environment. <code>.Rprofile</code> gates the entire renv workflow on the environment variable <code>ZZCOLLAB_CONTAINER=true</code>, which is only set inside the Docker container. On a bare host runner the variable is absent, so <code>.Rprofile</code> prints ‘Host R session (renv skipped – use container for reproducibility)’ and exits the renv block entirely. Any workflow step that subsequently calls <code>renv::restore()</code> finds no active project library and fails with a cascade of ‘dependency failed’ errors covering every package in the lockfile.</p>
+<p>The host-runner approach sidesteps this entirely: <code>r-lib/actions/setup-r-dependencies@v2</code> reads declared dependencies from <code>DESCRIPTION</code> and installs the latest compatible versions from Posit Package Manager, without invoking renv at all. This is semantically correct because <code>R CMD check</code> is agnostic to renv; it only requires that <code>DESCRIPTION</code>-declared packages are present on <code>.libPaths()</code>.</p>
+<p>The tradeoff is that the workflow tests against the latest compatible package versions, not the pinned versions in <code>renv.lock</code>. For a package validity check this is the right behaviour. A package whose <code>R CMD check</code> passes only against a specific pinned version has undeclared version constraints that belong in <code>DESCRIPTION</code>.</p>
+</section>
+<section id="key-decisions-in-r-package.yml" class="level2" data-number="5.2">
+<h2 data-number="5.2" class="anchored" data-anchor-id="key-decisions-in-r-package.yml"><span class="header-section-number">5.2</span> Key decisions in <code>r-package.yml</code></h2>
+<p><strong><code>setup-r-dependencies@v2</code> not <code>setup-renv@v2</code></strong>: The correct action for a DESCRIPTION-driven install is <code>r-lib/actions/setup-r-dependencies</code>. Using <code>r-lib/actions/setup-renv</code> calls <code>renv::restore()</code>, which fails on zzcollab repos because <code>.Rprofile</code> suppresses renv outside the container. Note also that the action name <code>r-lib/actions/install-r-package-deps</code> does not exist; the correct name is <code>setup-r-dependencies</code>.</p>
+<p><strong><code>extra-packages: any::rcmdcheck</code> with <code>needs: check</code></strong>: <code>rcmdcheck</code> is a CI tool, not a project dependency. It does not appear in <code>DESCRIPTION</code> and must be declared explicitly so <code>setup-r-dependencies</code> installs it alongside the project packages. The <code>needs: check</code> tag is the standard convention signalling that this is a check workflow.</p>
+<p><strong><code>r-lib/actions/check-r-package@v2</code></strong>: This action wraps <code>rcmdcheck::rcmdcheck()</code> with sensible defaults and uploads check artefacts. It fails the workflow on any ERROR and treats WARNINGs as errors by default. Undocumented exported objects produce a WARNING and will therefore fail CI; all exported functions must have roxygen2 documentation entries.</p>
+<p><strong><code>use-public-rspm: true</code></strong>: Tells <code>setup-r</code> to configure Posit Package Manager as the package repository, providing pre-compiled Linux binaries and avoiding source compilation for most packages.</p>
+<p><strong>No renv, no container pin</strong>: The workflow installs the latest compatible versions of declared dependencies. This is intentional. If a package requires a specific minimum version, express that constraint in <code>DESCRIPTION</code> with a <code>(&gt;= x.y.z)</code> qualifier.</p>
+<p><img src="media/images/ambiance2.png" class="img-fluid"></p>
+</section>
+</section>
+<section id="the-report-rendering-workflow-render-report.yml" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> The Report-Rendering Workflow: <code>render-report.yml</code></h1>
+<p>Place this file at <code>.github/workflows/render-report.yml</code>. It applies only to manuscript-package repos that contain <code>analysis/**/report.Rmd</code> files.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">name</span><span class="kw">:</span><span class="at"> Render Reports</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="fu">on</span><span class="kw">:</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">push</span><span class="kw">:</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">branches</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at">main</span><span class="kw">,</span><span class="at"> master</span><span class="kw">]</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">paths</span><span class="kw">:</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co">      # WHY path filters: building the Docker image takes 5-15 minutes.</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co">      # Triggering only when analysis code, R source, the lockfile, or the</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co">      # Dockerfile changes avoids that cost on documentation-only pushes.</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="st">'analysis/**'</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="st">'R/**'</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="st">'renv.lock'</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="st">'Dockerfile'</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="st">'.github/workflows/render-report.yml'</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">pull_request</span><span class="kw">:</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">branches</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at">main</span><span class="kw">,</span><span class="at"> master</span><span class="kw">]</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">paths</span><span class="kw">:</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="st">'analysis/**'</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="st">'R/**'</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="st">'renv.lock'</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="st">'Dockerfile'</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="fu">jobs</span><span class="kw">:</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">render</span><span class="kw">:</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">runs-on</span><span class="kw">:</span><span class="at"> ubuntu-latest</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a><span class="co">    # The job runs on a bare host runner, but all R work happens inside</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a><span class="co">    # the project's own Docker container (see 'docker run' step below).</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">steps</span><span class="kw">:</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">uses</span><span class="kw">:</span><span class="at"> actions/checkout@v6</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a><span class="co">        # Makes the repo contents available at $GITHUB_WORKSPACE, which is</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a><span class="co">        # then bind-mounted into the container.</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">uses</span><span class="kw">:</span><span class="at"> docker/setup-buildx-action@v3</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a><span class="co">        # Initialises BuildKit, the modern Docker build backend. Required</span></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a><span class="co">        # for --mount=type=cache in the Dockerfile (layer caching syntax).</span></span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> Build Docker image</span></span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a><span class="fu">        run</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>          docker build -t compendium-env .</span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>          # Builds the project's own Dockerfile, not a generic rocker image.</span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a>          # This means the render runs against the exact pinned environment</span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a>          # defined in this repo, including all tlmgr-installed LaTeX packages.</span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> Restore packages and render all manuscripts</span></span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a><span class="fu">        run</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a>          docker run --rm \</span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>            # --rm: remove the container after it exits (no orphan containers)</span>
+<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a>            -e CI=true \</span>
+<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a>            # CI=true: signals to R packages (e.g. usethis, renv) that this</span>
+<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a>            # is a non-interactive CI run; suppresses prompts and progress bars.</span>
+<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a>            -v ${{ github.workspace }}:/project \</span>
+<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a>            # Bind-mounts the checked-out repo into the container at /project,</span>
+<span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a>            # so the container can read source files and write rendered output</span>
+<span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a>            # back to the runner's workspace for the upload step.</span>
+<span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a>            -w /project compendium-env \</span>
+<span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a>            # Sets the container working directory to /project (the repo root).</span>
+<span id="cb2-58"><a href="#cb2-58" aria-hidden="true" tabindex="-1"></a>            Rscript -e '</span>
+<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a>              renv::restore()</span>
+<span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a>              # Synchronises the container library with renv.lock. The</span>
+<span id="cb2-61"><a href="#cb2-61" aria-hidden="true" tabindex="-1"></a>              # Dockerfile already ran renv::restore() at build time, so this</span>
+<span id="cb2-62"><a href="#cb2-62" aria-hidden="true" tabindex="-1"></a>              # is typically a no-op -- but it catches any drift introduced by</span>
+<span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a>              # bind-mounting the host repo over the container filesystem.</span>
+<span id="cb2-64"><a href="#cb2-64" aria-hidden="true" tabindex="-1"></a>              rmds &lt;- list.files(</span>
+<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a>                "analysis", pattern = "^report[.]Rmd$",</span>
+<span id="cb2-66"><a href="#cb2-66" aria-hidden="true" tabindex="-1"></a>                recursive = TRUE, full.names = TRUE</span>
+<span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a>              )</span>
+<span id="cb2-68"><a href="#cb2-68" aria-hidden="true" tabindex="-1"></a>              cat("Found", length(rmds), "manuscripts\n\n")</span>
+<span id="cb2-69"><a href="#cb2-69" aria-hidden="true" tabindex="-1"></a>              failed &lt;- character()</span>
+<span id="cb2-70"><a href="#cb2-70" aria-hidden="true" tabindex="-1"></a>              for (rmd in rmds) {</span>
+<span id="cb2-71"><a href="#cb2-71" aria-hidden="true" tabindex="-1"></a>                cat("=== Rendering:", rmd, "===\n")</span>
+<span id="cb2-72"><a href="#cb2-72" aria-hidden="true" tabindex="-1"></a>                old_wd &lt;- setwd(dirname(rmd))</span>
+<span id="cb2-73"><a href="#cb2-73" aria-hidden="true" tabindex="-1"></a>                tryCatch(</span>
+<span id="cb2-74"><a href="#cb2-74" aria-hidden="true" tabindex="-1"></a>                  rmarkdown::render(basename(rmd)),</span>
+<span id="cb2-75"><a href="#cb2-75" aria-hidden="true" tabindex="-1"></a>                  error = function(e) {</span>
+<span id="cb2-76"><a href="#cb2-76" aria-hidden="true" tabindex="-1"></a>                    cat("FAILED:", conditionMessage(e), "\n")</span>
+<span id="cb2-77"><a href="#cb2-77" aria-hidden="true" tabindex="-1"></a>                    failed &lt;&lt;- c(failed, rmd)</span>
+<span id="cb2-78"><a href="#cb2-78" aria-hidden="true" tabindex="-1"></a>                    # Collect failures rather than stopping at the first one,</span>
+<span id="cb2-79"><a href="#cb2-79" aria-hidden="true" tabindex="-1"></a>                    # so all manuscripts are attempted and all errors reported.</span>
+<span id="cb2-80"><a href="#cb2-80" aria-hidden="true" tabindex="-1"></a>                  }</span>
+<span id="cb2-81"><a href="#cb2-81" aria-hidden="true" tabindex="-1"></a>                )</span>
+<span id="cb2-82"><a href="#cb2-82" aria-hidden="true" tabindex="-1"></a>                setwd(old_wd)</span>
+<span id="cb2-83"><a href="#cb2-83" aria-hidden="true" tabindex="-1"></a>              }</span>
+<span id="cb2-84"><a href="#cb2-84" aria-hidden="true" tabindex="-1"></a>              cat("\n=== summary ===\n")</span>
+<span id="cb2-85"><a href="#cb2-85" aria-hidden="true" tabindex="-1"></a>              cat("rendered:", length(rmds) - length(failed), "\n")</span>
+<span id="cb2-86"><a href="#cb2-86" aria-hidden="true" tabindex="-1"></a>              cat("failed:  ", length(failed), "\n")</span>
+<span id="cb2-87"><a href="#cb2-87" aria-hidden="true" tabindex="-1"></a>              if (length(failed) &gt; 0) {</span>
+<span id="cb2-88"><a href="#cb2-88" aria-hidden="true" tabindex="-1"></a>                for (f in failed) cat("  ", f, "\n")</span>
+<span id="cb2-89"><a href="#cb2-89" aria-hidden="true" tabindex="-1"></a>                quit(status = 1)</span>
+<span id="cb2-90"><a href="#cb2-90" aria-hidden="true" tabindex="-1"></a>                # Exit non-zero so the GitHub Actions step is marked failed.</span>
+<span id="cb2-91"><a href="#cb2-91" aria-hidden="true" tabindex="-1"></a>              }</span>
+<span id="cb2-92"><a href="#cb2-92" aria-hidden="true" tabindex="-1"></a>            '</span>
+<span id="cb2-93"><a href="#cb2-93" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-94"><a href="#cb2-94" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> Upload rendered PDFs</span></span>
+<span id="cb2-95"><a href="#cb2-95" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">if</span><span class="kw">:</span><span class="at"> always()</span></span>
+<span id="cb2-96"><a href="#cb2-96" aria-hidden="true" tabindex="-1"></a><span class="co">        # WHY always(): uploads artefacts even when the render step failed,</span></span>
+<span id="cb2-97"><a href="#cb2-97" aria-hidden="true" tabindex="-1"></a><span class="co">        # so partially-rendered PDFs are available for debugging.</span></span>
+<span id="cb2-98"><a href="#cb2-98" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">uses</span><span class="kw">:</span><span class="at"> actions/upload-artifact@v4</span></span>
+<span id="cb2-99"><a href="#cb2-99" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">with</span><span class="kw">:</span></span>
+<span id="cb2-100"><a href="#cb2-100" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">name</span><span class="kw">:</span><span class="at"> rendered-manuscripts</span></span>
+<span id="cb2-101"><a href="#cb2-101" aria-hidden="true" tabindex="-1"></a><span class="fu">          path</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb2-102"><a href="#cb2-102" aria-hidden="true" tabindex="-1"></a>            analysis/**/*.pdf</span>
+<span id="cb2-103"><a href="#cb2-103" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">retention-days</span><span class="kw">:</span><span class="at"> </span><span class="dv">30</span></span>
+<span id="cb2-104"><a href="#cb2-104" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">if-no-files-found</span><span class="kw">:</span><span class="at"> warn</span></span>
+<span id="cb2-105"><a href="#cb2-105" aria-hidden="true" tabindex="-1"></a><span class="co">          # warn rather than error: a repo with no report.Rmd files yet is</span></span>
+<span id="cb2-106"><a href="#cb2-106" aria-hidden="true" tabindex="-1"></a><span class="co">          # not a failure; the step completes with a warning instead.</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<section id="key-decisions-in-render-report.yml" class="level2" data-number="6.1">
+<h2 data-number="6.1" class="anchored" data-anchor-id="key-decisions-in-render-report.yml"><span class="header-section-number">6.1</span> Key decisions in <code>render-report.yml</code></h2>
+<p><strong>Path filters</strong>: The workflow triggers only when files under <code>analysis/</code>, <code>R/</code>, <code>renv.lock</code>, or the Dockerfile change. This avoids running a full Docker build on every push that touches only documentation or CI configuration.</p>
+<p><strong>Docker build inside CI</strong>: The workflow builds the project’s own Docker image rather than using <code>rocker/verse</code> directly. This means the rendered output reflects the exact environment defined in the repo’s Dockerfile, including any custom system dependencies.</p>
+<p><strong><code>if-no-files-found: warn</code></strong>: If the repo contains no <code>report.Rmd</code> files, the upload step warns rather than fails. This makes the workflow safe to include in repos where manuscripts are work-in-progress.</p>
+<p><strong>No <code>r-package.yml</code> duplication</strong>: <code>render-report.yml</code> does not run R CMD check. It is the companion to <code>r-package.yml</code>, not a replacement; a manuscript-package repo requires both.</p>
+</section>
+</section>
+<section id="verification" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Verification</h1>
+<p>After placing the correct workflow files, push a commit to <code>main</code> and confirm CI passes:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">gh</span> run list <span class="at">--repo</span> <span class="op">&lt;</span>owner<span class="op">&gt;</span>/<span class="op">&lt;</span>repo<span class="op">&gt;</span> --limit 3</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">gh</span> run view <span class="op">&lt;</span>run-id<span class="op">&gt;</span> --log-failed</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>A successful <code>r-package.yml</code> run ends with:</p>
+<pre><code>Status: 0 ERRORs, 0 WARNINGs, N NOTEs</code></pre>
+<p>A successful <code>render-report.yml</code> run uploads one PDF per <code>report.Rmd</code> found in the <code>analysis/</code> tree.</p>
+<section id="diagnosing-common-failures" class="level2" data-number="7.1">
+<h2 data-number="7.1" class="anchored" data-anchor-id="diagnosing-common-failures"><span class="header-section-number">7.1</span> Diagnosing common failures</h2>
+<p><strong>‘Packages required but not available’</strong>: <code>RENV_CONFIG_REPOS_OVERRIDE</code> is missing or wrong. Check that the URL ends in <code>noble/latest</code> (not <code>jammy/latest</code>) for Ubuntu 24.04 containers.</p>
+<p><strong>‘Could not detect profile from Dockerfile’</strong>: The <code>Dockerfile</code> is missing <code># Profile: &lt;name&gt;</code> in the first 20 lines. Add it before running <code>make r</code> or pushing to CI.</p>
+<p><strong>‘no package called here’ in tinytest</strong>: A test file calls <code>library(here)</code> but <code>here</code> is not declared in <code>DESCRIPTION</code>. Add <code>here</code> to <code>Suggests</code>.</p>
+<p><strong>‘Namespaces in Imports field not imported from’</strong>: A package is listed in <code>DESCRIPTION</code> <code>Imports</code> but never used. Remove it or demote it to <code>Suggests</code>.</p>
+</section>
+</section>
+<section id="daily-workflow" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Daily Workflow</h1>
+<p>With both workflow files in place, the typical development loop is:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Action</th>
+<th>CI triggered</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>git push</code> to <code>main</code></td>
+<td>both workflows if paths match</td>
+</tr>
+<tr class="even">
+<td>Edit <code>analysis/</code> only</td>
+<td><code>render-report.yml</code> only</td>
+</tr>
+<tr class="odd">
+<td>Edit <code>R/</code> only</td>
+<td>both workflows</td>
+</tr>
+<tr class="even">
+<td>Edit <code>.github/</code> only</td>
+<td>neither (path filters exclude it)</td>
+</tr>
+</tbody>
+</table>
+<p>Running <code>zzc doctor</code> before pushing catches most structural issues (missing <code># Profile:</code>, outdated <code>.Rprofile</code>, misplaced files) before they become CI failures.</p>
+</section>
+<section id="things-to-watch-out-for" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> Things to Watch Out For</h1>
+<ol type="1">
+<li><p><strong>The zzcollab <code>.Rprofile</code> suppresses renv on any host runner.</strong> <code>.Rprofile</code> gates renv activation on <code>ZZCOLLAB_CONTAINER=true</code>. This variable is only set inside the Docker container. Any CI workflow that runs on a bare Ubuntu runner and calls <code>renv::restore()</code> (including <code>r-lib/actions/setup-renv@v2</code>) will silently skip renv activation and then fail with ‘dependency failed’ errors for every package in the lockfile. The fix is to use <code>setup-r-dependencies@v2</code> in <code>r-package.yml</code> (which reads from <code>DESCRIPTION</code>, not <code>renv.lock</code>) and to reserve renv-based workflows for <code>render-report.yml</code>, which runs inside the container where <code>ZZCOLLAB_CONTAINER=true</code> is present.</p></li>
+<li><p><strong><code>renv::status()$synchronized</code> is not a stable API field.</strong> <code>renv::status()</code> returns a list but the <code>$synchronized</code> element is internal to renv and has changed across versions. CI templates that check <code>isTRUE(status$synchronized)</code> to gate a quit will misfire: renv may report drift for reasons unrelated to the lockfile (for example, because renv itself was downgraded from 1.2.3 to 1.2.2 during restore, which is lockfile-consistent but triggers a status change). The symptom is a ‘renv lockfile is not synchronised’ failure immediately after a successful <code>renv::restore()</code>. Remove this check from <code>render-report.yml</code> entirely; <code>renv::restore()</code> already exits non-zero on genuine failures.</p></li>
+<li><p><strong><code>r-lib/actions/install-r-package-deps</code> does not exist.</strong> The correct action name is <code>r-lib/actions/setup-r-dependencies</code>. Using the wrong name produces ‘Can’t find action.yml’ and a silent job failure with no informative error message.</p></li>
+<li><p><strong>Both workflows trigger on the same push if both are present.</strong> In a manuscript-package repo this is correct. In a data-analysis repo with no manuscripts, <code>render-report.yml</code> will still run but will find zero <code>report.Rmd</code> files and exit with a warning, not an error.</p></li>
+<li><p><strong>Undeclared exported objects fail CI.</strong> <code>check-r-package@v2</code> treats WARNINGs as errors. Every object exported via <code>@export</code> in roxygen2 must have a documentation entry. Constants and datasets exported via <code>NAMESPACE</code> also require documentation. The check message is ‘Undocumented code objects’; the fix is to add a minimal roxygen2 block to each object.</p></li>
+<li><p><strong>Undeclared test dependencies also fail CI.</strong> If a test file calls <code>library(foo)</code> or <code>foo::bar()</code> and <code>foo</code> is not listed in <code>DESCRIPTION</code> under <code>Imports</code> or <code>Suggests</code>, R CMD check fails even if <code>foo</code> is in <code>renv.lock</code>. <code>renv.lock</code> is invisible to <code>R CMD check</code>.</p></li>
+<li><p><strong><code>render-report.yml</code> builds the Docker image on every triggered run.</strong> Without a Docker layer cache, this adds 3-10 minutes per run. The workflow does not currently use <code>cache-from</code> or <code>cache-to</code> for the Docker build step.</p></li>
+<li><p><strong>TinyTeX auto-install does not work in CI.</strong> <code>rocker/verse</code> ships a system-level TeX Live installation, not TinyTeX. TinyTeX’s auto-install mechanism requires the wrapper scripts placed by <code>tinytex::install_tinytex()</code>; <code>rocker/verse</code> provides plain TeX Live executables instead, so no wrappers are present. When <code>xelatex</code> encounters a missing package such as <code>amssymb.sty</code> or <code>booktabs.sty</code>, it fails immediately with ‘File not found’. Pre-install every required LaTeX package via <code>tinytex::tlmgr_install()</code> in the Dockerfile; the image must be self-contained.</p></li>
+<li><p><strong>Packages installed by the Dockerfile outside <code>renv.lock</code> are invisible after <code>renv::restore()</code>.</strong> Packages written to the site library by <code>install.packages()</code> during the Docker build are not recorded in <code>renv.lock</code>. When <code>render-report.yml</code> calls <code>renv::restore()</code>, renv activates a project library that shadows the site library, making those packages invisible. The symptom is ‘there is no package called X’ immediately after a successful restore. The fix is to run <code>renv::snapshot()</code> inside the container after any <code>install.packages()</code> call that adds a render-time dependency.</p></li>
+</ol>
+</section>
+<section id="uninstall-rollback" class="level1" data-number="10">
+<h1 data-number="10"><span class="header-section-number">10</span> Uninstall / Rollback</h1>
+<p>To remove CI from a repo:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span> .github/workflows/r-package.yml</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span> .github/workflows/render-report.yml</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> add <span class="at">-u</span> .github/workflows/</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">"Remove CI workflows"</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> push</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>GitHub Actions stops triggering automatically once the YAML files are removed. Any in-progress runs will complete before the removal takes effect.</p>
+<p><img src="media/images/ambiance3.png" class="img-fluid"></p>
+</section>
+<section id="what-did-we-learn" class="level1" data-number="11">
+<h1 data-number="11"><span class="header-section-number">11</span> What Did We Learn?</h1>
+<section id="lessons-learnt" class="level2" data-number="11.1">
+<h2 data-number="11.1" class="anchored" data-anchor-id="lessons-learnt"><span class="header-section-number">11.1</span> Lessons Learnt</h2>
+<p><strong>Conceptual understanding:</strong></p>
+<ul>
+<li>Workspace type (manuscript-package, data-analysis, blog-post) determines the correct CI combination. Applying the same workflow to all repos masks real differences in what each repo needs to verify.</li>
+<li><code>r-package.yml</code> and <code>render-report.yml</code> answer different questions and must use different execution environments. <code>r-package.yml</code> runs on a bare host runner and reads from <code>DESCRIPTION</code>; <code>render-report.yml</code> runs inside the project container and reads from <code>renv.lock</code>. Conflating the two produces failures that are difficult to diagnose.</li>
+<li>The zzcollab <code>.Rprofile</code> is a first-class architectural constraint, not an implementation detail. Any CI workflow that touches renv on a host runner will fail silently because <code>.Rprofile</code> gates renv on <code>ZZCOLLAB_CONTAINER=true</code>. Understanding this gate is prerequisite to writing any new zzcollab CI template.</li>
+<li>Internal renv API fields (such as <code>renv::status()$synchronized</code>) are not stable across renv versions and should not be used as CI gates. Use <code>renv::restore()</code> exit codes instead.</li>
+</ul>
+<p><strong>Technical skills:</strong></p>
+<ul>
+<li><code>gh run list --json workflowName,conclusion,createdAt --jq</code> produces a concise pass/fail table across multiple repos without opening the browser.</li>
+<li><code>gh run view --log-failed</code> isolates the failing step and its error message without scrolling through the full log.</li>
+<li>Comparing workflow file line counts across commits (<code>git show SHA:path |   wc -l</code>) quickly confirms whether a file changed between two runs.</li>
+<li><code>diff &lt;(git show SHA1:file) &lt;(git show SHA2:file)</code> is more reliable than <code>git diff SHA1..SHA2 -- file</code> when working from a Dropbox-synced path, where the path-filtered diff may return empty output unexpectedly.</li>
+<li><code>zzc validate --fix</code> scans R source files and adds missing packages to <code>DESCRIPTION</code> and stub entries to <code>renv.lock</code>. The stub entries lack <code>Hash</code> and <code>Requirements</code> fields; a full <code>renv::snapshot()</code> inside the container is still required to produce a complete lockfile.</li>
+</ul>
+<p><strong>Gotchas and pitfalls:</strong></p>
+<ul>
+<li>A cascade of ‘dependency failed’ errors in <code>setup-renv@v2</code> on a host runner is almost always caused by <code>.Rprofile</code> suppressing renv, not by missing packages. Check for the message ‘Host R session (renv skipped)’ in the step log before investigating individual packages.</li>
+<li><code>actions/checkout@v6</code> exists and is current as of May 2026. Checking the GitHub Marketplace release history before assuming a version is wrong prevents unnecessary edits.</li>
+<li><code>r-lib/actions/install-r-package-deps</code> is not a real action. The correct name is <code>r-lib/actions/setup-r-dependencies</code>. The error message (‘Can’t find action.yml’) is not informative about the cause.</li>
+<li>Adding <code>render-report.yml</code> to a data-analysis repo is harmless but wasteful. The <code>if-no-files-found: warn</code> option prevents a hard failure, but the Docker build step still runs on every triggered push.</li>
+<li>‘there is no package called X’ immediately after a successful <code>renv::restore()</code> means X was installed by the Dockerfile outside <code>renv.lock</code> and is being shadowed by the renv project library. Run <code>renv::snapshot()</code> inside the container to record it.</li>
+<li>Missing LaTeX packages (<code>amssymb.sty</code>, <code>booktabs.sty</code>, etc.) in CI always indicate a gap in the Dockerfile’s <code>tlmgr_install()</code> list. TinyTeX auto-install is absent in <code>rocker/verse</code>; do not wait for it.</li>
+</ul>
+</section>
+<section id="limitations" class="level2" data-number="11.2">
+<h2 data-number="11.2" class="anchored" data-anchor-id="limitations"><span class="header-section-number">11.2</span> Limitations</h2>
+<ul>
+<li>These two workflow files cover only the most common zzc CI patterns. Repos with Shiny applications, pkgdown sites, or Quarto books require additional or different workflow files not documented here.</li>
+<li><code>r-package.yml</code> tests against the latest compatible package versions, not the pinned versions in <code>renv.lock</code>. A regression introduced by a new upstream package release will appear in <code>r-package.yml</code> CI but not in local development (which uses pinned versions). This is a feature, not a defect, but it requires prompt attention when CI fails on a push that made no package-related changes.</li>
+<li><code>render-report.yml</code> does not cache the Docker build. Large images with many compiled system libraries can take 10 or more minutes to build from scratch on every triggered run.</li>
+<li>The zzcollab <code>.Rprofile</code> design (renv gated on <code>ZZCOLLAB_CONTAINER=true</code>) means any future CI workflow that needs renv on a host runner must either run inside the container or set the variable explicitly, which is semantically misleading. A cleaner long-term fix would gate renv on <code>CI=true || ZZCOLLAB_CONTAINER=true</code>, but this requires a coordinated change to the zzcollab <code>.Rprofile</code> template.</li>
+<li>The workflows target the <code>main</code> and <code>master</code> branches only. Feature branches do not get CI unless the <code>on: push: branches</code> list is extended.</li>
+<li>Neither workflow addresses code coverage, linting, or spell-checking. These require additional workflow steps or separate YAML files.</li>
+</ul>
+</section>
+<section id="opportunities-for-improvement" class="level2" data-number="11.3">
+<h2 data-number="11.3" class="anchored" data-anchor-id="opportunities-for-improvement"><span class="header-section-number">11.3</span> Opportunities for Improvement</h2>
+<ol type="1">
+<li>Add Docker layer caching to <code>render-report.yml</code> using <code>cache-from: type=gha</code> and <code>cache-to: type=gha,mode=max</code> in the build step to reduce build times from 10 minutes to under 2 minutes on cache hits.</li>
+<li>Extend <code>zzc doctor</code> to scaffold <code>render-report.yml</code> automatically for manuscript-package repos, so the file is present from first <code>zzc init</code> rather than requiring manual distribution.</li>
+<li>Add a <code>--no-vignettes</code> flag to the <code>rcmdcheck::rcmdcheck()</code> call for repos with vignettes that require LaTeX, which is not available on the bare host runner used by <code>r-package.yml</code>.</li>
+<li>Parameterise the R version and Ubuntu codename in both workflow files so that bumping the container image requires a change in one place rather than two.</li>
+<li>Add a workflow dispatch trigger (<code>on: workflow_dispatch</code>) to both files so CI can be triggered manually from the GitHub Actions tab without a push.</li>
+<li>Build a <code>zzc ci-status</code> subcommand that queries <code>gh run list</code> for all repos in a directory tree and reports pass/fail in a single table.</li>
+</ol>
+</section>
+</section>
+<section id="wrapping-up" class="level1" data-number="12">
+<h1 data-number="12"><span class="header-section-number">12</span> Wrapping Up</h1>
+<p>Getting CI right in a zzcollab portfolio is a two-step problem: first, identify the workspace type; second, apply the correct workflow combination. The manuscript-package type is the most common and the most demanding, requiring both <code>r-package.yml</code> and <code>render-report.yml</code>. The data-analysis type needs only the package check. The blog-post type needs neither.</p>
+<p>The most important architectural insight from developing these workflows is that the two files must use different execution environments because they answer different questions. <code>r-package.yml</code> asks whether the package is structurally sound, reads from <code>DESCRIPTION</code>, and runs on a bare host runner. <code>render-report.yml</code> asks whether the fully pinned containerised environment produces a rendered output, reads from <code>renv.lock</code>, and runs inside the project’s own Docker image. Conflating the two – for example, by running <code>renv::restore()</code> on a host runner – triggers the zzcollab <code>.Rprofile</code> gate and produces a cascade of ‘dependency failed’ errors that obscure the real cause.</p>
+<p>The practical corollary is that <code>r-package.yml</code> must use <code>r-lib/actions/setup-r-dependencies@v2</code> (reading from <code>DESCRIPTION</code>), not any renv-based action, precisely because the zzcollab <code>.Rprofile</code> gate makes renv silent on host runners. Equally, <code>render-report.yml</code> should not gate on <code>renv::status()$synchronized</code>: that field is an internal renv API that misfires after a version downgrade, and <code>renv::restore()</code> exit codes are the correct signal. For diagnostics, <code>zzc doctor</code> before a push and <code>gh run view --log-failed</code> after one cover most failure modes without opening the browser.</p>
+</section>
+<section id="see-also" class="level1" data-number="13">
+<h1 data-number="13"><span class="header-section-number">13</span> See Also</h1>
+<p><strong>Related posts:</strong></p>
+<ul>
+<li><a href="https://focusonr.org/posts/63-zzcollab-ci-strategy/">A tiered CI strategy for zzcollab research compendia</a>: companion post on the broader CI philosophy behind these workflow files.</li>
+</ul>
+<p><strong>Key resources:</strong></p>
+<ul>
+<li><a href="https://docs.github.com/en/actions">GitHub Actions documentation</a>: reference for workflow syntax, triggers, and runner environments.</li>
+<li><a href="https://packagemanager.posit.co/">Posit Package Manager</a>: source of pre-compiled R package binaries for Linux distributions.</li>
+<li><a href="https://github.com/rocker-org/rocker-versioned2">rocker-org/rocker-versioned2</a>: source for the <code>rocker/tidyverse</code> and <code>rocker/verse</code> container images used in CI.</li>
+<li><a href="https://rstudio.github.io/renv/">renv documentation</a>: reference for <code>renv.lock</code>, <code>RENV_CONFIG_REPOS_OVERRIDE</code>, and related configuration options.</li>
+</ul>
+<hr>
+</section>
+<section id="glossary" class="level1" data-number="14">
+<h1 data-number="14"><span class="header-section-number">14</span> Glossary</h1>
+<p>The following terms appear throughout this post. Readers familiar with GitHub Actions can skip this section.</p>
+<p><strong>Workflow</strong>: a YAML file placed under <code>.github/workflows/</code> that defines one or more automated jobs. GitHub executes the workflow whenever a configured trigger event occurs.</p>
+<p><strong>Trigger (<code>on:</code>)</strong>: the event that causes a workflow to run. Common triggers are <code>push</code> (a commit pushed to a branch), <code>pull_request</code> (a PR opened or updated against a branch), and <code>workflow_dispatch</code> (a manual run initiated from the GitHub Actions tab).</p>
+<p><strong><code>paths:</code> filter</strong>: narrows a <code>push</code> or <code>pull_request</code> trigger to fire only when at least one changed file matches the listed glob patterns. Used in <code>render-report.yml</code> to avoid a full Docker build on documentation-only pushes.</p>
+<p><strong><code>branches:</code> filter</strong>: further narrows a trigger to specific branch names. Both workflows target <code>main</code> and <code>master</code> only; pushes to feature branches do not trigger CI unless this list is extended.</p>
+<p><strong>Job</strong>: a named set of steps that execute sequentially on the same runner. Each workflow in this post defines one job (<code>check</code> and <code>render</code>, respectively).</p>
+<p><strong>Runner</strong>: the virtual machine that executes a job. <code>runs-on: ubuntu-latest</code> requests a GitHub-hosted Ubuntu 24.04 runner. Runners are ephemeral: they are provisioned fresh for each job run and discarded afterwards.</p>
+<p><strong>Step</strong>: one unit of work within a job. A step is either a <code>run:</code> block (arbitrary shell commands) or a <code>uses:</code> block (a pre-built action). Steps within a job share the same runner filesystem and environment variables.</p>
+<p><strong>Action (<code>uses:</code>)</strong>: a reusable automation unit published to the GitHub Marketplace or a repository. Referenced as <code>owner/repo@version</code>, for example <code>actions/checkout@v6</code>. The version tag pins the action to a specific major release; updates within that major version are pulled automatically.</p>
+<p><strong><code>with:</code></strong>: named input parameters passed to an action. The available inputs are defined by the action’s own <code>action.yml</code>; passing an unrecognised key is silently ignored.</p>
+<p><strong><code>env:</code></strong>: key-value pairs that are injected as environment variables for the scope in which they are declared (workflow, job, or individual step). Variables declared at job level are visible to all steps in that job.</p>
+<p><strong>Secret (<code>secrets.*</code>)</strong>: an encrypted value stored in the repository’s Settings &gt; Secrets. Accessed in a workflow via the expression syntax <code>${{ secrets.NAME }}</code>. <code>GITHUB_TOKEN</code> is auto-provisioned by GitHub Actions for every run and requires no manual setup.</p>
+<p><strong>Expression (<code>${{ ... }}</code>)</strong>: GitHub Actions’ interpolation syntax, evaluated at workflow parse time. Common uses include accessing secrets (<code>${{ secrets.GITHUB_TOKEN }}</code>), context variables (<code>${{ github.workspace }}</code>), and conditional expressions in <code>if:</code> fields.</p>
+<p><strong>Artifact</strong>: a file or directory uploaded from a workflow run via <code>actions/upload-artifact</code>. Artifacts are retained for the number of days specified by <code>retention-days</code> and can be downloaded from the run summary page. Used in <code>render-report.yml</code> to preserve rendered PDFs.</p>
+<p><strong><code>if: always()</code></strong>: a step-level condition that evaluates to true regardless of whether previous steps succeeded or failed. Used on the upload step so that partially-rendered PDFs are available for debugging even when a render fails.</p>
+<p><strong><code>r-lib/actions</code></strong>: a collection of GitHub Actions maintained by the r-lib organisation specifically for R workflows. The three used in this post are <code>setup-r</code> (installs R), <code>setup-r-dependencies</code> (installs packages from <code>DESCRIPTION</code>), and <code>check-r-package</code> (runs R CMD check via <code>rcmdcheck</code>).</p>
+<p><strong><code>workflow_dispatch</code></strong>: an on-demand trigger that enables a workflow to be run manually from the GitHub Actions tab without pushing a commit. Not currently configured in these workflows; see Opportunities for Improvement.</p>
+</section>
+<section id="reproducibility" class="level1" data-number="15">
+<h1 data-number="15"><span class="header-section-number">15</span> Reproducibility</h1>
+<p><strong>Tested configuration:</strong></p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Component</th>
+<th>Version</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Operating system (host)</td>
+<td>macOS 15.4</td>
+</tr>
+<tr class="even">
+<td>Operating system (CI)</td>
+<td>Ubuntu 24.04.4 LTS (noble)</td>
+</tr>
+<tr class="odd">
+<td>R (host runner)</td>
+<td>latest release (setup-r)</td>
+</tr>
+<tr class="even">
+<td>rocker/verse (render-report)</td>
+<td>4.6.0</td>
+</tr>
+<tr class="odd">
+<td>actions/checkout</td>
+<td>v6</td>
+</tr>
+<tr class="even">
+<td>r-lib/actions/setup-r</td>
+<td>v2</td>
+</tr>
+<tr class="odd">
+<td>r-lib/actions/setup-r-dependencies</td>
+<td>v2</td>
+</tr>
+<tr class="even">
+<td>r-lib/actions/check-r-package</td>
+<td>v2</td>
+</tr>
+<tr class="odd">
+<td>actions/upload-artifact</td>
+<td>v4</td>
+</tr>
+<tr class="even">
+<td>docker/setup-buildx-action</td>
+<td>v3</td>
+</tr>
+<tr class="odd">
+<td>Last verified</td>
+<td>2026-05-22</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Workflow files (genericised):</strong></p>
+<ul>
+<li><code>docs/r-package.yml</code>: annotated generic R CMD check workflow</li>
+<li><code>docs/render-report.yml</code>: annotated generic report-rendering workflow</li>
+</ul>
+<hr>
+<p><em>Rendered on 2026-05-22 at 18:16 PDT.</em><br> <em>Source: ~/prj/qblog/posts/69-zzc-github-workflows/zzc-github-workflows/analysis/report/index.qmd</em></p>
+<hr>
+</section>
+<section id="lets-connect" class="level1" data-number="16">
+<h1 data-number="16"><span class="header-section-number">16</span> Let’s Connect</h1>
+<p><em>Have questions, suggestions, or spot an error? Let me know.</em></p>
+<ul>
+<li><strong>GitHub:</strong> <a href="https://github.com/rgt47">rgt47</a></li>
+<li><strong>LinkedIn:</strong> <a href="https://linkedin.com/in/rgthomaslab">Ronald Glenn Thomas</a></li>
+<li><strong>Email:</strong> rgthomas47@gmail.com</li>
+</ul>
+<hr>
+<!-- ============================================================================
+PRE-PUBLISH QA CHECKLIST: verify each item BEFORE setting draft: false
+
+This is the verification pass that mirrors the AUTHOR PROVIDES list at the
+top of this file. If anything below is unchecked, the post is not ready.
+
+[ ] YAML
+    [ ] title, subtitle, date, categories, description, image filled in
+    [x] document-type: 'blog'
+    [x] draft: false
+
+[ ] Narrative complete (no remaining `[bracketed]` placeholders)
+    [ ] grep '\[' index.qmd returns only legitimate code/links
+
+[ ] Configuration artifacts present and tested
+    [ ] docs/r-package.yml present (genericised, annotated)
+    [ ] docs/render-report.yml present (genericised, annotated)
+    [ ] Verification commands produce the documented output
+    [ ] Uninstall / rollback steps documented
+
+[ ] Things to Watch Out For
+    [ ] At least 5 gotchas listed (setup posts require this)
+    [ ] Each gotcha has both a symptom AND a fix
+
+[ ] Visual design
+    [ ] 1 hero image (width=80%) immediately after AUTHOR PROVIDES block
+    [ ] Exactly 3 ambiance images ({.img-fluid} only, no width=NN%,
+        no fig-align): after Objectives, after Configuration, before
+        Lessons Learnt
+    [ ] Hero and ambiance captions describe the actual image (not a
+        placeholder description)
+    [ ] No hand-coded "Download PDF" link in body
+    [ ] media/images/README.md attributes every image
+
+[ ] Content quality
+    [ ] Learner voice: author positioned as peer, not expert
+    [ ] Zero emoji anywhere (narrative, comments, captions)
+    [ ] Zero em dashes (forbidden per house style; use parens or commas)
+    [ ] Single quotes preferred over double quotes in prose
+    [ ] Each command and config setting interpreted in plain language
+
+[ ] Reproducibility
+    [ ] Version matrix table filled in (OS, tool, dependencies, date)
+    [ ] Workflow files committed under docs/
+    [ ] Verification commands confirmed against a real CI run
+
+[ ] Render verification
+    [x] quarto render index.qmd produces clean HTML with no warnings
+    [x] Hero image displays in /blog/ listing card
+    [ ] Internal links resolve
+
+============================================================================ -->
+<section id="related-posts-in-this-cluster" class="level2" data-number="16.1">
+<h2 data-number="16.1" class="anchored" data-anchor-id="related-posts-in-this-cluster"><span class="header-section-number">16.1</span> Related posts in this cluster</h2>
+<p>This post is part of the <em>ZZCOLLAB Reproducible Compendia</em> series. Recommended reading order:</p>
+<ol type="1">
+<li>Post 01: <a href="../01-zc-quarto-compendium-intro/">Reproducible Blog Posts with ZZCOLLAB</a></li>
+<li>Post 02: <a href="../02-zc-blog-post-template/">Constructing a reproducible blog post using zzcollab tools</a></li>
+<li>Post 03: <a href="../03-zc-markdown-to-blog-workflow/">From Markdown to Blog Post: A ZZCOLLAB workflow</a></li>
+<li>Post 04: <a href="../04-zc-share-rmd-via-docker/">Sharing R Code via Docker: R Markdown Reports</a></li>
+<li>Post 05: <a href="../05-zc-analysis-initiation-checklist/">A 55-Item Initiation Checklist for zzcollab Data Analyses</a></li>
+<li>Post 06: <a href="../06-zc-manuscript-report-elements/">Seven Required Elements for a zzc Manuscript report.Rmd</a></li>
+<li>Post 07: <a href="../07-zc-tiered-ci-strategy/">A tiered CI strategy for zzcollab research compendia</a></li>
+<li><strong>Post 08: GitHub Actions workflows for zzcollab research compendia</strong> (this post)</li>
+</ol>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp("https:\/\/focusonr\.org");
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<script src="https://giscus.app/client.js" data-repo="rgt47/qblog" data-repo-id="R_kgDOH6TO7A" data-category="General" data-category-id="DIC_kwDOH6TO7M4CXqIi" data-mapping="pathname" data-reactions-enabled="1" data-emit-metadata="0" data-input-position="bottom" data-theme="light" data-lang="en" crossorigin="anonymous" async="">
+</script>
+<input type="hidden" id="giscus-base-theme" value="light">
+<input type="hidden" id="giscus-alt-theme" value="light">
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Copyright 2023-2026, Ronald ‘Ryy’ G. Thomas. The lab’s other activities live at <a href="https://rgtlab.org">rgtlab.org</a>.</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47">
+      <i class="bi bi-github" role="img">
+</i> 
+    </a>
+  </li>  
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47">
+      <i class="bi bi-twitter" role="img">
+</i> 
+    </a>
+  </li>  
+</ul>
+    </div>
+  </div>
+</footer>
+
+<!-- Fix category filtering to work with plain-text categories -->
+<script>
+window.addEventListener('DOMContentLoaded', function() {
+  setTimeout(function() {
+    // Patch sidebar click handlers to use plain-text categories
+    const categoryEls = document.querySelectorAll(
+      ".quarto-listing-category .category"
+    );
+
+    for (const categoryEl of categoryEls) {
+      // Get the plain-text category value directly
+      const category = categoryEl.getAttribute("data-category");
+
+      categoryEl.onclick = () => {
+        window.filterListingCategory(category);
+        // Set hash with encoded category
+        const encodedCategory = btoa(encodeURIComponent(category));
+        window.history.pushState(null, null, `#category=${encodedCategory}`);
+        return false;
+      };
+    }
+
+    // Also patch the category title click handler
+    const categoryTitleEls = document.querySelectorAll(
+      ".quarto-listing-category-title"
+    );
+    for (const categoryTitleEl of categoryTitleEls) {
+      categoryTitleEl.onclick = () => {
+        window.filterListingCategory("");
+        window.history.pushState(null, null, "#");
+        return false;
+      };
+    }
+
+    // Override filterListingCategory to work with plain-text categories
+    window.filterListingCategory = function(category) {
+      const listingIds = Object.keys(window['quarto-listings']);
+      for (const listingId of listingIds) {
+        const list = window['quarto-listings'][listingId];
+        if (list) {
+          if (category === '') {
+            // resets the filter
+            list.filter();
+          } else {
+            // filter to this category - handle both plain text and base64
+            list.filter(function (item) {
+              const itemValues = item.values();
+              if (itemValues.categories !== null && itemValues.categories !== undefined) {
+                let categories;
+
+                try {
+                  // Try to decode as base64 first
+                  categories = decodeURIComponent(atob(itemValues.categories)).split(",");
+                } catch(e) {
+                  // If that fails, assume it's plain text
+                  categories = itemValues.categories.split(",");
+                }
+
+                // Trim whitespace from categories
+                categories = categories.map(c => c.trim());
+                return categories.includes(category);
+              } else {
+                return false;
+              }
+            });
+          }
+        }
+      }
+    };
+
+    // Trigger the listing-loaded handler
+    if (window['quarto-listing-loaded']) {
+      window['quarto-listing-loaded']();
+    }
+  }, 500);
+});
+</script>
+
+<!-- PDF view/download button for blog posts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Only add the button on post pages
+  if (window.location.pathname.includes('/posts/') && !window.location.pathname.endsWith('/posts/') && !window.location.pathname.endsWith('/posts/index.html')) {
+    var currentPath = window.location.pathname;
+    // Handle both /posts/name/ and /posts/name/index.html formats
+    var pdfPath;
+    if (currentPath.endsWith('/')) {
+      pdfPath = currentPath + 'index.pdf';
+    } else {
+      pdfPath = currentPath.replace('.html', '.pdf');
+    }
+
+    // Check if PDF exists first
+    fetch(pdfPath, { method: 'HEAD' })
+      .then(function(response) {
+        if (response.ok) {
+          // PDF exists, show download button
+          showDownloadButton(pdfPath);
+        }
+        // If PDF doesn't exist, don't show any button
+      })
+      .catch(function(error) {
+        // Error checking PDF, don't show any button
+      });
+  }
+});
+
+function showDownloadButton(pdfPath) {
+  var downloadBtn = document.createElement('div');
+  downloadBtn.className = 'pdf-download-button';
+
+  // Get file size if possible
+  fetch(pdfPath, { method: 'HEAD' })
+    .then(function(response) {
+      var size = response.headers.get('Content-Length');
+      var sizeText = '';
+
+      if (size) {
+        // Convert to MB or KB
+        var sizeInMB = size / (1024 * 1024);
+        if (sizeInMB >= 1) {
+          sizeText = ' (' + sizeInMB.toFixed(1) + ' MB)';
+        } else {
+          sizeText = ' (' + (size / 1024).toFixed(0) + ' KB)';
+        }
+      }
+
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' + sizeText +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    })
+    .catch(function() {
+      // Basic fallback if we can't get file size
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    });
+
+  // Find where to insert the button (right after the title block)
+  var titleBlock = document.querySelector('.quarto-title-meta');
+  if (titleBlock) {
+    titleBlock.after(downloadBtn);
+  }
+}
+</script>
+
+<style>
+.pdf-download-button {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+</style>
+
+
+
+
+</body></html>
