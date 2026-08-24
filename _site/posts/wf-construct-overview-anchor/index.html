@@ -1,0 +1,1617 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ronald G. Thomas">
+<meta name="dcterms.date" content="2026-04-26">
+<meta name="description" content="A reproducible reference for the laptop-scale workflow construct used in day-to-day data science and biostatistics work. The post documents the existing layers (hardware, operating systems, file system, shell, editor, scripts, applications, cloud, backup, R packages) drawn from a working notebook outline, then proposes a set of evidence-graded extensions appropriate to a 2026 polyglot practice (LLM-augmented editing, modern CLI replacements, secret scanning, secure remote access, polyglot reproducibility, and knowledge management).">
+
+<title>A Workflow Construct for the Modern Data Scientist – focusonr</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-ab181d296742526fc851df428f4bd360.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": true,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "keyboard-shortcut": [
+    "?",
+    "/"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&amp;family=Open+Sans:ital,wght@0,400;0,600;1,400&amp;family=Fira+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<script src="https://kit.fontawesome.com/0fba9333d8.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+
+<!-- Custom meta tags for social sharing -->
+<meta property="og:site_name" content="focusonr">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@rgt47">
+
+<!-- Add responsive features -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<!-- Add analytics if needed -->
+<!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXX');
+</script> -->
+
+<!-- Add custom javascript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Remove code tools button completely
+  const codeButton = document.querySelector('.code-tools-button');
+  if (codeButton) {
+    codeButton.remove();
+  }
+  
+  // Add any custom JavaScript functionality here
+  
+  // Example: Add smooth scrolling
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      
+      document.querySelector(this.getAttribute('href')).scrollIntoView({
+        behavior: 'smooth'
+      });
+    });
+  });
+  
+  // Make sidebar category items clickable (but not TOC items)
+  const categoryLinks = {
+    'Programming & Development': '/posts/?category=Programming+%26+Development',
+    'Data Analysis & Visualization': '/posts/?category=Data+Analysis+%26+Visualization',
+    'Deployment & Operations': '/posts/?category=Deployment+%26+Operations',
+    'Development Environment': '/posts/?category=Development+Environment',
+    'Shiny Applications': '/posts/?category=Shiny+Applications',
+    'AI & Automation': '/posts/?category=AI+%26+Automation',
+    'System Administration': '/posts/?category=System+Administration'
+  };
+  
+  // Only target sidebar items that are not in the TOC
+  document.querySelectorAll('.sidebar-item-section .sidebar-item-text').forEach(item => {
+    // Skip if this is inside the TOC
+    if (item.closest('#TOC')) return;
+    
+    const text = item.textContent.trim();
+    if (categoryLinks[text]) {
+      item.addEventListener('click', function() {
+        window.location.href = categoryLinks[text];
+      });
+    }
+  });
+});
+</script>
+<meta name="quarto:status" content="draft">
+
+
+<meta property="og:title" content="A Workflow Construct for the Modern Data Scientist – focusonr">
+<meta property="og:description" content="A reproducible reference for the laptop-scale workflow construct used in day-to-day data science and biostatistics work. The post documents the existing layers (hardware, operating systems, file system, shell, editor, scripts, applications, cloud, backup, R packages) drawn from a working notebook outline, then proposes a set of evidence-graded extensions appropriate to a 2026 polyglot practice (LLM-augmented editing, modern CLI replacements, secret scanning, secure remote access, polyglot reproducibility, and knowledge management).">
+<meta property="og:image" content="https://focusonr.org/posts/wf-construct-overview-anchor/media/images/hero.png">
+<meta property="og:site_name" content="focusonr">
+<meta property="og:image:height" content="1920">
+<meta property="og:image:width" content="1920">
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top"><div id="quarto-draft-alert" class="alert alert-warning"><i class="bi bi-pencil-square"></i>Draft</div>
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../index.html">
+    <span class="navbar-title">focusonr</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../blog/index.html"> 
+<span class="menu-text">Blog</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="https://rgtlab.org"> 
+<span class="menu-text">rgtlab.org</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47"> <i class="bi bi-twitter" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a>
+  <ul class="collapse">
+  <li><a href="#motivations" id="toc-motivations" class="nav-link" data-scroll-target="#motivations"><span class="header-section-number">1.1</span> Motivations</a></li>
+  <li><a href="#objectives" id="toc-objectives" class="nav-link" data-scroll-target="#objectives"><span class="header-section-number">1.2</span> Objectives</a></li>
+  </ul></li>
+  <li><a href="#what-is-the-workflow-construct" id="toc-what-is-the-workflow-construct" class="nav-link" data-scroll-target="#what-is-the-workflow-construct"><span class="header-section-number">2</span> What is the Workflow Construct?</a></li>
+  <li><a href="#theoretical-framing" id="toc-theoretical-framing" class="nav-link" data-scroll-target="#theoretical-framing"><span class="header-section-number">3</span> Theoretical Framing</a>
+  <ul class="collapse">
+  <li><a href="#reference-architecture-layered-n-tier" id="toc-reference-architecture-layered-n-tier" class="nav-link" data-scroll-target="#reference-architecture-layered-n-tier"><span class="header-section-number">3.0.1</span> Reference Architecture (layered / n-tier)</a></li>
+  <li><a href="#infrastructure-as-code-applied-at-the-workstation-level" id="toc-infrastructure-as-code-applied-at-the-workstation-level" class="nav-link" data-scroll-target="#infrastructure-as-code-applied-at-the-workstation-level"><span class="header-section-number">3.0.2</span> Infrastructure as Code, applied at the workstation level</a></li>
+  <li><a href="#reproducible-research-compendium-project-tier" id="toc-reproducible-research-compendium-project-tier" class="nav-link" data-scroll-target="#reproducible-research-compendium-project-tier"><span class="header-section-number">3.0.3</span> Reproducible Research Compendium (project tier)</a></li>
+  <li><a href="#internal-developer-platform-and-golden-path-team-tier" id="toc-internal-developer-platform-and-golden-path-team-tier" class="nav-link" data-scroll-target="#internal-developer-platform-and-golden-path-team-tier"><span class="header-section-number">3.0.4</span> Internal Developer Platform and Golden Path (team tier)</a></li>
+  <li><a href="#dev-container-specification-and-software-bill-of-materials" id="toc-dev-container-specification-and-software-bill-of-materials" class="nav-link" data-scroll-target="#dev-container-specification-and-software-bill-of-materials"><span class="header-section-number">3.0.5</span> Dev Container specification and Software Bill of Materials</a></li>
+  <li><a href="#summary-positioning" id="toc-summary-positioning" class="nav-link" data-scroll-target="#summary-positioning"><span class="header-section-number">3.0.6</span> Summary positioning</a></li>
+  </ul></li>
+  <li><a href="#prerequisites" id="toc-prerequisites" class="nav-link" data-scroll-target="#prerequisites"><span class="header-section-number">4</span> Prerequisites</a></li>
+  <li><a href="#the-layered-architecture" id="toc-the-layered-architecture" class="nav-link" data-scroll-target="#the-layered-architecture"><span class="header-section-number">5</span> The Layered Architecture</a></li>
+  <li><a href="#daily-workflow" id="toc-daily-workflow" class="nav-link" data-scroll-target="#daily-workflow"><span class="header-section-number">6</span> Daily Workflow</a></li>
+  <li><a href="#recommendations-for-the-modern-data-scientist" id="toc-recommendations-for-the-modern-data-scientist" class="nav-link" data-scroll-target="#recommendations-for-the-modern-data-scientist"><span class="header-section-number">7</span> Recommendations for the Modern Data Scientist</a>
+  <ul class="collapse">
+  <li><a href="#modern-command-line-replacements-strong" id="toc-modern-command-line-replacements-strong" class="nav-link" data-scroll-target="#modern-command-line-replacements-strong"><span class="header-section-number">7.0.1</span> Modern command-line replacements (strong)</a></li>
+  <li><a href="#secret-scanning-at-the-staging-step-strong" id="toc-secret-scanning-at-the-staging-step-strong" class="nav-link" data-scroll-target="#secret-scanning-at-the-staging-step-strong"><span class="header-section-number">7.0.2</span> Secret scanning at the staging step (strong)</a></li>
+  <li><a href="#llm-augmented-editing-conditional" id="toc-llm-augmented-editing-conditional" class="nav-link" data-scroll-target="#llm-augmented-editing-conditional"><span class="header-section-number">7.0.3</span> LLM-augmented editing (conditional)</a></li>
+  <li><a href="#polyglot-language-management-conditional" id="toc-polyglot-language-management-conditional" class="nav-link" data-scroll-target="#polyglot-language-management-conditional"><span class="header-section-number">7.0.4</span> Polyglot language management (conditional)</a></li>
+  <li><a href="#quarto-as-the-document-layer-strong" id="toc-quarto-as-the-document-layer-strong" class="nav-link" data-scroll-target="#quarto-as-the-document-layer-strong"><span class="header-section-number">7.0.5</span> Quarto as the document layer (strong)</a></li>
+  <li><a href="#containerisation-beyond-docker-desktop-conditional" id="toc-containerisation-beyond-docker-desktop-conditional" class="nav-link" data-scroll-target="#containerisation-beyond-docker-desktop-conditional"><span class="header-section-number">7.0.6</span> Containerisation beyond Docker Desktop (conditional)</a></li>
+  <li><a href="#secrets-management-strong-if-cloud-is-used" id="toc-secrets-management-strong-if-cloud-is-used" class="nav-link" data-scroll-target="#secrets-management-strong-if-cloud-is-used"><span class="header-section-number">7.0.7</span> Secrets management (strong if cloud is used)</a></li>
+  <li><a href="#secure-remote-access-conditional" id="toc-secure-remote-access-conditional" class="nav-link" data-scroll-target="#secure-remote-access-conditional"><span class="header-section-number">7.0.8</span> Secure remote access (conditional)</a></li>
+  <li><a href="#knowledge-management-optional" id="toc-knowledge-management-optional" class="nav-link" data-scroll-target="#knowledge-management-optional"><span class="header-section-number">7.0.9</span> Knowledge management (optional)</a></li>
+  <li><a href="#modern-data-tooling-conditional" id="toc-modern-data-tooling-conditional" class="nav-link" data-scroll-target="#modern-data-tooling-conditional"><span class="header-section-number">7.0.10</span> Modern data tooling (conditional)</a></li>
+  </ul></li>
+  <li><a href="#things-to-watch-out-for" id="toc-things-to-watch-out-for" class="nav-link" data-scroll-target="#things-to-watch-out-for"><span class="header-section-number">8</span> Things to Watch Out For</a></li>
+  <li><a href="#verification" id="toc-verification" class="nav-link" data-scroll-target="#verification"><span class="header-section-number">9</span> Verification</a></li>
+  <li><a href="#uninstall-rollback" id="toc-uninstall-rollback" class="nav-link" data-scroll-target="#uninstall-rollback"><span class="header-section-number">10</span> Uninstall / Rollback</a></li>
+  <li><a href="#lessons-learnt" id="toc-lessons-learnt" class="nav-link" data-scroll-target="#lessons-learnt"><span class="header-section-number">11</span> Lessons Learnt</a>
+  <ul class="collapse">
+  <li><a href="#conceptual" id="toc-conceptual" class="nav-link" data-scroll-target="#conceptual"><span class="header-section-number">11.0.1</span> Conceptual</a></li>
+  <li><a href="#technical" id="toc-technical" class="nav-link" data-scroll-target="#technical"><span class="header-section-number">11.0.2</span> Technical</a></li>
+  <li><a href="#gotcha-shaped" id="toc-gotcha-shaped" class="nav-link" data-scroll-target="#gotcha-shaped"><span class="header-section-number">11.0.3</span> Gotcha-shaped</a></li>
+  </ul></li>
+  <li><a href="#limitations" id="toc-limitations" class="nav-link" data-scroll-target="#limitations"><span class="header-section-number">12</span> Limitations</a></li>
+  <li><a href="#opportunities-for-improvement" id="toc-opportunities-for-improvement" class="nav-link" data-scroll-target="#opportunities-for-improvement"><span class="header-section-number">13</span> Opportunities for Improvement</a></li>
+  <li><a href="#wrapping-up" id="toc-wrapping-up" class="nav-link" data-scroll-target="#wrapping-up"><span class="header-section-number">14</span> Wrapping Up</a></li>
+  <li><a href="#see-also" id="toc-see-also" class="nav-link" data-scroll-target="#see-also"><span class="header-section-number">15</span> See Also</a></li>
+  <li><a href="#reproducibility" id="toc-reproducibility" class="nav-link" data-scroll-target="#reproducibility"><span class="header-section-number">16</span> Reproducibility</a></li>
+  <li><a href="#feedback" id="toc-feedback" class="nav-link" data-scroll-target="#feedback"><span class="header-section-number">17</span> Feedback</a>
+  <ul class="collapse">
+  <li><a href="#related-posts-in-this-cluster" id="toc-related-posts-in-this-cluster" class="nav-link" data-scroll-target="#related-posts-in-this-cluster"><span class="header-section-number">17.1</span> Related posts in this cluster</a></li>
+  </ul></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="index.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content column-page-left" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">A Workflow Construct for the Modern Data Scientist</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">setup</div>
+    <div class="quarto-category">workflow</div>
+    <div class="quarto-category">zsh</div>
+    <div class="quarto-category">vim</div>
+    <div class="quarto-category">docker</div>
+    <div class="quarto-category">reproducibility</div>
+    <div class="quarto-category">workflow-construct</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    A reproducible reference for the laptop-scale workflow construct used in day-to-day data science and biostatistics work. The post documents the existing layers (hardware, operating systems, file system, shell, editor, scripts, applications, cloud, backup, R packages) drawn from a working notebook outline, then proposes a set of evidence-graded extensions appropriate to a 2026 polyglot practice (LLM-augmented editing, modern CLI replacements, secret scanning, secure remote access, polyglot reproducibility, and knowledge management).
+  </div>
+</div>
+
+
+<div class="quarto-title-meta column-page-left">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ronald G. Thomas </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">April 26, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/hero.png" class="img-fluid figure-img" style="width:80.0%"></p>
+<figcaption>A closed silver laptop on a dark walnut desk, with a fanned stack of cream vellum sheets beside it, each sheet printed in fine sepia ink with a different schematic diagram and partially overlapping the next. A brass paperweight pins the topmost sheet; a fountain pen rests at the right. The composite of overlapping sheets makes more structure visible than any single sheet alone, evoking the post’s thesis that a research workflow is a stack of thin, individually replaceable layers.</figcaption>
+</figure>
+</div>
+<p><em>A workflow construct is a layered reference of the tools, configurations, and conventions that make day-to-day research work reproducible across machines and across years. Treating the construct as an explicit artefact, rather than as an accumulation of shell-history accidents, is what allows it to be reviewed, audited, and rebuilt.</em></p>
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>The handwritten outline reproduced in this post (a single notebook page titled ‘Workflow Construct’) summarises a working data scientist’s laptop in twelve rows: hardware, operating system, file system, shell, editor, vim plugins, zsh functions, shell scripts, zsh aliases, applications, cloud, backup, and R packages. Each row names two to five concrete tools or conventions; together they describe a complete research compendium at the level of a single user’s machine. The outline is dense, opinionated, and entirely undocumented, in the sense that reading the page does not by itself tell a newcomer how the rows fit together or why each entry was chosen.</p>
+<p>The post has two purposes. The first is to document the existing construct as it stands, so that the reasoning behind each row is preserved alongside the row itself. The second is to propose a set of extensions appropriate to a 2026 polyglot data science practice, graded by their expected return on configuration effort. The extensions are not endorsements; each is presented with the failure mode it addresses, the cost of adopting it, and the conditions under which it is unnecessary.</p>
+<p>The construct is presented as a reference rather than as a tutorial. Each row is a layer in a stack that other rows depend on, and the dependencies are noted where they are not obvious. Readers who want a complete tutorial for any single layer (zsh, Neovim, Docker, AWS) will find more thorough sources in the See Also section; the contribution here is the assembly, not the parts.</p>
+<section id="motivations" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="motivations"><span class="header-section-number">1.1</span> Motivations</h2>
+<p>The decision to write the construct down rather than to keep it in shell history was motivated by the following pain points, each of which is shared with most working data scientists:</p>
+<ul>
+<li><p><strong>Drift between machines.</strong> A workflow that exists only as configuration files on a single laptop drifts whenever a new machine is provisioned. The new machine receives a partial transcription of the old one, missing precisely the conventions that the user has internalised and forgotten that they configured. Writing the construct down makes the drift visible.</p></li>
+<li><p><strong>Onboarding cost for collaborators.</strong> A coauthor or student asked to reproduce an analysis on their own laptop arrives without the construct and produces results that fail in ways that are diagnostic only of the missing layer. A documented construct allows the collaborator to either match the layers that matter or to articulate the specific layer at which their setup differs.</p></li>
+<li><p><strong>Auditability of reproducible artefacts.</strong> A reproducible research compendium (in the zzcollab sense) pins the project’s R package versions, container image, and source code. It does not pin the user’s editor, shell, or terminal multiplexer. Most of the time those are irrelevant; on the occasions they are not (an editor that strips trailing newlines, a shell that silently expands aliases inside scripts) the absence of a workflow-level record is what makes the failure hard to diagnose.</p></li>
+<li><p><strong>The construct itself as a research artefact.</strong> Methods papers occasionally need to reference the computing environment used to produce a result. A frozen snapshot of the construct, dated and versioned alongside the analysis, is a more useful citation than a vague phrase like ‘analyses were conducted in R on a workstation’.</p></li>
+<li><p><strong>Defence against tool churn.</strong> The 2020s have seen rapid turnover in shell utilities, editor ecosystems, and cloud primitives. A construct expressed as a set of named layers rather than as a specific list of tools makes it easy to swap a layer (replace <code>cd</code> with <code>zoxide</code>, replace <code>tmux</code> with <code>zellij</code>, replace AWS EC2 with Hetzner) without rewriting the entire stack.</p></li>
+</ul>
+</section>
+<section id="objectives" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="objectives"><span class="header-section-number">1.2</span> Objectives</h2>
+<p>The deliverables documented and proposed in this post are the following:</p>
+<ol type="1">
+<li><p>Reproduce the existing twelve-row construct with the rationale for each entry made explicit, using the handwritten outline as the source of truth.</p></li>
+<li><p>Identify the dependencies between rows so that the construct can be rebuilt from scratch in a defensible order on a new machine.</p></li>
+<li><p>Propose a set of layer-by-layer extensions appropriate to a 2026 polyglot data science practice, each graded as a strong recommendation, a conditional recommendation, or an optional addition.</p></li>
+<li><p>Surface the limitations of a single-laptop construct (what it does and does not pin) and the failure modes that remain even after the construct is fully documented.</p></li>
+</ol>
+<p>The post is not a step-by-step installation guide for any individual tool; the See Also section links to existing qblog setup posts that play that role for the most opinionated layers (zsh, Neovim, Quarto, AWS, dotfiles, zzcollab).</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance1.png" class="img-fluid figure-img" style="height:3.5in"></p>
+<figcaption>Placeholder ambiance image (coffee, Unsplash free licence). To be replaced with a photograph of a working laptop showing a tiled terminal with Neovim, zsh, and a containerised R session running side by side.</figcaption>
+</figure>
+</div>
+</section>
+</section>
+<section id="what-is-the-workflow-construct" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> What is the Workflow Construct?</h1>
+<p>A workflow construct is the set of choices that, taken together, define how a single user does research-grade computing on a single machine. The choices span a hardware layer, an operating system, a file-system layout, a shell, an editor, a set of language toolchains, a containerisation layer, a cloud or remote compute layer, and a backup strategy. Each layer is independent in principle: a user could swap macOS for Linux Mint without rewriting their R packages, or replace Vim with Neovim without changing their shell. In practice the layers interact (the editor plugins assume a shell, the shell scripts assume a file-system layout, the R packages assume a containerised dependency manifest), and the construct is the explicit record of which interactions have been resolved and which remain implicit.</p>
+<p>A useful analogy is the operating-system kernel and its userland. The kernel is invisible to most users most of the time, but its presence is what makes any of the userland tools work. Likewise the workflow construct is invisible to a researcher who never touches a new machine, but its presence is what makes a new machine reach productivity in hours rather than weeks.</p>
+<p>A concrete example: the construct documented below specifies that the user’s projects live in <code>~/prj/</code>, that the directory is synced via Dropbox and committed to GitHub, that R packages are installed inside a Docker container with a pinned <code>renv.lock</code>, and that the container is rebuilt from a <code>Dockerfile</code> checked into the same repository as the analysis. With those four facts, a new analyst can reproduce the entire compute environment by cloning the repository, running <code>make r</code>, and starting work; without them, the same task requires a sequence of guesses about which package versions matched which paper.</p>
+</section>
+<section id="theoretical-framing" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Theoretical Framing</h1>
+<p>The informal definition above is sufficient for daily use, but the construct is best understood as a special case of several recognised software-engineering frameworks. Naming the generalisations clarifies which design decisions are construct-specific and which are inherited from the underlying patterns, and identifies the rigorous formal counterparts to which the present hand-rolled instantiation could be migrated.</p>
+<p>The construct generalises along five axes.</p>
+<section id="reference-architecture-layered-n-tier" class="level3" data-number="3.0.1">
+<h3 data-number="3.0.1" class="anchored" data-anchor-id="reference-architecture-layered-n-tier"><span class="header-section-number">3.0.1</span> Reference Architecture (layered / n-tier)</h3>
+<p>A reference architecture, in the sense used by Bass, Clements, and Kazman in <em>Software Architecture in Practice</em> (4th edition, 2021) and codified in TOGAF and ISO/IEC/IEEE 42010, is a documented blueprint that prescribes the layers of a system and the permitted couplings between them, without prescribing the implementing tools. The classical layered architecture pattern (Buschmann, Meunier, Rohnert, Sommerlad, and Stal, <em>Pattern-Oriented Software Architecture</em> vol.&nbsp;1, 1996) is the variant in which each layer depends only on the layer immediately below it. The Workflow Construct is a personal-scope reference architecture in this sense: the technical section below is the blueprint, and each row names a layer whose tools can be substituted without disturbing the rows above.</p>
+</section>
+<section id="infrastructure-as-code-applied-at-the-workstation-level" class="level3" data-number="3.0.2">
+<h3 data-number="3.0.2" class="anchored" data-anchor-id="infrastructure-as-code-applied-at-the-workstation-level"><span class="header-section-number">3.0.2</span> Infrastructure as Code, applied at the workstation level</h3>
+<p>Infrastructure as Code, as articulated by Morris in <em>Infrastructure as Code</em> (2nd edition, 2020), treats the configuration of computing infrastructure as a versioned, declarative artefact that can be applied repeatedly to produce a reproducible state. The construct’s dotfiles repository, <code>Dockerfile</code>, and <code>renv.lock</code> together form a hand-rolled IaC instance scoped to a single workstation. The emerging term <strong>Development Environment as Code</strong> (DEaC) names this pattern specifically for developer workstations rather than for production infrastructure. The most rigorous formal counterpart is <strong>Nix Home Manager / NixOS</strong>, which replaces the construct’s <code>install.sh</code> with a verified-reproducible build closure; the trade-off is that Nix is closer to all-or-nothing adoption, whereas the present construct admits incremental migration.</p>
+</section>
+<section id="reproducible-research-compendium-project-tier" class="level3" data-number="3.0.3">
+<h3 data-number="3.0.3" class="anchored" data-anchor-id="reproducible-research-compendium-project-tier"><span class="header-section-number">3.0.3</span> Reproducible Research Compendium (project tier)</h3>
+<p>Gentleman and Temple Lang (2007, <em>Journal of Computational and Graphical Statistics</em>) introduced the term ‘research compendium’ for a dynamically-generated document bundled with its data, code, and dependency manifest. Marwick, Boettiger, and Mullen (‘Packaging Data Analytical Work Reproducibly Using R (and Friends)’, <em>The American Statistician</em>, 2018) operationalised the pattern as an R package with <code>data/</code>, <code>R/</code>, and <code>vignettes/</code> directories plus a Dockerfile. The zzcollab framework implements this at the project level. The Workflow Construct sits one tier above the compendium: the compendium pins what an analysis depends on, the construct pins what the analyst’s environment depends on, and together they form a two-tier reproducibility stack.</p>
+</section>
+<section id="internal-developer-platform-and-golden-path-team-tier" class="level3" data-number="3.0.4">
+<h3 data-number="3.0.4" class="anchored" data-anchor-id="internal-developer-platform-and-golden-path-team-tier"><span class="header-section-number">3.0.4</span> Internal Developer Platform and Golden Path (team tier)</h3>
+<p>The Platform Engineering discipline (Spotify’s Backstage and Golden Path artefacts from 2020 onward; the CNCF Platform Working Group white paper from 2022 onward) defines an <strong>Internal Developer Platform</strong> as an opinionated, supported, paved-road set of conventions followed by default. The construct, scoped to a team rather than a single user, is a personal IDP. A team-scope construct with a published <code>install.sh</code> and shared scripts is structurally indistinguishable from a small-organisation Golden Path; the distinction is one of governance, not of architecture.</p>
+</section>
+<section id="dev-container-specification-and-software-bill-of-materials" class="level3" data-number="3.0.5">
+<h3 data-number="3.0.5" class="anchored" data-anchor-id="dev-container-specification-and-software-bill-of-materials"><span class="header-section-number">3.0.5</span> Dev Container specification and Software Bill of Materials</h3>
+<p>Two narrower industry standards formalise specific subsets of the construct. The <code>devcontainer.json</code> specification (<a href="https://containers.dev/">containers.dev</a>) defines a schema-validated, portable record of the editor, runtime, and toolchain layers, suitable for use across IDEs, GitHub Codespaces, and CI runners. The Software Bill of Materials formats SPDX (ISO/IEC 5962:2021) and CycloneDX (Ecma TC54) formalise the version-matrix row of the construct’s Reproducibility section as a machine-readable inventory of component versions and provenance.</p>
+</section>
+<section id="summary-positioning" class="level3" data-number="3.0.6">
+<h3 data-number="3.0.6" class="anchored" data-anchor-id="summary-positioning"><span class="header-section-number">3.0.6</span> Summary positioning</h3>
+<p>Taken together, the Workflow Construct is most precisely described as a layered Reference Architecture for a single-user research workstation, instantiated as ad hoc Infrastructure as Code, with the project tier following the Reproducible Research Compendium pattern. Adopting one of the formal counterparts (Nix Home Manager for the IaC layer, a <code>devcontainer.json</code> for the editor and toolchain layers, an SPDX SBOM for the version matrix) is a refinement, not a replacement; the layered architecture itself is unchanged. The technical realisation follows in the next section.</p>
+</section>
+</section>
+<section id="prerequisites" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Prerequisites</h1>
+<p>The construct documented below assumes the following:</p>
+<ul>
+<li><strong>Operating system literacy.</strong> Reading and editing dotfiles (<code>.zshrc</code>, <code>.vimrc</code>, <code>.gitconfig</code>) without a graphical interface.</li>
+<li><strong>Version-control fluency.</strong> Familiarity with <code>git</code> at the level of <code>clone</code>, <code>commit</code>, <code>push</code>, <code>branch</code>, <code>merge</code>, and <code>rebase</code>. Conventional Commits and signed commits are useful but not required.</li>
+<li><strong>Shell scripting comfort.</strong> Reading and writing short bash or zsh scripts, with an understanding of environment variables, exit codes, and standard streams.</li>
+<li><strong>Containerisation awareness.</strong> Recognition that Docker images are layered, that <code>renv.lock</code> plus a <code>Dockerfile</code> define a reproducible R environment, and that a container is run, not installed.</li>
+<li><strong>Time investment.</strong> Approximately one to two days to reconstruct the existing construct on a fresh laptop, plus perhaps a further half-day to layer in the recommended extensions discussed below. Most of the time is package installation rather than configuration.</li>
+</ul>
+<p>The construct as documented is opinionated about Vim or Neovim as the editor, zsh as the shell, and Docker as the container runtime. Readers committed to alternative editors (VS Code, RStudio exclusively, Emacs) can still extract value from the structure, but several of the rows will need substitution rather than adoption.</p>
+</section>
+<section id="the-layered-architecture" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> The Layered Architecture</h1>
+<p>This section is the technical realisation of the layered Reference Architecture introduced in the Theoretical Framing above. The thirteen rows of the construct correspond to thirteen layers in the architecture; each row names a single tool or convention that occupies the layer, with the understanding that the tool is replaceable while the layer is not. The table reproduces the handwritten outline as a typed reference, with two columns added: a brief rationale for each layer’s tool choice, and the set of related qblog posts that document each layer in detail. Lines have been wrapped at 78 characters for portability.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Layer</th>
+<th>Choice</th>
+<th>Rationale</th>
+<th>Related posts</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Hardware</td>
+<td>MacBook + ThinkPad</td>
+<td>Two machines covering macOS and Linux Mint surface area; ThinkPads have first-class Linux driver support.</td>
+<td>03</td>
+</tr>
+<tr class="even">
+<td>Operating system</td>
+<td>macOS, Linux Mint</td>
+<td>macOS for daily driver and graphics-heavy tasks; Mint for a familiar Cinnamon desktop on Linux without the configuration cost of a tiling distribution.</td>
+<td>03</td>
+</tr>
+<tr class="odd">
+<td>File system</td>
+<td><code>~/prj</code> synced via Dropbox; tracked in Git</td>
+<td>Single canonical project root; Dropbox handles continuous sync, Git handles intentional snapshots.</td>
+<td>20, 21, 24</td>
+</tr>
+<tr class="even">
+<td>Shell</td>
+<td>zsh</td>
+<td>Modern parameter expansion, completion system, plugin ecosystem; default on macOS since Catalina.</td>
+<td>01</td>
+</tr>
+<tr class="odd">
+<td>Editor</td>
+<td>Vim / Neovim</td>
+<td>Modal editing, cross-machine parity, no graphical dependency, exact same configuration on the laptop and in an SSH session.</td>
+<td>26, 30, 37</td>
+</tr>
+<tr class="even">
+<td>Vim plugins</td>
+<td><code>zzvim-r</code>, <code>ultisnips</code>, <code>vimtex</code></td>
+<td>R session integration, snippet expansion, LaTeX compilation; the minimum set for an R + LaTeX workflow inside Vim.</td>
+<td>26, 30, 41</td>
+</tr>
+<tr class="odd">
+<td>zsh functions</td>
+<td><code>ff</code> (fuzzy file finder)</td>
+<td>Lightweight <code>fzf</code>-driven file selector; lighter than a plugin for a one-purpose helper.</td>
+<td>01</td>
+</tr>
+<tr class="even">
+<td>Shell scripts</td>
+<td><code>zzcollab</code>, <code>tn</code>, <code>zzgit</code>, <code>lssince</code></td>
+<td>Project scaffolding, tmux session helpers, interactive git wizard with secret scanning, recently-modified file listing.</td>
+<td>05, 49</td>
+</tr>
+<tr class="odd">
+<td>zsh aliases</td>
+<td><code>ss</code>, <code>sk</code>, <code>d</code>, <code>j</code>, <code>zo</code>, <code>zp</code>, …</td>
+<td>Two-letter shortcuts for high-frequency operations: open the most recent PDF of the current directory in Skim (<code>ss</code>), open Skim (<code>sk</code>), list the directory stack (<code>d</code>), jump to a frequent directory via autojump (<code>j</code>), and zzcollab project navigation to <code>docs/</code> (<code>zo</code>) and <code>analysis/report/</code> (<code>zp</code>).</td>
+<td>01, 24</td>
+</tr>
+<tr class="even">
+<td>Applications</td>
+<td>GitHub CLI (<code>gh</code>), R, RStudio, Docker</td>
+<td>The minimum graphical or service-style tooling that does not fit inside a plugin or alias.</td>
+<td>01, 14, 28</td>
+</tr>
+<tr class="odd">
+<td>Cloud</td>
+<td>AWS EC2 + dotfiles repository</td>
+<td>EC2 for on-demand compute and Shiny hosting; a public dotfiles repository to reproduce the construct on any new machine.</td>
+<td>22, 23, 24</td>
+</tr>
+<tr class="even">
+<td>Backup</td>
+<td>GitHub, external SSD</td>
+<td>Two-tier backup: GitHub for source-of-truth, SSD for binary artefacts and intermediate data that should not be committed.</td>
+<td>20</td>
+</tr>
+<tr class="odd">
+<td>R packages</td>
+<td><code>zzlongplot</code>, <code>zztab2fig</code>, <code>zztable1</code>, <code>zzpower</code>, <code>zzfishon</code></td>
+<td>Author-maintained packages for longitudinal plots, table-to-figure conversions, Table 1 generation, power calculations, and fishery-domain helpers.</td>
+<td>14, 18, 19</td>
+</tr>
+</tbody>
+</table>
+<p>The dependency order, when reconstructing the construct on a fresh machine, is roughly: operating system, file system, shell, applications, editor, version control, cloud, then language toolchains and packages last. The order is not strict; it minimises the number of times a step has to be repeated because a prerequisite was missing.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance2.png" class="img-fluid figure-img" style="height:3.5in"></p>
+<figcaption>Placeholder ambiance image (coffee, Unsplash free licence). To be replaced with a screenshot of the construct’s directory layout under <code>~/prj/</code>, with at least three project subdirectories visible and the synced Dropbox indicator present.</figcaption>
+</figure>
+</div>
+</section>
+<section id="daily-workflow" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Daily Workflow</h1>
+<p>Once the construct is in place, day-to-day operation reduces to a small set of repeatable patterns. The patterns matter more than the specific tools; a reader who substitutes Helix for Neovim or Hetzner for AWS can preserve the patterns unchanged.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Pattern</th>
+<th>Command (representative)</th>
+<th>Frequency</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Start a new project</td>
+<td><code>mkdir ~/prj/NN-name &amp;&amp; cd $_ &amp;&amp; zzc analysis</code></td>
+<td>weekly</td>
+</tr>
+<tr class="even">
+<td>Resume an existing project</td>
+<td><code>j name</code> (autojump), then <code>tn</code> to attach a tmux session</td>
+<td>daily</td>
+</tr>
+<tr class="odd">
+<td>Edit a file</td>
+<td><code>vim path/to/file.R</code> (or <code>nvim</code>)</td>
+<td>continuous</td>
+</tr>
+<tr class="even">
+<td>Run R inside the project container</td>
+<td><code>make r</code></td>
+<td>daily</td>
+</tr>
+<tr class="odd">
+<td>Stage, scan, commit, push</td>
+<td><code>zzgit</code></td>
+<td>several times daily</td>
+</tr>
+<tr class="even">
+<td>Sync dotfiles to a new machine</td>
+<td><code>git clone https://github.com/mygit/dotfiles ~/dotfiles &amp;&amp; cd ~/dotfiles &amp;&amp; ./install.sh</code></td>
+<td>per machine</td>
+</tr>
+<tr class="odd">
+<td>Provision a cloud instance</td>
+<td><code>aws_create_instance.sh -p projname</code></td>
+<td>per project</td>
+</tr>
+<tr class="even">
+<td>Recently-modified files in a directory</td>
+<td><code>lssince 24h</code></td>
+<td>weekly</td>
+</tr>
+</tbody>
+</table>
+<p>The pattern that pays the most compounded interest is the project root convention (<code>~/prj/NN-name/</code>), because it is the substrate on which all other automation can assume a path.</p>
+</section>
+<section id="recommendations-for-the-modern-data-scientist" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Recommendations for the Modern Data Scientist</h1>
+<p>The construct as documented is sufficient for a primarily R-centric biostatistics practice on macOS and Linux. The following extensions extend it for a 2026 polyglot practice without displacing any existing layer. Each is graded as <strong>strong</strong> (likely to repay the configuration cost within weeks), <strong>conditional</strong> (worth adopting only if the row’s failure mode is already biting), or <strong>optional</strong> (interesting but not load bearing).</p>
+<section id="modern-command-line-replacements-strong" class="level3" data-number="7.0.1">
+<h3 data-number="7.0.1" class="anchored" data-anchor-id="modern-command-line-replacements-strong"><span class="header-section-number">7.0.1</span> Modern command-line replacements (strong)</h3>
+<p>A small set of Rust-implemented utilities replace the historical Unix tools with substantially better defaults and materially faster operation on large directories. Each is a drop-in replacement for an existing alias and does not break anything if removed.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Replaces</th>
+<th>Tool</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>grep</code></td>
+<td><code>ripgrep</code> (<code>rg</code>)</td>
+<td>recursive by default, respects <code>.gitignore</code>, faster on large trees</td>
+</tr>
+<tr class="even">
+<td><code>find</code></td>
+<td><code>fd</code></td>
+<td>shorter syntax, parallel, respects <code>.gitignore</code></td>
+</tr>
+<tr class="odd">
+<td><code>cat</code> (display)</td>
+<td><code>bat</code></td>
+<td>syntax highlighting, line numbers, page integration</td>
+</tr>
+<tr class="even">
+<td><code>ls</code></td>
+<td><code>eza</code></td>
+<td>git-aware, tree mode, more readable defaults</td>
+</tr>
+<tr class="odd">
+<td><code>cd</code></td>
+<td><code>zoxide</code></td>
+<td>learns frequently-visited directories, fuzzy matching</td>
+</tr>
+<tr class="even">
+<td><code>cd</code> selector</td>
+<td><code>fzf</code></td>
+<td>interactive selection across history, files, processes</td>
+</tr>
+<tr class="odd">
+<td><code>git diff</code> (display)</td>
+<td><code>delta</code></td>
+<td>side-by-side, syntax-highlighted, hunk-anchored</td>
+</tr>
+<tr class="even">
+<td><code>git</code> (porcelain)</td>
+<td><code>lazygit</code></td>
+<td>terminal UI for review-heavy workflows</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>j</code> shortcut in the construct is provided by <strong>autojump</strong>. Adopting <code>zoxide</code> is a substitution at the same layer, not an addition: the autojump source line is replaced with <code>eval "$(zoxide init zsh --cmd j)"</code>, preserving the <code>j</code> muscle memory while migrating the frecency database to zoxide’s Rust implementation. Both tools rank directories by recent and frequent access; zoxide’s incremental advantages are matching speed on large <code>cdpath</code> sets and a smaller dependency footprint (no Python, no separate <code>autojump.sh</code> sourcing).</p>
+<p>The full installation, configuration, and migration walkthrough for these eight tools (including the autojump-to-zoxide database seeding) is documented in <a href="../wf-modern-cli-tools/">Modern CLI Replacements for the Shell Layer</a>.</p>
+</section>
+<section id="secret-scanning-at-the-staging-step-strong" class="level3" data-number="7.0.2">
+<h3 data-number="7.0.2" class="anchored" data-anchor-id="secret-scanning-at-the-staging-step-strong"><span class="header-section-number">7.0.2</span> Secret scanning at the staging step (strong)</h3>
+<p>The single most preventable category of credential incident is a secret committed to a public repository. The <code>zzgit</code> script listed in the construct already wraps <code>gitleaks</code> for this purpose; the recommendation is to ensure that <code>gitleaks</code> is actually installed on every machine that participates in the construct, and to add a <code>pre-commit</code> hook for the residual case in which a commit is made through an IDE or a script that bypasses <code>zzgit</code>. See post 49 for the design rationale and post 51 for the relationship between standalone scripts and shell functions.</p>
+</section>
+<section id="llm-augmented-editing-conditional" class="level3" data-number="7.0.3">
+<h3 data-number="7.0.3" class="anchored" data-anchor-id="llm-augmented-editing-conditional"><span class="header-section-number">7.0.3</span> LLM-augmented editing (conditional)</h3>
+<p>Two integration points are worth distinguishing. The first is an in-editor assistant (Cursor, Zed, Neovim with <code>codecompanion.nvim</code> or <code>avante.nvim</code>, Claude Code or <code>aider</code> invoked at the shell) that proposes diffs in response to a prompt about the current buffer. The second is an out-of-editor research assistant (Claude, ChatGPT, or a local model via Ollama) that answers questions about a paper, a function reference, or a methodology without producing a diff. The first integration is the one that is conditional: it amplifies code-velocity for users who are already shell- and editor-fluent and is dilutive for users who use it as a substitute for learning the underlying tools. The second is unambiguously useful and should be adopted when the construct is otherwise stable.</p>
+<p>A specific configuration appropriate to the existing construct is Claude Code at the shell (<code>claude</code> invoked from inside <code>~/prj</code> with the project’s <code>CLAUDE.md</code> defining conventions) plus a Neovim plugin for in-buffer prompts on the rare occasion that the diff is small enough to be reviewed inline. The pattern reverses the modal of a graphical AI editor: the assistant lives at the shell where the user already does their version-control work, and the editor remains a deterministic text manipulation tool. The full installation, configuration, and <code>CLAUDE.md</code> authoring conventions for this integration are documented in <a href="../wf-claude-code-in-shell/">LLM-Augmented Editing for the Workflow Construct</a>, which also catalogues the in-buffer-plugin, graphical-editor, and browser-based alternatives and the trade-offs between them.</p>
+</section>
+<section id="polyglot-language-management-conditional" class="level3" data-number="7.0.4">
+<h3 data-number="7.0.4" class="anchored" data-anchor-id="polyglot-language-management-conditional"><span class="header-section-number">7.0.4</span> Polyglot language management (conditional)</h3>
+<p>R is the construct’s primary language; Python is its frequent auxiliary. A version manager that handles both (and Node, Ruby, and Go for ecosystem dependencies) eliminates the class of incidents in which a project requires R 4.4 but the system provides R 4.5 silently.</p>
+<p>Two competitive choices exist: <code>mise</code> (formerly <code>rtx</code>, Rust-based, fast) and <code>asdf</code> (older, plugin-based, shell-portable). Either works; the recommendation is to pick one and document the choice in the construct, because mixing both produces hard-to-diagnose path-precedence issues.</p>
+<p>For Python specifically, <code>uv</code> (also Rust-based) replaces <code>pip</code>, <code>virtualenv</code>, <code>pyenv</code>, <code>pip-tools</code>, and <code>poetry</code> with a single tool that resolves and installs in a fraction of the time the stack of older tools requires. Adoption is a strong recommendation if Python appears in the construct at all.</p>
+</section>
+<section id="quarto-as-the-document-layer-strong" class="level3" data-number="7.0.5">
+<h3 data-number="7.0.5" class="anchored" data-anchor-id="quarto-as-the-document-layer-strong"><span class="header-section-number">7.0.5</span> Quarto as the document layer (strong)</h3>
+<p>Quarto subsumes the role previously divided between R Markdown, Jupyter, and standalone LaTeX, and produces both HTML and PDF output from a single source. The construct’s qblog repository is already a Quarto site; the recommendation is to extend the convention to research papers (<code>paper.qmd</code> rendered to PDF via the <code>quarto pdf</code> engine) and to internal reports, retiring standalone <code>.Rmd</code> and <code>.tex</code> files where the cross-format benefit is real. Existing posts 17 and 29 cover the migration path.</p>
+</section>
+<section id="containerisation-beyond-docker-desktop-conditional" class="level3" data-number="7.0.6">
+<h3 data-number="7.0.6" class="anchored" data-anchor-id="containerisation-beyond-docker-desktop-conditional"><span class="header-section-number">7.0.6</span> Containerisation beyond Docker Desktop (conditional)</h3>
+<p>Docker remains the construct’s container runtime. Two extensions are worth knowing about:</p>
+<ul>
+<li><p><strong><code>devcontainer.json</code></strong> (the VS Code / GitHub Codespaces format) lets the same container definition serve a local Docker invocation, a Codespace, and a CI runner. The cost is a single JSON file in the repository root; the benefit is that the construct’s container layer becomes portable across graphical editors that the user does not personally use.</p></li>
+<li><p><strong>Apptainer (formerly Singularity)</strong> is the right runtime for HPC clusters that disallow Docker for security reasons. It reads OCI images so a Dockerfile composes; the substitution is surgical (the Makefile’s <code>make r</code> target invokes <code>apptainer exec</code> instead of <code>docker run</code>).</p></li>
+</ul>
+<p>Both are conditional on the user actually crossing into a multi-environment setting; for a single-laptop practice neither is necessary.</p>
+</section>
+<section id="secrets-management-strong-if-cloud-is-used" class="level3" data-number="7.0.7">
+<h3 data-number="7.0.7" class="anchored" data-anchor-id="secrets-management-strong-if-cloud-is-used"><span class="header-section-number">7.0.7</span> Secrets management (strong if cloud is used)</h3>
+<p>The construct’s cloud row depends on AWS credentials, which by default live in <code>~/.aws/credentials</code> as a plain-text file. The broader concern, which the cloud-credentials problem specialises, is the inventory of secrets the laptop accumulates over time (API keys, tokens, SSH keys), most of which end up exported in <code>.zshrc</code> or pasted into <code>.env</code> files. Three recommendations together address the full inventory:</p>
+<ul>
+<li><strong>AWS IAM Identity Center (formerly SSO)</strong> with <code>aws sso login</code> produces short-lived credentials that expire automatically. This is the recommended primary path for AWS credentials specifically; long-lived <code>~/.aws/credentials</code> access keys should be rotated and removed once SSO is in place.</li>
+<li><strong><code>pass</code></strong> (the Unix password store) is the recommended general-purpose secret store for non-AWS API keys (Anthropic, OpenAI, Zotero, GitHub tokens). It is open-source, GPG-keyed, git-synchronisable, and small enough (around 700 lines of bash) to audit. Secrets are injected at process-start time via a <code>with-secret</code> shell helper rather than exported into the environment, so they are visible only to the wrapped command.</li>
+<li><strong><code>gitleaks</code> at staging time</strong>, via the <code>zzgit</code> secret scanner, catches the residual cases in which a secret reaches the working tree despite the upstream prevention. Tier 1 and Tier 2 reduce the volume of cases that reach the safety net; Tier 3 catches the remainder.</li>
+</ul>
+<p>Open-source alternatives to <code>pass</code> include <strong><code>gopass</code></strong> (a multi-store-aware Go reimplementation, useful for users managing multiple stores) and <strong><code>bitwarden-cli</code></strong> against a self-hosted <strong><code>vaultwarden</code></strong> server (a 1Password-like UX without the proprietary dependency). The proprietary <strong><code>1Password CLI</code></strong> (<code>op</code>) is structurally similar to the <code>pass</code>-plus-<code>with-secret</code> pattern and may be appropriate for users already paying for 1Password; the construct’s default recommendation is open-source given the trust requirement on the secrets layer (a single subverted code path could compromise every system the operator authenticates to).</p>
+<p>The full installation, configuration, and migration walkthrough for <code>pass</code>, AWS IAM Identity Center, and the <code>with-secret</code> injection pattern is documented in <a href="../sec-aws-and-pass-secrets/">AWS and pass: A Three-Tier Secrets Scheme</a>.</p>
+</section>
+<section id="secure-remote-access-conditional" class="level3" data-number="7.0.8">
+<h3 data-number="7.0.8" class="anchored" data-anchor-id="secure-remote-access-conditional"><span class="header-section-number">7.0.8</span> Secure remote access (conditional)</h3>
+<p><code>ssh</code> over the public internet is adequate for an EC2 instance with a static IP and a known SSH port. Two extensions address the case in which the construct spans multiple machines that should reach each other regardless of network topology:</p>
+<ul>
+<li><strong>Tailscale</strong> (a WireGuard-based mesh VPN) gives every machine a stable hostname reachable from every other machine without port-forwarding. The construct’s MacBook, ThinkPad, and EC2 instance become reachable as <code>mac</code>, <code>thinkpad</code>, and <code>ec2-prod</code> respectively, regardless of which network any of them is on.</li>
+<li><strong>mosh</strong> replaces <code>ssh</code> over high-latency or intermittent links, surviving roaming and brief disconnections that would drop a <code>ssh</code> session.</li>
+</ul>
+<p>Both are conditional on the user actually working remotely or on multiple machines. For a single-laptop practice neither is required.</p>
+</section>
+<section id="knowledge-management-optional" class="level3" data-number="7.0.9">
+<h3 data-number="7.0.9" class="anchored" data-anchor-id="knowledge-management-optional"><span class="header-section-number">7.0.9</span> Knowledge management (optional)</h3>
+<p>A research workflow accumulates references, notes, and methodological observations that do not belong in a code repository. Three layers are worth naming:</p>
+<ul>
+<li><strong>Zotero</strong> plus the <strong>Zotero MCP server</strong> for reference management with programmatic access from an LLM context.</li>
+<li><strong>Obsidian</strong> or <strong>Logseq</strong> for plain-text notes with bidirectional links and a graph view, both of which sync over Dropbox or Git alongside the rest of the construct.</li>
+<li><strong>Pandoc</strong> as the universal document converter, which makes the notes portable to LaTeX, Quarto, or HTML without re-authoring.</li>
+</ul>
+<p>The optional grade reflects that knowledge management is personal: a researcher with an established system should not disrupt it for the sake of construct consistency. In the qblog curriculum (<code>WORKFLOW_REFACTOR_PLAN.md</code> at the qblog root), knowledge management is positioned as a separate cross-cutting tier alongside the workstation, project, and team-cloud tiers, paired with the LLM-augmented-editing recommendation above as the corresponding research-side counterpart.</p>
+</section>
+<section id="modern-data-tooling-conditional" class="level3" data-number="7.0.10">
+<h3 data-number="7.0.10" class="anchored" data-anchor-id="modern-data-tooling-conditional"><span class="header-section-number">7.0.10</span> Modern data tooling (conditional)</h3>
+<p>For data sets that exceed comfortable in-memory size in R or Python, three additions are worth considering:</p>
+<ul>
+<li><strong>DuckDB</strong> as an embedded analytical database, queried from R via <code>duckdb</code> or from Python via <code>duckdb</code> directly. Replaces most ad-hoc uses of <code>data.table</code> or <code>polars</code> for query-shaped workloads.</li>
+<li><strong>Apache Arrow / Parquet</strong> as the on-disk format for intermediate data, with <code>arrow</code> in R and <code>pyarrow</code> in Python exchanging columnar data without copy.</li>
+<li><strong>Polars</strong> as the Rust-implemented DataFrame library in Python (and increasingly in R via <code>polars</code>), competitive with <code>data.table</code> for in-memory work.</li>
+</ul>
+<p>The conditional grade reflects that for clinical-trial-scale data sets (hundreds of subjects, tens of variables) none of these are necessary; for cohort or registry data they begin to matter.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance3.png" class="img-fluid figure-img" style="height:3.5in"></p>
+<figcaption>Placeholder ambiance image (coffee, Unsplash free licence). To be replaced with a screenshot of a tiled terminal showing <code>zoxide</code>, <code>bat</code>, <code>eza</code>, and a Quarto preview running side by side.</figcaption>
+</figure>
+</div>
+</section>
+</section>
+<section id="things-to-watch-out-for" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Things to Watch Out For</h1>
+<p>Five gotchas have surfaced in the maintenance of this construct over the past several years. Each is small in isolation; in aggregation they are the leading causes of construct drift.</p>
+<ul>
+<li><p><strong>Dropbox is not a version-control system.</strong> The file-system row pairs Dropbox sync with Git tracking precisely because Dropbox provides continuous sync but no notion of an intentional snapshot. Relying on Dropbox alone leaves the user with no rollback target between an accidental deletion and the most recent typing event.</p></li>
+<li><p><strong><code>renv.lock</code> does not pin the system R version.</strong> A project that restored cleanly on R 4.4 may fail to compile a package on R 4.6 because the package’s source has incompatibilities with a newer R. The construct’s container layer addresses this by pinning R itself in the Dockerfile; outside of Docker, the language manager (<code>mise</code> or <code>asdf</code>) is the equivalent control.</p></li>
+<li><p><strong>zsh aliases do not expand inside scripts by default.</strong> A script that calls <code>ss</code> will fail with <code>command not found</code> even if <code>ss</code> is aliased in <code>.zshrc</code>. The fix is to use the underlying command in scripts and reserve aliases for interactive shells, or to invoke the script with <code>zsh -i</code> to load the interactive configuration (with the corresponding overhead).</p></li>
+<li><p><strong>GitHub Actions runs Linux by default; macOS and Windows runners are billed at higher rates.</strong> A construct that develops on macOS and tests on Linux benefits from this alignment; one that depends on macOS-specific tooling (a Homebrew cask, a Quartz graphics device) needs an explicit <code>runs-on: macos-latest</code> and a budget for the additional minute-rate.</p></li>
+<li><p><strong>AWS EC2 instances accumulate Elastic IP charges when stopped.</strong> A construct that leaves an EC2 instance in the stopped state to resume work the next morning continues to be billed for the IP, which is approximately the same as the instance’s hourly rate when running. The teardown discipline (release the IP and stop the instance, or release the instance and the IP both) is part of the construct, not an afterthought.</p></li>
+</ul>
+</section>
+<section id="verification" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> Verification</h1>
+<p>The construct can be partially verified with the following set of one-line commands, run on a freshly provisioned machine after the dotfiles repository is cloned and the install script has run. Each command should succeed (return zero, non-empty output); failures indicate a layer that did not install cleanly.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Shell layer</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">zsh</span> <span class="at">--version</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="va">$SHELL</span>                            <span class="co"># /bin/zsh or /usr/local/bin/zsh</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Editor layer</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="ex">nvim</span> <span class="at">--version</span> <span class="kw">|</span> <span class="fu">head</span> <span class="at">-1</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="ex">vim</span> <span class="at">--version</span> <span class="kw">|</span> <span class="fu">head</span> <span class="at">-1</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Version control layer</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> <span class="at">--version</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="ex">gh</span> <span class="at">--version</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Container layer</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> <span class="at">--version</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> run <span class="at">--rm</span> hello-world</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Language layer</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="ex">R</span> <span class="at">--version</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">'sessionInfo()'</span> <span class="kw">|</span> <span class="fu">head</span> <span class="at">-3</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Cloud layer</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="ex">aws</span> <span class="at">--version</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="ex">aws</span> sts get-caller-identity            <span class="co"># confirms credentials are loaded</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a><span class="co"># zzcollab + custom scripts</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="fu">which</span> zzcollab zzgit lssince tn</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="co"># R packages (inside the project container)</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> r                                  <span class="co"># then in R: library(zzlongplot)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>A green pass on all twelve commands indicates the construct is materialised. A failure on any single command localises the problem to the corresponding layer.</p>
+</section>
+<section id="uninstall-rollback" class="level1" data-number="10">
+<h1 data-number="10"><span class="header-section-number">10</span> Uninstall / Rollback</h1>
+<p>The construct is additive: each layer is composed of files under <code>~/.config/</code>, <code>~/.zshrc</code>, or analogous locations, and can be removed without affecting the other layers. A clean rollback of the entire construct (for instance, when handing the laptop back at the end of a contract) follows this order:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Stop and remove all running containers and images</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> ps <span class="at">-aq</span> <span class="kw">|</span> <span class="fu">xargs</span> <span class="at">-r</span> docker rm <span class="at">-f</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> images <span class="at">-aq</span> <span class="kw">|</span> <span class="fu">xargs</span> <span class="at">-r</span> docker rmi <span class="at">-f</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> system prune <span class="at">-af</span> <span class="at">--volumes</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Remove project root (assuming nothing unsynced remains)</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="fu">ls</span> ~/prj                                <span class="co"># confirm contents first</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span> <span class="at">-rf</span> ~/prj</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Remove dotfiles</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span> <span class="at">-rf</span> ~/dotfiles</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span> <span class="at">-f</span> ~/.zshrc ~/.vimrc ~/.gitconfig ~/.aws/credentials</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="co"># 4. Remove plugin manager state</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span> <span class="at">-rf</span> ~/.oh-my-zsh ~/.cache/zsh ~/.zinit</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span> <span class="at">-rf</span> ~/.local/share/nvim ~/.cache/nvim</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="co"># 5. Optionally uninstall the system-level applications</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="ex">brew</span> uninstall <span class="at">--cask</span> docker rstudio</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="ex">brew</span> uninstall awscli gh git neovim ripgrep fd bat eza zoxide fzf</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The order matters: containers and project data first (because they hold work), dotfiles next (because they hold configuration), plugin caches third (because they hold derived state), and system-level applications last. The reverse order would leave orphaned containers or dangling configuration files.</p>
+</section>
+<section id="lessons-learnt" class="level1" data-number="11">
+<h1 data-number="11"><span class="header-section-number">11</span> Lessons Learnt</h1>
+<p>Maintaining the construct over several years has produced lessons grouped into three buckets: conceptual, technical, and gotcha-shaped.</p>
+<section id="conceptual" class="level3" data-number="11.0.1">
+<h3 data-number="11.0.1" class="anchored" data-anchor-id="conceptual"><span class="header-section-number">11.0.1</span> Conceptual</h3>
+<ul>
+<li><p><strong>The construct is a stack, not a list.</strong> The temptation when documenting a setup is to flatten it into a list of tools. Treating it as a layered stack (hardware, OS, file system, shell, editor, language, container, cloud, backup) makes the dependencies explicit and the substitutions surgical. Swapping <code>tmux</code> for <code>zellij</code> does not require rewriting the editor configuration, because the substitution lives in a single layer.</p></li>
+<li><p><strong>Layers should be replaceable individually.</strong> A construct in which the editor’s plugins assume a specific shell, or in which the shell’s aliases assume a specific terminal multiplexer, is a construct that resists incremental modernisation. The discipline is to push such couplings into optional helper functions (<code>tn</code> works whether or not the user is in tmux) rather than into the layer itself.</p></li>
+<li><p><strong>Documentation lives next to the code, not in a wiki.</strong> The outline reproduced here is precisely the kind of artefact that used to live on a corporate wiki and was lost when the wiki was decommissioned. Committing the construct to a public Git repository (the dotfiles repo, plus the qblog post) ensures that it is recoverable from any machine with internet access.</p></li>
+<li><p><strong>The construct is more durable than any individual tool.</strong> Editors, shells, and cloud primitives turn over on a roughly five-year cycle; the convention <code>~/prj/NN-name/</code> has been stable for longer. The construct’s stability comes from naming the convention rather than the tool.</p></li>
+</ul>
+</section>
+<section id="technical" class="level3" data-number="11.0.2">
+<h3 data-number="11.0.2" class="anchored" data-anchor-id="technical"><span class="header-section-number">11.0.2</span> Technical</h3>
+<ul>
+<li><p><strong>Dotfiles repositories should be installable, not just readable.</strong> A dotfiles repository that requires a manual symlink for every file is one that nobody (including its author) will fully install. An <code>install.sh</code> script that uses <code>stow</code>, <code>chezmoi</code>, or a hand-rolled symlink loop is the difference between an inert dotfiles repository and a reproducible construct. See post 24.</p></li>
+<li><p><strong>Shell scripts beat zsh functions for cross-shell portability.</strong> A script written as <code>#!/usr/bin/env bash</code> works identically when invoked from zsh, bash, or <code>cron</code>. A zsh function works only inside an interactive zsh shell. The construct’s shell-scripts row reflects this principle: tools intended to be invoked from <code>cron</code>, from CI, or from a collaborator’s terminal are scripts. Tools intended to wrap the user’s interactive flow (where zsh-only constructs are worth the conciseness) are functions.</p></li>
+<li><p><strong>Container images should be built from <code>Dockerfile</code>, not pulled from a personal registry.</strong> A registry image is opaque; a Dockerfile is auditable. The construct’s R package work rebuilds from <code>Dockerfile</code> plus <code>renv.lock</code> on every analyst’s machine, which means a divergence between two analysts’ results is debuggable rather than mysterious.</p></li>
+<li><p><strong>Backup is two-tier or it is not backup.</strong> GitHub holds the source of truth and the version history. An external SSD holds the binary artefacts (PDF outputs, compiled containers, intermediate data) that should not be committed. A single-tier backup that puts everything in one place is a single point of failure for both privacy and recovery.</p></li>
+</ul>
+</section>
+<section id="gotcha-shaped" class="level3" data-number="11.0.3">
+<h3 data-number="11.0.3" class="anchored" data-anchor-id="gotcha-shaped"><span class="header-section-number">11.0.3</span> Gotcha-shaped</h3>
+<ul>
+<li><p><strong>macOS aliases for <code>find</code> and <code>sed</code> are BSD-flavoured and silently differ from GNU.</strong> A script that uses <code>sed -i ''</code> on macOS will fail on Linux Mint with the same <code>sed -i</code> syntax, because GNU <code>sed</code> reads the empty string as a filename. The construct addresses this by aliasing GNU coreutils (<code>gsed</code>, <code>gfind</code>, <code>ggrep</code>) on macOS, or by writing scripts in a language-portable subset.</p></li>
+<li><p><strong>Dropbox file watchers conflict with <code>vim</code>’s default swap-file behaviour on shared paths.</strong> Symptom: <code>E325: ATTENTION</code> on every file open. Fix: configure <code>vim</code> to write swap files to <code>~/.vim/swap</code> outside the synced directory.</p></li>
+<li><p><strong><code>docker</code> on Apple Silicon defaults to ARM-native images.</strong> An R package that is unavailable as an ARM build will install from source and may fail in ways that are not reproduced on a collaborator’s x86_64 Linux machine. The construct’s Dockerfile pins <code>--platform=linux/amd64</code> to keep the build cross-machine consistent at the cost of a small runtime overhead under emulation.</p></li>
+<li><p><strong><code>renv::restore()</code> in a container reads the lockfile and installs to the host’s R library if the container’s library path is not exported correctly.</strong> The construct’s Dockerfile sets <code>RENV_PATHS_CACHE=/home/analyst/.cache/R/renv</code> to confine the cache to the container; without this line the cache is shared with the host, which produces the failure mode in which the analysis succeeds locally but fails in CI even though the lockfile is identical.</p></li>
+</ul>
+</section>
+</section>
+<section id="limitations" class="level1" data-number="12">
+<h1 data-number="12"><span class="header-section-number">12</span> Limitations</h1>
+<p>The construct as documented above has the following honest limitations:</p>
+<ul>
+<li><p><strong>It is opinionated about the editor.</strong> A reader who uses VS Code, RStudio exclusively, or a graphical IDE will need to substitute several rows. The construct can be adapted to such users, but the effort is non-trivial.</p></li>
+<li><p><strong>It is single-user.</strong> The construct describes one person’s laptop. Team-scale conventions (shared package mirrors, group CI runners, shared secret stores) are out of scope; the zzcollab framework provides those at the project level.</p></li>
+<li><p><strong>The cloud layer is AWS-specific.</strong> A construct on a university or hospital network may need to substitute the institution’s HPC, a private OpenStack cloud, or a different commercial provider. The patterns transfer; the specific scripts in the construct’s shell-scripts row do not.</p></li>
+<li><p><strong>Backup is local-plus-GitHub.</strong> The construct does not prescribe an off-site cold backup (Glacier, Backblaze B2, encrypted external drive at a relative’s house). For research-critical data the user’s institution’s backup policy is the authoritative layer; the construct supplements it rather than replacing it.</p></li>
+<li><p><strong>The R packages row is author-maintained.</strong> A reader who does not author R packages in the <code>zz*</code> namespace will substitute different package choices in the same row. The pattern (a small set of personal packages tracked alongside the construct) generalises; the names do not.</p></li>
+<li><p><strong>The construct does not address security hardening.</strong> Full-disk encryption, firmware passwords, screen-lock policies, and secure-boot configuration are out of scope. The recommendation is to follow the operating system vendor’s hardening guidance separately and to treat the construct as layered on top of a hardened machine.</p></li>
+</ul>
+</section>
+<section id="opportunities-for-improvement" class="level1" data-number="13">
+<h1 data-number="13"><span class="header-section-number">13</span> Opportunities for Improvement</h1>
+<p>Several extensions are plausible and would be appropriate for subsequent revisions of the construct:</p>
+<ol type="1">
+<li><p><strong>A construct-as-code repository.</strong> A single repository (e.g., <code>mygit/workflow-construct</code>) that contains the dotfiles, the install script, the layer-by-layer documentation, and a CI job that boots a fresh container, runs the install script, and exercises the verification commands. The CI job would prove that the construct is in fact reproducible rather than aspirationally so.</p></li>
+<li><p><strong>A construct profile for collaborators.</strong> A simplified subset of the construct (no zzcollab, no zz-prefix R packages, no personal aliases) that a coauthor can install on their machine to reproduce the project-specific layers without inheriting personal preferences.</p></li>
+<li><p><strong>A <code>mise.toml</code> at the project root.</strong> A polyglot version manifest that pins R, Python, and Node versions per project, replacing the current implicit reliance on the system-installed R. See the polyglot recommendation above.</p></li>
+<li><p><strong>A construct snapshot in every paper’s reproducibility appendix.</strong> A frozen, dated copy of the construct (with versions for every layer) committed alongside the paper’s analysis repository, so that the construct is recoverable from the paper’s archive even if the dotfiles repository later moves or is deleted.</p></li>
+<li><p><strong>An LLM-context file (<code>CLAUDE.md</code> or equivalent).</strong> A human-and-machine-readable file that documents the construct’s conventions for an in-shell coding assistant. The file already exists for the qblog repository; the recommendation is to template it for new projects so that the assistant has the construct in its context from the first invocation.</p></li>
+<li><p><strong>A health-check script.</strong> A <code>~/bin/construct-check</code> command that runs the verification block above on demand, reports a green or red status per layer, and exits non-zero if any layer is broken. Useful as a periodic check on long-lived machines.</p></li>
+</ol>
+</section>
+<section id="wrapping-up" class="level1" data-number="14">
+<h1 data-number="14"><span class="header-section-number">14</span> Wrapping Up</h1>
+<p>A workflow construct is not the same as a list of tools. It is the explicit record of how a working data scientist’s laptop is assembled, layer by layer, from hardware up to language packages. The handwritten outline reproduced and annotated above documents one such construct as it stood at the start of 2026, with twelve named rows and a concrete tool or convention in each. The annotations make explicit the reasoning that lived implicitly in the author’s habits.</p>
+<p>The recommendations section proposes a set of evidence-graded extensions that bring the construct forward into a 2026 polyglot practice without displacing any existing layer. The extensions are not prescriptions; each is presented with the specific failure mode it addresses, the conditions under which adoption is worthwhile, and the cost of adoption. The intent is that a reader can read the construct, identify the failure modes that match their own current pain, and adopt the corresponding extensions without inheriting the parts that do not fit their practice.</p>
+<p>The decision to write the construct down was the highest-leverage single act in its maintenance. Subsequent decisions (replacing <code>grep</code> with <code>ripgrep</code>, adding <code>zzgit</code>, layering in Tailscale) were small in isolation; the documentation is what makes them discoverable, reviewable, and reversible.</p>
+<p>In conclusion, four points merit emphasis. First, a workflow construct is layered (hardware, OS, file system, shell, editor, language, container, cloud, backup): each layer should be documented, its dependencies pinned, and it should be treated as individually replaceable. Second, documentation belongs next to the code; a construct preserved only in the author’s habits is not a construct. Third, extensions should be graded by failure mode: a tool is warranted because of the failure mode it closes, not because it is new. Fourth, the convention outlives any individual tool: <code>~/prj/NN-name/</code> has outlasted three editors and two cloud providers, and naming the convention rather than the tool is what produces that durability.</p>
+</section>
+<section id="see-also" class="level1" data-number="15">
+<h1 data-number="15"><span class="header-section-number">15</span> See Also</h1>
+<ul>
+<li>Setup posts in this repository that document individual layers in detail:
+<ul>
+<li><code>01-configtermzsh</code>: zsh configuration and the alias conventions referenced above.</li>
+<li><code>03-installmintonmacbook</code>: Linux Mint on the ThinkPad row.</li>
+<li><code>20-researchbackupsystem</code> and <code>21-researchmanagement</code>: the file-system row and its backup discipline.</li>
+<li><code>22-serversetupawscli</code> and <code>23-serversetupawsconsole</code>: the AWS EC2 cloud row, both scripted and console-based.</li>
+<li><code>24-setupdotfilesongithub</code>: the dotfiles installer.</li>
+<li><code>25-setupgit</code>: the version-control layer.</li>
+<li><code>26-setupneovim</code>, <code>30-setupRvimtex</code>, <code>37-simplevimplugin</code>, <code>41-ultisnipspythonpost</code>: the editor and plugin rows.</li>
+<li><code>28-setupormodifytorrtoolsanalysisrepo</code>, <code>32-sharermdcodeviadocker</code>, <code>33-shareshinycodeviadocker</code>: the container layer.</li>
+<li><code>49-zzgit</code>: the interactive git wizard listed in the shell-scripts row.</li>
+<li><code>50-textbookdevelopment</code>, <code>51-scripts-vs-functions</code>: related discussions of layered authoring practice.</li>
+<li><code>53-modern-cli-replacements</code>: the worked walkthrough for the modern command-line replacements recommendation.</li>
+<li><code>55-secrets-management</code>: the worked walkthrough for the secrets-management recommendation, leading with <code>pass</code> as the open-source primary.</li>
+<li><code>60-llm-augmented-editing</code>: the worked walkthrough for the LLM-augmented-editing recommendation, leading with Claude Code at the shell and the per-project <code>CLAUDE.md</code> convention.</li>
+</ul></li>
+<li>External references for the recommended extensions:
+<ul>
+<li>Modern CLI replacements: <code>ripgrep</code> (<a href="https://github.com/BurntSushi/ripgrep">https://github.com/BurntSushi/ripgrep</a>), <code>fd</code> (<a href="https://github.com/sharkdp/fd">https://github.com/sharkdp/fd</a>), <code>bat</code> (<a href="https://github.com/sharkdp/bat">https://github.com/sharkdp/bat</a>), <code>eza</code> (<a href="https://github.com/eza-community/eza">https://github.com/eza-community/eza</a>), <code>zoxide</code> (<a href="https://github.com/ajeetdsouza/zoxide">https://github.com/ajeetdsouza/zoxide</a>), <code>delta</code> (<a href="https://github.com/dandavison/delta">https://github.com/dandavison/delta</a>), <code>lazygit</code> (<a href="https://github.com/jesseduffield/lazygit">https://github.com/jesseduffield/lazygit</a>).</li>
+<li>Polyglot version managers: <code>mise</code> (<a href="https://mise.jdx.dev/">https://mise.jdx.dev/</a>), <code>uv</code> (<a href="https://docs.astral.sh/uv/">https://docs.astral.sh/uv/</a>).</li>
+<li>Quarto: <a href="https://quarto.org/">https://quarto.org/</a>.</li>
+<li>Containers: <code>devcontainer.json</code> spec (<a href="https://containers.dev/">https://containers.dev/</a>), Apptainer (<a href="https://apptainer.org/">https://apptainer.org/</a>).</li>
+<li>Secrets: AWS IAM Identity Center (<a href="https://docs.aws.amazon.com/singlesignon/">https://docs.aws.amazon.com/singlesignon/</a>), <code>1Password CLI</code> (<a href="https://developer.1password.com/docs/cli/">https://developer.1password.com/docs/cli/</a>).</li>
+<li>Remote access: Tailscale (<a href="https://tailscale.com/">https://tailscale.com/</a>), <code>mosh</code> (<a href="https://mosh.org/">https://mosh.org/</a>).</li>
+<li>Data tooling: DuckDB (<a href="https://duckdb.org/">https://duckdb.org/</a>), Apache Arrow (<a href="https://arrow.apache.org/">https://arrow.apache.org/</a>), Polars (<a href="https://pola.rs/">https://pola.rs/</a>).</li>
+</ul></li>
+<li>Canonical references for the Theoretical Framing:
+<ul>
+<li>Bass, L., Clements, P., and Kazman, R. (2021). <em>Software Architecture in Practice</em>, 4th edition. Addison-Wesley. (Reference architecture; layered pattern.)</li>
+<li>Buschmann, F., Meunier, R., Rohnert, H., Sommerlad, P., and Stal, M. (1996). <em>Pattern-Oriented Software Architecture, Volume 1: A System of Patterns</em>. Wiley. (The ‘Layers’ architectural pattern.)</li>
+<li>ISO/IEC/IEEE 42010:2022, ‘Software, systems and enterprise: Architecture description.’</li>
+<li>Morris, K. (2020). <em>Infrastructure as Code: Dynamic Systems for the Cloud Age</em>, 2nd edition. O’Reilly. (Definitive IaC treatment; the workstation analogue is direct.)</li>
+<li>Gentleman, R., and Temple Lang, D. (2007). ‘Statistical Analyses and Reproducible Research.’ <em>Journal of Computational and Graphical Statistics</em> 16(1): 1 to 23. (Original ‘research compendium’ formulation.)</li>
+<li>Marwick, B., Boettiger, C., and Mullen, L. (2018). ‘Packaging Data Analytical Work Reproducibly Using R (and Friends).’ <em>The American Statistician</em> 72(1): 80 to 88. (Operational compendium pattern; basis for zzcollab.)</li>
+<li>CNCF Platform Working Group white paper, ‘Platforms’ (<a href="https://tag-app-delivery.cncf.io/whitepapers/platforms/">https://tag-app-delivery.cncf.io/whitepapers/platforms/</a>). (Internal Developer Platform definition.)</li>
+<li>Spotify Engineering, ‘How We Use Backstage and the Golden Path to Pave the Road for Engineers’ (<a href="https://engineering.atspotify.com/">https://engineering.atspotify.com/</a>).</li>
+<li>SPDX (ISO/IEC 5962:2021): <a href="https://spdx.dev/">https://spdx.dev/</a>. CycloneDX (Ecma TC54): <a href="https://cyclonedx.org/">https://cyclonedx.org/</a>.</li>
+<li>Nix and Home Manager: <a href="https://nixos.org/">https://nixos.org/</a>; Home Manager (<a href="https://nix-community.github.io/home-manager/">https://nix-community.github.io/home-manager/</a>). (Verified-reproducible counterpart to ad hoc IaC.)</li>
+</ul></li>
+</ul>
+</section>
+<section id="reproducibility" class="level1" data-number="16">
+<h1 data-number="16"><span class="header-section-number">16</span> Reproducibility</h1>
+<p>The construct was developed and verified on the following software stack:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Component</th>
+<th>Version</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>MacBook OS</td>
+<td>macOS 15 (Sequoia)</td>
+<td>primary daily driver</td>
+</tr>
+<tr class="even">
+<td>ThinkPad OS</td>
+<td>Linux Mint 22 (Wilma)</td>
+<td>Cinnamon edition</td>
+</tr>
+<tr class="odd">
+<td>Shell</td>
+<td>zsh 5.9</td>
+<td>minimum 5.0</td>
+</tr>
+<tr class="even">
+<td>Editor</td>
+<td>Neovim 0.11, Vim 9.1</td>
+<td>both supported</td>
+</tr>
+<tr class="odd">
+<td>Version control</td>
+<td>git 2.43, gh 2.62</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Container runtime</td>
+<td>Docker Desktop 4.36 / Docker Engine 27</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>R</td>
+<td>4.5.2</td>
+<td>inside <code>rocker/tidyverse:4.5.2</code></td>
+</tr>
+<tr class="even">
+<td>AWS CLI</td>
+<td>2.18</td>
+<td>with <code>aws sso</code> configured</td>
+</tr>
+<tr class="odd">
+<td>Quarto</td>
+<td>1.6.43</td>
+<td>for the qblog site itself</td>
+</tr>
+<tr class="even">
+<td>zzcollab</td>
+<td>1.0.x</td>
+<td>profile: <code>ubuntu_x11_analysis</code></td>
+</tr>
+<tr class="odd">
+<td>Author R packages</td>
+<td><code>zzlongplot</code>, <code>zztab2fig</code>, <code>zztable1</code>, <code>zzpower</code>, <code>zzfishon</code></td>
+<td>tagged releases</td>
+</tr>
+<tr class="even">
+<td>Recommended extensions</td>
+<td><code>ripgrep</code> 14, <code>fd</code> 9, <code>bat</code> 0.24, <code>eza</code> 0.20, <code>zoxide</code> 0.9, <code>delta</code> 0.17, <code>lazygit</code> 0.44, <code>uv</code> 0.5, <code>mise</code> 2026.04, <code>tailscale</code> 1.78, <code>1password-cli</code> 2.30</td>
+<td>optional layers</td>
+</tr>
+</tbody>
+</table>
+<p>Date of last verification: 2026-04-26.</p>
+</section>
+<section id="feedback" class="level1" data-number="17">
+<h1 data-number="17"><span class="header-section-number">17</span> Feedback</h1>
+<p>Corrections, suggestions, and questions are welcome. Please open an issue or pull request on the <a href="https://github.com/mygit">GitHub repository</a> or send an email to user@example.com. Substitutions for any single layer (for example, a Helix-based editor row, an Emacs-based editor row, or a non-AWS cloud row) are particularly welcome and will be incorporated into a subsequent revision of this post.</p>
+<section id="related-posts-in-this-cluster" class="level2" data-number="17.1">
+<h2 data-number="17.1" class="anchored" data-anchor-id="related-posts-in-this-cluster"><span class="header-section-number">17.1</span> Related posts in this cluster</h2>
+<p>This post is part of the <em>Workflow Construct</em> series. Recommended reading order:</p>
+<ol type="1">
+<li><strong>Post 15: A Workflow Construct for the Modern Data Scientist</strong> (this post)</li>
+<li>Post 16: <a href="../16-wf-unix-workspace-config/">Unix Command-Line Workspace Setup for Data Science</a></li>
+<li>Post 17: <a href="../17-wf-multi-laptop-dotfiles-bootstrap/">Multi-Laptop macOS Bootstrap</a></li>
+<li>Post 18: <a href="../18-wf-git-for-data-science/">Setting Up Git for Data Science Workflows</a></li>
+<li>Post 19: <a href="../19-wf-neovim-data-science-ide/">Setting Up Neovim as a Data Science IDE</a></li>
+<li>Post 20: <a href="../20-wf-r-vim-latex-workflow/">Extending the R-Vim Workflow with LaTeX</a></li>
+<li>Post 21: <a href="../21-wf-modern-cli-tools/">Modern CLI Replacements for the Shell Layer</a></li>
+<li>Post 22: <a href="../22-wf-claude-code-in-shell/">LLM-Augmented Editing for the Workflow Construct</a></li>
+<li>Post 23: <a href="../23-wf-yabai-tiling-window-manager/">Configuring Yabai as a Tiling Window Manager</a></li>
+<li>Post 24: <a href="../24-wf-pocket-terminal-ttyd-tailscale/">A pocket terminal with ttyd and Tailscale</a></li>
+<li>Post 25: <a href="../25-wf-linux-mint-on-macbook/">Install Linux Mint on a MacBook Air</a></li>
+</ol>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/focusonr\.org");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<input type="hidden" id="giscus-base-theme" value="light">
+<input type="hidden" id="giscus-alt-theme" value="light">
+<script>
+  function loadGiscus() {
+    // Function to get the theme based on body class
+    const getTheme = () => {
+      let baseTheme = document.getElementById('giscus-base-theme').value;
+      let altTheme = document.getElementById('giscus-alt-theme').value;
+      return document.body.classList.contains('quarto-dark') ? altTheme : baseTheme;
+    };
+    const script = document.createElement("script");
+    script.src = "https://giscus.app/client.js";
+    script.async = true;
+    script.dataset.repo = "rgt47/qblog";
+    script.dataset.repoId = "R_kgDOH6TO7A";
+    script.dataset.category = "General";
+    script.dataset.categoryId = "DIC_kwDOH6TO7M4CXqIi";
+    script.dataset.mapping = "pathname";
+    script.dataset.reactionsEnabled = "1";
+    script.dataset.emitMetadata = "0";
+    script.dataset.inputPosition = "bottom";
+    script.dataset.theme = getTheme();
+    script.dataset.lang = "en";
+    script.crossOrigin = "anonymous";
+    // Append the script to the desired div instead of at the end of the body
+    document.getElementById("quarto-content").appendChild(script);
+  }
+  loadGiscus();
+</script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Copyright 2023-2026, Ronald ‘Ryy’ G. Thomas. The lab’s other activities live at <a href="https://rgtlab.org">rgtlab.org</a>.</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47">
+      <i class="bi bi-github" role="img">
+</i> 
+    </a>
+  </li>  
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47">
+      <i class="bi bi-twitter" role="img">
+</i> 
+    </a>
+  </li>  
+</ul>
+    </div>
+  </div>
+</footer>
+
+<!-- Fix category filtering: Quarto's own filterListingCategory() compares
+     the base64+URI-encoded data-category value directly against
+     itemValues.categories.split(","), but itemValues.categories is ALSO
+     base64+URI-encoded as a whole (e.g. one blob decoding to
+     "r,data-visualization"), so the split never finds a comma to split on
+     and the raw-blob comparison never matches. Both sides must be decoded
+     before comparing. -->
+<script>
+window.addEventListener('DOMContentLoaded', function() {
+  setTimeout(function() {
+    function decodeCategory(value) {
+      try {
+        return decodeURIComponent(atob(value));
+      } catch (e) {
+        return value;
+      }
+    }
+
+    window.filterListingCategory = function(category) {
+      const listingIds = Object.keys(window['quarto-listings']);
+      for (const listingId of listingIds) {
+        const list = window['quarto-listings'][listingId];
+        if (list) {
+          if (category === '') {
+            list.filter();
+          } else {
+            const target = decodeCategory(category);
+            list.filter(function (item) {
+              const itemValues = item.values();
+              if (itemValues.categories !== null && itemValues.categories !== undefined) {
+                const categories = decodeCategory(itemValues.categories)
+                  .split(",")
+                  .map(c => c.trim());
+                return categories.includes(target);
+              } else {
+                return false;
+              }
+            });
+          }
+        }
+      }
+    };
+  }, 500);
+});
+</script>
+
+<!-- PDF view/download button for blog posts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Only add the button on post pages
+  if (window.location.pathname.includes('/posts/') && !window.location.pathname.endsWith('/posts/') && !window.location.pathname.endsWith('/posts/index.html')) {
+    var currentPath = window.location.pathname;
+    // Handle both /posts/name/ and /posts/name/index.html formats
+    var pdfPath;
+    if (currentPath.endsWith('/')) {
+      pdfPath = currentPath + 'index.pdf';
+    } else {
+      pdfPath = currentPath.replace('.html', '.pdf');
+    }
+
+    // Check if PDF exists first
+    fetch(pdfPath, { method: 'HEAD' })
+      .then(function(response) {
+        if (response.ok) {
+          // PDF exists, show download button
+          showDownloadButton(pdfPath);
+        }
+        // If PDF doesn't exist, don't show any button
+      })
+      .catch(function(error) {
+        // Error checking PDF, don't show any button
+      });
+  }
+});
+
+function showDownloadButton(pdfPath) {
+  var downloadBtn = document.createElement('div');
+  downloadBtn.className = 'pdf-download-button';
+
+  // Get file size if possible
+  fetch(pdfPath, { method: 'HEAD' })
+    .then(function(response) {
+      var size = response.headers.get('Content-Length');
+      var sizeText = '';
+
+      if (size) {
+        // Convert to MB or KB
+        var sizeInMB = size / (1024 * 1024);
+        if (sizeInMB >= 1) {
+          sizeText = ' (' + sizeInMB.toFixed(1) + ' MB)';
+        } else {
+          sizeText = ' (' + (size / 1024).toFixed(0) + ' KB)';
+        }
+      }
+
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' + sizeText +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    })
+    .catch(function() {
+      // Basic fallback if we can't get file size
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    });
+
+  // Find where to insert the button (right after the title block)
+  var titleBlock = document.querySelector('.quarto-title-meta');
+  if (titleBlock) {
+    titleBlock.after(downloadBtn);
+  }
+}
+</script>
+
+<style>
+.pdf-download-button {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+</style>
+
+
+
+
+</body></html>

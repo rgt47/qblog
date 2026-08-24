@@ -1,0 +1,1460 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ronald G. Thomas">
+<meta name="dcterms.date" content="2026-08-18">
+<meta name="description" content="An applied, step-by-step walkthrough of reviewing an AI-assisted R package with zzvim-R as the review environment, from structural audit through CRAN submission.">
+
+<title>Exemplar Code Review: The zzobj2fig Package – focusonr</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-ab181d296742526fc851df428f4bd360.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": true,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "keyboard-shortcut": [
+    "?",
+    "/"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&amp;family=Open+Sans:ital,wght@0,400;0,600;1,400&amp;family=Fira+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<script src="https://kit.fontawesome.com/0fba9333d8.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+
+<!-- Custom meta tags for social sharing -->
+<meta property="og:site_name" content="focusonr">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@rgt47">
+
+<!-- Add responsive features -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<!-- Add analytics if needed -->
+<!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXX');
+</script> -->
+
+<!-- Add custom javascript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Remove code tools button completely
+  const codeButton = document.querySelector('.code-tools-button');
+  if (codeButton) {
+    codeButton.remove();
+  }
+  
+  // Add any custom JavaScript functionality here
+  
+  // Example: Add smooth scrolling
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      
+      document.querySelector(this.getAttribute('href')).scrollIntoView({
+        behavior: 'smooth'
+      });
+    });
+  });
+  
+  // Make sidebar category items clickable (but not TOC items)
+  const categoryLinks = {
+    'Programming & Development': '/posts/?category=Programming+%26+Development',
+    'Data Analysis & Visualization': '/posts/?category=Data+Analysis+%26+Visualization',
+    'Deployment & Operations': '/posts/?category=Deployment+%26+Operations',
+    'Development Environment': '/posts/?category=Development+Environment',
+    'Shiny Applications': '/posts/?category=Shiny+Applications',
+    'AI & Automation': '/posts/?category=AI+%26+Automation',
+    'System Administration': '/posts/?category=System+Administration'
+  };
+  
+  // Only target sidebar items that are not in the TOC
+  document.querySelectorAll('.sidebar-item-section .sidebar-item-text').forEach(item => {
+    // Skip if this is inside the TOC
+    if (item.closest('#TOC')) return;
+    
+    const text = item.textContent.trim();
+    if (categoryLinks[text]) {
+      item.addEventListener('click', function() {
+        window.location.href = categoryLinks[text];
+      });
+    }
+  });
+});
+</script>
+<meta name="quarto:status" content="draft">
+
+
+<meta property="og:title" content="Exemplar Code Review: The zzobj2fig Package – focusonr">
+<meta property="og:description" content="An applied, step-by-step walkthrough of reviewing an AI-assisted R package with zzvim-R as the review environment, from structural audit through CRAN submission.">
+<meta property="og:image" content="https://focusonr.org/posts/rp-code-review-exemplar/media/images/hero.jpg">
+<meta property="og:site_name" content="focusonr">
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top"><div id="quarto-draft-alert" class="alert alert-warning"><i class="bi bi-pencil-square"></i>Draft</div>
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../index.html">
+    <span class="navbar-title">focusonr</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../blog/index.html"> 
+<span class="menu-text">Blog</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="https://rgtlab.org"> 
+<span class="menu-text">rgtlab.org</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47"> <i class="bi bi-twitter" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a>
+  <ul class="collapse">
+  <li><a href="#motivations" id="toc-motivations" class="nav-link" data-scroll-target="#motivations"><span class="header-section-number">1.1</span> Motivations</a></li>
+  <li><a href="#objectives" id="toc-objectives" class="nav-link" data-scroll-target="#objectives"><span class="header-section-number">1.2</span> Objectives</a></li>
+  </ul></li>
+  <li><a href="#prerequisites" id="toc-prerequisites" class="nav-link" data-scroll-target="#prerequisites"><span class="header-section-number">2</span> Prerequisites</a></li>
+  <li><a href="#structural-review" id="toc-structural-review" class="nav-link" data-scroll-target="#structural-review"><span class="header-section-number">3</span> Structural Review</a>
+  <ul class="collapse">
+  <li><a href="#description" id="toc-description" class="nav-link" data-scroll-target="#description"><span class="header-section-number">3.1</span> DESCRIPTION</a></li>
+  <li><a href="#namespace-and-dependency-audit" id="toc-namespace-and-dependency-audit" class="nav-link" data-scroll-target="#namespace-and-dependency-audit"><span class="header-section-number">3.2</span> NAMESPACE and dependency audit</a></li>
+  </ul></li>
+  <li><a href="#function-by-function-review" id="toc-function-by-function-review" class="nav-link" data-scroll-target="#function-by-function-review"><span class="header-section-number">4</span> Function-by-Function Review</a>
+  <ul class="collapse">
+  <li><a href="#debugging-the-core-function" id="toc-debugging-the-core-function" class="nav-link" data-scroll-target="#debugging-the-core-function"><span class="header-section-number">4.1</span> Debugging the core function</a></li>
+  <li><a href="#s3-dispatch-review" id="toc-s3-dispatch-review" class="nav-link" data-scroll-target="#s3-dispatch-review"><span class="header-section-number">4.2</span> S3 dispatch review</a></li>
+  <li><a href="#ai-generated-code-patterns-operationalised" id="toc-ai-generated-code-patterns-operationalised" class="nav-link" data-scroll-target="#ai-generated-code-patterns-operationalised"><span class="header-section-number">4.3</span> AI-generated code patterns, operationalised</a></li>
+  </ul></li>
+  <li><a href="#test-suite-review" id="toc-test-suite-review" class="nav-link" data-scroll-target="#test-suite-review"><span class="header-section-number">5</span> Test Suite Review</a></li>
+  <li><a href="#integration-and-security-review" id="toc-integration-and-security-review" class="nav-link" data-scroll-target="#integration-and-security-review"><span class="header-section-number">6</span> Integration and Security Review</a>
+  <ul class="collapse">
+  <li><a href="#tracing-data-flow" id="toc-tracing-data-flow" class="nav-link" data-scroll-target="#tracing-data-flow"><span class="header-section-number">6.1</span> Tracing data flow</a></li>
+  <li><a href="#system-command-review" id="toc-system-command-review" class="nav-link" data-scroll-target="#system-command-review"><span class="header-section-number">6.2</span> System command review</a></li>
+  </ul></li>
+  <li><a href="#documentation-review" id="toc-documentation-review" class="nav-link" data-scroll-target="#documentation-review"><span class="header-section-number">7</span> Documentation Review</a></li>
+  <li><a href="#remediation" id="toc-remediation" class="nav-link" data-scroll-target="#remediation"><span class="header-section-number">8</span> Remediation</a></li>
+  <li><a href="#final-verification-and-cran-submission" id="toc-final-verification-and-cran-submission" class="nav-link" data-scroll-target="#final-verification-and-cran-submission"><span class="header-section-number">9</span> Final Verification and CRAN Submission</a></li>
+  <li><a href="#establishing-ownership" id="toc-establishing-ownership" class="nav-link" data-scroll-target="#establishing-ownership"><span class="header-section-number">10</span> Establishing Ownership</a></li>
+  <li><a href="#things-to-watch-out-for" id="toc-things-to-watch-out-for" class="nav-link" data-scroll-target="#things-to-watch-out-for"><span class="header-section-number">11</span> Things to Watch Out For</a></li>
+  <li><a href="#lessons-learnt" id="toc-lessons-learnt" class="nav-link" data-scroll-target="#lessons-learnt"><span class="header-section-number">12</span> Lessons Learnt</a></li>
+  <li><a href="#limitations" id="toc-limitations" class="nav-link" data-scroll-target="#limitations"><span class="header-section-number">13</span> Limitations</a></li>
+  <li><a href="#opportunities-for-improvement" id="toc-opportunities-for-improvement" class="nav-link" data-scroll-target="#opportunities-for-improvement"><span class="header-section-number">14</span> Opportunities for Improvement</a></li>
+  <li><a href="#wrapping-up" id="toc-wrapping-up" class="nav-link" data-scroll-target="#wrapping-up"><span class="header-section-number">15</span> Wrapping Up</a>
+  <ul class="collapse">
+  <li><a href="#what-did-we-learn" id="toc-what-did-we-learn" class="nav-link" data-scroll-target="#what-did-we-learn"><span class="header-section-number">15.1</span> What Did We Learn?</a></li>
+  </ul></li>
+  <li><a href="#see-also" id="toc-see-also" class="nav-link" data-scroll-target="#see-also"><span class="header-section-number">16</span> See Also</a></li>
+  <li><a href="#reproducibility" id="toc-reproducibility" class="nav-link" data-scroll-target="#reproducibility"><span class="header-section-number">17</span> Reproducibility</a></li>
+  <li><a href="#lets-connect" id="toc-lets-connect" class="nav-link" data-scroll-target="#lets-connect"><span class="header-section-number">18</span> Let’s Connect</a>
+  <ul class="collapse">
+  <li><a href="#related-posts-in-this-cluster" id="toc-related-posts-in-this-cluster" class="nav-link" data-scroll-target="#related-posts-in-this-cluster"><span class="header-section-number">18.1</span> Related posts in this cluster</a></li>
+  </ul></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="index.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content column-page-left" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Exemplar Code Review: The zzobj2fig Package</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">r</div>
+    <div class="quarto-category">r-packages</div>
+    <div class="quarto-category">code-review</div>
+    <div class="quarto-category">ai-assisted-development</div>
+    <div class="quarto-category">zzvim-r</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    An applied, step-by-step walkthrough of reviewing an AI-assisted R package with zzvim-R as the review environment, from structural audit through CRAN submission.
+  </div>
+</div>
+
+
+<div class="quarto-title-meta column-page-left">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ronald G. Thomas </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">August 18, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<!-- ============================================================================
+AUTHOR PROVIDES — concrete inputs the blogger must supply
+
+YAML FRONT MATTER
+  [x] title, date, categories, description, image filled in
+  [ ] draft: false    — flip when ready
+
+IMAGES (4 total: hero + 3 ambiance, all in media/images/)
+  [ ] Hero image (80% width)
+  [ ] Ambiance image 1 — after Objectives
+  [ ] Ambiance image 2 — after the function-review walkthrough
+  [ ] Ambiance image 3 — before Lessons Learnt
+  [ ] media/images/README.md — sources + attribution for every image
+
+SOURCE
+  Adapted from docs/EXEMPLAR_CODE_REVIEW_ZZTAB2FIG.md in the zzobj2fig
+  package (~/prj/sfw/10-zzobj2fig/zzobj2fig/docs/). This post condenses
+  that guide's 10-part walkthrough into blog format; the zzvim-R
+  key-mapping reference and code excerpts are reproduced from the
+  source. No claims about zzobj2fig's actual review outcome (coverage
+  numbers, pass/fail verdicts) have been independently re-verified for
+  this post; they are carried over from the source document as
+  reported there.
+============================================================================ -->
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/hero.jpg" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:80.0%"></p>
+</figure>
+</div>
+<p><em>A companion piece to <a href="../rp-code-review-methodology/">Code Review for AI-Assisted R Package Development</a>: the same five phases, applied to a real package with a real editor open.</em></p>
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>The <a href="../rp-code-review-methodology/">companion post on this site</a> lays out a five-phase framework for reviewing R packages built through human-AI collaboration. A framework read in the abstract is easy to nod along with and hard to actually run. This post applies it, phase by phase, to <code>zzobj2fig</code>, a real package that converts data frames and statistical objects to publication-quality LaTeX tables with automatic PDF generation and cropping. The package was designed by a human author and implemented by an AI assistant (Claude). It exports 52 functions, includes 29 S3 methods, and targets academic researchers who need journal-ready tables.</p>
+<p>The review environment throughout is <code>zzvim-R</code>, a Neovim/Vim plugin for R development that provides side-by-side source and terminal panes, smart code submission, object inspection shortcuts, and chunk navigation for R Markdown and Quarto files. None of the review methodology depends on this specific tool, but the concrete commands below assume it, since a review walkthrough is more useful with actual keystrokes than with “open your editor of choice.”</p>
+<section id="motivations" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="motivations"><span class="header-section-number">1.1</span> Motivations</h2>
+<ul>
+<li><strong>A framework needs a worked example.</strong> Abstract review criteria (“check design alignment”) do not specify what checking looks like in a terminal.</li>
+<li><strong>Debugging tools belong in a review, not just a bug fix.</strong> <code>browser()</code>, <code>trace()</code>, and <code>debug()</code> are review instruments as much as debugging instruments; this post treats them that way.</li>
+<li><strong>CRAN submission is downstream of review, not separate from it.</strong> A review that stops at “the code looks fine” and does not verify a clean-environment install has not actually finished.</li>
+</ul>
+</section>
+<section id="objectives" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="objectives"><span class="header-section-number">1.2</span> Objectives</h2>
+<ol type="1">
+<li>Walk through structural review (<code>DESCRIPTION</code>, <code>NAMESPACE</code>, dependency audit) using a real package’s actual metadata.</li>
+<li>Demonstrate function-level review with interactive debugging (<code>trace()</code>, <code>debug()</code>, <code>browser()</code>) on <code>zzobj2fig</code>’s core internal function.</li>
+<li>Apply the AI-generated-code-pattern checklist concretely, with <code>vimgrep</code> and <code>grep</code> commands that surface each pattern.</li>
+<li>Carry the review through remediation, final verification, and a CRAN pre-submission checklist.</li>
+</ol>
+<p><img src="media/images/ambiance1.jpg" class="img-fluid"></p>
+</section>
+</section>
+<section id="prerequisites" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Prerequisites</h1>
+<p>Before starting, establish a review workspace separate from the package’s own working tree, so review notes survive a <code>git clean</code> or a branch switch:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> ~/code-reviews/zzobj2fig</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ~/code-reviews/zzobj2fig</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> notes test-outputs findings debug-sessions</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">touch</span> notes/REVIEW_LOG.md</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><code>REVIEW_LOG.md</code> tracks phase status and a running findings-severity count:</p>
+<pre><code># zzobj2fig Code Review Log
+
+**Reviewer:** [Your name]
+**Start Date:** [Date]
+**Package Version:** 0.2.0</code></pre>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Phase</th>
+<th style="text-align: left;">Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Pre-Review Setup</td>
+<td style="text-align: left;">Not Started</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Structural Review</td>
+<td style="text-align: left;">Not Started</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Function Review</td>
+<td style="text-align: left;">Not Started</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Test Suite Review</td>
+<td style="text-align: left;">Not Started</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Integration Review</td>
+<td style="text-align: left;">Not Started</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Security Review</td>
+<td style="text-align: left;">Not Started</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Documentation Review</td>
+<td style="text-align: left;">Not Started</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Remediation</td>
+<td style="text-align: left;">Not Started</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Final Verification</td>
+<td style="text-align: left;">Not Started</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">CRAN Preparation</td>
+<td style="text-align: left;">Not Started</td>
+</tr>
+</tbody>
+</table>
+<p>Then set up the editor and load the package under review:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ~/prj/d01/zzobj2fig</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> checkout <span class="at">-b</span> code-review-<span class="va">$(</span><span class="fu">date</span> +%Y%m%d<span class="va">)</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="ex">vim</span> .</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<pre class="vim"><code>:e R/obj2fig.R
+" Launch an R terminal: &lt;LocalLeader&gt;w (vertical) or
+" &lt;LocalLeader&gt;W (horizontal), or &lt;LocalLeader&gt;rr for host R with renv</code></pre>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(devtools)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(testthat)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">load_all</span>()</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co"># zzobj2fig 0.2.0 - LaTeX table generation for R</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Run initial diagnostics and record everything in the review log:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">document</span>()</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>check_results <span class="ot">&lt;-</span> devtools<span class="sc">::</span><span class="fu">check</span>()</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>test_results <span class="ot">&lt;-</span> devtools<span class="sc">::</span><span class="fu">test</span>()</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">requireNamespace</span>(<span class="st">"covr"</span>, <span class="at">quietly =</span> <span class="cn">TRUE</span>)) {</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  coverage <span class="ot">&lt;-</span> covr<span class="sc">::</span><span class="fu">package_coverage</span>()</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(coverage)</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>For <code>zzobj2fig</code>, the reported metrics were approximately 13 R source files totalling 5,300 lines of code, 52 exported functions plus 29 S3 methods, and 7 test files totalling 1,200 lines of tests.</p>
+</section>
+<section id="structural-review" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Structural Review</h1>
+<section id="description" class="level2" data-number="3.1">
+<h2 data-number="3.1" class="anchored" data-anchor-id="description"><span class="header-section-number">3.1</span> DESCRIPTION</h2>
+<pre><code>Package: zzobj2fig
+Title: Generate LaTeX Tables and PDF Outputs
+Version: 0.2.0
+Description: A package to create LaTeX tables from dataframes and
+    statistical objects with optional styling and generate cropped PDF
+    figures. Supports multiple output formats, themes for journal styling
+    (APA, Nature, NEJM), S3 methods for lm/glm objects, and R Markdown
+    integration via custom knitr engine.
+License: GPL (&gt;= 3) + file LICENSE</code></pre>
+<p>The review questions here are mechanical but easy to skip under time pressure: is the title in title case, is the description a complete sentence ending with a period, are all authors specified with roles, does the <code>LICENSE</code> file actually exist, and are the R version requirements reasonable.</p>
+</section>
+<section id="namespace-and-dependency-audit" class="level2" data-number="3.2">
+<h2 data-number="3.2" class="anchored" data-anchor-id="namespace-and-dependency-audit"><span class="header-section-number">3.2</span> NAMESPACE and dependency audit</h2>
+<p><code>zzobj2fig</code> exports a main API (<code>o2f</code>, <code>o2f_batch</code>, <code>o2f_inline</code>), theme functions (<code>o2f_theme</code>, <code>o2f_theme_set</code>, <code>o2f_theme_get</code>), advanced features (<code>o2f_footnote</code>, <code>o2f_header_above</code>, <code>o2f_collapse_rows</code>), and 29 S3 methods covering <code>lm</code>, <code>glm</code>, <code>anova</code>, <code>htest</code>, survival models (<code>coxph</code>, <code>survfit</code>, <code>survdiff</code>), and mixed models (<code>lmerMod</code>, <code>glmerMod</code>, <code>lme</code>).</p>
+<p>For each <code>Imports</code> entry, check actual usage before accepting the dependency:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>imports <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"kableExtra"</span>, <span class="st">"stats"</span>, <span class="st">"utils"</span>)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (pkg <span class="cf">in</span> imports) {</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  pattern <span class="ot">&lt;-</span> <span class="fu">paste0</span>(pkg, <span class="st">"::"</span>)</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  matches <span class="ot">&lt;-</span> <span class="fu">system</span>(<span class="fu">paste0</span>(<span class="st">"grep -r '"</span>, pattern, <span class="st">"' R/"</span>), <span class="at">intern =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"</span><span class="sc">\n</span><span class="st">"</span>, pkg, <span class="st">"usage:</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(matches, <span class="at">sep =</span> <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>All three imports checked out as essential: <code>kableExtra</code> for core table generation, <code>stats</code> for <code>coef</code>/<code>confint</code>/<code>nobs</code> in the model methods, <code>utils</code> for <code>methods()</code>. <code>Suggests</code> entries were audited the same way, checking for conditional use via <code>requireNamespace()</code>.</p>
+</section>
+</section>
+<section id="function-by-function-review" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Function-by-Function Review</h1>
+<p>Build a function inventory before reviewing anything, and review in dependency order rather than file order, since reviewing a caller before its callee means re-reading the same context twice:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>r_files <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="st">"R"</span>, <span class="at">pattern =</span> <span class="st">"</span><span class="sc">\\</span><span class="st">.R$"</span>, <span class="at">full.names =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>functions <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (file <span class="cf">in</span> r_files) {</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  content <span class="ot">&lt;-</span> <span class="fu">readLines</span>(file)</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  fn_lines <span class="ot">&lt;-</span> <span class="fu">grep</span>(<span class="st">"^[a-zA-Z_</span><span class="sc">\\</span><span class="st">.][a-zA-Z0-9_</span><span class="sc">\\</span><span class="st">.]*</span><span class="sc">\\</span><span class="st">s*&lt;-</span><span class="sc">\\</span><span class="st">s*function"</span>, content)</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (line_num <span class="cf">in</span> fn_lines) {</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    fn_name <span class="ot">&lt;-</span> <span class="fu">sub</span>(<span class="st">"</span><span class="sc">\\</span><span class="st">s*&lt;-.*"</span>, <span class="st">""</span>, content[line_num])</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    functions[[fn_name]] <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">file =</span> file, <span class="at">line =</span> line_num)</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Functions to review:"</span>, <span class="fu">length</span>(functions), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>For <code>zzobj2fig</code>, the review order followed the dependency graph: <code>zzz.R</code> (package initialisation) first, then <code>obj2fig.R</code> (core internal implementation), <code>s3-methods.R</code>, <code>themes.R</code>, <code>advanced-features.R</code>, <code>broom-methods.R</code>, <code>formatting.R</code>, <code>inline.R</code>, <code>latex-include.R</code>, <code>batch.R</code>, <code>caching.R</code>, <code>output-formats.R</code>, and <code>knitr-engine.R</code> last.</p>
+<section id="debugging-the-core-function" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="debugging-the-core-function"><span class="header-section-number">4.1</span> Debugging the core function</h2>
+<p><code>o2f_internal()</code> (<code>obj2fig.R:52-239</code>) is the function everything else calls into, so it gets the most scrutiny. Rather than reading the implementation statically, trace it interactively:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Insert a breakpoint without modifying the source</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="fu">trace</span>(<span class="st">"o2f_internal"</span>, <span class="at">tracer =</span> browser, <span class="at">where =</span> <span class="fu">asNamespace</span>(<span class="st">"zzobj2fig"</span>))</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>test_df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">x =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>, <span class="at">y =</span> <span class="fu">c</span>(<span class="st">"a"</span>, <span class="st">"b"</span>, <span class="st">"c"</span>))</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="fu">o2f</span>(test_df, <span class="st">"debug_test"</span>, <span class="at">sub_dir =</span> <span class="fu">tempdir</span>())</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="co"># In the browser: n (next line), s (step into), c (continue), Q (quit)</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="fu">untrace</span>(<span class="st">"o2f_internal"</span>, <span class="at">where =</span> <span class="fu">asNamespace</span>(<span class="st">"zzobj2fig"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Stepping through in this way, four regions of the function got separate attention: input validation (lines 69-127, checked for <code>call. = FALSE</code> on every <code>stop()</code>, which was used consistently), theme resolution (lines 129-143), directory creation (lines 159-174), and the LaTeX compilation step (lines 223-225), where stepping into <code>compile_latex()</code> with <code>s</code> surfaced the actual system call being constructed.</p>
+<p><code>debug()</code> and <code>debugonce()</code> cover the cases <code>trace()</code> does not fit as well: <code>debug(zzobj2fig:::compile_latex)</code> for a function you expect to step through repeatedly across several test calls, and <code>debugonce(zzobj2fig:::sanitize_column_names)</code> when you want exactly one interactive pass and no more.</p>
+</section>
+<section id="s3-dispatch-review" class="level2" data-number="4.2">
+<h2 data-number="4.2" class="anchored" data-anchor-id="s3-dispatch-review"><span class="header-section-number">4.2</span> S3 dispatch review</h2>
+<p>For the <code>o2f</code> generic, confirm the dispatch table before debugging any single method:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>o2f <span class="ot">&lt;-</span> <span class="cf">function</span>(x, ...) {</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">UseMethod</span>(<span class="st">"o2f"</span>)</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="fu">methods</span>(o2f)</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="fu">debug</span>(zzobj2fig<span class="sc">:::</span>o2f.lm)</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">lm</span>(mpg <span class="sc">~</span> cyl <span class="sc">+</span> hp, <span class="at">data =</span> mtcars)</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="fu">o2f</span>(model, <span class="st">"test_lm"</span>, <span class="at">sub_dir =</span> <span class="fu">tempdir</span>())</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="co"># In browser: print(x), str(s), print(coef_df)</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a><span class="fu">undebug</span>(zzobj2fig<span class="sc">:::</span>o2f.lm)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Manual verification without the debugger is worth doing too, since it checks the assumption the code depends on rather than just the code itself:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">lm</span>(mpg <span class="sc">~</span> cyl <span class="sc">+</span> hp, <span class="at">data =</span> mtcars)</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>s <span class="ot">&lt;-</span> <span class="fu">summary</span>(model)</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>coef_df <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(s<span class="sc">$</span>coefficients)</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(coef_df)</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="co"># [1] "Estimate"   "Std. Error" "t value"    "Pr(&gt;|t|)"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>That last line matters: <code>o2f.lm</code> assumes <code>summary.lm()</code>’s coefficient matrix has exactly those column names, and that assumption is only safe because it was checked, not because it seemed likely.</p>
+</section>
+<section id="ai-generated-code-patterns-operationalised" class="level2" data-number="4.3">
+<h2 data-number="4.3" class="anchored" data-anchor-id="ai-generated-code-patterns-operationalised"><span class="header-section-number">4.3</span> AI-generated code patterns, operationalised</h2>
+<p>The companion post’s pattern checklist becomes concrete searches:</p>
+<pre class="vim"><code>" Over-engineering: nested function chains
+:vimgrep /function.*function.*function/j R/*.R</code></pre>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Defensive redundancy: repeated validation</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">system</span>(<span class="st">"grep -n 'is.data.frame' R/*.R"</span>, <span class="at">intern =</span> <span class="cn">TRUE</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<pre class="vim"><code>" Inconsistent style: mixed assignment or pipe operators
+:vimgrep /[^&lt;!=]=[^=]/j R/*.R
+:vimgrep /%&gt;%/j R/*.R
+:vimgrep /|&gt;/j R/*.R</code></pre>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Hallucinated functions: verify every referenced function exists</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="fu">exists</span>(<span class="st">"kable"</span>, <span class="at">where =</span> <span class="st">"package:kableExtra"</span>)</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="fu">exists</span>(<span class="st">"row_spec"</span>, <span class="at">where =</span> <span class="st">"package:kableExtra"</span>)</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="fu">tryCatch</span>(</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  zzobj2fig<span class="sc">:::</span><span class="fu">nonexistent_function</span>(),</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">error =</span> <span class="cf">function</span>(e) <span class="fu">cat</span>(<span class="st">"Function not found:"</span>, e<span class="sc">$</span>message, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><img src="media/images/ambiance2.jpg" class="img-fluid"></p>
+</section>
+</section>
+<section id="test-suite-review" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Test Suite Review</h1>
+<p>Run coverage first, then read a sample of test bodies rather than trusting the percentage alone:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(covr)</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>coverage <span class="ot">&lt;-</span> <span class="fu">package_coverage</span>()</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(coverage)</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="fu">report</span>(coverage)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>A representative test from <code>zzobj2fig</code>’s suite:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">test_that</span>(<span class="st">"o2f handles basic dataframe conversion correctly"</span>, {</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">skip_if_no_latex</span>()</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">skip_if_not</span>(<span class="fu">system</span>(<span class="st">"pdfcrop -version"</span>) <span class="sc">==</span> <span class="dv">0</span>, <span class="st">"pdfcrop not available"</span>)</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">dir.create</span>(<span class="st">"test_output"</span>, <span class="at">showWarnings =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">on.exit</span>(<span class="fu">unlink</span>(<span class="st">"test_output"</span>, <span class="at">recursive =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>  test_df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">col1 =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>, <span class="at">col2 =</span> letters[<span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>])</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>  output_file <span class="ot">&lt;-</span> <span class="fu">o2f</span>(test_df, <span class="st">"test_table"</span>, <span class="at">sub_dir =</span> <span class="st">"test_output"</span>)</span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">expect_true</span>(<span class="fu">file.exists</span>(<span class="st">"test_output/test_table.tex"</span>))</span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">expect_true</span>(<span class="fu">file.exists</span>(<span class="st">"test_output/test_table.pdf"</span>))</span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Test quality assessment for this file: it skips gracefully when <code>xelatex</code>/<code>pdfcrop</code> are unavailable, creates an isolated output directory and cleans it up with <code>on.exit()</code>, and checks actual file creation rather than merely that the call did not error. What it does not do, and what a follow-up pass flagged as an opportunity, is verify file <em>contents</em> or confirm the generated PDF is valid, not just present.</p>
+<p>To find gaps systematically rather than by inspection alone, cross the export list against the test file contents:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>exports <span class="ot">&lt;-</span> <span class="fu">getNamespaceExports</span>(<span class="st">"zzobj2fig"</span>)</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>test_files <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="st">"tests/testthat"</span>, <span class="at">pattern =</span> <span class="st">"^test-.*</span><span class="sc">\\</span><span class="st">.R$"</span>,</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>                         <span class="at">full.names =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>test_content <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">lapply</span>(test_files, readLines))</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>untested <span class="ot">&lt;-</span> <span class="fu">character</span>(<span class="dv">0</span>)</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (fn <span class="cf">in</span> exports) {</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">any</span>(<span class="fu">grepl</span>(fn, test_content, <span class="at">fixed =</span> <span class="cn">TRUE</span>))) {</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>    untested <span class="ot">&lt;-</span> <span class="fu">c</span>(untested, fn)</span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Potentially untested functions:</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(untested, <span class="at">sep =</span> <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="integration-and-security-review" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Integration and Security Review</h1>
+<section id="tracing-data-flow" class="level2" data-number="6.1">
+<h2 data-number="6.1" class="anchored" data-anchor-id="tracing-data-flow"><span class="header-section-number">6.1</span> Tracing data flow</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">trace</span>(<span class="st">"o2f"</span>, <span class="at">tracer =</span> <span class="fu">quote</span>(<span class="fu">cat</span>(<span class="st">"&gt;&gt;&gt; Entering o2f</span><span class="sc">\n</span><span class="st">"</span>)),</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>      <span class="at">where =</span> <span class="fu">asNamespace</span>(<span class="st">"zzobj2fig"</span>))</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="fu">trace</span>(<span class="st">"o2f_internal"</span>, <span class="at">tracer =</span> <span class="fu">quote</span>(<span class="fu">cat</span>(<span class="st">"&gt;&gt;&gt; Entering o2f_internal</span><span class="sc">\n</span><span class="st">"</span>)),</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>      <span class="at">where =</span> <span class="fu">asNamespace</span>(<span class="st">"zzobj2fig"</span>))</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>test_df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">x =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>, <span class="at">y =</span> <span class="fu">c</span>(<span class="st">"a"</span>, <span class="st">"b"</span>, <span class="st">"c"</span>))</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a><span class="fu">o2f</span>(test_df, <span class="st">"trace_test"</span>, <span class="at">sub_dir =</span> <span class="fu">tempdir</span>())</span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a><span class="fu">untrace</span>(<span class="st">"o2f"</span>, <span class="at">where =</span> <span class="fu">asNamespace</span>(<span class="st">"zzobj2fig"</span>))</span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a><span class="fu">untrace</span>(<span class="st">"o2f_internal"</span>, <span class="at">where =</span> <span class="fu">asNamespace</span>(<span class="st">"zzobj2fig"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The resulting call chain: <code>o2f()</code> (S3 generic) dispatches to <code>o2f.data.frame()</code> or another method, which calls <code>o2f_internal()</code>, which in turn calls <code>sanitize_column_names()</code>, <code>sanitize_table_cells()</code>, and <code>create_latex_table()</code> (writing the <code>.tex</code> file via <code>kableExtra::kable()</code>), then <code>compile_latex()</code> (<code>system("xelatex ...")</code>) and <code>crop_pdf()</code> (<code>system("pdfcrop ...")</code>).</p>
+</section>
+<section id="system-command-review" class="level2" data-number="6.2">
+<h2 data-number="6.2" class="anchored" data-anchor-id="system-command-review"><span class="header-section-number">6.2</span> System command review</h2>
+<p>Every <code>system()</code> call is a potential injection point, so each one gets an individual verdict rather than a blanket pass:</p>
+<pre class="vim"><code>:vimgrep /system\s*(/j R/*.R
+:copen</code></pre>
+<p>For <code>zzobj2fig</code>’s two <code>system()</code> call sites: <code>compile_latex()</code> uses <code>shQuote()</code> on every path argument, which prevents shell injection, and <code>basename()</code> on the target, which removes directory traversal; the command itself is fixed (<code>xelatex</code>, not user-controlled). Same pattern in <code>crop_pdf()</code>: quoted paths, a numeric (pre-validated) margin, and a fixed command structure. Verdict: system command usage is safe.</p>
+<p>A final sweep for credential or secret handling turned up nothing to flag: the package works with statistical output, not with credentials, so this check was fast, but skipping it is exactly how a package accumulates an unreviewed dependency on an environment variable no one documented.</p>
+</section>
+</section>
+<section id="documentation-review" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Documentation Review</h1>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(zzobj2fig)</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>?o2f</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="fu">help</span>(<span class="at">package =</span> <span class="st">"zzobj2fig"</span>)</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a><span class="fu">args</span>(o2f.default)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Per-function checklist: title concise, description explains purpose, every parameter has <code>@param</code>, return value has <code>@return</code>, examples run (wrapped in <code>\dontrun{}</code> if they require a working LaTeX installation), and related functions are cross-linked with <code>@seealso</code>. Vignettes get a build check (<code>devtools::build_vignettes()</code>) in addition to a read-through, since a vignette that reads well but does not build is worse than no vignette at all.</p>
+</section>
+<section id="remediation" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Remediation</h1>
+<p>Findings sort into the same four tiers as the companion post’s framework: critical (security, crashes, incorrect calculations), major (significant behavioural deviation, missing validation, confusing errors), minor (style, documentation gaps, small inefficiencies), and enhancement (feature suggestions, performance, API polish).</p>
+<p>A representative fix cycle for <code>zzobj2fig</code>, working entirely inside the editor and terminal split:</p>
+<pre class="vim"><code>:e R/s3-methods.R
+:173</code></pre>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">load_all</span>()</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a><span class="fu">debugonce</span>(zzobj2fig<span class="sc">:::</span>o2f.lm)</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a><span class="fu">o2f</span>(model, <span class="at">digits =</span> <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="fu">test_that</span>(<span class="st">"o2f.lm validates digits parameter"</span>, {</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  model <span class="ot">&lt;-</span> <span class="fu">lm</span>(mpg <span class="sc">~</span> cyl, <span class="at">data =</span> mtcars)</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">expect_error</span>(<span class="fu">o2f</span>(model, <span class="at">digits =</span> <span class="sc">-</span><span class="dv">1</span>), <span class="st">"non-negative"</span>)</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">expect_error</span>(<span class="fu">o2f</span>(model, <span class="at">digits =</span> <span class="st">"three"</span>), <span class="st">"numeric"</span>)</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">test</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The pattern generalises: reproduce interactively, fix the source, add a test that would have caught the original defect, then confirm the whole suite still passes, not just the new test.</p>
+<p><img src="media/images/ambiance3.jpg" class="img-fluid"></p>
+</section>
+<section id="final-verification-and-cran-submission" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> Final Verification and CRAN Submission</h1>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>test_results <span class="ot">&lt;-</span> devtools<span class="sc">::</span><span class="fu">test</span>()</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">any</span>(test_results<span class="sc">$</span>failed <span class="sc">&gt;</span> <span class="dv">0</span>)) {</span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stop</span>(<span class="st">"Tests failed! Fix before proceeding."</span>)</span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>check_results <span class="ot">&lt;-</span> devtools<span class="sc">::</span><span class="fu">check</span>()</span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(check_results)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>CRAN submission needs zero errors and zero warnings; notes should be either eliminated or individually justified. A clean-environment install test catches what an in-session <code>devtools::load_all()</code> never will:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">build</span>()</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">"../zzobj2fig_0.2.0.tar.gz"</span>, <span class="at">repos =</span> <span class="cn">NULL</span>, <span class="at">type =</span> <span class="st">"source"</span>)</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(zzobj2fig)</span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a><span class="fu">check_latex_deps</span>()</span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>test_df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">x =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>, <span class="at">y =</span> letters[<span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>])</span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a><span class="fu">o2f</span>(test_df, <span class="st">"test"</span>, <span class="at">sub_dir =</span> <span class="fu">tempdir</span>())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The pre-submission checklist for <code>zzobj2fig</code> covered package metadata (version, description as a single paragraph, valid license and maintainer email), code quality (<code>R CMD check</code> clean, no undocumented functions, no missing imports or exports, examples running without long-running calls left un-wrapped), system dependencies (<code>SystemRequirements</code> documented, graceful failure when LaTeX is missing), documentation (<code>README</code>, <code>NEWS.md</code>, vignettes building), and testing (platform coverage, graceful skips when dependencies are absent).</p>
+</section>
+<section id="establishing-ownership" class="level1" data-number="10">
+<h1 data-number="10"><span class="header-section-number">10</span> Establishing Ownership</h1>
+<p>Before claiming ownership of <code>zzobj2fig</code>, the review closed with a set of questions answerable without referring back to the source: architecture questions (what is the main entry point, how does S3 dispatch work, where is global state stored, what system dependencies are required), implementation questions (how are special LaTeX characters handled, what happens when compilation fails, how does the theme system resolve names to objects, how are footnotes implemented), and debugging questions (where would you look for wrong table formatting, how would you diagnose a LaTeX compilation error, what would cause <code>o2f</code> to return silently without creating files).</p>
+<p>Demonstrating debugging proficiency without AI assistance is the concrete test:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>test_df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="fu">c</span>(<span class="st">"Test &amp; Co."</span>, <span class="st">"100% Complete"</span>, <span class="st">"Price: $50"</span>),</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">value =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span></span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a><span class="fu">trace</span>(<span class="st">"sanitize_table_cells"</span>, <span class="at">tracer =</span> browser,</span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>      <span class="at">where =</span> <span class="fu">asNamespace</span>(<span class="st">"zzobj2fig"</span>))</span>
+<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a><span class="fu">o2f</span>(test_df, <span class="st">"special_chars"</span>, <span class="at">sub_dir =</span> <span class="fu">tempdir</span>())</span>
+<span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a><span class="co"># In browser: what input does the function receive, what</span></span>
+<span id="cb29-9"><a href="#cb29-9" aria-hidden="true" tabindex="-1"></a><span class="co"># transformations are applied, what output is produced?</span></span>
+<span id="cb29-10"><a href="#cb29-10" aria-hidden="true" tabindex="-1"></a><span class="fu">untrace</span>(<span class="st">"sanitize_table_cells"</span>, <span class="at">where =</span> <span class="fu">asNamespace</span>(<span class="st">"zzobj2fig"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>And writing original code that uses the package, rather than only reading it, is what actually proves the understanding claimed above:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>my_journal_theme <span class="ot">&lt;-</span> <span class="fu">o2f_theme</span>(</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">"my_journal"</span>,</span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">scolor =</span> <span class="st">"gray!5"</span>,</span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">header_bold =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">font_size =</span> <span class="st">"small"</span>,</span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">striped =</span> <span class="cn">TRUE</span></span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a><span class="fu">o2f_theme_register</span>(my_journal_theme)</span>
+<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a><span class="fu">o2f_theme_set</span>(<span class="st">"my_journal"</span>)</span>
+<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">lm</span>(mpg <span class="sc">~</span> wt <span class="sc">+</span> hp <span class="sc">+</span> cyl, <span class="at">data =</span> mtcars)</span>
+<span id="cb30-12"><a href="#cb30-12" aria-hidden="true" tabindex="-1"></a><span class="fu">o2f</span>(model, <span class="st">"my_regression"</span>, <span class="at">digits =</span> <span class="dv">2</span>,</span>
+<span id="cb30-13"><a href="#cb30-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">caption =</span> <span class="st">"Regression Results"</span>, <span class="at">label =</span> <span class="st">"tab:regression"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="things-to-watch-out-for" class="level1" data-number="11">
+<h1 data-number="11"><span class="header-section-number">11</span> Things to Watch Out For</h1>
+<ul>
+<li><strong>Reviewing by file order instead of dependency order</strong> doubles the re-reading; start at <code>zzz.R</code> and work outward along the call graph.</li>
+<li><strong>Trusting <code>trace()</code> output without <code>untrace()</code>-ing afterward.</strong> A forgotten trace silently slows every subsequent call and produces console noise that looks like a new bug.</li>
+<li><strong>Treating “the test passes” as “the behaviour is verified.”</strong> The <code>o2f</code> file-existence test above passes even if the generated LaTeX is malformed; content verification is a separate, unaddressed gap.</li>
+<li><strong>Skipping the security sweep on packages that “obviously” have no sensitive data.</strong> The check took minutes; skipping it is how an undocumented credential dependency goes unnoticed.</li>
+<li><strong>CRAN’s “0 warnings” bar creeping into “0 warnings, some notes I never actually justified.”</strong> An unjustified note is a deferred warning.</li>
+<li><strong>Confusing debugging (finding a fix) with review (verifying the whole function).</strong> <code>debugonce()</code> on one input tells you about that input; the systematic function-review pass is still required.</li>
+</ul>
+</section>
+<section id="lessons-learnt" class="level1" data-number="12">
+<h1 data-number="12"><span class="header-section-number">12</span> Lessons Learnt</h1>
+<p><strong>Conceptual:</strong></p>
+<ul>
+<li>Applying an abstract review framework to a real package surfaces edge cases (S3 dispatch verification, LaTeX-specific system-call review) that a generic checklist would not anticipate.</li>
+<li>A five-phase structure holds up under a 52-function, 29-method package without needing modification, which is some evidence the phase boundaries are drawn in the right places.</li>
+</ul>
+<p><strong>Technical:</strong></p>
+<ul>
+<li><code>trace(fun, tracer = browser, where = asNamespace(pkg))</code> is a non-invasive way to step through an internal function without editing the source.</li>
+<li><code>getNamespaceExports()</code> plus a grep across test file contents is a fast, if approximate, way to find untested exports.</li>
+<li><code>shQuote()</code> plus <code>basename()</code> on every path argument is the concrete pattern that makes a <code>system()</code> call defensible in a security review, not just an assertion that it is “probably fine.”</li>
+</ul>
+<p><strong>Gotchas:</strong></p>
+<ul>
+<li>File-existence tests can pass while content is wrong; this gap should be closed before the next release, not carried forward indefinitely.</li>
+<li><code>debug()</code> persists across calls until explicitly removed with <code>undebug()</code>; forgetting to remove it mid-review is a common self-inflicted confusion.</li>
+<li>A package with zero sensitive-data handling still needs the security pass; “obviously safe” is a conclusion the pass should produce, not a reason to skip it.</li>
+</ul>
+</section>
+<section id="limitations" class="level1" data-number="13">
+<h1 data-number="13"><span class="header-section-number">13</span> Limitations</h1>
+<ul>
+<li>This walkthrough covers one package’s review; a package with compiled code, non-standard evaluation, or heavier external I/O would surface phases this post does not exercise.</li>
+<li>The <code>zzvim-R</code> commands shown are specific to that plugin; the underlying R debugging calls (<code>trace</code>, <code>debug</code>, <code>browser</code>) are editor-agnostic, but the keystroke workflow is not.</li>
+<li>Coverage numbers, pass/fail results, and the “system command usage is safe” verdict are carried over from the source document as reported there; this post does not independently re-run <code>zzobj2fig</code>’s test suite or re-verify those figures.</li>
+</ul>
+</section>
+<section id="opportunities-for-improvement" class="level1" data-number="14">
+<h1 data-number="14"><span class="header-section-number">14</span> Opportunities for Improvement</h1>
+<ol type="1">
+<li>A follow-up pass that verifies LaTeX table <em>content</em>, not just file existence, closing the gap the test-review section identified.</li>
+<li>A parallel walkthrough using a non-Vim editor’s debugging integration, to separate the review methodology from the <code>zzvim-R</code>-specific keystrokes.</li>
+<li>A worked example of the “companion post’s” ownership test actually failing for a function, to show what an honest “not yet ready to ship” verdict looks like in practice.</li>
+<li>Extending the security-review pass with a worked compiled-code example, since <code>zzobj2fig</code> has none to exercise that branch of the checklist.</li>
+</ol>
+</section>
+<section id="wrapping-up" class="level1" data-number="15">
+<h1 data-number="15"><span class="header-section-number">15</span> Wrapping Up</h1>
+<section id="what-did-we-learn" class="level2" data-number="15.1">
+<h2 data-number="15.1" class="anchored" data-anchor-id="what-did-we-learn"><span class="header-section-number">15.1</span> What Did We Learn?</h2>
+<p>The companion methodology post argues that review requires genuine understanding, not a read-through. This walkthrough is the evidence for that claim in a specific case: understanding <code>o2f_internal()</code> required stepping through it with <code>browser()</code>, not reading it top to bottom; understanding the test suite’s actual coverage required reading test bodies, not the coverage percentage; and understanding the security posture of two <code>system()</code> calls required checking the quoting discipline at each call site individually, not trusting that “the package looks careful” as a whole. None of that substitutes for the framework; it is what the framework looks like when it is actually run against a package with 52 exported functions and a LaTeX compilation step that could, if the quoting were wrong, execute arbitrary shell commands.</p>
+<p><strong>Main takeaways:</strong></p>
+<ul>
+<li>Interactive debugging (<code>trace</code>, <code>debug</code>, <code>browser</code>) is a review tool, not just a bug-fix tool.</li>
+<li>A single <code>system()</code> call needs its own individual security verdict; “the package is fine” is not a verdict.</li>
+<li>File-existence tests and content-correctness tests check different things, and a review that only checks the former has an unclosed gap worth naming explicitly, not silently.</li>
+</ul>
+<p><strong>If you are trying this yourself:</strong> start with the function inventory script before opening any single file, and budget real time for the CRAN pre-submission checklist. It is the part most often compressed under deadline pressure, and it is also the part a reviewer other than the author will actually see.</p>
+</section>
+</section>
+<section id="see-also" class="level1" data-number="16">
+<h1 data-number="16"><span class="header-section-number">16</span> See Also</h1>
+<p>This post applies the framework from <a href="../rp-code-review-methodology/">Code Review for AI-Assisted R Package Development</a>, which covers the five-phase structure, the AI-pattern checklist, and the ownership test in the abstract. Read that post first if the phase-by-phase reasoning here is unfamiliar.</p>
+<p><strong>Key resources:</strong></p>
+<ul>
+<li><a href="https://github.com/rgt47/zzvim-R">zzvim-R</a> — the Neovim/Vim plugin used as the review environment throughout</li>
+<li><a href="https://adv-r.hadley.nz/debugging.html">Advanced R, 2nd ed.</a> — debugging tools chapter</li>
+<li><a href="https://cran.r-project.org/web/packages/policies.html">CRAN Repository Policy</a></li>
+<li><a href="https://testthat.r-lib.org/">testthat documentation</a></li>
+</ul>
+<hr>
+</section>
+<section id="reproducibility" class="level1" data-number="17">
+<h1 data-number="17"><span class="header-section-number">17</span> Reproducibility</h1>
+<p><strong>Source document:</strong> <code>docs/EXEMPLAR_CODE_REVIEW_ZZTAB2FIG.md</code>, from the <code>zzobj2fig</code> package (<code>~/prj/sfw/10-zzobj2fig/zzobj2fig/</code>). This post condenses that guide’s 10-part walkthrough; code excerpts and the <code>zzvim-R</code> command reference are reproduced from the source. Package metrics, coverage figures, and review verdicts reported above are carried over from the source document and have not been independently re-verified for this post.</p>
+<p><strong>Session information:</strong></p>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code>R version 4.6.1 (2026-06-24)
+Platform: aarch64-apple-darwin25.4.0
+Running under: macOS Tahoe 26.6.2
+
+Matrix products: default
+BLAS:   /opt/homebrew/Cellar/openblas/0.3.34/lib/libopenblasp-r0.3.34.dylib 
+LAPACK: /opt/homebrew/Cellar/r/4.6.1/lib/R/lib/libRlapack.dylib;  LAPACK version 3.12.1
+
+locale:
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+time zone: America/Los_Angeles
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+loaded via a namespace (and not attached):
+ [1] htmlwidgets_1.6.4 compiler_4.6.1    fastmap_1.2.0     cli_3.6.6        
+ [5] tools_4.6.1       htmltools_0.5.9   parallel_4.6.1    otel_0.2.0       
+ [9] yaml_2.3.12       rmarkdown_2.31    knitr_1.51        jsonlite_2.0.0   
+[13] xfun_0.58         digest_0.6.39     rlang_1.3.0       evaluate_1.0.5   </code></pre>
+</div>
+</div>
+<hr>
+<p><em>Rendered on 2026-08-18 at 11:00 PDT.</em><br> <em>Source: ~/prj/rgtlab/posts/rp-code-review-exemplar/analysis/report/index.qmd</em></p>
+<hr>
+</section>
+<section id="lets-connect" class="level1" data-number="18">
+<h1 data-number="18"><span class="header-section-number">18</span> Let’s Connect</h1>
+<p>Questions, corrections, or a report of where this walkthrough’s specifics no longer match a current <code>zzobj2fig</code> release are welcome in the comment thread below.</p>
+<ul>
+<li><strong>GitHub</strong>: <a href="https://github.com/rgt47">rgt47</a></li>
+<li><strong>Email</strong>: <a href="https://rgtlab.org/contact">Contact form</a></li>
+</ul>
+<!-- ============================================================================
+PRE-PUBLISH QA CHECKLIST — verify each item BEFORE setting draft: false
+
+[ ] YAML
+    [x] title, date, categories, description, image filled in
+    [x] document-type: "blog"
+    [ ] draft: false
+
+[ ] Visual design
+    [ ] 1 hero image (width=80%) present
+    [ ] Exactly 3 ambiance images ({.img-fluid} only) after Objectives,
+        after the function-review walkthrough, and before Lessons Learnt
+    [ ] media/images/README.md attributes every image
+
+[ ] Content quality
+    [x] Zero emoji anywhere
+    [x] Zero em dashes
+    [x] Single quotes preferred over double quotes in prose
+    [x] Epistemic disclosure present: coverage/verdict figures flagged as
+        carried over from source, not independently re-verified
+
+[ ] Cross-references
+    [x] See Also links to the companion methodology post
+    [x] Companion post's See Also links back here
+
+[ ] Render verification
+    [ ] quarto render index.qmd produces clean HTML with no warnings
+    [ ] Hero image displays in /blog/ listing card
+    [ ] Internal links resolve
+
+============================================================================ -->
+<section id="related-posts-in-this-cluster" class="level2" data-number="18.1">
+<h2 data-number="18.1" class="anchored" data-anchor-id="related-posts-in-this-cluster"><span class="header-section-number">18.1</span> Related posts in this cluster</h2>
+<p>This post is part of the <em>R Package Development and Testing</em> series. Recommended reading order:</p>
+<ol type="1">
+<li><a href="../rp-package-update-workflow/">Updating an R Package: A Complete Development Workflow</a></li>
+<li><a href="../rp-vim-r-repl-plugin/">Writing a Simple Vim Plugin for REPL Interaction</a></li>
+<li><a href="../rp-testing-data-analysis/">Testing Data Analysis Workflows in R</a></li>
+<li><a href="../rp-testthat-to-tinytest/">From testthat to tinytest: Converting an R Package Test Suite</a></li>
+<li><a href="../rp-code-review-methodology/">Code Review for AI-Assisted R Package Development</a></li>
+<li><strong>Exemplar Code Review: The zzobj2fig Package</strong> (this post)</li>
+</ol>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/focusonr\.org");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<input type="hidden" id="giscus-base-theme" value="light">
+<input type="hidden" id="giscus-alt-theme" value="light">
+<script>
+  function loadGiscus() {
+    // Function to get the theme based on body class
+    const getTheme = () => {
+      let baseTheme = document.getElementById('giscus-base-theme').value;
+      let altTheme = document.getElementById('giscus-alt-theme').value;
+      return document.body.classList.contains('quarto-dark') ? altTheme : baseTheme;
+    };
+    const script = document.createElement("script");
+    script.src = "https://giscus.app/client.js";
+    script.async = true;
+    script.dataset.repo = "rgt47/qblog";
+    script.dataset.repoId = "R_kgDOH6TO7A";
+    script.dataset.category = "General";
+    script.dataset.categoryId = "DIC_kwDOH6TO7M4CXqIi";
+    script.dataset.mapping = "pathname";
+    script.dataset.reactionsEnabled = "1";
+    script.dataset.emitMetadata = "0";
+    script.dataset.inputPosition = "bottom";
+    script.dataset.theme = getTheme();
+    script.dataset.lang = "en";
+    script.crossOrigin = "anonymous";
+    // Append the script to the desired div instead of at the end of the body
+    document.getElementById("quarto-content").appendChild(script);
+  }
+  loadGiscus();
+</script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Copyright 2023-2026, Ronald ‘Ryy’ G. Thomas. The lab’s other activities live at <a href="https://rgtlab.org">rgtlab.org</a>.</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47">
+      <i class="bi bi-github" role="img">
+</i> 
+    </a>
+  </li>  
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47">
+      <i class="bi bi-twitter" role="img">
+</i> 
+    </a>
+  </li>  
+</ul>
+    </div>
+  </div>
+</footer>
+
+<!-- Fix category filtering: Quarto's own filterListingCategory() compares
+     the base64+URI-encoded data-category value directly against
+     itemValues.categories.split(","), but itemValues.categories is ALSO
+     base64+URI-encoded as a whole (e.g. one blob decoding to
+     "r,data-visualization"), so the split never finds a comma to split on
+     and the raw-blob comparison never matches. Both sides must be decoded
+     before comparing. -->
+<script>
+window.addEventListener('DOMContentLoaded', function() {
+  setTimeout(function() {
+    function decodeCategory(value) {
+      try {
+        return decodeURIComponent(atob(value));
+      } catch (e) {
+        return value;
+      }
+    }
+
+    window.filterListingCategory = function(category) {
+      const listingIds = Object.keys(window['quarto-listings']);
+      for (const listingId of listingIds) {
+        const list = window['quarto-listings'][listingId];
+        if (list) {
+          if (category === '') {
+            list.filter();
+          } else {
+            const target = decodeCategory(category);
+            list.filter(function (item) {
+              const itemValues = item.values();
+              if (itemValues.categories !== null && itemValues.categories !== undefined) {
+                const categories = decodeCategory(itemValues.categories)
+                  .split(",")
+                  .map(c => c.trim());
+                return categories.includes(target);
+              } else {
+                return false;
+              }
+            });
+          }
+        }
+      }
+    };
+  }, 500);
+});
+</script>
+
+<!-- PDF view/download button for blog posts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Only add the button on post pages
+  if (window.location.pathname.includes('/posts/') && !window.location.pathname.endsWith('/posts/') && !window.location.pathname.endsWith('/posts/index.html')) {
+    var currentPath = window.location.pathname;
+    // Handle both /posts/name/ and /posts/name/index.html formats
+    var pdfPath;
+    if (currentPath.endsWith('/')) {
+      pdfPath = currentPath + 'index.pdf';
+    } else {
+      pdfPath = currentPath.replace('.html', '.pdf');
+    }
+
+    // Check if PDF exists first
+    fetch(pdfPath, { method: 'HEAD' })
+      .then(function(response) {
+        if (response.ok) {
+          // PDF exists, show download button
+          showDownloadButton(pdfPath);
+        }
+        // If PDF doesn't exist, don't show any button
+      })
+      .catch(function(error) {
+        // Error checking PDF, don't show any button
+      });
+  }
+});
+
+function showDownloadButton(pdfPath) {
+  var downloadBtn = document.createElement('div');
+  downloadBtn.className = 'pdf-download-button';
+
+  // Get file size if possible
+  fetch(pdfPath, { method: 'HEAD' })
+    .then(function(response) {
+      var size = response.headers.get('Content-Length');
+      var sizeText = '';
+
+      if (size) {
+        // Convert to MB or KB
+        var sizeInMB = size / (1024 * 1024);
+        if (sizeInMB >= 1) {
+          sizeText = ' (' + sizeInMB.toFixed(1) + ' MB)';
+        } else {
+          sizeText = ' (' + (size / 1024).toFixed(0) + ' KB)';
+        }
+      }
+
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' + sizeText +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    })
+    .catch(function() {
+      // Basic fallback if we can't get file size
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    });
+
+  // Find where to insert the button (right after the title block)
+  var titleBlock = document.querySelector('.quarto-title-meta');
+  if (titleBlock) {
+    titleBlock.after(downloadBtn);
+  }
+}
+</script>
+
+<style>
+.pdf-download-button {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+</style>
+
+
+
+
+</body></html>

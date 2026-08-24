@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ronald G. Thomas">
+<meta name="dcterms.date" content="2026-06-20">
+<meta name="description" content="A reproducible recipe for serving a multi-volume Quarto book series under a custom domain, with one subdomain per book, automatic SSL, and continuous deployment on every push.">
+
+<title>Hosting a Quarto Book Series on Netlify with Route 53 and GitHub Actions – focusonr</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-ab181d296742526fc851df428f4bd360.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": true,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "keyboard-shortcut": [
+    "?",
+    "/"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&amp;family=Open+Sans:ital,wght@0,400;0,600;1,400&amp;family=Fira+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<script src="https://kit.fontawesome.com/0fba9333d8.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+
+<!-- Custom meta tags for social sharing -->
+<meta property="og:site_name" content="focusonr">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@rgt47">
+
+<!-- Add responsive features -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<!-- Add analytics if needed -->
+<!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXX');
+</script> -->
+
+<!-- Add custom javascript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Remove code tools button completely
+  const codeButton = document.querySelector('.code-tools-button');
+  if (codeButton) {
+    codeButton.remove();
+  }
+  
+  // Add any custom JavaScript functionality here
+  
+  // Example: Add smooth scrolling
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      
+      document.querySelector(this.getAttribute('href')).scrollIntoView({
+        behavior: 'smooth'
+      });
+    });
+  });
+  
+  // Make sidebar category items clickable (but not TOC items)
+  const categoryLinks = {
+    'Programming & Development': '/posts/?category=Programming+%26+Development',
+    'Data Analysis & Visualization': '/posts/?category=Data+Analysis+%26+Visualization',
+    'Deployment & Operations': '/posts/?category=Deployment+%26+Operations',
+    'Development Environment': '/posts/?category=Development+Environment',
+    'Shiny Applications': '/posts/?category=Shiny+Applications',
+    'AI & Automation': '/posts/?category=AI+%26+Automation',
+    'System Administration': '/posts/?category=System+Administration'
+  };
+  
+  // Only target sidebar items that are not in the TOC
+  document.querySelectorAll('.sidebar-item-section .sidebar-item-text').forEach(item => {
+    // Skip if this is inside the TOC
+    if (item.closest('#TOC')) return;
+    
+    const text = item.textContent.trim();
+    if (categoryLinks[text]) {
+      item.addEventListener('click', function() {
+        window.location.href = categoryLinks[text];
+      });
+    }
+  });
+});
+</script>
+<meta name="quarto:status" content="draft">
+
+
+<meta property="og:title" content="Hosting a Quarto Book Series on Netlify with Route 53 and GitHub Actions – focusonr">
+<meta property="og:description" content="A reproducible recipe for serving a multi-volume Quarto book series under a custom domain, with one subdomain per book, automatic SSL, and continuous deployment on every push.">
+<meta property="og:image" content="https://focusonr.org/posts/pub-hosting-quarto-books-netlify/media/images/hero.png">
+<meta property="og:site_name" content="focusonr">
+<meta property="og:image:height" content="768">
+<meta property="og:image:width" content="1376">
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top"><div id="quarto-draft-alert" class="alert alert-warning"><i class="bi bi-pencil-square"></i>Draft</div>
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../index.html">
+    <span class="navbar-title">focusonr</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../blog/index.html"> 
+<span class="menu-text">Blog</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="https://rgtlab.org"> 
+<span class="menu-text">rgtlab.org</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47"> <i class="bi bi-twitter" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a></li>
+  <li><a href="#motivations" id="toc-motivations" class="nav-link" data-scroll-target="#motivations"><span class="header-section-number">2</span> Motivations</a></li>
+  <li><a href="#objectives" id="toc-objectives" class="nav-link" data-scroll-target="#objectives"><span class="header-section-number">3</span> Objectives</a></li>
+  <li><a href="#prerequisites" id="toc-prerequisites" class="nav-link" data-scroll-target="#prerequisites"><span class="header-section-number">4</span> Prerequisites</a></li>
+  <li><a href="#hosting-options-considered" id="toc-hosting-options-considered" class="nav-link" data-scroll-target="#hosting-options-considered"><span class="header-section-number">5</span> Hosting options considered</a></li>
+  <li><a href="#phase-1-create-a-netlify-site-per-book" id="toc-phase-1-create-a-netlify-site-per-book" class="nav-link" data-scroll-target="#phase-1-create-a-netlify-site-per-book"><span class="header-section-number">6</span> Phase 1: Create a Netlify site per book</a></li>
+  <li><a href="#phase-2-add-custom-subdomains-in-netlify" id="toc-phase-2-add-custom-subdomains-in-netlify" class="nav-link" data-scroll-target="#phase-2-add-custom-subdomains-in-netlify"><span class="header-section-number">7</span> Phase 2: Add custom subdomains in Netlify</a></li>
+  <li><a href="#phase-3-add-cname-records-in-route-53" id="toc-phase-3-add-cname-records-in-route-53" class="nav-link" data-scroll-target="#phase-3-add-cname-records-in-route-53"><span class="header-section-number">8</span> Phase 3: Add CNAME records in Route 53</a></li>
+  <li><a href="#phase-4-verify-dns-and-ssl" id="toc-phase-4-verify-dns-and-ssl" class="nav-link" data-scroll-target="#phase-4-verify-dns-and-ssl"><span class="header-section-number">9</span> Phase 4: Verify DNS and SSL</a></li>
+  <li><a href="#phase-5-confirm-each-books-site-url" id="toc-phase-5-confirm-each-books-site-url" class="nav-link" data-scroll-target="#phase-5-confirm-each-books-site-url"><span class="header-section-number">10</span> Phase 5: Confirm each book’s site-url</a></li>
+  <li><a href="#phase-6-continuous-deployment-with-github-actions" id="toc-phase-6-continuous-deployment-with-github-actions" class="nav-link" data-scroll-target="#phase-6-continuous-deployment-with-github-actions"><span class="header-section-number">11</span> Phase 6: Continuous deployment with GitHub Actions</a></li>
+  <li><a href="#verification" id="toc-verification" class="nav-link" data-scroll-target="#verification"><span class="header-section-number">12</span> Verification</a></li>
+  <li><a href="#things-to-watch-out-for" id="toc-things-to-watch-out-for" class="nav-link" data-scroll-target="#things-to-watch-out-for"><span class="header-section-number">13</span> Things to Watch Out For</a></li>
+  <li><a href="#optional-the-freeze-cache" id="toc-optional-the-freeze-cache" class="nav-link" data-scroll-target="#optional-the-freeze-cache"><span class="header-section-number">14</span> Optional: the freeze cache</a></li>
+  <li><a href="#what-did-we-learn" id="toc-what-did-we-learn" class="nav-link" data-scroll-target="#what-did-we-learn"><span class="header-section-number">15</span> What Did We Learn?</a></li>
+  <li><a href="#see-also" id="toc-see-also" class="nav-link" data-scroll-target="#see-also"><span class="header-section-number">16</span> See Also</a></li>
+  <li><a href="#reproducibility" id="toc-reproducibility" class="nav-link" data-scroll-target="#reproducibility"><span class="header-section-number">17</span> Reproducibility</a>
+  <ul class="collapse">
+  <li><a href="#related-posts-in-this-cluster" id="toc-related-posts-in-this-cluster" class="nav-link" data-scroll-target="#related-posts-in-this-cluster"><span class="header-section-number">17.1</span> Related posts in this cluster</a></li>
+  </ul></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="index.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content column-page-left" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Hosting a Quarto Book Series on Netlify with Route 53 and GitHub Actions</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">quarto</div>
+    <div class="quarto-category">netlify</div>
+    <div class="quarto-category">deployment</div>
+    <div class="quarto-category">reproducibility</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    A reproducible recipe for serving a multi-volume Quarto book series under a custom domain, with one subdomain per book, automatic SSL, and continuous deployment on every push.
+  </div>
+</div>
+
+
+<div class="quarto-title-meta column-page-left">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ronald G. Thomas </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">June 20, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/hero.png" class="img-fluid figure-img" style="width:80.0%"></p>
+<figcaption>Six bound textbooks whose spines each feed a luminous line into a single domain hub and back out to six separate rendered web pages, symbolising one domain serving six independently deployed Quarto books.</figcaption>
+</figure>
+</div>
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>A companion post, <a href="../../posts/pub-statistical-computing-textbook/">Building a statistical computing textbook in the Age of AI</a>, documented the authoring decisions behind the rgtlab Curriculum Project. It ended with a deployment to-do: configure the books to serve from <code>rgtlab.org</code>. This post discharges that to-do and generalises it. The series has since grown from two volumes to six, and all six are now hosted under one domain with one subdomain per book.</p>
+<p>The objective is a deployment in which day-to-day editing reduces to <code>git push</code>. No manual upload, no DNS edit, and no dashboard interaction should be required to publish a corrected sentence. The configuration that achieves this combines three services:</p>
+<ul>
+<li><strong>AWS Route 53</strong> as the DNS provider for <code>rgtlab.org</code>.</li>
+<li><strong>Netlify</strong> as the static-site host, one site per book.</li>
+<li><strong>GitHub Actions</strong> as the continuous-integration system that re-renders each book and re-deploys it on every push to <code>main</code>.</li>
+</ul>
+<p>The six books, their repositories, and their subdomains are:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Vol</th>
+<th>GitHub repo</th>
+<th>Subdomain</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td><code>rgt47/r-bootcamp</code></td>
+<td><code>r-bootcamp.rgtlab.org</code></td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>rgt47/practicum</code></td>
+<td><code>practicum.rgtlab.org</code></td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td><code>rgt47/scai</code></td>
+<td><code>scai.rgtlab.org</code></td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td><code>rgt47/scai-advanced</code></td>
+<td><code>scai-advanced.rgtlab.org</code></td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td><code>rgt47/applied-genai</code></td>
+<td><code>applied-genai.rgtlab.org</code></td>
+</tr>
+<tr class="even">
+<td>6</td>
+<td><code>rgt47/applied-methods</code></td>
+<td><code>applied-methods.rgtlab.org</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="motivations" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Motivations</h1>
+<ul>
+<li>A book under active revision is published continuously, not once. Any step that requires a human to remember a command is a step that eventually gets skipped, leaving the deployed copy stale relative to the source.</li>
+<li>Six independently authored volumes should deploy independently. A render failure in the advanced-methods volume must not block a correction to the boot-camp volume.</li>
+<li>Onboarding a seventh volume should be mechanical: one repository, one Netlify site, one DNS record, with no change to the existing six.</li>
+<li>The deployment should be reproducible from this document alone, so that the configuration survives a lost laptop or a change of maintainer.</li>
+</ul>
+</section>
+<section id="objectives" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Objectives</h1>
+<ol type="1">
+<li>Serve each book at its own subdomain of <code>rgtlab.org</code> over HTTPS, with certificates provisioned and renewed automatically.</li>
+<li>Re-render and re-deploy each book automatically on every push to <code>main</code>.</li>
+<li>Keep the books decoupled so that each deploys on its own schedule and fails in isolation.</li>
+<li>Document the per-book operation as a loop, so the recipe scales to additional volumes without rewriting.</li>
+</ol>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance1.png" class="img-fluid figure-img" style="height:3.5in"></p>
+<figcaption>Placeholder ambiance image; will be replaced with subject-specific imagery before publication.</figcaption>
+</figure>
+</div>
+</section>
+<section id="prerequisites" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Prerequisites</h1>
+<p>This process assumes:</p>
+<ul>
+<li>A registered domain (<code>rgtlab.org</code>) with its hosted zone in <strong>AWS Route 53</strong>.</li>
+<li>A <strong>Netlify</strong> account, free tier sufficient.</li>
+<li>A <strong>GitHub</strong> account with one repository per book under a common owner (<code>rgt47/</code>).</li>
+<li>Each book is a <strong>Quarto book</strong> (<code>_quarto.yml</code> at the repository root) that renders cleanly with <code>quarto render</code>.</li>
+<li><strong>Quarto 1.5+</strong> locally and pinned in CI. The book format changed non-trivially between 1.4 and 1.5.</li>
+</ul>
+</section>
+<section id="hosting-options-considered" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Hosting options considered</h1>
+<p>Three configurations were weighed before settling on subdomains.</p>
+<p><strong>Subdomains (chosen).</strong> Each book gets its own subdomain pointing to a separate Netlify site. DNS is one CNAME record per subdomain. Each book deploys independently. This is the simplest configuration and the one that scales most cleanly: a new volume is one more repository, one more site, and one more record.</p>
+<p><strong>Single site with subpaths.</strong> One Netlify site rooted at <code>rgtlab.org</code> renders all books into subdirectories of a single deploy (<code>rgtlab.org/docs/scai</code>). The drawback at six books is that one failed render blocks the entire deploy, coupling volumes that should be independent.</p>
+<p><strong>Proxy and rewrites.</strong> Each book keeps its own Netlify site, and a ‘shell’ site for <code>rgtlab.org</code> proxies requests via <code>status = 200</code> redirects. This preserves decoupling but introduces relative-path edge cases for CSS and image assets, which sometimes resolve at the shell domain rather than the proxied origin and require absolute URLs in each book’s Quarto configuration.</p>
+<p>The phases below describe the subdomain approach. Where a step says ‘for each book’, apply it to all six, substituting the relevant repository and subdomain.</p>
+</section>
+<section id="phase-1-create-a-netlify-site-per-book" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Phase 1: Create a Netlify site per book</h1>
+<p>This phase produces one Netlify site per book and the temporary <code>*.netlify.app</code> URLs that DNS will target.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> install <span class="at">-g</span> netlify-cli</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">netlify</span> login                       <span class="co"># opens browser; authorise</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>From each book’s source directory, publish:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ~/Dropbox/prj/tch/03-scai</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto</span> publish netlify</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>On first run, Quarto offers to create a new site. Confirm. It builds the book, uploads <code>_book/</code>, and prints a URL such as <code>https://random-name-12345.netlify.app</code>. Record each URL; Phase 3 needs them.</p>
+</section>
+<section id="phase-2-add-custom-subdomains-in-netlify" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Phase 2: Add custom subdomains in Netlify</h1>
+<p>For each site, in the Netlify dashboard:</p>
+<ol type="1">
+<li>Open <strong>Site configuration</strong> then <strong>Domain management</strong>.</li>
+<li>Choose <strong>Add a domain</strong> then <strong>Add a domain you already own</strong>.</li>
+<li>Enter the book’s subdomain (for example, <code>scai.rgtlab.org</code>), then <strong>Verify</strong> and <strong>Add domain</strong>.</li>
+<li>Click <strong>Check DNS configuration</strong> and copy the target hostname, which is the site’s full <code>*.netlify.app</code> name.</li>
+</ol>
+</section>
+<section id="phase-3-add-cname-records-in-route-53" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Phase 3: Add CNAME records in Route 53</h1>
+<p>For each subdomain, create one CNAME record in the <code>rgtlab.org</code> hosted zone:</p>
+<ul>
+<li><strong>Record name</strong>: the label only, such as <code>scai</code>. Route 53 appends <code>.rgtlab.org</code>; do not type the full domain.</li>
+<li><strong>Record type</strong>: <code>CNAME</code>.</li>
+<li><strong>Value</strong>: that book’s <code>*.netlify.app</code> hostname, with no <code>https://</code> and no trailing slash.</li>
+<li><strong>TTL</strong>: <code>300</code>, so mistakes correct quickly.</li>
+<li><strong>Routing policy</strong>: Simple routing.</li>
+</ul>
+<p>Repeat for <code>r-bootcamp</code>, <code>practicum</code>, <code>scai</code>, <code>scai-advanced</code>, <code>applied-genai</code>, and <code>applied-methods</code>.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance2.png" class="img-fluid figure-img" style="height:3.5in"></p>
+<figcaption>Placeholder ambiance image; will be replaced with subject-specific imagery before publication.</figcaption>
+</figure>
+</div>
+</section>
+<section id="phase-4-verify-dns-and-ssl" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> Phase 4: Verify DNS and SSL</h1>
+<p>DNS propagation for a fresh subdomain typically takes 1 to 10 minutes. Confirm every record at once:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> sub <span class="kw">in</span> r-bootcamp practicum scai scai-advanced <span class="dt">\</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>           applied-genai applied-methods<span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="bu">printf</span> <span class="st">'%-32s '</span> <span class="st">"</span><span class="va">$sub</span><span class="st">.rgtlab.org"</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="ex">dig</span> <span class="st">"</span><span class="va">$sub</span><span class="st">.rgtlab.org"</span> CNAME +short</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Each should return its <code>*.netlify.app</code> value. Netlify then requests a Let’s Encrypt certificate automatically, which provisions 1 to 5 minutes after DNS resolves. Visit each <code>https://&lt;subdomain&gt;.rgtlab.org</code> and confirm it serves over HTTPS with no warnings.</p>
+</section>
+<section id="phase-5-confirm-each-books-site-url" class="level1" data-number="10">
+<h1 data-number="10"><span class="header-section-number">10</span> Phase 5: Confirm each book’s site-url</h1>
+<p>Each book’s <code>_quarto.yml</code> records its public location so that absolute links, social-card metadata, and the sitemap match the deployed URL:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ~/Dropbox/prj/tch</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> d <span class="kw">in</span> 01-r-bootcamp 02-practicum 03-scai <span class="dt">\</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>         04-scai-advanced 05-applied-genai 06-applied-methods<span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="bu">printf</span> <span class="st">'%-20s '</span> <span class="st">"</span><span class="va">$d</span><span class="st">"</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">grep</span> <span class="at">-h</span> <span class="st">'site-url'</span> <span class="st">"</span><span class="va">$d</span><span class="st">/_quarto.yml"</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Every row should print the matching subdomain. If a URL ever changes, update <code>site-url</code>, re-render, and re-publish.</p>
+</section>
+<section id="phase-6-continuous-deployment-with-github-actions" class="level1" data-number="11">
+<h1 data-number="11"><span class="header-section-number">11</span> Phase 6: Continuous deployment with GitHub Actions</h1>
+<p>This phase replaces manual <code>quarto publish netlify</code> with automatic deployment on every push to <code>main</code>.</p>
+<p>First, gather credentials. Generate one Netlify personal access token (<strong>User settings</strong> then <strong>Applications</strong> then <strong>Personal access tokens</strong>), reused across every repository. Then copy each site’s <strong>Site ID</strong> (a UUID on its <strong>Site configuration</strong> page).</p>
+<p>For each repository, under <strong>Settings</strong> then <strong>Secrets and variables</strong> then <strong>Actions</strong>, add two secrets:</p>
+<ul>
+<li><code>NETLIFY_AUTH_TOKEN</code>: the personal access token.</li>
+<li><code>NETLIFY_SITE_ID</code>: that book’s own Site ID.</li>
+</ul>
+<p>Then add <code>.github/workflows/publish.yml</code>:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">name</span><span class="kw">:</span><span class="at"> Render and deploy to Netlify</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="fu">on</span><span class="kw">:</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">push</span><span class="kw">:</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">branches</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at">main</span><span class="kw">]</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">workflow_dispatch</span><span class="kw">:</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="fu">jobs</span><span class="kw">:</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">publish</span><span class="kw">:</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">runs-on</span><span class="kw">:</span><span class="at"> ubuntu-latest</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">steps</span><span class="kw">:</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> Check out repository</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">uses</span><span class="kw">:</span><span class="at"> actions/checkout@v4</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> Set up Quarto</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">uses</span><span class="kw">:</span><span class="at"> quarto-dev/quarto-actions/setup@v2</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">with</span><span class="kw">:</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">version</span><span class="kw">:</span><span class="at"> </span><span class="st">'1.5.57'</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> Set up R</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">uses</span><span class="kw">:</span><span class="at"> r-lib/actions/setup-r@v2</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">with</span><span class="kw">:</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">use-public-rspm</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> Install R package dependencies</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">uses</span><span class="kw">:</span><span class="at"> r-lib/actions/setup-r-dependencies@v2</span></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">with</span><span class="kw">:</span></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a><span class="fu">          packages</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>            any::knitr</span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>            any::rmarkdown</span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>            any::dplyr</span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>            any::ggplot2</span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a>            any::survival</span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a>            any::palmerpenguins</span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> Render book</span></span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">run</span><span class="kw">:</span><span class="at"> quarto render</span></span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> Deploy to Netlify</span></span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">uses</span><span class="kw">:</span><span class="at"> nwtgck/actions-netlify@v3</span></span>
+<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">with</span><span class="kw">:</span></span>
+<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">publish-dir</span><span class="kw">:</span><span class="at"> ./_book</span></span>
+<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">production-branch</span><span class="kw">:</span><span class="at"> main</span></span>
+<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">production-deploy</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
+<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">deploy-message</span><span class="kw">:</span><span class="at"> </span><span class="st">'GHA: ${{ github.event.head_commit.message }}'</span></span>
+<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">enable-pull-request-comment</span><span class="kw">:</span><span class="at"> </span><span class="ch">false</span></span>
+<span id="cb5-47"><a href="#cb5-47" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">overwrites-pull-request-comment</span><span class="kw">:</span><span class="at"> </span><span class="ch">false</span></span>
+<span id="cb5-48"><a href="#cb5-48" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">env</span><span class="kw">:</span></span>
+<span id="cb5-49"><a href="#cb5-49" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">NETLIFY_AUTH_TOKEN</span><span class="kw">:</span><span class="at"> ${{ secrets.NETLIFY_AUTH_TOKEN }}</span></span>
+<span id="cb5-50"><a href="#cb5-50" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">NETLIFY_SITE_ID</span><span class="kw">:</span><span class="at"> ${{ secrets.NETLIFY_SITE_ID }}</span></span>
+<span id="cb5-51"><a href="#cb5-51" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">timeout-minutes</span><span class="kw">:</span><span class="at"> </span><span class="dv">5</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The <code>packages:</code> list is per-book. Each workflow declares only the R packages that book evaluates during render, so the lists differ across repositories. The methods and advanced-methods volumes pull in <code>lme4</code>, <code>Matrix</code>, and <code>survival</code>; the boot-camp volume needs fewer. When a chapter introduces a new dependency, add it to that book’s list; a CI failure will name what is missing.</p>
+</section>
+<section id="verification" class="level1" data-number="12">
+<h1 data-number="12"><span class="header-section-number">12</span> Verification</h1>
+<p>After the first push, open the repository’s <strong>Actions</strong> tab and watch the run. The first run takes 4 to 8 minutes, dominated by R package installation; later runs take 2 to 3 minutes once the package cache is warm. A green run means the deployed subdomain is live with the new content.</p>
+</section>
+<section id="things-to-watch-out-for" class="level1" data-number="13">
+<h1 data-number="13"><span class="header-section-number">13</span> Things to Watch Out For</h1>
+<ol type="1">
+<li><p><strong>CNAME value must be bare.</strong> Route 53 rejects, or silently mis-resolves, a value that includes <code>https://</code> or a trailing slash. Enter only the <code>*.netlify.app</code> hostname.</p></li>
+<li><p><strong>SSL lags DNS.</strong> The Let’s Encrypt certificate provisions only after DNS resolves. A site that loads over HTTP but warns on HTTPS is usually mid-provisioning, not misconfigured. Wait a few minutes before debugging.</p></li>
+<li><p><strong>Each repository needs its own Site ID.</strong> The auth token is shared, but <code>NETLIFY_SITE_ID</code> is per book. Pasting one book’s Site ID into another’s secrets deploys the wrong book to the wrong subdomain.</p></li>
+<li><p><strong>Per-book package lists drift.</strong> A chapter ported from one volume into another may carry a dependency the destination book’s workflow does not install. The render fails in CI, not locally, because the local machine already has the package.</p></li>
+<li><p><strong>Pin the Quarto version in CI.</strong> The book format changed between 1.4 and 1.5. An unpinned <code>setup</code> action that floats to a future major version can change rendering behaviour without any source edit.</p></li>
+</ol>
+</section>
+<section id="optional-the-freeze-cache" class="level1" data-number="14">
+<h1 data-number="14"><span class="header-section-number">14</span> Optional: the freeze cache</h1>
+<p>Books with <code>execute: freeze: auto</code> can commit the <code>_freeze/</code> directory so CI reuses cached chunk output instead of re-executing every chunk on every push:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">'!_freeze/'</span> <span class="op">&gt;&gt;</span> .gitignore        <span class="co"># un-ignore if needed</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> add _freeze</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">"Commit Quarto freeze cache"</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> push</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>CI then re-executes only chunks whose source changed. The trade-off is repository growth, acceptable for the small, deterministic chunks typical of these books.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/ambiance3.png" class="img-fluid figure-img" style="height:3.5in"></p>
+<figcaption>Placeholder ambiance image; will be replaced with subject-specific imagery before publication.</figcaption>
+</figure>
+</div>
+</section>
+<section id="what-did-we-learn" class="level1" data-number="15">
+<h1 data-number="15"><span class="header-section-number">15</span> What Did We Learn?</h1>
+<ul>
+<li><strong>Subdomains decouple deployment.</strong> One site per book means a failed render in one volume never blocks another, and onboarding a new volume touches nothing in the existing ones.</li>
+<li><strong><code>git push</code> is the whole workflow.</strong> Once secrets and the workflow file are in place, publishing a correction requires no command beyond the commit that makes it.</li>
+<li><strong>Independence is configuration, not discipline.</strong> The decoupling holds because each repository carries its own Site ID, its own package list, and its own workflow, not because the author remembers to keep them separate.</li>
+<li><strong>The recipe scales by repetition.</strong> Every phase is a per-book loop. A seventh volume is the same six steps once more, plus one DNS record.</li>
+</ul>
+</section>
+<section id="see-also" class="level1" data-number="16">
+<h1 data-number="16"><span class="header-section-number">16</span> See Also</h1>
+<ul>
+<li><a href="../../posts/pub-statistical-computing-textbook/">Building a statistical computing textbook in the Age of AI</a>: the authoring decisions behind the books deployed here.</li>
+</ul>
+<p><strong>Key resources:</strong></p>
+<ul>
+<li><a href="https://quarto.org/docs/publishing/netlify.html">Quarto: Publishing to Netlify</a></li>
+<li><a href="https://docs.netlify.com/domains-https/custom-domains/">Netlify custom domains</a></li>
+<li><a href="https://docs.aws.amazon.com/route53/">AWS Route 53 documentation</a></li>
+<li><a href="https://github.com/nwtgck/actions-netlify">nwtgck/actions-netlify</a></li>
+</ul>
+</section>
+<section id="reproducibility" class="level1" data-number="17">
+<h1 data-number="17"><span class="header-section-number">17</span> Reproducibility</h1>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Component</th>
+<th>Version</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Quarto</td>
+<td>1.5.57</td>
+</tr>
+<tr class="even">
+<td>Netlify CLI</td>
+<td>current</td>
+</tr>
+<tr class="odd">
+<td>GitHub Actions runner</td>
+<td>ubuntu-latest</td>
+</tr>
+<tr class="even">
+<td>Last verified</td>
+<td>2026-06-20</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p><em>Draft. Hero image in place; <code>draft: true</code> pending a <code>quarto render</code> check and wiring into the post compendium.</em></p>
+<section id="related-posts-in-this-cluster" class="level2" data-number="17.1">
+<h2 data-number="17.1" class="anchored" data-anchor-id="related-posts-in-this-cluster"><span class="header-section-number">17.1</span> Related posts in this cluster</h2>
+<p>This post is part of the <em>Quarto, R Markdown, and Publishing</em> series. Recommended reading order:</p>
+<ol type="1">
+<li><a href="../pub-multi-language-quarto/">Multi-Language Quarto Documents on macOS</a></li>
+<li><a href="../pub-r-script-to-rmd/">Rapid Conversion of Draft R Scripts to Formal Rmd</a></li>
+<li><a href="../pub-statistical-computing-textbook/">Building a Statistical Computing Textbook</a></li>
+<li><a href="../pub-obs-r-screencasts/">Setting up OBS for Live R Coding Screencasts</a></li>
+<li><strong>Hosting a Quarto Book Series on Netlify</strong> (this post)</li>
+<li><a href="../pub-ai-course-policy-survey/">A Review and Proposal for Policy Regarding Generative AI Use in Graduate Biostatistics Courses</a></li>
+</ol>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/focusonr\.org");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<input type="hidden" id="giscus-base-theme" value="light">
+<input type="hidden" id="giscus-alt-theme" value="light">
+<script>
+  function loadGiscus() {
+    // Function to get the theme based on body class
+    const getTheme = () => {
+      let baseTheme = document.getElementById('giscus-base-theme').value;
+      let altTheme = document.getElementById('giscus-alt-theme').value;
+      return document.body.classList.contains('quarto-dark') ? altTheme : baseTheme;
+    };
+    const script = document.createElement("script");
+    script.src = "https://giscus.app/client.js";
+    script.async = true;
+    script.dataset.repo = "rgt47/qblog";
+    script.dataset.repoId = "R_kgDOH6TO7A";
+    script.dataset.category = "General";
+    script.dataset.categoryId = "DIC_kwDOH6TO7M4CXqIi";
+    script.dataset.mapping = "pathname";
+    script.dataset.reactionsEnabled = "1";
+    script.dataset.emitMetadata = "0";
+    script.dataset.inputPosition = "bottom";
+    script.dataset.theme = getTheme();
+    script.dataset.lang = "en";
+    script.crossOrigin = "anonymous";
+    // Append the script to the desired div instead of at the end of the body
+    document.getElementById("quarto-content").appendChild(script);
+  }
+  loadGiscus();
+</script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Copyright 2023-2026, Ronald ‘Ryy’ G. Thomas. The lab’s other activities live at <a href="https://rgtlab.org">rgtlab.org</a>.</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47">
+      <i class="bi bi-github" role="img">
+</i> 
+    </a>
+  </li>  
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47">
+      <i class="bi bi-twitter" role="img">
+</i> 
+    </a>
+  </li>  
+</ul>
+    </div>
+  </div>
+</footer>
+
+<!-- Fix category filtering: Quarto's own filterListingCategory() compares
+     the base64+URI-encoded data-category value directly against
+     itemValues.categories.split(","), but itemValues.categories is ALSO
+     base64+URI-encoded as a whole (e.g. one blob decoding to
+     "r,data-visualization"), so the split never finds a comma to split on
+     and the raw-blob comparison never matches. Both sides must be decoded
+     before comparing. -->
+<script>
+window.addEventListener('DOMContentLoaded', function() {
+  setTimeout(function() {
+    function decodeCategory(value) {
+      try {
+        return decodeURIComponent(atob(value));
+      } catch (e) {
+        return value;
+      }
+    }
+
+    window.filterListingCategory = function(category) {
+      const listingIds = Object.keys(window['quarto-listings']);
+      for (const listingId of listingIds) {
+        const list = window['quarto-listings'][listingId];
+        if (list) {
+          if (category === '') {
+            list.filter();
+          } else {
+            const target = decodeCategory(category);
+            list.filter(function (item) {
+              const itemValues = item.values();
+              if (itemValues.categories !== null && itemValues.categories !== undefined) {
+                const categories = decodeCategory(itemValues.categories)
+                  .split(",")
+                  .map(c => c.trim());
+                return categories.includes(target);
+              } else {
+                return false;
+              }
+            });
+          }
+        }
+      }
+    };
+  }, 500);
+});
+</script>
+
+<!-- PDF view/download button for blog posts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Only add the button on post pages
+  if (window.location.pathname.includes('/posts/') && !window.location.pathname.endsWith('/posts/') && !window.location.pathname.endsWith('/posts/index.html')) {
+    var currentPath = window.location.pathname;
+    // Handle both /posts/name/ and /posts/name/index.html formats
+    var pdfPath;
+    if (currentPath.endsWith('/')) {
+      pdfPath = currentPath + 'index.pdf';
+    } else {
+      pdfPath = currentPath.replace('.html', '.pdf');
+    }
+
+    // Check if PDF exists first
+    fetch(pdfPath, { method: 'HEAD' })
+      .then(function(response) {
+        if (response.ok) {
+          // PDF exists, show download button
+          showDownloadButton(pdfPath);
+        }
+        // If PDF doesn't exist, don't show any button
+      })
+      .catch(function(error) {
+        // Error checking PDF, don't show any button
+      });
+  }
+});
+
+function showDownloadButton(pdfPath) {
+  var downloadBtn = document.createElement('div');
+  downloadBtn.className = 'pdf-download-button';
+
+  // Get file size if possible
+  fetch(pdfPath, { method: 'HEAD' })
+    .then(function(response) {
+      var size = response.headers.get('Content-Length');
+      var sizeText = '';
+
+      if (size) {
+        // Convert to MB or KB
+        var sizeInMB = size / (1024 * 1024);
+        if (sizeInMB >= 1) {
+          sizeText = ' (' + sizeInMB.toFixed(1) + ' MB)';
+        } else {
+          sizeText = ' (' + (size / 1024).toFixed(0) + ' KB)';
+        }
+      }
+
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' + sizeText +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    })
+    .catch(function() {
+      // Basic fallback if we can't get file size
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    });
+
+  // Find where to insert the button (right after the title block)
+  var titleBlock = document.querySelector('.quarto-title-meta');
+  if (titleBlock) {
+    titleBlock.after(downloadBtn);
+  }
+}
+</script>
+
+<style>
+.pdf-download-button {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+</style>
+
+
+
+
+</body></html>

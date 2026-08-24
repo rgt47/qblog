@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ronald G. Thomas">
+<meta name="dcterms.date" content="2026-08-18">
+<meta name="description" content="A methodological framework for reviewing R packages built through human-AI collaboration, structured as five review phases plus an explicit test for whether the human author has earned ownership of the result.">
+
+<title>Code Review for AI-Assisted R Package Development – focusonr</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-ab181d296742526fc851df428f4bd360.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": true,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "keyboard-shortcut": [
+    "?",
+    "/"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&amp;family=Open+Sans:ital,wght@0,400;0,600;1,400&amp;family=Fira+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<script src="https://kit.fontawesome.com/0fba9333d8.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+
+<!-- Custom meta tags for social sharing -->
+<meta property="og:site_name" content="focusonr">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@rgt47">
+
+<!-- Add responsive features -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<!-- Add analytics if needed -->
+<!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXX');
+</script> -->
+
+<!-- Add custom javascript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Remove code tools button completely
+  const codeButton = document.querySelector('.code-tools-button');
+  if (codeButton) {
+    codeButton.remove();
+  }
+  
+  // Add any custom JavaScript functionality here
+  
+  // Example: Add smooth scrolling
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      
+      document.querySelector(this.getAttribute('href')).scrollIntoView({
+        behavior: 'smooth'
+      });
+    });
+  });
+  
+  // Make sidebar category items clickable (but not TOC items)
+  const categoryLinks = {
+    'Programming & Development': '/posts/?category=Programming+%26+Development',
+    'Data Analysis & Visualization': '/posts/?category=Data+Analysis+%26+Visualization',
+    'Deployment & Operations': '/posts/?category=Deployment+%26+Operations',
+    'Development Environment': '/posts/?category=Development+Environment',
+    'Shiny Applications': '/posts/?category=Shiny+Applications',
+    'AI & Automation': '/posts/?category=AI+%26+Automation',
+    'System Administration': '/posts/?category=System+Administration'
+  };
+  
+  // Only target sidebar items that are not in the TOC
+  document.querySelectorAll('.sidebar-item-section .sidebar-item-text').forEach(item => {
+    // Skip if this is inside the TOC
+    if (item.closest('#TOC')) return;
+    
+    const text = item.textContent.trim();
+    if (categoryLinks[text]) {
+      item.addEventListener('click', function() {
+        window.location.href = categoryLinks[text];
+      });
+    }
+  });
+});
+</script>
+<meta name="quarto:status" content="draft">
+
+
+<meta property="og:title" content="Code Review for AI-Assisted R Package Development – focusonr">
+<meta property="og:description" content="A methodological framework for reviewing R packages built through human-AI collaboration, structured as five review phases plus an explicit test for whether the human author has earned ownership of the result.">
+<meta property="og:image" content="https://focusonr.org/posts/rp-code-review-methodology/media/images/hero.jpg">
+<meta property="og:site_name" content="focusonr">
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top"><div id="quarto-draft-alert" class="alert alert-warning"><i class="bi bi-pencil-square"></i>Draft</div>
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../index.html">
+    <span class="navbar-title">focusonr</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../blog/index.html"> 
+<span class="menu-text">Blog</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="https://rgtlab.org"> 
+<span class="menu-text">rgtlab.org</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47"> <i class="bi bi-twitter" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a>
+  <ul class="collapse">
+  <li><a href="#motivations" id="toc-motivations" class="nav-link" data-scroll-target="#motivations"><span class="header-section-number">1.1</span> Motivations</a></li>
+  <li><a href="#objectives" id="toc-objectives" class="nav-link" data-scroll-target="#objectives"><span class="header-section-number">1.2</span> Objectives</a></li>
+  </ul></li>
+  <li><a href="#what-is-this-framework-for" id="toc-what-is-this-framework-for" class="nav-link" data-scroll-target="#what-is-this-framework-for"><span class="header-section-number">2</span> What Is This Framework For?</a></li>
+  <li><a href="#prerequisites" id="toc-prerequisites" class="nav-link" data-scroll-target="#prerequisites"><span class="header-section-number">3</span> Prerequisites</a></li>
+  <li><a href="#the-five-review-phases" id="toc-the-five-review-phases" class="nav-link" data-scroll-target="#the-five-review-phases"><span class="header-section-number">4</span> The Five Review Phases</a>
+  <ul class="collapse">
+  <li><a href="#phase-1-structural-review" id="toc-phase-1-structural-review" class="nav-link" data-scroll-target="#phase-1-structural-review"><span class="header-section-number">4.1</span> Phase 1: Structural Review</a></li>
+  <li><a href="#phase-2-function-by-function-review" id="toc-phase-2-function-by-function-review" class="nav-link" data-scroll-target="#phase-2-function-by-function-review"><span class="header-section-number">4.2</span> Phase 2: Function-by-Function Review</a>
+  <ul class="collapse">
+  <li><a href="#patterns-specific-to-ai-generated-code" id="toc-patterns-specific-to-ai-generated-code" class="nav-link" data-scroll-target="#patterns-specific-to-ai-generated-code"><span class="header-section-number">4.2.1</span> Patterns specific to AI-generated code</a></li>
+  </ul></li>
+  <li><a href="#phase-3-test-suite-review" id="toc-phase-3-test-suite-review" class="nav-link" data-scroll-target="#phase-3-test-suite-review"><span class="header-section-number">4.3</span> Phase 3: Test Suite Review</a></li>
+  <li><a href="#phase-4-integration-and-system-review" id="toc-phase-4-integration-and-system-review" class="nav-link" data-scroll-target="#phase-4-integration-and-system-review"><span class="header-section-number">4.4</span> Phase 4: Integration and System Review</a></li>
+  <li><a href="#phase-5-security-and-safety-review" id="toc-phase-5-security-and-safety-review" class="nav-link" data-scroll-target="#phase-5-security-and-safety-review"><span class="header-section-number">4.5</span> Phase 5: Security and Safety Review</a></li>
+  </ul></li>
+  <li><a href="#documentation-review" id="toc-documentation-review" class="nav-link" data-scroll-target="#documentation-review"><span class="header-section-number">5</span> Documentation Review</a></li>
+  <li><a href="#annotation-and-severity" id="toc-annotation-and-severity" class="nav-link" data-scroll-target="#annotation-and-severity"><span class="header-section-number">6</span> Annotation and Severity</a></li>
+  <li><a href="#remediation-and-final-verification" id="toc-remediation-and-final-verification" class="nav-link" data-scroll-target="#remediation-and-final-verification"><span class="header-section-number">7</span> Remediation and Final Verification</a></li>
+  <li><a href="#per-package-review-checklist" id="toc-per-package-review-checklist" class="nav-link" data-scroll-target="#per-package-review-checklist"><span class="header-section-number">8</span> Per-Package Review Checklist</a></li>
+  <li><a href="#things-to-watch-out-for" id="toc-things-to-watch-out-for" class="nav-link" data-scroll-target="#things-to-watch-out-for"><span class="header-section-number">9</span> Things to Watch Out For</a></li>
+  <li><a href="#lessons-learnt" id="toc-lessons-learnt" class="nav-link" data-scroll-target="#lessons-learnt"><span class="header-section-number">10</span> Lessons Learnt</a></li>
+  <li><a href="#limitations" id="toc-limitations" class="nav-link" data-scroll-target="#limitations"><span class="header-section-number">11</span> Limitations</a></li>
+  <li><a href="#opportunities-for-improvement" id="toc-opportunities-for-improvement" class="nav-link" data-scroll-target="#opportunities-for-improvement"><span class="header-section-number">12</span> Opportunities for Improvement</a></li>
+  <li><a href="#establishing-ownership" id="toc-establishing-ownership" class="nav-link" data-scroll-target="#establishing-ownership"><span class="header-section-number">13</span> Establishing Ownership</a></li>
+  <li><a href="#wrapping-up" id="toc-wrapping-up" class="nav-link" data-scroll-target="#wrapping-up"><span class="header-section-number">14</span> Wrapping Up</a>
+  <ul class="collapse">
+  <li><a href="#what-did-we-learn" id="toc-what-did-we-learn" class="nav-link" data-scroll-target="#what-did-we-learn"><span class="header-section-number">14.1</span> What Did We Learn?</a></li>
+  </ul></li>
+  <li><a href="#see-also" id="toc-see-also" class="nav-link" data-scroll-target="#see-also"><span class="header-section-number">15</span> See Also</a></li>
+  <li><a href="#reproducibility" id="toc-reproducibility" class="nav-link" data-scroll-target="#reproducibility"><span class="header-section-number">16</span> Reproducibility</a></li>
+  <li><a href="#lets-connect" id="toc-lets-connect" class="nav-link" data-scroll-target="#lets-connect"><span class="header-section-number">17</span> Let’s Connect</a>
+  <ul class="collapse">
+  <li><a href="#related-posts-in-this-cluster" id="toc-related-posts-in-this-cluster" class="nav-link" data-scroll-target="#related-posts-in-this-cluster"><span class="header-section-number">17.1</span> Related posts in this cluster</a></li>
+  </ul></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="index.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content column-page-left" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Code Review for AI-Assisted R Package Development</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">r</div>
+    <div class="quarto-category">r-packages</div>
+    <div class="quarto-category">code-review</div>
+    <div class="quarto-category">ai-assisted-development</div>
+    <div class="quarto-category">testing</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    A methodological framework for reviewing R packages built through human-AI collaboration, structured as five review phases plus an explicit test for whether the human author has earned ownership of the result.
+  </div>
+</div>
+
+
+<div class="quarto-title-meta column-page-left">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ronald G. Thomas </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">August 18, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<!-- ============================================================================
+AUTHOR PROVIDES — concrete inputs the blogger must supply
+
+YAML FRONT MATTER
+  [x] title, date, categories, description, image filled in
+  [ ] draft: false    — flip when ready
+
+IMAGES (4 total: hero + 3 ambiance, all in media/images/)
+  [ ] Hero image (80% width)
+  [ ] Ambiance image 1 — after Objectives
+  [ ] Ambiance image 2 — mid-body, after the phase walkthrough
+  [ ] Ambiance image 3 — before Lessons Learnt
+  [ ] media/images/README.md — sources + attribution for every image
+
+SOURCE
+  Adapted from docs/CODE_REVIEW_METHODOLOGY.md in the zzobj2fig package
+  (~/prj/sfw/10-zzobj2fig/zzobj2fig/docs/). This post is a direct
+  translation of that white paper into blog format; content has been
+  reorganised for narrative flow but no methodological claims have been
+  added beyond the source document.
+============================================================================ -->
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="media/images/hero.jpg" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:80.0%"></p>
+</figure>
+</div>
+<p><em>A design authored by a human and a package implemented by an assistant still needs one owner who can defend every line: this is the checklist for becoming that owner.</em></p>
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>An increasingly common development pattern pairs a human architect, who designs package structure, API, and behaviour, with an AI assistant that writes the implementation and the test suite. The arrangement is productive, but it creates a responsibility gap. The human author’s name goes on the package, and with it the obligation to understand, maintain, and defend every line of code, regardless of who typed it.</p>
+<p>This post presents a methodological framework for closing that gap: a structured code review process for R packages developed through human-AI collaboration. It synthesises established code review practice with considerations specific to AI-generated code, and it ends with an explicit ownership test rather than a vague sense that the review “went well.”</p>
+<section id="motivations" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="motivations"><span class="header-section-number">1.1</span> Motivations</h2>
+<ul>
+<li><strong>The responsibility gap is real, not rhetorical.</strong> An author who cannot explain a function’s implementation cannot debug it, extend it, or defend it to a CRAN reviewer.</li>
+<li><strong>AI-generated code has characteristic failure modes.</strong> Over- engineering, hallucinated functionality, and pattern mimicry do not show up the same way in human-written code, so a generic review checklist misses them.</li>
+<li><strong>Coverage metrics are a floor, not a review.</strong> A package can reach 100% line coverage while every assertion checks nothing meaningful.</li>
+<li><strong>Ownership needs a definition, not a feeling.</strong> “I reviewed it” and “I can rebuild this from memory” are different claims, and only the second one licenses shipping the package under your name.</li>
+</ul>
+</section>
+<section id="objectives" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="objectives"><span class="header-section-number">1.2</span> Objectives</h2>
+<ol type="1">
+<li>Define the five review phases (structural, function-by-function, test suite, integration/system, security) and what each phase is for.</li>
+<li>Catalogue the AI-generated code patterns that deserve specific scrutiny during function review.</li>
+<li>Provide a concrete note-taking and severity-classification system for tracking findings through remediation.</li>
+<li>Establish a verifiable test for “ownership”: what an author must be able to do, unaided, before claiming the package as their own.</li>
+</ol>
+<p><img src="media/images/ambiance1.jpg" class="img-fluid"></p>
+</section>
+</section>
+<section id="what-is-this-framework-for" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> What Is This Framework For?</h1>
+<p>The scope is deliberately narrow. It addresses review of R packages where a human author defined requirements, architecture, and design decisions, an AI assistant wrote the implementation code and tests, and the author now seeks to establish complete ownership and understanding of the result before it ships. It is not a general code review guide, and it does not replace <code>R CMD check</code> or CRAN’s own policies; it sits alongside both.</p>
+<p>A thorough review in this context serves five purposes: comprehension (the author understands every implementation detail), correctness (the code does what it claims), quality (it meets ordinary maintainability standards), security (it introduces no new vulnerabilities), and consistency (the implementation matches the stated design, rather than drifting toward whatever the assistant found convenient).</p>
+</section>
+<section id="prerequisites" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Prerequisites</h1>
+<p>Before starting, assemble the original design documents and requirements, the package <code>DESCRIPTION</code> and <code>README</code>, any conversation logs or prompts used during development, existing test results and coverage reports, and <code>R CMD check</code> output. Then set up a working environment:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Install the package in development mode</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">load_all</span>()</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate fresh documentation</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">document</span>()</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Run initial quality checks</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">check</span>()</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>rcmdcheck<span class="sc">::</span><span class="fu">rcmdcheck</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Static analysis tooling worth having installed before the review starts: <code>lintr</code> for style and likely-error detection, <code>covr</code> for coverage measurement, <code>goodpractice</code> for a broader quality assessment, and <code>cyclocomp</code> for complexity metrics.</p>
+</section>
+<section id="the-five-review-phases" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> The Five Review Phases</h1>
+<section id="phase-1-structural-review" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="phase-1-structural-review"><span class="header-section-number">4.1</span> Phase 1: Structural Review</h2>
+<p>Begin at the package level, before looking at any individual function.</p>
+<p><strong>File structure.</strong> Confirm the package follows standard R package conventions (<code>DESCRIPTION</code>, <code>NAMESPACE</code>, <code>R/</code>, <code>man/</code>, <code>tests/testthat/</code>, <code>vignettes/</code>, <code>inst/</code>, <code>data/</code>).</p>
+<p><strong>Dependency audit.</strong> For every entry in <code>Imports</code>, ask whether it is actually necessary, whether it belongs in <code>Suggests</code> instead, whether its version constraint is appropriate, and whether it introduces a security or maintenance concern of its own.</p>
+<p><strong>Export surface.</strong> Read the <code>NAMESPACE</code>. Are only the functions that are meant to be public actually exported? Is the API surface as small as the design allows, with internal helpers kept private?</p>
+</section>
+<section id="phase-2-function-by-function-review" class="level2" data-number="4.2">
+<h2 data-number="4.2" class="anchored" data-anchor-id="phase-2-function-by-function-review"><span class="header-section-number">4.2</span> Phase 2: Function-by-Function Review</h2>
+<p>This is the core of the process. For every exported and internal function, work through five questions in order:</p>
+<p><strong>Correctness.</strong> Does the function produce the expected output for representative inputs? Are edge cases handled? Does it fail with an informative error rather than a cryptic one?</p>
+<p><strong>Design alignment.</strong> Does the implementation match the intended design, or has the assistant introduced patterns that were not requested?</p>
+<p><strong>Input validation.</strong> Are argument types checked where it matters? Are bounds enforced? Do the default arguments make sense?</p>
+<p><strong>Documentation quality.</strong> Does the roxygen2 block describe actual behaviour? Are all parameters documented, is the return value specified, and do the examples run without error?</p>
+<p><strong>Code clarity.</strong> Can you explain what each line does and why? Are names descriptive and consistent across the file?</p>
+<p>For each function, read the documentation before the implementation, trace the happy path with typical valid inputs, then trace at least one failure path with an invalid or edge-case input, verify that the test suite actually exercises the behaviour just traced, and deliberately question any assumption the code makes implicitly.</p>
+<section id="patterns-specific-to-ai-generated-code" class="level3" data-number="4.2.1">
+<h3 data-number="4.2.1" class="anchored" data-anchor-id="patterns-specific-to-ai-generated-code"><span class="header-section-number">4.2.1</span> Patterns specific to AI-generated code</h3>
+<p>A handful of patterns recur often enough in assistant-written code to warrant a dedicated pass:</p>
+<ul>
+<li><strong>Over-engineering.</strong> Abstraction or generality beyond what the requirements called for.</li>
+<li><strong>Defensive redundancy.</strong> Checks or fallbacks that duplicate a guarantee already made elsewhere.</li>
+<li><strong>Pattern mimicry.</strong> Code that looks correct because it resembles a familiar idiom, while missing a requirement specific to this package.</li>
+<li><strong>Inconsistent style.</strong> Naming or structural variation across functions that a single author would not have introduced.</li>
+<li><strong>Hallucinated functionality.</strong> References to functions, arguments, or packages that do not exist.</li>
+<li><strong>Outdated patterns.</strong> Deprecated functions or superseded approaches that were correct at some point in the assistant’s training data but are not the current recommendation.</li>
+</ul>
+</section>
+</section>
+<section id="phase-3-test-suite-review" class="level2" data-number="4.3">
+<h2 data-number="4.3" class="anchored" data-anchor-id="phase-3-test-suite-review"><span class="header-section-number">4.3</span> Phase 3: Test Suite Review</h2>
+<p>Coverage numbers are a starting point, not a conclusion:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>coverage <span class="ot">&lt;-</span> covr<span class="sc">::</span><span class="fu">package_coverage</span>()</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>covr<span class="sc">::</span><span class="fu">report</span>(coverage)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>High coverage does not guarantee test quality. For each test file, separately assess whether the assertions check substantive behaviour or merely that the code runs without erroring, whether boundary conditions are tested, whether expected failures are verified rather than only successes, whether tests are independent of one another’s side effects, and whether a reader can tell what each test is meant to validate.</p>
+<p>Then check correspondence in both directions: every documented behaviour should have a corresponding test, and every test should correspond to a documented or intended behaviour. Tests that check conditions no longer relevant to the design are as much a maintenance liability as missing tests.</p>
+</section>
+<section id="phase-4-integration-and-system-review" class="level2" data-number="4.4">
+<h2 data-number="4.4" class="anchored" data-anchor-id="phase-4-integration-and-system-review"><span class="header-section-number">4.4</span> Phase 4: Integration and System Review</h2>
+<p>Trace data flow across function boundaries rather than within a single function. Do the functions compose correctly when chained? Are intermediate data structures consistent from one stage to the next? Identify and evaluate any state management: global variables or options, environment modifications, file system operations, external connections. Verify error propagation: are errors caught at the right level, do the messages carry enough context to act on, and is cleanup performed correctly when something fails partway through?</p>
+</section>
+<section id="phase-5-security-and-safety-review" class="level2" data-number="4.5">
+<h2 data-number="4.5" class="anchored" data-anchor-id="phase-5-security-and-safety-review"><span class="header-section-number">4.5</span> Phase 5: Security and Safety Review</h2>
+<p>Examine every user-facing input for the standard vulnerability classes: unsanitised input used in file paths, input passed to system commands, query construction, and serialization or deserialization of untrusted data. For network and file system operations, confirm connections are closed, temporary files are cleaned up, credentials are handled appropriately, and URLs are validated before use. Finally, consider the security posture of the dependency chain itself: are the dependencies actively maintained, do any have known vulnerabilities, and is the chain as small as the design allows?</p>
+<p><img src="media/images/ambiance2.jpg" class="img-fluid"></p>
+</section>
+</section>
+<section id="documentation-review" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Documentation Review</h1>
+<p>User-facing documentation and developer documentation get separate passes. The <code>README</code> should state the package’s purpose clearly, give installation instructions, include a basic usage example, and point to further documentation. Vignettes should build without errors, present coherent workflows with realistic examples, and complement rather than duplicate the function-level documentation. Internal documentation should explain any non-obvious algorithm, record the reasoning behind design decisions, and document the contribution process if the package expects one.</p>
+</section>
+<section id="annotation-and-severity" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Annotation and Severity</h1>
+<p>Maintain structured notes during the review rather than relying on memory. A minimal per-function template:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">## Function: function_name</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="fu">### Status: [Reviewed | Needs Changes | Approved]</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="fu">### Understanding</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co">[</span><span class="ot">Summary of what the function does, in your own words</span><span class="co">]</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="fu">### Concerns</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Issue 1</span><span class="co">]</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Issue 2</span><span class="co">]</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="fu">### Questions</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="co">[</span><span class="ot">Question for further investigation</span><span class="co">]</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="fu">### Changes Required</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> Change 1</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> Change 2</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Classify every finding by severity: <strong>Critical</strong> (incorrect behaviour, a security vulnerability, or a data-corruption risk), <strong>Major</strong> (a significant deviation from requirements or poor error handling), <strong>Minor</strong> (style inconsistency, a documentation gap, or a small inefficiency), or <strong>Enhancement</strong> (a suggestion beyond the current requirements). The severity tier determines the order of remediation, not whether an issue gets fixed at all.</p>
+</section>
+<section id="remediation-and-final-verification" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Remediation and Final Verification</h1>
+<p>Work through issues in severity order: critical issues affecting correctness or security first, then major issues affecting usability or maintainability, then minor issues and enhancements as time allows. For each fix, understand the root cause before touching the code, implement the fix yourself rather than delegating it back to the assistant without understanding it, add or modify a test to prevent regression, and update documentation if the observable behaviour changed.</p>
+<p>After remediation, re-run the full test suite and <code>R CMD check</code>, confirm coverage has not decreased, and review the diff in version control before considering the issue closed. Before calling the review complete, run the full verification pass:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Full check</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">check</span>()</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Test coverage</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>covr<span class="sc">::</span><span class="fu">package_coverage</span>()</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Additional static analysis</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>lintr<span class="sc">::</span><span class="fu">lint_package</span>()</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>goodpractice<span class="sc">::</span><span class="fu">gp</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Then test installation in a clean environment (<code>remove.packages()</code> followed by <code>devtools::install()</code>) and run every example in the documentation with <code>devtools::run_examples()</code>.</p>
+<p><img src="media/images/ambiance3.jpg" class="img-fluid"></p>
+</section>
+<section id="per-package-review-checklist" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Per-Package Review Checklist</h1>
+<p>The five phases above are the reasoning behind this checklist; the checklist itself is what to actually run through for a given package. Copy it per package rather than trying to hold it in memory across multiple reviews in progress at once.</p>
+<p><strong>Phase 1: Structural</strong></p>
+<ul class="task-list">
+<li><label><input type="checkbox">File structure follows standard R package conventions</label></li>
+<li><label><input type="checkbox">Every <code>Imports</code> entry is necessary, correctly tiered (<code>Imports</code> vs <code>Suggests</code>), and version-constrained appropriately</label></li>
+<li><label><input type="checkbox"><code>NAMESPACE</code> exports only what is meant to be public</label></li>
+</ul>
+<p><strong>Phase 2: Function-by-function</strong></p>
+<ul class="task-list">
+<li><label><input type="checkbox">Every exported and internal function reviewed for correctness, design alignment, input validation, documentation quality, and code clarity</label></li>
+<li><label><input type="checkbox">Happy path and at least one failure path traced for each function, with the test suite confirmed to exercise both</label></li>
+<li><label><input type="checkbox">Every AI-generated-code pattern in this post’s list (over-engineering, defensive redundancy, pattern mimicry, inconsistent style, hallucinated functionality, outdated patterns) checked for, not just read past</label></li>
+</ul>
+<p><strong>Phase 3: Test suite</strong></p>
+<ul class="task-list">
+<li><label><input type="checkbox">Coverage report reviewed file by file, not just as a percentage</label></li>
+<li><label><input type="checkbox">A sample of test bodies read to confirm assertions check substantive behavior, not just that the code runs</label></li>
+<li><label><input type="checkbox">Every documented behavior has a corresponding test, and every test corresponds to a documented or intended behavior</label></li>
+</ul>
+<p><strong>Phase 4: Integration and system</strong></p>
+<ul class="task-list">
+<li><label><input type="checkbox">Data flow traced across function boundaries, not just within individual functions</label></li>
+<li><label><input type="checkbox">State management (globals, options, environment modifications, file system, external connections) identified and evaluated</label></li>
+<li><label><input type="checkbox">Error propagation verified: caught at the right level, with actionable messages and correct cleanup on partial failure</label></li>
+</ul>
+<p><strong>Phase 5: Security and safety</strong></p>
+<ul class="task-list">
+<li><label><input type="checkbox">Every user-facing input checked against the standard vulnerability classes (unsanitized paths, shell commands, query construction, deserialization)</label></li>
+<li><label><input type="checkbox">Network and file system operations confirmed to close connections, clean up temporary files, and validate URLs</label></li>
+<li><label><input type="checkbox">Dependency chain reviewed for maintenance status and known vulnerabilities</label></li>
+</ul>
+<p><strong>Before shipping: ownership sign-off</strong></p>
+<ul class="task-list">
+<li><label><input type="checkbox">Can explain any function’s purpose and implementation without referring to the code</label></li>
+<li><label><input type="checkbox">Can predict the function’s behavior for a novel input</label></li>
+<li><label><input type="checkbox">Can identify where a new requirement would require a change</label></li>
+<li><label><input type="checkbox">Can debug an issue without AI assistance</label></li>
+<li><label><input type="checkbox">Can respond to a user’s issue, review an external contribution, and extend the package’s functionality unaided</label></li>
+</ul>
+<p>A “no” anywhere in this checklist is a blocker, not a note for later; see Establishing Ownership below for what each unchecked box actually costs if it ships unresolved.</p>
+</section>
+<section id="things-to-watch-out-for" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> Things to Watch Out For</h1>
+<ul>
+<li><strong>Coverage as a proxy for quality.</strong> A test that asserts nothing meaningful still counts toward the coverage percentage.</li>
+<li><strong>Delegating the fix back to the assistant.</strong> Understanding the root cause and then asking the assistant to patch it is not the same as understanding the fix; do the remediation yourself.</li>
+<li><strong>Treating hallucinated functionality as a rare edge case.</strong> It surfaces often enough in assistant-written code that a dedicated existence check for every referenced function and package is worth the time.</li>
+<li><strong>Reviewing functions in file order instead of dependency order.</strong> Reviewing a caller before its callee means re-reading context twice; work from the bottom of the dependency graph up.</li>
+<li><strong>Skipping the “why,” not just the “what.”</strong> A function can be correct and still misaligned with the stated design; design alignment is a separate question from correctness.</li>
+<li><strong>Conflating “reviewed” with “understood.”</strong> The annotation template’s “Understanding” field is not decorative; if you cannot fill it in from memory, the function has not actually been reviewed.</li>
+</ul>
+</section>
+<section id="lessons-learnt" class="level1" data-number="10">
+<h1 data-number="10"><span class="header-section-number">10</span> Lessons Learnt</h1>
+<p><strong>Conceptual understanding:</strong></p>
+<ul>
+<li>Ownership is a testable claim, not a feeling of familiarity.</li>
+<li>Coverage and correctness are different axes; a review needs both.</li>
+<li>AI-generated code has a distinct failure signature (over-engineering, mimicry, hallucination) that a generic checklist will not catch.</li>
+</ul>
+<p><strong>Technical:</strong></p>
+<ul>
+<li><code>covr::package_coverage()</code> plus <code>covr::report()</code> gives a navigable, file-by-file coverage view, not just a percentage.</li>
+<li><code>goodpractice::gp()</code> and <code>lintr::lint_package()</code> catch a different class of issue than <code>R CMD check</code> and are worth running separately.</li>
+<li>A clean-environment install/reinstall test surfaces dependency issues that a <code>devtools::load_all()</code> session will never expose.</li>
+</ul>
+<p><strong>Gotchas:</strong></p>
+<ul>
+<li>High coverage can mask assertion-free tests; read a sample of test bodies, not just the coverage report.</li>
+<li><code>R CMD check</code> passing does not imply the design was followed; that requires the separate design-alignment pass.</li>
+<li>A function’s documentation can describe intended behaviour accurately while the implementation has drifted from it; verify both directions.</li>
+</ul>
+</section>
+<section id="limitations" class="level1" data-number="11">
+<h1 data-number="11"><span class="header-section-number">11</span> Limitations</h1>
+<ul>
+<li>The framework is scoped to R packages specifically; the phase structure generalises, but the tooling references (<code>covr</code>, <code>lintr</code>, <code>goodpractice</code>) do not transfer to other languages without substitution.</li>
+<li>It assumes the human author already has enough R fluency to evaluate correctness and design alignment; it is not a tutorial on reading R.</li>
+<li>It does not specify how much reviewer time is proportionate to package size or risk; that judgment is left to the reviewer.</li>
+<li>The ownership test in the final section is self-administered; it provides no external verification that the answers given are accurate.</li>
+</ul>
+</section>
+<section id="opportunities-for-improvement" class="level1" data-number="12">
+<h1 data-number="12"><span class="header-section-number">12</span> Opportunities for Improvement</h1>
+<ol type="1">
+<li>A companion checklist scaled down for small, low-risk packages, where the full five-phase process is disproportionate.</li>
+<li>Worked severity-classification examples, since “Major” versus “Critical” boundary cases are where reviewers disagree most.</li>
+<li>Guidance on reviewing an AI-assisted <em>contribution</em> to an already-owned package, as distinct from reviewing an entire AI-assisted package from scratch.</li>
+<li>A shared vocabulary for documenting AI involvement in <code>CITATION.cff</code> or a <code>NEWS.md</code> entry, referenced in this framework’s §8.3 but not specified in detail.</li>
+<li>An adaptation of the framework for packages with compiled code (C/C++/Rust via <code>cpp11</code> or extendr), where the security review phase needs additional scrutiny.</li>
+</ol>
+</section>
+<section id="establishing-ownership" class="level1" data-number="13">
+<h1 data-number="13"><span class="header-section-number">13</span> Establishing Ownership</h1>
+<p>Before claiming ownership of the package, verify that you can, without referring to the code: explain any function’s purpose and implementation, predict its behaviour for a novel input, identify where a new requirement would require a change, and debug an issue without AI assistance. Separately, confirm maintenance readiness: can you respond to a user’s issue, review an external contribution, adapt to a breaking change in a dependency, and extend the package’s functionality yourself?</p>
+<p>Consider also documenting the development process itself: that AI assistance was used, what review process was undertaken, and a clear version-control history showing the remediation work. This is not required by CRAN, but it is honest, and it gives a future maintainer (possibly a future version of yourself) the context this review process assumed from the start.</p>
+<p>Review does not end at first release. Any AI-generated change should go through the same review before merging, static analysis should run in continuous integration, and older code sections benefit from periodic re-review as the author’s own understanding of the package deepens. Knowledge decays without use: working with the codebase regularly, documenting decisions as they are made, and keeping review notes accessible are what keep the ownership claim true over time, not just true at the moment of first publication.</p>
+</section>
+<section id="wrapping-up" class="level1" data-number="14">
+<h1 data-number="14"><span class="header-section-number">14</span> Wrapping Up</h1>
+<section id="what-did-we-learn" class="level2" data-number="14.1">
+<h2 data-number="14.1" class="anchored" data-anchor-id="what-did-we-learn"><span class="header-section-number">14.1</span> What Did We Learn?</h2>
+<p>Thorough review of an AI-assisted package requires the same rigor a careful reviewer would bring to any package, plus a specific sensitivity to the failure modes assistant-written code tends to produce. The process demands more than a read-through; it requires achieving genuine understanding of every component before accepting responsibility for it. The five-phase structure (structural, function-by-function, test suite, integration, security) gives that process a checklist rather than leaving it to instinct, and the ownership test at the end gives it a stopping condition: review is complete when the answers to the ownership questions are honestly yes, not when the reviewer is tired of reading code.</p>
+<p><strong>Main takeaways:</strong></p>
+<ul>
+<li>Coverage is a floor, not a target; read test bodies, not just coverage percentages.</li>
+<li>AI-generated code has a specific set of failure patterns worth a dedicated review pass.</li>
+<li>Ownership is demonstrated by prediction and unaided debugging, not claimed by completing a checklist.</li>
+</ul>
+<p><strong>If you are trying this yourself:</strong> start with the structural review before touching any function body, keep the annotation template open in a second window rather than trying to hold findings in memory, and do not flip a package to “reviewed” until you can honestly answer every question in the Establishing Ownership section.</p>
+</section>
+</section>
+<section id="see-also" class="level1" data-number="15">
+<h1 data-number="15"><span class="header-section-number">15</span> See Also</h1>
+<p>A companion post walks this framework through an applied review of a real package: <a href="../rp-code-review-exemplar/">Exemplar Code Review: The zzobj2fig Package</a>, which uses <code>zzvim-R</code> as the review environment and works through structural review, function debugging with <code>browser()</code> and <code>trace()</code>, and a CRAN-submission checklist that this post does not cover.</p>
+<p>Three further companions transpose this same five-phase structure and ownership test onto prose rather than code: <a href="../rp-blog-review-methodology/">Review Methodology for AI-Assisted Blog Post Drafting</a> for blog-length prose, <a href="../rp-book-review-methodology/">Review Methodology for AI-Assisted Textbook Drafting</a> for book-length, pedagogically structured material, and <a href="../rp-paper-review-methodology/">Review Methodology for AI-Assisted Research Paper Drafting</a> for academic manuscripts, grounded in published journal and publisher AI-disclosure policy.</p>
+<p><strong>Key resources:</strong></p>
+<ul>
+<li><a href="https://r-pkgs.org/">R Packages, 2nd ed.</a> — Wickham and Bryan</li>
+<li><a href="https://adv-r.hadley.nz/">Advanced R, 2nd ed.</a> — Wickham</li>
+<li><a href="https://cran.r-project.org/doc/manuals/r-release/R-exts.html">Writing R Extensions</a> — R Core Team</li>
+<li><a href="https://cran.r-project.org/web/packages/policies.html">CRAN Repository Policy</a></li>
+<li><a href="https://devguide.ropensci.org/">rOpenSci Packages: Development, Maintenance, and Peer Review</a></li>
+</ul>
+<hr>
+</section>
+<section id="reproducibility" class="level1" data-number="16">
+<h1 data-number="16"><span class="header-section-number">16</span> Reproducibility</h1>
+<p><strong>Source document:</strong> <code>docs/CODE_REVIEW_METHODOLOGY.md</code>, from the <code>zzobj2fig</code> package (<code>~/prj/sfw/10-zzobj2fig/zzobj2fig/</code>). This post is a direct translation of that white paper into blog format; no methodological claims were added beyond the source.</p>
+<p><strong>Session information:</strong></p>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code>R version 4.6.1 (2026-06-24)
+Platform: aarch64-apple-darwin25.4.0
+Running under: macOS Tahoe 26.6.2
+
+Matrix products: default
+BLAS:   /opt/homebrew/Cellar/openblas/0.3.34/lib/libopenblasp-r0.3.34.dylib 
+LAPACK: /opt/homebrew/Cellar/r/4.6.1/lib/R/lib/libRlapack.dylib;  LAPACK version 3.12.1
+
+locale:
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+time zone: America/Los_Angeles
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+loaded via a namespace (and not attached):
+ [1] htmlwidgets_1.6.4 compiler_4.6.1    fastmap_1.2.0     cli_3.6.6        
+ [5] tools_4.6.1       htmltools_0.5.9   parallel_4.6.1    otel_0.2.0       
+ [9] yaml_2.3.12       rmarkdown_2.31    knitr_1.51        jsonlite_2.0.0   
+[13] xfun_0.58         digest_0.6.39     rlang_1.3.0       evaluate_1.0.5   </code></pre>
+</div>
+</div>
+<hr>
+<p><em>Rendered on 2026-08-18 at 11:00 PDT.</em><br> <em>Source: ~/prj/rgtlab/posts/rp-code-review-methodology/analysis/report/index.qmd</em></p>
+<hr>
+</section>
+<section id="lets-connect" class="level1" data-number="17">
+<h1 data-number="17"><span class="header-section-number">17</span> Let’s Connect</h1>
+<p>Questions, corrections, or a different view on where this framework is too strict or too loose are welcome in the comment thread below.</p>
+<ul>
+<li><strong>GitHub</strong>: <a href="https://github.com/rgt47">rgt47</a></li>
+<li><strong>Email</strong>: <a href="https://rgtlab.org/contact">Contact form</a></li>
+</ul>
+<!-- ============================================================================
+PRE-PUBLISH QA CHECKLIST — verify each item BEFORE setting draft: false
+
+[ ] YAML
+    [x] title, date, categories, description, image filled in
+    [x] document-type: "blog"
+    [ ] draft: false
+
+[ ] Visual design
+    [ ] 1 hero image (width=80%) present
+    [ ] Exactly 3 ambiance images ({.img-fluid} only) after Objectives,
+        mid-body, and before Lessons Learnt
+    [ ] media/images/README.md attributes every image
+
+[ ] Content quality
+    [x] Zero emoji anywhere
+    [x] Zero em dashes
+    [x] Single quotes preferred over double quotes in prose
+    [x] Direct-abstract opening (reference style, no fabricated personal
+        narrative not grounded in the source document)
+
+[ ] Cross-references
+    [x] See Also links to the companion exemplar post
+    [ ] Companion post's See Also links back here (verify after both exist)
+
+[ ] Render verification
+    [ ] quarto render index.qmd produces clean HTML with no warnings
+    [ ] Hero image displays in /blog/ listing card
+    [ ] Internal links resolve
+
+============================================================================ -->
+<section id="related-posts-in-this-cluster" class="level2" data-number="17.1">
+<h2 data-number="17.1" class="anchored" data-anchor-id="related-posts-in-this-cluster"><span class="header-section-number">17.1</span> Related posts in this cluster</h2>
+<p>This post is part of the <em>R Package Development and Testing</em> series. Recommended reading order:</p>
+<ol type="1">
+<li><a href="../rp-package-update-workflow/">Updating an R Package: A Complete Development Workflow</a></li>
+<li><a href="../rp-vim-r-repl-plugin/">Writing a Simple Vim Plugin for REPL Interaction</a></li>
+<li><a href="../rp-testing-data-analysis/">Testing Data Analysis Workflows in R</a></li>
+<li><a href="../rp-testthat-to-tinytest/">From testthat to tinytest: Converting an R Package Test Suite</a></li>
+<li><strong>Code Review for AI-Assisted R Package Development</strong> (this post)</li>
+<li><a href="../rp-code-review-exemplar/">Exemplar Code Review: The zzobj2fig Package</a></li>
+</ol>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/focusonr\.org");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<input type="hidden" id="giscus-base-theme" value="light">
+<input type="hidden" id="giscus-alt-theme" value="light">
+<script>
+  function loadGiscus() {
+    // Function to get the theme based on body class
+    const getTheme = () => {
+      let baseTheme = document.getElementById('giscus-base-theme').value;
+      let altTheme = document.getElementById('giscus-alt-theme').value;
+      return document.body.classList.contains('quarto-dark') ? altTheme : baseTheme;
+    };
+    const script = document.createElement("script");
+    script.src = "https://giscus.app/client.js";
+    script.async = true;
+    script.dataset.repo = "rgt47/qblog";
+    script.dataset.repoId = "R_kgDOH6TO7A";
+    script.dataset.category = "General";
+    script.dataset.categoryId = "DIC_kwDOH6TO7M4CXqIi";
+    script.dataset.mapping = "pathname";
+    script.dataset.reactionsEnabled = "1";
+    script.dataset.emitMetadata = "0";
+    script.dataset.inputPosition = "bottom";
+    script.dataset.theme = getTheme();
+    script.dataset.lang = "en";
+    script.crossOrigin = "anonymous";
+    // Append the script to the desired div instead of at the end of the body
+    document.getElementById("quarto-content").appendChild(script);
+  }
+  loadGiscus();
+</script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Copyright 2023-2026, Ronald ‘Ryy’ G. Thomas. The lab’s other activities live at <a href="https://rgtlab.org">rgtlab.org</a>.</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/rgt47">
+      <i class="bi bi-github" role="img">
+</i> 
+    </a>
+  </li>  
+    <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com/rgt47">
+      <i class="bi bi-twitter" role="img">
+</i> 
+    </a>
+  </li>  
+</ul>
+    </div>
+  </div>
+</footer>
+
+<!-- Fix category filtering: Quarto's own filterListingCategory() compares
+     the base64+URI-encoded data-category value directly against
+     itemValues.categories.split(","), but itemValues.categories is ALSO
+     base64+URI-encoded as a whole (e.g. one blob decoding to
+     "r,data-visualization"), so the split never finds a comma to split on
+     and the raw-blob comparison never matches. Both sides must be decoded
+     before comparing. -->
+<script>
+window.addEventListener('DOMContentLoaded', function() {
+  setTimeout(function() {
+    function decodeCategory(value) {
+      try {
+        return decodeURIComponent(atob(value));
+      } catch (e) {
+        return value;
+      }
+    }
+
+    window.filterListingCategory = function(category) {
+      const listingIds = Object.keys(window['quarto-listings']);
+      for (const listingId of listingIds) {
+        const list = window['quarto-listings'][listingId];
+        if (list) {
+          if (category === '') {
+            list.filter();
+          } else {
+            const target = decodeCategory(category);
+            list.filter(function (item) {
+              const itemValues = item.values();
+              if (itemValues.categories !== null && itemValues.categories !== undefined) {
+                const categories = decodeCategory(itemValues.categories)
+                  .split(",")
+                  .map(c => c.trim());
+                return categories.includes(target);
+              } else {
+                return false;
+              }
+            });
+          }
+        }
+      }
+    };
+  }, 500);
+});
+</script>
+
+<!-- PDF view/download button for blog posts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Only add the button on post pages
+  if (window.location.pathname.includes('/posts/') && !window.location.pathname.endsWith('/posts/') && !window.location.pathname.endsWith('/posts/index.html')) {
+    var currentPath = window.location.pathname;
+    // Handle both /posts/name/ and /posts/name/index.html formats
+    var pdfPath;
+    if (currentPath.endsWith('/')) {
+      pdfPath = currentPath + 'index.pdf';
+    } else {
+      pdfPath = currentPath.replace('.html', '.pdf');
+    }
+
+    // Check if PDF exists first
+    fetch(pdfPath, { method: 'HEAD' })
+      .then(function(response) {
+        if (response.ok) {
+          // PDF exists, show download button
+          showDownloadButton(pdfPath);
+        }
+        // If PDF doesn't exist, don't show any button
+      })
+      .catch(function(error) {
+        // Error checking PDF, don't show any button
+      });
+  }
+});
+
+function showDownloadButton(pdfPath) {
+  var downloadBtn = document.createElement('div');
+  downloadBtn.className = 'pdf-download-button';
+
+  // Get file size if possible
+  fetch(pdfPath, { method: 'HEAD' })
+    .then(function(response) {
+      var size = response.headers.get('Content-Length');
+      var sizeText = '';
+
+      if (size) {
+        // Convert to MB or KB
+        var sizeInMB = size / (1024 * 1024);
+        if (sizeInMB >= 1) {
+          sizeText = ' (' + sizeInMB.toFixed(1) + ' MB)';
+        } else {
+          sizeText = ' (' + (size / 1024).toFixed(0) + ' KB)';
+        }
+      }
+
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' + sizeText +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    })
+    .catch(function() {
+      // Basic fallback if we can't get file size
+      downloadBtn.innerHTML =
+        '<div class="alert alert-secondary d-flex align-items-center p-3" role="alert">' +
+        '  <a href="' + pdfPath + '" class="btn btn-primary btn-sm me-3" target="_blank">' +
+        '    <i class="bi bi-file-pdf me-1"></i> Download PDF' +
+        '  </a>' +
+        '  <span class="small text-muted">View or save a printer-friendly version of this article</span>' +
+        '</div>';
+    });
+
+  // Find where to insert the button (right after the title block)
+  var titleBlock = document.querySelector('.quarto-title-meta');
+  if (titleBlock) {
+    titleBlock.after(downloadBtn);
+  }
+}
+</script>
+
+<style>
+.pdf-download-button {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+</style>
+
+
+
+
+</body></html>

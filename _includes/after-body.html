@@ -1,65 +1,38 @@
 
-<!-- Fix category filtering to work with plain-text categories -->
+<!-- Fix category filtering: Quarto's own filterListingCategory() compares
+     the base64+URI-encoded data-category value directly against
+     itemValues.categories.split(","), but itemValues.categories is ALSO
+     base64+URI-encoded as a whole (e.g. one blob decoding to
+     "r,data-visualization"), so the split never finds a comma to split on
+     and the raw-blob comparison never matches. Both sides must be decoded
+     before comparing. -->
 <script>
 window.addEventListener('DOMContentLoaded', function() {
   setTimeout(function() {
-    // Patch sidebar click handlers to use plain-text categories
-    const categoryEls = document.querySelectorAll(
-      ".quarto-listing-category .category"
-    );
-
-    for (const categoryEl of categoryEls) {
-      // Get the plain-text category value directly
-      const category = categoryEl.getAttribute("data-category");
-
-      categoryEl.onclick = () => {
-        window.filterListingCategory(category);
-        // Set hash with encoded category
-        const encodedCategory = btoa(encodeURIComponent(category));
-        window.history.pushState(null, null, `#category=${encodedCategory}`);
-        return false;
-      };
+    function decodeCategory(value) {
+      try {
+        return decodeURIComponent(atob(value));
+      } catch (e) {
+        return value;
+      }
     }
 
-    // Also patch the category title click handler
-    const categoryTitleEls = document.querySelectorAll(
-      ".quarto-listing-category-title"
-    );
-    for (const categoryTitleEl of categoryTitleEls) {
-      categoryTitleEl.onclick = () => {
-        window.filterListingCategory("");
-        window.history.pushState(null, null, "#");
-        return false;
-      };
-    }
-
-    // Override filterListingCategory to work with plain-text categories
     window.filterListingCategory = function(category) {
       const listingIds = Object.keys(window['quarto-listings']);
       for (const listingId of listingIds) {
         const list = window['quarto-listings'][listingId];
         if (list) {
           if (category === '') {
-            // resets the filter
             list.filter();
           } else {
-            // filter to this category - handle both plain text and base64
+            const target = decodeCategory(category);
             list.filter(function (item) {
               const itemValues = item.values();
               if (itemValues.categories !== null && itemValues.categories !== undefined) {
-                let categories;
-
-                try {
-                  // Try to decode as base64 first
-                  categories = decodeURIComponent(atob(itemValues.categories)).split(",");
-                } catch(e) {
-                  // If that fails, assume it's plain text
-                  categories = itemValues.categories.split(",");
-                }
-
-                // Trim whitespace from categories
-                categories = categories.map(c => c.trim());
-                return categories.includes(category);
+                const categories = decodeCategory(itemValues.categories)
+                  .split(",")
+                  .map(c => c.trim());
+                return categories.includes(target);
               } else {
                 return false;
               }
@@ -68,11 +41,6 @@ window.addEventListener('DOMContentLoaded', function() {
         }
       }
     };
-
-    // Trigger the listing-loaded handler
-    if (window['quarto-listing-loaded']) {
-      window['quarto-listing-loaded']();
-    }
   }, 500);
 });
 </script>
